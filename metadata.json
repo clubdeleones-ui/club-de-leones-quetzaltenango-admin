@@ -1,0 +1,5 @@
+{
+  "name": "Club de Leones Quetzaltenango Admin",
+  "description": "Plataforma administrativa y pública para el Club de Leones Quetzaltenango, permitiendo gestión de socios, revisión de cuotas, consulta de actas con IA y galería histórica.",
+  "requestFramePermissions": []
+}
