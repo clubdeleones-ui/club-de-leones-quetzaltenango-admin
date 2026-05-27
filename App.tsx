@@ -51,11 +51,19 @@ const App: React.FC = () => {
             <Route path="/" element={<Home />} />
             <Route path="/actividades" element={<Calendario accessToken={auth.accessToken} />} />
             <Route path="/galeria" element={<Galeria />} />
-            <Route path="/estatutos" element={<Estatutos accessToken={auth.accessToken} />} />
+            <Route path="/socios" element={<Socios />} />
             <Route path="/proponer-socio" element={<ProponerSocio />} />
             <Route path="/login" element={auth.isAuthenticated ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />} />
 
             {/* Protected Routes */}
+            <Route
+              path="/estatutos"
+              element={
+                <ProtectedRoute isAuthenticated={auth.isAuthenticated}>
+                  <Estatutos accessToken={auth.accessToken} />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/dashboard"
               element={
@@ -84,14 +92,6 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute isAuthenticated={auth.isAuthenticated}>
                   <Actas accessToken={auth.accessToken} />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/socios"
-              element={
-                <ProtectedRoute isAuthenticated={auth.isAuthenticated}>
-                  <Socios />
                 </ProtectedRoute>
               }
             />

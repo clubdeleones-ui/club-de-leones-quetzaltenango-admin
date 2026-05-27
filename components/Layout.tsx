@@ -63,17 +63,19 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
     { label: 'Inicio', path: '/', icon: Home, public: true },
     { label: 'Actividades', path: '/actividades', icon: Calendar, public: true },
     { label: 'Galería', path: '/galeria', icon: Image, public: true },
-    { label: 'Estatutos', path: '/estatutos', icon: ShieldCheck, public: true },
+    { label: 'Directorio', path: '/socios', icon: Users, public: true },
   ];
 
   const getProtectedItems = () => {
     if (!auth.user) return [];
     
-    const items = [{ label: 'Mi Panel', path: '/dashboard', icon: User }];
+    const items = [
+      { label: 'Mi Panel', path: '/dashboard', icon: User },
+      { label: 'Estatutos', path: '/estatutos', icon: ShieldCheck }
+    ];
     
     if (auth.user.rol !== UserRole.DONANTE) {
       items.push({ label: 'Actas', path: '/actas', icon: FileText });
-      items.push({ label: 'Directorio', path: '/socios', icon: Users });
     }
     
     const isAdministrative = 
