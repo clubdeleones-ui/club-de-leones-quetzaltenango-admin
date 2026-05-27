@@ -42,8 +42,8 @@ const Socios: React.FC = () => {
     <div className="space-y-10 max-w-7xl mx-auto px-4 md:px-8 py-8 animate-in fade-in duration-700">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-5xl font-black text-blue-900 tracking-tight">Directorio de Socios</h1>
-          <p className="text-lg text-slate-700 mt-2 font-medium">
+          <h1 className="text-3xl font-extrabold text-blue-900 tracking-tight">Directorio de Socios</h1>
+          <p className="text-base text-slate-750 mt-1 font-medium">
             Conoce a los miembros activos que hacen posible nuestro servicio y a los nuevos candidatos en evaluación.
           </p>
         </div>
@@ -53,27 +53,27 @@ const Socios: React.FC = () => {
       <div className="flex border-b border-slate-200">
         <button
           onClick={() => setActiveTab('activos')}
-          className={`flex items-center space-x-3 px-8 py-4 font-bold text-lg border-b-4 transition-all ${
+          className={`flex items-center space-x-3 px-6 py-3 font-semibold text-base border-b-4 transition-all ${
             activeTab === 'activos'
               ? 'border-blue-900 text-blue-900'
-              : 'border-transparent text-slate-650 hover:text-slate-850'
+              : 'border-transparent text-slate-600 hover:text-slate-800'
           }`}
         >
-          <Users size={20} />
+          <Users size={18} />
           <span>Socios Activos ({socios.length})</span>
         </button>
         <button
           onClick={() => setActiveTab('propuestos')}
-          className={`flex items-center space-x-3 px-8 py-4 font-bold text-lg border-b-4 transition-all relative ${
+          className={`flex items-center space-x-3 px-6 py-3 font-semibold text-base border-b-4 transition-all relative ${
             activeTab === 'propuestos'
               ? 'border-blue-900 text-blue-900'
-              : 'border-transparent text-slate-650 hover:text-slate-850'
+              : 'border-transparent text-slate-600 hover:text-slate-800'
           }`}
         >
-          <UserCheck size={20} />
+          <UserCheck size={18} />
           <span>Candidatos Propuestos</span>
           {propuestasPendientes.length > 0 && (
-            <span className="absolute top-3 right-0 bg-yellow-500 text-blue-900 text-xs font-black w-5 h-5 flex items-center justify-center rounded-full animate-bounce">
+            <span className="absolute top-2 right-0 bg-yellow-500 text-blue-900 text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full animate-bounce">
               {propuestasPendientes.length}
             </span>
           )}
@@ -97,7 +97,7 @@ const Socios: React.FC = () => {
                   
                   {/* Badge de Estatus flotante premium */}
                   <div className="absolute top-4 right-4">
-                    <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center space-x-1.5 border backdrop-blur-md ${
+                    <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center space-x-1.5 border backdrop-blur-md ${
                       socio.estatus === 'Pending' 
                         ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' 
                         : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
@@ -133,15 +133,15 @@ const Socios: React.FC = () => {
 
                   {/* Nombre y Cargo */}
                   <div className="space-y-2.5 w-full">
-                    <h3 className="font-extrabold text-xl text-slate-900 tracking-tight leading-snug group-hover:text-blue-950 transition-colors">
+                    <h3 className="font-bold text-lg text-slate-900 tracking-tight leading-snug group-hover:text-blue-950 transition-colors">
                       {socio.nombre}
                     </h3>
                     
                     {/* Badge de Puesto */}
                     <div className="flex justify-center">
-                      <span className={`text-[11px] font-extrabold uppercase tracking-wider px-3.5 py-1 rounded-full border ${
+                      <span className={`text-xs font-semibold uppercase tracking-wider px-3.5 py-1 rounded-full border ${
                         socio.rol === 'SUPER_ADMIN' || socio.rol === 'TESORERO' || socio.rol === 'SECRETARIO'
-                          ? 'bg-amber-50 text-amber-850 border-amber-200/70'
+                          ? 'bg-amber-50 text-amber-800 border-amber-200/70'
                           : socio.rol === 'ASESOR_SERVICIOS' || socio.rol === 'PRESIDENTE_AFILIACION'
                           ? 'bg-indigo-50 text-indigo-800 border-indigo-200/70'
                           : 'bg-slate-50 text-slate-700 border-slate-200/70'
@@ -151,11 +151,11 @@ const Socios: React.FC = () => {
                     </div>
                     
                     {/* Caja de Datos Premium */}
-                    <div className="w-full bg-slate-50/50 rounded-2xl p-4 border border-slate-100/90 text-left text-xs font-semibold text-slate-700 space-y-3 mt-5">
+                    <div className="w-full bg-slate-50/50 rounded-2xl p-4 border border-slate-100/90 text-left text-sm font-medium text-slate-700 space-y-3 mt-5">
                       {/* Club */}
                       <div className="flex items-center justify-between pb-2 border-b border-slate-100/60">
-                        <span className="text-slate-400 flex items-center space-x-1.5">
-                          <Building size={14} className="text-slate-400 flex-shrink-0" />
+                        <span className="text-slate-450 flex items-center space-x-1.5">
+                          <Building size={16} className="text-slate-400 flex-shrink-0" />
                           <span>Club</span>
                         </span>
                         <span className="font-bold text-slate-800 text-right truncate max-w-[150px]">{socio.club || 'QUETZALTENANGO'}</span>
@@ -163,8 +163,8 @@ const Socios: React.FC = () => {
 
                       {/* Correo */}
                       <div className="flex items-center justify-between pb-2 border-b border-slate-100/60">
-                        <span className="text-slate-400 flex items-center space-x-1.5">
-                          <Mail size={14} className="text-slate-400 flex-shrink-0" />
+                        <span className="text-slate-450 flex items-center space-x-1.5">
+                          <Mail size={16} className="text-slate-400 flex-shrink-0" />
                           <span>Correo</span>
                         </span>
                         {socio.correo ? (
@@ -176,14 +176,14 @@ const Socios: React.FC = () => {
                             {socio.correo}
                           </a>
                         ) : (
-                          <span className="text-slate-400 font-medium italic">Sin correo registrado</span>
+                          <span className="text-slate-450 font-normal italic">Sin correo registrado</span>
                         )}
                       </div>
 
                       {/* Teléfono */}
                       <div className="flex items-center justify-between pb-2 border-b border-slate-100/60">
-                        <span className="text-slate-400 flex items-center space-x-1.5">
-                          <Phone size={14} className="text-slate-400 flex-shrink-0" />
+                        <span className="text-slate-450 flex items-center space-x-1.5">
+                          <Phone size={16} className="text-slate-400 flex-shrink-0" />
                           <span>Teléfono</span>
                         </span>
                         {socio.telefono && socio.telefono !== 'Sin teléfono' && socio.telefono !== '' ? (
@@ -194,14 +194,14 @@ const Socios: React.FC = () => {
                             {socio.telefono}
                           </a>
                         ) : (
-                          <span className="text-slate-400 font-medium italic">Sin teléfono registrado</span>
+                          <span className="text-slate-450 font-normal italic">Sin teléfono registrado</span>
                         )}
                       </div>
 
                       {/* Gestión / Período */}
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400 flex items-center space-x-1.5">
-                          <Calendar size={14} className="text-slate-400 flex-shrink-0" />
+                        <span className="text-slate-450 flex items-center space-x-1.5">
+                          <Calendar size={16} className="text-slate-400 flex-shrink-0" />
                           <span>Gestión</span>
                         </span>
                         <span className="font-bold text-slate-800 text-right truncate">
@@ -211,7 +211,7 @@ const Socios: React.FC = () => {
                     </div>
 
                     {/* Membresía / Solvencia */}
-                    <div className="flex items-center justify-between px-2 pt-2 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                    <div className="flex items-center justify-between px-2 pt-2 text-xs text-slate-400 font-bold uppercase tracking-wider">
                       <span>Membresía Financiera</span>
                       <span className={`flex items-center space-x-1 ${
                         socio.estadoCuotas === 'Al día' 
@@ -235,9 +235,9 @@ const Socios: React.FC = () => {
           <div className="space-y-8">
             {/* Note banner */}
             <div className="bg-yellow-50 border border-yellow-200/60 rounded-3xl p-6 flex items-start space-x-4 max-w-4xl">
-              <Clock className="text-yellow-750 flex-shrink-0 mt-0.5" size={24} />
+              <Clock className="text-yellow-750 flex-shrink-0 mt-0.5" size={20} />
               <div>
-                <h4 className="font-bold text-yellow-950 text-lg">Candidaturas en Proceso de Evaluación</h4>
+                <h4 className="font-bold text-yellow-950 text-base">Candidaturas en Proceso de Evaluación</h4>
                 <p className="text-yellow-900 text-sm mt-1 leading-relaxed font-medium">
                   Las personas listadas a continuación han sido propuestas por socios activos del club debido a su vocación de servicio y calidades humanas. Sus propuestas se encuentran actualmente bajo revisión por parte de la Junta Directiva para su formalización y aprobación.
                 </p>
@@ -246,11 +246,11 @@ const Socios: React.FC = () => {
 
             {propuestasPendientes.length === 0 ? (
               <div className="bg-white rounded-[2rem] border border-slate-100 p-16 text-center max-w-3xl">
-                <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-500">
-                  <UserCheck size={36} />
+                <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-500">
+                  <UserCheck size={28} />
                 </div>
-                <h3 className="text-2xl font-black text-slate-800">No hay propuestas pendientes</h3>
-                <p className="text-slate-750 mt-2 max-w-md mx-auto font-medium">
+                <h3 className="text-xl font-bold text-slate-800">No hay propuestas pendientes</h3>
+                <p className="text-slate-600 mt-2 max-w-md mx-auto text-sm font-medium">
                   Actualmente no existen candidaturas propuestas en evaluación. Si conoces a alguien idóneo para ser parte del club, puedes postularlo usando el formulario público.
                 </p>
               </div>
@@ -259,49 +259,49 @@ const Socios: React.FC = () => {
                 {propuestasPendientes.map((propuesta) => (
                   <div 
                     key={propuesta.id} 
-                    className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 hover:shadow-xl hover:border-slate-200 transition-all duration-300 flex flex-col space-y-6"
+                    className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-xl hover:border-slate-200 transition-all duration-300 flex flex-col space-y-5"
                   >
                     {/* Header info */}
-                    <div className="flex items-start space-x-6">
+                    <div className="flex items-start space-x-5">
                       <img 
                         src={propuesta.fotoCandidato || 'https://picsum.photos/seed/' + propuesta.id + '/200/200'} 
-                        className="w-24 h-24 rounded-3xl object-cover border-4 border-slate-50 shadow-sm flex-shrink-0" 
+                        className="w-20 h-20 rounded-2xl object-cover border-4 border-slate-50 shadow-sm flex-shrink-0" 
                         alt={propuesta.nombreCandidato} 
                       />
-                      <div className="space-y-2 min-w-0">
-                        <span className="bg-yellow-50 text-yellow-800 border border-yellow-250 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                      <div className="space-y-1.5 min-w-0">
+                        <span className="bg-yellow-50 text-yellow-800 border border-yellow-250 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                           En Evaluación
                         </span>
-                        <h3 className="font-extrabold text-2xl text-slate-900 leading-snug truncate mt-1">{propuesta.nombreCandidato}</h3>
-                        <div className="flex items-center text-slate-700 text-sm font-medium">
-                          <Briefcase size={14} className="mr-2 text-slate-500 flex-shrink-0" />
+                        <h3 className="font-bold text-lg text-slate-900 leading-snug truncate mt-1">{propuesta.nombreCandidato}</h3>
+                        <div className="flex items-center text-slate-600 text-xs font-medium">
+                          <Briefcase size={12} className="mr-1.5 text-slate-400 flex-shrink-0" />
                           <span className="truncate">{propuesta.profesionCandidato}</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Proponent info */}
-                    <div className="bg-slate-50/80 rounded-2xl p-4 flex items-center justify-between border border-slate-100">
-                      <div className="flex items-center space-x-2 text-sm text-slate-750">
-                        <ShieldCheck size={16} className="text-blue-900" />
-                        <span>Propuesto por el socio activo:</span>
+                    <div className="bg-slate-50/85 rounded-xl p-3.5 flex items-center justify-between border border-slate-100/80">
+                      <div className="flex items-center space-x-1.5 text-xs text-slate-600">
+                        <ShieldCheck size={14} className="text-blue-900" />
+                        <span>Propuesto por:</span>
                       </div>
-                      <span className="font-extrabold text-sm text-blue-900 bg-blue-50 px-3 py-1.5 rounded-xl">
+                      <span className="font-bold text-xs text-blue-900 bg-blue-50/80 px-2.5 py-1 rounded-lg">
                         {propuesta.proponente}
                       </span>
                     </div>
 
                     {/* Qualities / characteristics tags */}
-                    <div className="space-y-3">
-                      <h4 className="font-extrabold text-base text-slate-800 uppercase tracking-widest flex items-center">
-                        <ThumbsUp size={14} className="mr-2 text-slate-500" />
+                    <div className="space-y-2">
+                      <h4 className="font-bold text-xs text-slate-555 uppercase tracking-wider flex items-center">
+                        <ThumbsUp size={12} className="mr-1.5 text-slate-400" />
                         Cualidades Destacadas
                       </h4>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-1.5">
                         {propuesta.caracteristicas.map((carac, index) => (
                           <span 
                             key={index} 
-                            className="bg-blue-50/50 hover:bg-blue-50 border border-blue-100 text-blue-950 font-semibold px-3 py-1 rounded-xl text-sm transition-colors"
+                            className="bg-blue-50/50 hover:bg-blue-50 border border-blue-100/70 text-blue-950 font-medium px-2.5 py-0.5 rounded-lg text-xs transition-colors"
                           >
                             ✨ {carac}
                           </span>
@@ -312,15 +312,15 @@ const Socios: React.FC = () => {
                     {/* Justification details */}
                     <div className="space-y-3 pt-2 border-t border-slate-100 flex-grow">
                       <div>
-                        <h4 className="font-bold text-sm text-slate-650 uppercase tracking-wider">Motivo de Nominación</h4>
-                        <p className="text-slate-800 text-sm mt-1 leading-relaxed italic bg-slate-50/30 p-3 rounded-2xl border border-slate-100/50 font-medium">
+                        <h4 className="font-bold text-[10px] text-slate-500 uppercase tracking-wider">Motivo de Nominación</h4>
+                        <p className="text-slate-800 text-xs mt-1 leading-relaxed italic bg-slate-50/30 p-2.5 rounded-xl border border-slate-100/50 font-medium">
                           "{propuesta.motivoPropuesta}"
                         </p>
                       </div>
                       {propuesta.porQueBuenLeon && (
                         <div>
-                          <h4 className="font-bold text-sm text-slate-650 uppercase tracking-wider mt-3">¿Por qué sería un buen León?</h4>
-                          <p className="text-slate-800 text-sm mt-1 leading-relaxed italic bg-slate-50/30 p-3 rounded-2xl border border-slate-100/50 font-medium">
+                          <h4 className="font-bold text-[10px] text-slate-500 uppercase tracking-wider mt-2">¿Por qué sería un buen León?</h4>
+                          <p className="text-slate-800 text-xs mt-1 leading-relaxed italic bg-slate-50/30 p-2.5 rounded-xl border border-slate-100/50 font-medium">
                             "{propuesta.porQueBuenLeon}"
                           </p>
                         </div>

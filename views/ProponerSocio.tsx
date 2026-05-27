@@ -101,8 +101,8 @@ const ProponerSocio: React.FC = () => {
         <div className="w-20 h-20 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto shadow-md">
           <CheckCircle size={48} />
         </div>
-        <h2 className="text-3xl font-black text-blue-900 tracking-tight">¡Propuesta Enviada Exitosamente!</h2>
-        <p className="text-slate-500 text-lg max-w-md mx-auto leading-relaxed">
+        <h2 className="text-xl md:text-2xl font-bold text-blue-900 tracking-tight">¡Propuesta Enviada Exitosamente!</h2>
+        <p className="text-slate-500 text-base max-w-md mx-auto leading-relaxed">
           Agradecemos tu iniciativa. La propuesta para incorporar a <strong className="text-slate-800">{nombreCandidato}</strong> ha sido registrada en el Libro de Candidaturas del club.
         </p>
         <p className="text-xs text-yellow-600 font-semibold bg-yellow-50 px-4 py-2 rounded-xl w-fit mx-auto">
@@ -136,8 +136,8 @@ const ProponerSocio: React.FC = () => {
           <span className="bg-blue-50 text-blue-900 text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-widest">
             Comité de Membresía y Afiliación
           </span>
-          <h1 className="text-4xl md:text-5xl font-black text-blue-900 tracking-tight">Propuesta de Nuevo Socio</h1>
-          <p className="text-slate-700 text-base max-w-lg mx-auto leading-relaxed font-medium">
+          <h1 className="text-2xl md:text-3xl font-bold text-blue-900 tracking-tight">Propuesta de Nuevo Socio</h1>
+          <p className="text-slate-650 text-sm max-w-lg mx-auto leading-relaxed font-medium">
             Nuestra fuerza radica en el servicio y la calidad humana. Si conoces a alguien comprometido con la comunidad, preséntalo para ser un León.
           </p>
         </div>
@@ -145,12 +145,12 @@ const ProponerSocio: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Proponente Section */}
           <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 space-y-4">
-            <h3 className="text-lg font-bold text-slate-800 flex items-center">
+            <h3 className="text-base font-bold text-slate-800 flex items-center">
               <span className="text-yellow-500 mr-2">🔑</span>
               1. Socio Proponente
             </h3>
             <div>
-              <label className="block text-sm font-bold text-slate-750 uppercase tracking-wide mb-2">Nombre del Socio Activo que lo Propone *</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Nombre del Socio Activo que lo Propone *</label>
               <input 
                 type="text"
                 required
@@ -176,9 +176,9 @@ const ProponerSocio: React.FC = () => {
                 }
                 setMostrarCamposPropuesta(true);
               }}
-              className="w-full py-5 border-2 border-dashed border-blue-200 hover:border-blue-900 text-blue-900 font-black rounded-3xl transition-all flex items-center justify-center space-x-3 bg-blue-50/10 hover:bg-blue-50/20 active:scale-[0.99]"
+              className="w-full py-3.5 border-2 border-dashed border-blue-200 hover:border-blue-900 text-blue-900 font-bold text-sm rounded-2xl transition-all flex items-center justify-center space-x-3 bg-blue-50/10 hover:bg-blue-50/20 active:scale-[0.99]"
             >
-              <UserPlus size={20} />
+              <UserPlus size={18} />
               <span>Agregar Propuesta de Candidato</span>
             </button>
           )}
@@ -186,7 +186,7 @@ const ProponerSocio: React.FC = () => {
           {/* Proposal fields container */}
           {mostrarCamposPropuesta && (
             <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-              <h3 className="text-lg font-bold text-slate-800 flex items-center border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-800 flex items-center border-b border-slate-100 pb-3">
                 <span className="text-yellow-500 mr-2">🦁</span>
                 2. Datos de la Persona Propuesta
               </h3>
@@ -194,7 +194,7 @@ const ProponerSocio: React.FC = () => {
               {/* Candidato Name and Profession */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-bold text-slate-750 uppercase tracking-wide mb-2">Nombre Completo del Candidato *</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Nombre Completo del Candidato *</label>
                   <input 
                     type="text"
                     required
@@ -205,7 +205,7 @@ const ProponerSocio: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-750 uppercase tracking-wide mb-2">Campo Profesional / Ocupación *</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Campo Profesional / Ocupación *</label>
                   <input 
                     type="text"
                     required
@@ -219,7 +219,7 @@ const ProponerSocio: React.FC = () => {
 
               {/* Photo Upload (Opcional) */}
               <div>
-                <label className="block text-sm font-bold text-slate-750 uppercase tracking-wide mb-2">Fotografía del Candidato (Opcional)</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Fotografía del Candidato (Opcional)</label>
                 <div className="flex items-center space-x-6 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                   <div className="w-16 h-16 rounded-full bg-slate-200 flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-300">
                     {fotoCandidato ? (
@@ -249,7 +249,7 @@ const ProponerSocio: React.FC = () => {
 
               {/* Fila de checkboxes (Características de Lions International) */}
               <div className="space-y-3">
-                <label className="block text-sm font-bold text-slate-750 uppercase tracking-wide">Cualidades y Características Destacadas *</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">Cualidades y Características Destacadas *</label>
                 <p className="text-xs text-slate-600 font-medium">Marque las características y aptitudes sobresalientes que describe al candidato en su ética y servicio.</p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
@@ -273,7 +273,7 @@ const ProponerSocio: React.FC = () => {
                           className="w-4 h-4 text-blue-900 border-slate-300 rounded focus:ring-blue-900 mt-0.5 cursor-pointer"
                         />
                         <div>
-                          <p className="text-sm font-black text-slate-900 flex items-center">
+                          <p className="text-sm font-semibold text-slate-900 flex items-center">
                             <SelectedIcon size={14} className="mr-1.5 text-blue-900/60" />
                             {opc.label}
                           </p>
@@ -288,7 +288,7 @@ const ProponerSocio: React.FC = () => {
               {/* Justification Textareas */}
               <div className="space-y-6 pt-2">
                 <div>
-                  <label className="block text-sm font-bold text-slate-750 uppercase tracking-wide mb-2">¿Por qué propone a esta persona? *</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">¿Por qué propone a esta persona? *</label>
                   <textarea 
                     rows={4}
                     required
@@ -300,7 +300,7 @@ const ProponerSocio: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-slate-750 uppercase tracking-wide mb-2">¿Por qué considera que sería un buen León en el club? *</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">¿Por qué considera que sería un buen León en el club? *</label>
                   <textarea 
                     rows={4}
                     required
@@ -316,9 +316,9 @@ const ProponerSocio: React.FC = () => {
               <div className="pt-6 border-t border-slate-100 flex justify-end">
                 <button
                   type="submit"
-                  className="bg-blue-900 hover:bg-blue-800 text-white font-black px-8 py-4 rounded-2xl flex items-center space-x-3 shadow-lg shadow-blue-900/10 active:scale-[0.98] transition-all"
+                  className="bg-blue-900 hover:bg-blue-800 text-white font-semibold px-6 py-3 rounded-2xl flex items-center space-x-3 shadow-lg shadow-blue-900/10 active:scale-[0.98] transition-all text-sm"
                 >
-                  <Send size={18} />
+                  <Send size={16} />
                   <span>Enviar Propuesta al Comité</span>
                 </button>
               </div>

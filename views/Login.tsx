@@ -137,8 +137,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             className="relative w-24 h-24 mx-auto object-contain drop-shadow-lg"
           />
         </div>
-        <h2 className="text-4xl font-extrabold text-blue-900 tracking-tight">Acceso Socios</h2>
-        <p className="text-slate-500 mt-3 font-medium">Panel Administrativo</p>
+        <h2 className="text-2xl md:text-3xl font-bold text-blue-900 tracking-tight">Acceso Socios</h2>
+        <p className="text-sm text-slate-550 mt-1.5 font-medium">Panel Administrativo</p>
       </div>
 
       {error && (
@@ -180,7 +180,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
         <button
           type="submit"
-          className="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-blue-900/20 active:scale-[0.98] flex items-center justify-center space-x-2"
+          className="w-full bg-blue-900 hover:bg-blue-800 text-white font-semibold py-3.5 text-base rounded-2xl transition-all shadow-lg shadow-blue-900/20 active:scale-[0.98] flex items-center justify-center space-x-2"
         >
           <span>Ingresar ahora</span>
           <ArrowRight size={18} />
@@ -198,7 +198,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         <button
           type="button"
           onClick={() => loginWithGoogle()}
-          className="w-full bg-white border border-slate-200 py-3 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 transition-all flex items-center justify-center space-x-3 active:scale-[0.98] shadow-sm"
+          className="w-full bg-white border border-slate-200 py-3 rounded-2xl font-semibold text-sm text-slate-700 hover:bg-slate-50 transition-all flex items-center justify-center space-x-3 active:scale-[0.98] shadow-sm"
         >
           <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" alt="Google" className="w-5 h-5" />
           <span>Cuenta del Club (Workspace)</span>
@@ -206,11 +206,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       </form>
 
       <div className="mt-8 pt-6 border-t border-slate-100 space-y-4">
-        <p className="text-center text-xs font-bold text-slate-400 uppercase tracking-widest">Accesos Rápidos de Prueba</p>
+        <p className="text-center text-sm font-semibold text-slate-400 uppercase tracking-widest">Accesos Rápidos de Prueba</p>
         
         {/* Desplegable para Directiva / Administradores */}
         <div className="space-y-1.5">
-          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Junta Directiva / Gestión</label>
+          <label className="block text-xs font-bold text-slate-450 uppercase tracking-wider">Junta Directiva / Gestión</label>
           <div className="relative">
             <select
               onChange={(e) => {
@@ -220,7 +220,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 }
               }}
               defaultValue=""
-              className="w-full bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-900 cursor-pointer appearance-none"
+              className="w-full bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-sm rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-900 cursor-pointer appearance-none"
             >
               <option value="" disabled>Seleccione un cargo administrativo...</option>
               <option value="clubdeleonesquetzaltenango@gmail.com">🦁 Presidente (Admin Principal)</option>
@@ -241,24 +241,24 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <button
             type="button"
             onClick={() => handleQuickLogin('ricardo.solorzano.g@gmail.com')}
-            className="p-3.5 rounded-2xl border border-blue-200 bg-blue-50/50 hover:bg-blue-100 text-blue-700 font-extrabold text-center transition-all flex flex-col items-center justify-center space-y-1 shadow-sm active:scale-95"
+            className="p-3.5 rounded-2xl border border-blue-200 bg-blue-50/50 hover:bg-blue-100 text-blue-700 font-bold text-center transition-all flex flex-col items-center justify-center space-y-1 shadow-sm active:scale-95"
           >
             <span className="text-lg">🦁</span>
-            <span className="text-xs">Socio Regular</span>
+            <span className="text-sm">Socio Regular</span>
           </button>
           <button
             type="button"
             onClick={() => handleQuickLogin('donante@leonesxela.com')}
-            className="p-3.5 rounded-2xl border border-rose-200 bg-rose-50/50 hover:bg-rose-100 text-rose-700 font-extrabold text-center transition-all flex flex-col items-center justify-center space-y-1 shadow-sm active:scale-95"
+            className="p-3.5 rounded-2xl border border-rose-200 bg-rose-50/50 hover:bg-rose-100 text-rose-700 font-bold text-center transition-all flex flex-col items-center justify-center space-y-1 shadow-sm active:scale-95"
           >
             <span className="text-lg">❤️</span>
-            <span className="text-xs">Donante</span>
+            <span className="text-sm">Donante</span>
           </button>
         </div>
 
-        <p className="text-center text-[10px] text-slate-400 mt-2 leading-relaxed">
+        <p className="text-center text-xs text-slate-400 mt-2 leading-relaxed">
           O escribe las credenciales manualmente con contraseña: <br />
-          🗝️ Super Admin: <span className="font-mono font-bold text-slate-600">Nuevadirectiva2627!</span> | Otros: <span className="font-mono font-bold text-slate-600">123456</span>
+          🗝️ Super Admin: <span className="font-mono font-bold text-slate-500">Nuevadirectiva2627!</span> | Otros: <span className="font-mono font-bold text-slate-500">123456</span>
         </p>
       </div>
     </div>

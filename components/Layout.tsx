@@ -111,8 +111,8 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
                 <img src="images/logo.png" alt="Logo" className="w-11 h-11 object-contain" />
               </div>
               <div className="flex flex-col">
-                <span className="font-black text-xl tracking-tight leading-none">Club de Leones</span>
-                <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest mt-1">Quetzaltenango</span>
+                <span className="font-extrabold text-lg tracking-tight leading-none">Club de Leones</span>
+                <span className="text-[11px] font-black text-yellow-400 uppercase tracking-widest mt-1">Quetzaltenango</span>
               </div>
             </div>
 
@@ -159,8 +159,8 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
                       <div className="absolute right-0 mt-3 w-64 bg-white text-slate-800 rounded-[1.5rem] shadow-2xl border border-slate-100 py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                         {/* Member Details */}
                         <div className="px-5 py-3 border-b border-slate-100">
-                          <p className="font-extrabold text-slate-800 truncate leading-snug">{auth.user?.nombre}</p>
-                          <p className="text-[10px] text-blue-900 font-black uppercase tracking-wider mt-1 truncate">
+                          <p className="font-extrabold text-slate-805 truncate leading-snug">{auth.user?.nombre}</p>
+                          <p className="text-xs text-blue-900 font-bold uppercase tracking-wider mt-1 truncate">
                             {auth.user?.puesto || 'Socio Regular'}
                           </p>
                         </div>
@@ -258,7 +258,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
                   />
                   <div className="min-w-0">
                     <p className="font-extrabold text-white text-base truncate">{auth.user?.nombre}</p>
-                    <p className="text-[10px] text-yellow-400 font-bold uppercase tracking-wider mt-0.5 truncate">{auth.user?.puesto || 'Socio'}</p>
+                    <p className="text-xs text-yellow-400 font-bold uppercase tracking-wider mt-0.5 truncate">{auth.user?.puesto || 'Socio'}</p>
                   </div>
                 </div>
 
@@ -315,7 +315,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
       <footer className="bg-slate-900 text-slate-400 py-16 border-t border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-12">
           <div className="space-y-4">
-            <h3 className="text-white text-2xl font-black tracking-tight flex items-center space-x-2">
+            <h3 className="text-white text-xl font-bold tracking-tight flex items-center space-x-2">
               <span className="bg-white p-1 rounded-xl block"><img src="images/logo.png" alt="Logo" className="w-8 h-8 object-contain" /></span>
               <span>Club de Leones Xela</span>
             </h3>
