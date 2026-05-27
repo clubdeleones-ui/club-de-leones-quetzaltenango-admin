@@ -59,9 +59,15 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
 
       try {
         const fetchedPropuestas = await firebaseService.getProposals();
-        if (fetchedPropuestas && fetchedPropuestas.length > 0) {
-          setPropuestas(fetchedPropuestas);
-          localStorage.setItem('club_leones_propuestas', JSON.stringify(fetchedPropuestas));
+        if (fetchedPropuestas) {
+          setPropuestas(prev => {
+            const fetchedIds = new Set(fetchedPropuestas.map(p => p.id));
+            const unsynced = prev.filter(p => (p as any).synced === false && !fetchedIds.has(p.id));
+            const syncedFetched = fetchedPropuestas.map(p => ({ ...p, synced: true }));
+            const merged = [...syncedFetched, ...unsynced];
+            localStorage.setItem('club_leones_propuestas', JSON.stringify(merged));
+            return merged;
+          });
         }
       } catch (err) {
         console.error("Error fetching proposals from Firebase:", err);

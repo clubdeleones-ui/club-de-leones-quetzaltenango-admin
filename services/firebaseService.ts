@@ -12,19 +12,9 @@ import { Socio, PropuestaSocio } from "../types";
 
 export const firebaseService = {
   // Upload candidate photo to Firebase Storage (Supports Base64 data_url format)
-  uploadCandidatePhoto: async (base64Data: string, candidateId: string): Promise<string> => {
-    if (!base64Data || !base64Data.startsWith("data:")) {
-      return base64Data; // Return as is if it's already a web URL
-    }
-    try {
-      const storageRef = ref(storage, `candidatos/${candidateId}.jpg`);
-      await uploadString(storageRef, base64Data, "data_url");
-      const downloadURL = await getDownloadURL(storageRef);
-      return downloadURL;
-    } catch (error) {
-      console.error("Error uploading photo to Storage:", error);
-      throw error;
-    }
+  uploadCandidatePhoto: async (base64Data: string, _candidateId: string): Promise<string> => {
+    // Return base64 directly to store in Firestore, avoiding Storage rules latency and timeouts
+    return base64Data;
   },
 
   // Save a new proposal to Firestore

@@ -105,18 +105,9 @@ const ProponerSocio: React.FC = () => {
     let finalPhotoUrl = fotoCandidato || 'https://picsum.photos/seed/' + Math.random() + '/200/200';
 
     try {
-      // 1. Upload photo to Firebase Storage if it's base64 data
+      // 1. Upload photo (simply returns the base64 URL now to avoid Storage latency)
       if (fotoCandidato && fotoCandidato.startsWith('data:')) {
-        try {
-          // Wrapped in a 15-second timeout
-          finalPhotoUrl = await withTimeout(
-            firebaseService.uploadCandidatePhoto(fotoCandidato, candidateId),
-            15000,
-            "Storage upload timeout"
-          );
-        } catch (storageError) {
-          console.warn("Storage upload failed, using compressed base64:", storageError);
-        }
+        finalPhotoUrl = await firebaseService.uploadCandidatePhoto(fotoCandidato, candidateId);
       }
 
       const nuevaPropuesta: PropuestaSocio = {
@@ -135,21 +126,30 @@ const ProponerSocio: React.FC = () => {
         nombreEsposa: estadoCivil === 'Casado' ? nombreEsposa : undefined
       };
 
+      let isSynced = false;
       try {
-        // 2. Save proposal to Firestore (Wrapped in a 10-second timeout)
+        // 2. Save proposal to Firestore (Wrapped in a 8-second timeout for quick feedback)
         await withTimeout(
           firebaseService.saveProposal(nuevaPropuesta),
-          10000,
-          "Firestore save timeout"
+          8000,
+          "El servidor de la base de datos central tardó demasiado en responder."
         );
-      } catch (firestoreError) {
+        isSynced = true;
+      } catch (firestoreError: any) {
         console.error("Firestore save failed, falling back to local storage:", firestoreError);
+        alert(`Aviso: No se pudo subir la propuesta al servidor central (${firestoreError?.message || firestoreError}). La propuesta quedará guardada temporalmente en este dispositivo y se visualizará en tu directorio.`);
       }
 
-      // 3. Save to localStorage in any case as fallback/cache
+      // Add sync state metadata to the local copy
+      const propuestaLocal = {
+        ...nuevaPropuesta,
+        synced: isSynced
+      };
+
+      // 3. Save to localStorage
       const localPropuestas = localStorage.getItem('club_leones_propuestas');
       const propuestasActuales = localPropuestas ? JSON.parse(localPropuestas) : [];
-      localStorage.setItem('club_leones_propuestas', JSON.stringify([nuevaPropuesta, ...propuestasActuales]));
+      localStorage.setItem('club_leones_propuestas', JSON.stringify([propuestaLocal, ...propuestasActuales]));
 
       setSubmitted(true);
     } catch (err) {
