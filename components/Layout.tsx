@@ -1,7 +1,20 @@
-
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, LogIn, LogOut, User, FileText, Calendar, Image, ShieldCheck, Home } from 'lucide-react';
+import { 
+  Menu, 
+  X, 
+  LogIn, 
+  LogOut, 
+  User, 
+  FileText, 
+  Calendar, 
+  Image, 
+  ShieldCheck, 
+  Home,
+  Users,
+  ChevronDown,
+  Info
+} from 'lucide-react';
 import { AuthState, UserRole } from '../types';
 import { googleService } from '../services/googleService';
 
@@ -12,11 +25,14 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
-  const [isOpen, setIsOpen] = React.useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => {
+  // Initialize Gapi client
+  useEffect(() => {
     const initGapi = async () => {
       try {
         await googleService.initClient();
@@ -30,6 +46,19 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
     initGapi();
   }, [auth.accessToken]);
 
+  // Click outside to close user dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsUserDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const navItems = [
     { label: 'Inicio', path: '/', icon: Home, public: true },
     { label: 'Actividades', path: '/actividades', icon: Calendar, public: true },
@@ -42,10 +71,9 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
     
     const items = [{ label: 'Mi Panel', path: '/dashboard', icon: User }];
     
-    // Donors do not have access to internal club documents (actas) or member directories
     if (auth.user.rol !== UserRole.DONANTE) {
       items.push({ label: 'Actas', path: '/actas', icon: FileText });
-      items.push({ label: 'Directorio', path: '/socios', icon: User });
+      items.push({ label: 'Directorio', path: '/socios', icon: Users });
     }
     
     const isAdministrative = 
@@ -70,58 +98,115 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <nav className="bg-blue-900 text-white shadow-lg sticky top-0 z-50">
+    <div className="min-h-screen flex flex-col bg-slate-50/50">
+      {/* Main Premium Navbar */}
+      <nav className="bg-blue-900/95 backdrop-blur-md text-white shadow-xl sticky top-0 z-50 border-b border-blue-800/40 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center space-x-3 cursor-pointer group" onClick={() => navigate('/')}>
-              <div className="bg-white p-1 rounded-full overflow-hidden transition-transform group-hover:scale-110 shadow-md">
-                <img src="/images/logo.png" alt="Logo" className="w-10 h-10 object-contain" />
+          <div className="flex justify-between h-20">
+            {/* Logo Section */}
+            <div className="flex items-center space-x-4 cursor-pointer group" onClick={() => navigate('/')}>
+              <div className="bg-white p-1 rounded-2xl overflow-hidden transition-all duration-300 group-hover:scale-105 group-hover:rotate-3 shadow-lg">
+                <img src="/images/logo.png" alt="Logo" className="w-11 h-11 object-contain" />
               </div>
               <div className="flex flex-col">
-                <span className="font-bold text-lg tracking-tight leading-none">Club de Leones</span>
-                <span className="text-xs font-medium text-yellow-400 uppercase tracking-widest mt-0.5">Quetzaltenango</span>
+                <span className="font-black text-xl tracking-tight leading-none">Club de Leones</span>
+                <span className="text-[10px] font-black text-yellow-400 uppercase tracking-widest mt-1">Quetzaltenango</span>
               </div>
             </div>
 
-            {/* Desktop Nav */}
-            <div className="hidden md:flex items-center space-x-4">
-              {navItems.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${location.pathname === item.path ? 'bg-blue-800 text-yellow-400' : 'hover:bg-blue-800'
+            {/* Desktop Nav Items */}
+            <div className="hidden md:flex items-center space-x-2">
+              {navItems.map((item) => {
+                const active = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 flex items-center space-x-2 ${
+                      active 
+                        ? 'bg-blue-850/65 text-yellow-400 shadow-inner' 
+                        : 'text-slate-200 hover:bg-blue-800/50 hover:text-white'
                     }`}
-                >
-                  {item.label}
-                </Link>
-              ))}
+                  >
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
 
+              {/* Authentication Actions / Dropdown */}
               {auth.isAuthenticated ? (
                 <>
-                  <div className="h-6 w-px bg-blue-700 mx-2" />
-                  {protectedItems.map((item) => (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${location.pathname === item.path ? 'bg-blue-800 text-yellow-400' : 'hover:bg-blue-800'
-                        }`}
+                  <div className="h-8 w-px bg-blue-850/60 mx-4" />
+                  
+                  {/* User Dropdown */}
+                  <div className="relative" ref={dropdownRef}>
+                    <button
+                      onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+                      className="flex items-center space-x-2 focus:outline-none hover:bg-blue-800/50 p-1.5 rounded-2xl transition-all duration-300 border border-transparent hover:border-blue-750"
                     >
-                      {item.label}
-                    </Link>
-                  ))}
-                  <button
-                    onClick={onLogout}
-                    className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors ml-4"
-                  >
-                    <LogOut size={18} />
-                    <span>Salir</span>
-                  </button>
+                      <img
+                        src={auth.user?.foto || 'https://picsum.photos/seed/' + auth.user?.id + '/100/100'}
+                        alt={auth.user?.nombre}
+                        className="w-10 h-10 rounded-xl object-cover border border-slate-300/30"
+                      />
+                      <ChevronDown size={16} className={`text-slate-300 transition-transform duration-300 ${isUserDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {/* Dropdown Menu Floating Card */}
+                    {isUserDropdownOpen && (
+                      <div className="absolute right-0 mt-3 w-64 bg-white text-slate-800 rounded-[1.5rem] shadow-2xl border border-slate-100 py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                        {/* Member Details */}
+                        <div className="px-5 py-3 border-b border-slate-100">
+                          <p className="font-extrabold text-slate-800 truncate leading-snug">{auth.user?.nombre}</p>
+                          <p className="text-[10px] text-blue-900 font-black uppercase tracking-wider mt-1 truncate">
+                            {auth.user?.puesto || 'Socio Regular'}
+                          </p>
+                        </div>
+                        
+                        {/* Protected links */}
+                        <div className="py-2">
+                          {protectedItems.map((item) => {
+                            const Icon = item.icon;
+                            const isLinkActive = location.pathname === item.path;
+                            return (
+                              <Link
+                                key={item.path}
+                                to={item.path}
+                                onClick={() => setIsUserDropdownOpen(false)}
+                                className={`flex items-center space-x-3 px-5 py-3 text-sm font-bold transition-colors ${
+                                  isLinkActive 
+                                    ? 'bg-blue-50 text-blue-900' 
+                                    : 'text-slate-600 hover:bg-slate-50'
+                                }`}
+                              >
+                                <Icon size={18} className={isLinkActive ? 'text-blue-900' : 'text-slate-400'} />
+                                <span>{item.label}</span>
+                              </Link>
+                            );
+                          })}
+                        </div>
+
+                        {/* Logout action */}
+                        <div className="border-t border-slate-100 pt-2 px-2">
+                          <button
+                            onClick={() => {
+                              setIsUserDropdownOpen(false);
+                              onLogout();
+                            }}
+                            className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                          >
+                            <LogOut size={18} />
+                            <span>Cerrar Sesión</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </>
               ) : (
                 <button
                   onClick={() => navigate('/login')}
-                  className="flex items-center space-x-2 bg-yellow-500 hover:bg-yellow-600 text-blue-900 px-4 py-2 rounded-lg font-bold transition-colors ml-4"
+                  className="flex items-center space-x-2 bg-yellow-500 hover:bg-yellow-600 text-blue-955 px-5 py-2.5 rounded-xl font-black transition-all ml-4 shadow-lg shadow-yellow-500/10 hover:-translate-y-0.5"
                 >
                   <LogIn size={18} />
                   <span>Acceso Socios</span>
@@ -133,7 +218,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
             <div className="md:hidden flex items-center">
               <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="inline-flex items-center justify-center p-2 rounded-md hover:bg-blue-800 focus:outline-none"
+                className="inline-flex items-center justify-center p-2.5 rounded-xl hover:bg-blue-800 focus:outline-none transition-colors border border-transparent hover:border-blue-750"
               >
                 {isOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
@@ -141,77 +226,128 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
           </div>
         </div>
 
-        {/* Mobile Nav */}
+        {/* Mobile Navigation Drawer */}
         {isOpen && (
-          <div className="md:hidden bg-blue-900 border-t border-blue-800 px-2 pt-2 pb-3 space-y-1">
-            {navItems.map((item) => (
-              <button
-                key={item.path}
-                onClick={() => handleNav(item.path)}
-                className="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-blue-800"
-              >
-                {item.label}
-              </button>
-            ))}
+          <div className="md:hidden bg-blue-900 border-t border-blue-800 px-4 py-4 space-y-3 animate-in slide-in-from-top duration-300">
+            {/* Public Links */}
+            <div className="space-y-1">
+              {navItems.map((item) => (
+                <button
+                  key={item.path}
+                  onClick={() => handleNav(item.path)}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-left text-base font-bold transition-all ${
+                    location.pathname === item.path ? 'bg-blue-800 text-yellow-400' : 'text-slate-200 hover:bg-blue-850'
+                  }`}
+                >
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Private Links / Profile */}
             {auth.isAuthenticated ? (
-              <>
-                <div className="border-t border-blue-800 my-2 pt-2">
-                  {protectedItems.map((item) => (
-                    <button
-                      key={item.path}
-                      onClick={() => handleNav(item.path)}
-                      className="block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-blue-800"
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                  <button
-                    onClick={onLogout}
-                    className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-400 hover:bg-blue-800"
-                  >
-                    Cerrar Sesión
-                  </button>
+              <div className="border-t border-blue-850 pt-4 space-y-4">
+                {/* Profile card mobile */}
+                <div className="flex items-center space-x-4 px-4 py-2 bg-blue-850/40 rounded-2xl border border-blue-800/40">
+                  <img 
+                    src={auth.user?.foto || 'https://picsum.photos/seed/' + auth.user?.id + '/100/100'} 
+                    alt={auth.user?.nombre} 
+                    className="w-12 h-12 rounded-xl object-cover" 
+                  />
+                  <div className="min-w-0">
+                    <p className="font-extrabold text-white text-base truncate">{auth.user?.nombre}</p>
+                    <p className="text-[10px] text-yellow-400 font-bold uppercase tracking-wider mt-0.5 truncate">{auth.user?.puesto || 'Socio'}</p>
+                  </div>
                 </div>
-              </>
+
+                {/* Sub links */}
+                <div className="space-y-1">
+                  {protectedItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={item.path}
+                        onClick={() => handleNav(item.path)}
+                        className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-left text-base font-bold transition-all ${
+                          location.pathname === item.path ? 'bg-blue-800 text-yellow-400' : 'text-slate-200 hover:bg-blue-850'
+                        }`}
+                      >
+                        <Icon size={18} className="text-slate-400" />
+                        <span>{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Logout Button */}
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    onLogout();
+                  }}
+                  className="w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-left text-base font-bold text-red-400 hover:bg-red-500/10 transition-all border border-transparent hover:border-red-500/20"
+                >
+                  <LogOut size={18} />
+                  <span>Cerrar Sesión</span>
+                </button>
+              </div>
             ) : (
               <button
                 onClick={() => handleNav('/login')}
-                className="block w-full text-left px-3 py-2 rounded-md text-base font-medium bg-yellow-500 text-blue-900 mt-4"
+                className="w-full flex items-center justify-center space-x-2 px-4 py-3.5 rounded-xl text-base font-black bg-yellow-500 text-blue-955 hover:bg-yellow-600 transition-all"
               >
-                Acceso Socios
+                <LogIn size={18} />
+                <span>Acceso Socios</span>
               </button>
             )}
           </div>
         )}
       </nav>
 
-      <main className="flex-grow container mx-auto px-4 py-8">
+      {/* Main Content Area */}
+      <main className="flex-grow">
         {children}
       </main>
 
-      <footer className="bg-slate-900 text-slate-400 py-12">
-        <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div>
-            <h3 className="text-white text-xl font-bold mb-4">Club de Leones Quetzaltenango</h3>
-            <p className="text-sm">Sirviendo a la comunidad altense desde hace décadas con integridad y compromiso.</p>
+      {/* Footer Section */}
+      <footer className="bg-slate-900 text-slate-400 py-16 border-t border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-12">
+          <div className="space-y-4">
+            <h3 className="text-white text-2xl font-black tracking-tight flex items-center space-x-2">
+              <span className="bg-white p-1 rounded-xl block"><img src="/images/logo.png" alt="Logo" className="w-8 h-8 object-contain" /></span>
+              <span>Club de Leones Xela</span>
+            </h3>
+            <p className="text-sm leading-relaxed">
+              Sirviendo a la comunidad altense y de Quetzaltenango desde hace décadas con integridad, compañerismo y un firme compromiso de servicio comunitario.
+            </p>
           </div>
           <div>
-            <h4 className="text-white font-semibold mb-4">Enlaces Rápidos</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link to="/estatutos" className="hover:text-yellow-500">Estatutos</Link></li>
-              <li><Link to="/actividades" className="hover:text-yellow-500">Actividades</Link></li>
-              <li><Link to="/galeria" className="hover:text-yellow-500">Historia</Link></li>
-              <li><Link to="/proponer-socio" className="hover:text-yellow-500 font-bold text-yellow-400">Proponer Nuevo Socio</Link></li>
+            <h4 className="text-white font-black uppercase text-sm tracking-widest mb-6">Enlaces Rápidos</h4>
+            <ul className="space-y-3 text-sm font-semibold">
+              <li><Link to="/estatutos" className="hover:text-yellow-400 transition-colors">Estatutos Oficiales</Link></li>
+              <li><Link to="/actividades" className="hover:text-yellow-400 transition-colors">Calendario de Actividades</Link></li>
+              <li><Link to="/galeria" className="hover:text-yellow-400 transition-colors">Galería Histórica</Link></li>
+              <li>
+                <Link to="/proponer-socio" className="text-yellow-400 hover:text-yellow-500 font-bold flex items-center transition-colors">
+                  <Info size={14} className="mr-2" />
+                  Proponer Nuevo Socio (Público)
+                </Link>
+              </li>
             </ul>
           </div>
-          <div>
-            <h4 className="text-white font-semibold mb-4">Contacto</h4>
-            <p className="text-sm italic">Quetzaltenango, Guatemala</p>
-            <p className="text-sm">Email: info@leonesxela.com</p>
+          <div className="space-y-4">
+            <h4 className="text-white font-black uppercase text-sm tracking-widest mb-6">Contacto y Sede</h4>
+            <p className="text-sm leading-relaxed">
+              Quetzaltenango, Guatemala <br />
+              <span className="text-slate-500">Sede Central del Club de Leones</span>
+            </p>
+            <p className="text-sm">
+              Email: <a href="mailto:clubdeleonesquetzaltenango@gmail.com" className="text-slate-300 hover:text-yellow-400 transition-colors">clubdeleonesquetzaltenango@gmail.com</a>
+            </p>
           </div>
         </div>
-        <div className="container mx-auto px-4 mt-8 pt-8 border-t border-slate-800 text-center text-xs">
-          &copy; {new Date().getFullYear()} Club de Leones Quetzaltenango. Todos los derechos reservados.
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-8 border-t border-slate-800 text-center text-xs">
+          &copy; {new Date().getFullYear()} Club de Leones Quetzaltenango. Diseñado para servicio y liderazgo. Todos los derechos reservados.
         </div>
       </footer>
     </div>
