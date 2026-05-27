@@ -3,36 +3,48 @@ import { Socio, UserRole, Acta, Actividad, GaleriaItem, Donacion, Beneficio } fr
 export const MOCK_SOCIOS: Socio[] = [
   {
     id: '1',
-    nombre: 'Jorge De Leon Alconero',
-    correo: 'alconerodeleonjm@gmail.com',
+    nombre: 'Edwin Ernesto Pacheco López',
+    correo: 'innovandoxela@gmail.com',
     rol: UserRole.SUPER_ADMIN,
     puesto: 'Presidente del Club',
     estadoCuotas: 'Al día',
     montoPendiente: 0,
-    foto: 'https://picsum.photos/seed/jorge/200/200',
-    fechaIngreso: '2025-07-01'
+    foto: 'https://picsum.photos/seed/edwin/200/200',
+    fechaIngreso: '2026-07-01',
+    telefono: '502-36135616',
+    estatus: 'Pending',
+    fechaFin: '2027-06-30',
+    club: 'QUETZALTENANGO'
   },
   {
     id: '2',
-    nombre: 'Edwin Ernesto Pacheco López',
-    correo: 'innovandoxela@gmail.com',
+    nombre: 'Flor Rodríguez Cifuentes',
+    correo: 'ubirod3@gmail.com',
     rol: UserRole.SECRETARIO,
     puesto: 'Secretario del Club',
     estadoCuotas: 'Al día',
     montoPendiente: 0,
-    foto: 'https://picsum.photos/seed/edwin/200/200',
-    fechaIngreso: '2025-07-01'
+    foto: 'https://picsum.photos/seed/flor/200/200',
+    fechaIngreso: '2026-07-01',
+    telefono: '',
+    estatus: 'Pending',
+    fechaFin: '2027-06-30',
+    club: 'QUETZALTENANGO'
   },
   {
     id: '3',
-    nombre: 'Mynor Gómez López',
-    correo: 'mynorgl@hotmail.com',
+    nombre: 'Oscar Adolfo Garcia Chamale',
+    correo: 'oscargarcia@leonesxela.com',
     rol: UserRole.TESORERO,
     puesto: 'Tesorero del Club',
     estadoCuotas: 'Al día',
     montoPendiente: 0,
-    foto: 'https://picsum.photos/seed/mynor/200/200',
-    fechaIngreso: '2025-07-01'
+    foto: 'https://picsum.photos/seed/oscar/200/200',
+    fechaIngreso: '2026-07-01',
+    telefono: '',
+    estatus: 'Pending',
+    fechaFin: '2027-06-30',
+    club: 'QUETZALTENANGO'
   },
   {
     id: '4',
@@ -43,21 +55,44 @@ export const MOCK_SOCIOS: Socio[] = [
     estadoCuotas: 'Al día',
     montoPendiente: 0,
     foto: 'https://picsum.photos/seed/mariantonia/200/200',
-    fechaIngreso: '2025-07-01'
+    fechaIngreso: '2026-07-01',
+    telefono: '502-0000-54140948',
+    estatus: 'Pending',
+    fechaFin: '2027-06-30',
+    club: 'QUETZALTENANGO'
   },
   {
     id: '5',
-    nombre: 'Gladis Violeta Gramajo Estrada De Solorzano',
-    correo: 'ggramajodesolorzano@gmail.com',
+    nombre: 'Rolando José Daniel Mérida del Valle',
+    correo: 'contactomsixela@gmail.com',
     rol: UserRole.PRESIDENTE_AFILIACION,
-    puesto: 'Administrador del club',
+    puesto: 'Presidente del Comité de Aumento de Socios del Club',
     estadoCuotas: 'Al día',
     montoPendiente: 0,
-    foto: 'https://picsum.photos/seed/gladis/200/200',
-    fechaIngreso: '2025-10-12'
+    foto: 'https://picsum.photos/seed/rolando/200/200',
+    fechaIngreso: '2026-07-01',
+    telefono: '',
+    estatus: 'Pending',
+    fechaFin: '2027-06-30',
+    club: 'QUETZALTENANGO'
   },
   {
     id: '6',
+    nombre: 'Jonathan García Chávez',
+    correo: 'jd.garcia.ch@gmail.com',
+    rol: UserRole.ASESOR_SERVICIOS,
+    puesto: 'Asesor de Servicios del club',
+    estadoCuotas: 'Al día',
+    montoPendiente: 0,
+    foto: 'https://picsum.photos/seed/jonathan/200/200',
+    fechaIngreso: '2026-07-01',
+    telefono: '',
+    estatus: 'Pending',
+    fechaFin: '2027-06-30',
+    club: 'QUETZALTENANGO'
+  },
+  {
+    id: '7',
     nombre: 'Ricardo Solorzano Guillen',
     correo: 'ricardo.solorzano.g@gmail.com',
     rol: UserRole.SOCIO,
@@ -65,10 +100,29 @@ export const MOCK_SOCIOS: Socio[] = [
     estadoCuotas: 'Al día',
     montoPendiente: 0,
     foto: 'https://picsum.photos/seed/ricardo/200/200',
-    fechaIngreso: '2025-07-01'
+    fechaIngreso: '2026-07-01',
+    telefono: '0050230348221',
+    estatus: 'Pending',
+    fechaFin: '2027-06-30',
+    club: 'QUETZALTENANGO'
   },
   {
-    id: '7',
+    id: '10',
+    nombre: 'Oscar Adolfo Garcia Chamale',
+    correo: 'oscargarcia2@leonesxela.com',
+    rol: UserRole.SOCIO,
+    puesto: 'Segundo Vicepresidente de club',
+    estadoCuotas: 'Al día',
+    montoPendiente: 0,
+    foto: 'https://picsum.photos/seed/oscar2/200/200',
+    fechaIngreso: '2026-07-01',
+    telefono: '',
+    estatus: 'Pending',
+    fechaFin: '2027-06-30',
+    club: 'QUETZALTENANGO'
+  },
+  {
+    id: '8',
     nombre: 'Club de Leones Quetzaltenango',
     correo: 'clubdeleonesquetzaltenango@gmail.com',
     rol: UserRole.SUPER_ADMIN,
@@ -76,10 +130,14 @@ export const MOCK_SOCIOS: Socio[] = [
     estadoCuotas: 'Al día',
     montoPendiente: 0,
     foto: 'https://picsum.photos/seed/adminmain/200/200',
-    fechaIngreso: '2026-01-01'
+    fechaIngreso: '2026-01-01',
+    telefono: '502-7761-0000',
+    estatus: 'Active',
+    fechaFin: 'Sin fecha fin',
+    club: 'QUETZALTENANGO'
   },
   {
-    id: '8',
+    id: '9',
     nombre: 'Sofía Ramos',
     correo: 'donante@leonesxela.com',
     rol: UserRole.DONANTE,
@@ -87,7 +145,11 @@ export const MOCK_SOCIOS: Socio[] = [
     estadoCuotas: 'Al día',
     montoPendiente: 0,
     foto: 'https://picsum.photos/seed/donante1/200/200',
-    fechaIngreso: '2025-02-14'
+    fechaIngreso: '2025-02-14',
+    telefono: '502-5555-5555',
+    estatus: 'Active',
+    fechaFin: 'Sin fecha fin',
+    club: 'QUETZALTENANGO'
   }
 ];
 

@@ -20,6 +20,10 @@ export interface Socio {
   montoPendiente: number;
   foto: string;
   fechaIngreso: string;
+  telefono?: string;
+  estatus?: string;
+  fechaFin?: string;
+  club?: string;
 }
 
 export interface Acta {

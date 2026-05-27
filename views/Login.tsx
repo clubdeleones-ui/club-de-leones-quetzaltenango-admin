@@ -223,11 +223,12 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               className="w-full bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-900 cursor-pointer appearance-none"
             >
               <option value="" disabled>Seleccione un cargo administrativo...</option>
-              <option value="clubdeleonesquetzaltenango@gmail.com">🦁 Presidente (Super Admin)</option>
-              <option value="admin@leonesxela.com">💰 Tesorero</option>
-              <option value="elena@leonesxela.com">📝 Secretario</option>
-              <option value="carlos@leonesxela.com">🤝 Asesor de Servicios</option>
-              <option value="mariela@leonesxela.com">📋 Presidente de Afiliación</option>
+              <option value="clubdeleonesquetzaltenango@gmail.com">🦁 Presidente (Admin Principal)</option>
+              <option value="innovandoxela@gmail.com">🦁 Edwin Pacheco (Presidente 26-27)</option>
+              <option value="oscargarcia@leonesxela.com">💰 Oscar Garcia (Tesorero)</option>
+              <option value="ubirod3@gmail.com">📝 Flor Rodríguez (Secretario)</option>
+              <option value="mariancruzdl@gmail.com">🤝 Mariantonia Cruz (Mercadotecnia)</option>
+              <option value="contactomsixela@gmail.com">📋 Rolando Mérida (Afiliación)</option>
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400 font-bold text-xs">
               ▼
@@ -239,7 +240,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         <div className="grid grid-cols-2 gap-3 pt-1">
           <button
             type="button"
-            onClick={() => handleQuickLogin('ricardo@leonesxela.com')}
+            onClick={() => handleQuickLogin('ricardo.solorzano.g@gmail.com')}
             className="p-3.5 rounded-2xl border border-blue-200 bg-blue-50/50 hover:bg-blue-100 text-blue-700 font-extrabold text-center transition-all flex flex-col items-center justify-center space-y-1 shadow-sm active:scale-95"
           >
             <span className="text-lg">🦁</span>

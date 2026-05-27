@@ -76,9 +76,9 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
   
   // Dynamic States with localStorage persistence
   const [socios, setSocios] = useState<Socio[]>(() => {
-    const local = localStorage.getItem('club_leones_socios_v2');
+    const local = localStorage.getItem('club_leones_socios_v3');
     if (local) return JSON.parse(local);
-    localStorage.setItem('club_leones_socios_v2', JSON.stringify(MOCK_SOCIOS));
+    localStorage.setItem('club_leones_socios_v3', JSON.stringify(MOCK_SOCIOS));
     return MOCK_SOCIOS;
   });
 
@@ -88,7 +88,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
   });
 
   useEffect(() => {
-    localStorage.setItem('club_leones_socios_v2', JSON.stringify(socios));
+    localStorage.setItem('club_leones_socios_v3', JSON.stringify(socios));
   }, [socios]);
 
   useEffect(() => {

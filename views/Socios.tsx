@@ -11,7 +11,9 @@ import {
   Users,
   Briefcase,
   ThumbsUp,
-  Clock
+  Clock,
+  Phone,
+  Building
 } from 'lucide-react';
 
 const Socios: React.FC = () => {
@@ -19,7 +21,7 @@ const Socios: React.FC = () => {
   
   // Load members from localStorage or fallback to mock
   const [socios, setSocios] = useState<Socio[]>(() => {
-    const local = localStorage.getItem('club_leones_socios_v2');
+    const local = localStorage.getItem('club_leones_socios_v3');
     if (local) return JSON.parse(local);
     return MOCK_SOCIOS;
   });
@@ -79,43 +81,147 @@ const Socios: React.FC = () => {
       <div className="animate-in fade-in-50 duration-300">
         {activeTab === 'activos' ? (
           /* ACTIVE MEMBERS LIST */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 pt-10">
             {socios.map((socio) => (
               <div 
                 key={socio.id} 
-                className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 flex items-start space-x-6 hover:shadow-xl hover:border-slate-200 transition-all duration-300 group"
+                className="bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-2xl border border-slate-100 hover:border-blue-900/10 transition-all duration-500 flex flex-col relative group hover:-translate-y-2"
               >
-                <img 
-                  src={socio.foto} 
-                  className="w-24 h-24 rounded-2xl object-cover border-4 border-slate-50 shadow-inner group-hover:scale-105 transition-transform duration-300" 
-                  alt={socio.nombre} 
-                />
-                <div className="space-y-3 flex-grow min-w-0">
-                  <div>
-                    <h3 className="font-extrabold text-xl text-slate-900 leading-tight truncate">{socio.nombre}</h3>
-                    <span className={`inline-block text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full mt-1.5 ${
-                      socio.puesto 
-                        ? 'bg-yellow-500 text-blue-900' 
-                        : 'bg-blue-50 text-blue-800'
+                {/* Cabecera decorativa */}
+                <div className="h-28 bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 relative">
+                  {/* Patrón de líneas decorativas o círculos difusos en el fondo */}
+                  <div className="absolute inset-0 opacity-15 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-yellow-300 via-transparent to-transparent"></div>
+                  
+                  {/* Badge de Estatus flotante premium */}
+                  <div className="absolute top-4 right-4">
+                    <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center space-x-1.5 border backdrop-blur-md ${
+                      socio.estatus === 'Pending' 
+                        ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' 
+                        : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                     }`}>
-                      {socio.puesto || 'Socio Regular'}
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        socio.estatus === 'Pending' ? 'bg-yellow-500 animate-pulse' : 'bg-emerald-400 animate-pulse'
+                      }`} />
+                      <span>{socio.estatus === 'Pending' ? 'Pendiente' : 'Activo'}</span>
                     </span>
                   </div>
-                  <div className="space-y-1.5 pt-1">
-                    <div className="flex items-center text-slate-700 text-sm truncate font-medium">
-                      <Mail size={14} className="mr-2.5 text-slate-500 flex-shrink-0" />
-                      <span className="truncate">{socio.correo}</span>
-                    </div>
-                    <div className="flex items-center text-slate-700 text-sm font-medium">
-                      <Calendar size={14} className="mr-2.5 text-slate-500 flex-shrink-0" />
-                      <span>Ingreso: {socio.fechaIngreso}</span>
-                    </div>
-                    {socio.puesto && (
-                      <div className="flex items-center text-blue-900 text-sm font-bold bg-blue-50/50 px-3 py-1.5 rounded-xl w-fit">
-                        <Award size={14} className="mr-2 text-yellow-500" />
-                        Junta Directiva
+                </div>
+
+                {/* Avatar y Contenido */}
+                <div className="px-6 pb-8 pt-14 flex flex-col flex-grow items-center text-center relative">
+                  {/* Contenedor del Avatar flotando sobre la cabecera */}
+                  <div className="absolute -top-12 left-1/2 transform -translate-x-1/2">
+                    <div className="relative">
+                      {/* Anillo de color según jerarquía */}
+                      <img 
+                        src={socio.foto || `https://picsum.photos/seed/${socio.nombre}/200/200`} 
+                        className={`w-24 h-24 rounded-full object-cover border-4 border-white shadow-xl group-hover:scale-105 transition-all duration-500 ${
+                          socio.rol === 'SUPER_ADMIN' || socio.rol === 'TESORERO' || socio.rol === 'SECRETARIO'
+                            ? 'ring-4 ring-amber-400/80 ring-offset-2'
+                            : 'ring-4 ring-blue-900/60 ring-offset-2'
+                        }`} 
+                        alt={socio.nombre} 
+                      />
+                      <div className="absolute bottom-0 right-0 bg-blue-950 text-amber-400 p-1.5 rounded-full border-2 border-white shadow-md">
+                        <Award size={14} />
                       </div>
-                    )}
+                    </div>
+                  </div>
+
+                  {/* Nombre y Cargo */}
+                  <div className="space-y-2.5 w-full">
+                    <h3 className="font-extrabold text-xl text-slate-900 tracking-tight leading-snug group-hover:text-blue-950 transition-colors">
+                      {socio.nombre}
+                    </h3>
+                    
+                    {/* Badge de Puesto */}
+                    <div className="flex justify-center">
+                      <span className={`text-[11px] font-extrabold uppercase tracking-wider px-3.5 py-1 rounded-full border ${
+                        socio.rol === 'SUPER_ADMIN' || socio.rol === 'TESORERO' || socio.rol === 'SECRETARIO'
+                          ? 'bg-amber-50 text-amber-850 border-amber-200/70'
+                          : socio.rol === 'ASESOR_SERVICIOS' || socio.rol === 'PRESIDENTE_AFILIACION'
+                          ? 'bg-indigo-50 text-indigo-800 border-indigo-200/70'
+                          : 'bg-slate-50 text-slate-700 border-slate-200/70'
+                      }`}>
+                        {socio.puesto || 'Socio Regular'}
+                      </span>
+                    </div>
+                    
+                    {/* Caja de Datos Premium */}
+                    <div className="w-full bg-slate-50/50 rounded-2xl p-4 border border-slate-100/90 text-left text-xs font-semibold text-slate-700 space-y-3 mt-5">
+                      {/* Club */}
+                      <div className="flex items-center justify-between pb-2 border-b border-slate-100/60">
+                        <span className="text-slate-400 flex items-center space-x-1.5">
+                          <Building size={14} className="text-slate-400 flex-shrink-0" />
+                          <span>Club</span>
+                        </span>
+                        <span className="font-bold text-slate-800 text-right truncate max-w-[150px]">{socio.club || 'QUETZALTENANGO'}</span>
+                      </div>
+
+                      {/* Correo */}
+                      <div className="flex items-center justify-between pb-2 border-b border-slate-100/60">
+                        <span className="text-slate-400 flex items-center space-x-1.5">
+                          <Mail size={14} className="text-slate-400 flex-shrink-0" />
+                          <span>Correo</span>
+                        </span>
+                        {socio.correo ? (
+                          <a 
+                            href={`mailto:${socio.correo}`}
+                            className="font-bold text-blue-900 hover:text-blue-700 truncate max-w-[170px] transition-colors"
+                            title={socio.correo}
+                          >
+                            {socio.correo}
+                          </a>
+                        ) : (
+                          <span className="text-slate-400 font-medium italic">Sin correo registrado</span>
+                        )}
+                      </div>
+
+                      {/* Teléfono */}
+                      <div className="flex items-center justify-between pb-2 border-b border-slate-100/60">
+                        <span className="text-slate-400 flex items-center space-x-1.5">
+                          <Phone size={14} className="text-slate-400 flex-shrink-0" />
+                          <span>Teléfono</span>
+                        </span>
+                        {socio.telefono && socio.telefono !== 'Sin teléfono' && socio.telefono !== '' ? (
+                          <a 
+                            href={`tel:${socio.telefono}`}
+                            className="font-bold text-slate-800 hover:text-blue-900 transition-colors"
+                          >
+                            {socio.telefono}
+                          </a>
+                        ) : (
+                          <span className="text-slate-400 font-medium italic">Sin teléfono registrado</span>
+                        )}
+                      </div>
+
+                      {/* Gestión / Período */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-400 flex items-center space-x-1.5">
+                          <Calendar size={14} className="text-slate-400 flex-shrink-0" />
+                          <span>Gestión</span>
+                        </span>
+                        <span className="font-bold text-slate-800 text-right truncate">
+                          {socio.fechaIngreso} al {socio.fechaFin && socio.fechaFin !== 'Sin fecha fin' ? socio.fechaFin : 'Indefinido'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Membresía / Solvencia */}
+                    <div className="flex items-center justify-between px-2 pt-2 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                      <span>Membresía Financiera</span>
+                      <span className={`flex items-center space-x-1 ${
+                        socio.estadoCuotas === 'Al día' 
+                          ? 'text-emerald-600' 
+                          : socio.estadoCuotas === 'Pendiente'
+                          ? 'text-yellow-600'
+                          : 'text-rose-600'
+                      }`}>
+                        <span>●</span>
+                        <span>{socio.estadoCuotas}</span>
+                      </span>
+                    </div>
+
                   </div>
                 </div>
               </div>
