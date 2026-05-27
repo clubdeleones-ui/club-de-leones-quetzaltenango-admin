@@ -370,45 +370,48 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                 {propuestasAMostrar.map((propuesta) => (
                   <div 
                     key={propuesta.id} 
-                    className={`bg-white rounded-3xl p-6 shadow-sm border hover:shadow-xl transition-all duration-300 flex flex-col space-y-5 relative ${
-                      propuesta.estado === 'Aprobado' ? 'border-green-200' : 
-                      propuesta.estado === 'Rechazado' ? 'border-red-200' : 'border-slate-100 hover:border-slate-200'
+                    className={`bg-white rounded-3xl overflow-hidden shadow-md border hover:shadow-xl transition-all duration-300 flex flex-col relative ${
+                      propuesta.estado === 'Aprobado' ? 'border-green-300' : 
+                      propuesta.estado === 'Rechazado' ? 'border-red-300' : 'border-yellow-300'
                     }`}
                   >
-                    {/* Header info */}
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-5">
-                        <img 
-                          src={propuesta.fotoCandidato || 'https://picsum.photos/seed/' + propuesta.id + '/200/200'} 
-                          className="w-20 h-20 rounded-2xl object-cover border-4 border-slate-50 shadow-sm flex-shrink-0" 
-                          alt={propuesta.nombreCandidato} 
-                        />
-                        <div className="space-y-1.5 min-w-0">
-                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                            propuesta.estado === 'Aprobado' ? 'bg-green-50 text-green-700 border border-green-200' :
-                            propuesta.estado === 'Rechazado' ? 'bg-red-50 text-red-700 border border-red-200' :
-                            'bg-yellow-50 text-yellow-800 border border-yellow-250'
-                          }`}>
-                            {propuesta.estado === 'Pendiente' ? 'En Evaluación' : propuesta.estado}
-                          </span>
-                          <h3 className="font-bold text-lg text-slate-900 leading-snug truncate mt-1">{propuesta.nombreCandidato}</h3>
-                          <div className="flex items-center text-slate-600 text-xs font-medium">
-                            <Briefcase size={12} className="mr-1.5 text-slate-400 flex-shrink-0" />
-                            <span className="truncate">{propuesta.profesionCandidato}</span>
+                    {/* Banner Llamativo de Estado */}
+                    <div className={`w-full py-2.5 px-6 flex items-center justify-center font-black text-[10px] sm:text-xs tracking-[0.2em] uppercase text-white shadow-sm ${
+                      propuesta.estado === 'Aprobado' ? 'bg-gradient-to-r from-emerald-500 to-green-600' :
+                      propuesta.estado === 'Rechazado' ? 'bg-gradient-to-r from-red-500 to-rose-600' :
+                      'bg-gradient-to-r from-yellow-400 to-yellow-600'
+                    }`}>
+                      {propuesta.estado === 'Pendiente' ? 'En Evaluación' : propuesta.estado}
+                    </div>
+
+                    <div className="p-6 flex flex-col space-y-5">
+                      {/* Header info */}
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start space-x-5">
+                          <img 
+                            src={propuesta.fotoCandidato || 'https://picsum.photos/seed/' + propuesta.id + '/200/200'} 
+                            className="w-20 h-20 rounded-2xl object-cover border-4 border-slate-50 shadow-sm flex-shrink-0" 
+                            alt={propuesta.nombreCandidato} 
+                          />
+                          <div className="space-y-1.5 min-w-0 pt-1">
+                            <h3 className="font-black text-xl text-slate-900 leading-snug truncate mt-1">{propuesta.nombreCandidato}</h3>
+                            <div className="flex items-center text-slate-600 text-xs font-medium">
+                              <Briefcase size={12} className="mr-1.5 text-slate-400 flex-shrink-0" />
+                              <span className="truncate">{propuesta.profesionCandidato}</span>
+                            </div>
                           </div>
                         </div>
+                        
+                        {canEditPropuestas && (
+                          <button 
+                            onClick={() => handleDeletePropuesta(propuesta.id)}
+                            className="p-2 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-full transition-all border border-slate-100 shadow-sm"
+                            title="Eliminar permanentemente"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
-                      
-                      {canEditPropuestas && (
-                        <button 
-                          onClick={() => handleDeletePropuesta(propuesta.id)}
-                          className="p-2 bg-white hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-full transition-all"
-                          title="Eliminar permanentemente"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </div>
 
                     {/* Proponent info */}
                     <div className="bg-slate-50/85 rounded-xl p-3.5 flex items-center justify-between border border-slate-100/80">
@@ -482,7 +485,7 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                           }`}
                         >
                           <Clock size={14} />
-                          <span>Pendiente</span>
+                          <span>Evaluando</span>
                         </button>
                         <button
                           onClick={() => propuesta.estado !== 'Rechazado' && handleRechazarPropuesta(propuesta.id)}
@@ -498,6 +501,7 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                         </button>
                       </div>
                     )}
+                    </div>
                   </div>
                 ))}
               </div>

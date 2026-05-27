@@ -1428,24 +1428,22 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
                       }`}
                     >
                       {/* Premium Header Background */}
-                      <div className={`absolute top-0 left-0 w-full h-24 bg-gradient-to-br opacity-20 transition-opacity group-hover:opacity-30 ${
+                      <div className={`absolute top-0 left-0 w-full h-24 bg-gradient-to-br opacity-10 transition-opacity group-hover:opacity-20 ${
                         prop.estado === 'Aprobado' ? 'from-green-400 to-emerald-600' : 
                         prop.estado === 'Rechazado' ? 'from-red-400 to-rose-600' : 'from-blue-600 to-indigo-900'
                       }`}></div>
 
+                      {/* Banner Llamativo de Estado */}
+                      <div className={`w-full py-2.5 px-6 flex items-center justify-center font-black text-[10px] sm:text-xs tracking-[0.2em] uppercase text-white shadow-sm relative z-20 ${
+                        prop.estado === 'Aprobado' ? 'bg-gradient-to-r from-emerald-500 to-green-600' :
+                        prop.estado === 'Rechazado' ? 'bg-gradient-to-r from-red-500 to-rose-600' :
+                        'bg-gradient-to-r from-yellow-400 to-yellow-600'
+                      }`}>
+                        {prop.estado === 'Pendiente' ? 'En Evaluación' : prop.estado}
+                      </div>
+
                       {/* Header Actions & Badge */}
-                      <div className="w-full flex justify-between items-start p-6 pb-0 relative z-10">
-                        <div className="flex space-x-2">
-                          <span className={`text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-wider shadow-sm border backdrop-blur-md ${
-                            prop.estado === 'Aprobado' 
-                              ? 'bg-green-50/90 text-green-700 border-green-200' 
-                              : prop.estado === 'Rechazado' 
-                                ? 'bg-red-50/90 text-red-700 border-red-200' 
-                                : 'bg-yellow-50/90 text-yellow-700 border-yellow-200 animate-pulse'
-                          }`}>
-                            {prop.estado}
-                          </span>
-                        </div>
+                      <div className="w-full flex justify-end items-start px-6 pt-4 relative z-10">
                         {/* Edit & Delete Actions (Guarded) */}
                         {canEditPropuestas && (
                           <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1541,7 +1539,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
                                 title="Marcar como pendiente (en evaluación)"
                               >
                                 <Clock size={14} />
-                                <span>Pendiente</span>
+                                <span>Evaluando</span>
                               </button>
                               <button
                                 onClick={() => prop.estado !== 'Rechazado' && handleRechazarPropuesta(prop.id)}
