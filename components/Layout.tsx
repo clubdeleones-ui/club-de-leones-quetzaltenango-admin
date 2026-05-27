@@ -307,7 +307,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
       </nav>
 
       {/* Main Content Area */}
-      <main className="flex-grow">
+      <main className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
         {children}
       </main>
 
