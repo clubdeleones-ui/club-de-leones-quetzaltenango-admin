@@ -15,7 +15,10 @@ import {
   ThumbsUp,
   Clock,
   Phone,
-  Building
+  Building,
+  CheckCircle,
+  X,
+  Trash2
 } from 'lucide-react';
 
 interface SociosProps {
@@ -68,8 +71,67 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
     fetchData();
   }, []);
 
-  // Filter only pending proposals
-  const propuestasPendientes = propuestas.filter(p => p.estado === 'Pendiente');
+  const canEditPropuestas = user?.rol === UserRole.SUPER_ADMIN || user?.rol === UserRole.PRESIDENTE_AFILIACION || user?.rol === UserRole.SECRETARIO;
+  
+  // Filter proposals: public sees only pending, admins see all
+  const propuestasAMostrar = canEditPropuestas 
+    ? propuestas 
+    : propuestas.filter(p => p.estado === 'Pendiente');
+
+  // Action Handlers
+  const handleAprobarPropuesta = async (propuesta: PropuestaSocio) => {
+    const nuevoSocio: Socio = {
+      id: `socio-${Date.now()}`,
+      nombre: propuesta.nombreCandidato,
+      correo: propuesta.nombreCandidato.toLowerCase().replace(/[^a-z0-9]+/g, '') + '@leonesxela.com',
+      rol: UserRole.SOCIO,
+      puesto: 'Socio Ingresado',
+      estadoCuotas: 'Al día',
+      montoPendiente: 0,
+      foto: propuesta.fotoCandidato || `https://picsum.photos/seed/${propuesta.nombreCandidato}/200/200`,
+      fechaIngreso: new Date().toISOString().split('T')[0]
+    };
+    setSocios([nuevoSocio, ...socios]);
+    setPropuestas(propuestas.map(p => p.id === propuesta.id ? { ...p, estado: 'Aprobado' } : p));
+
+    try {
+      await firebaseService.updateProposalStatus(propuesta.id, 'Aprobado');
+      await firebaseService.saveSocio(nuevoSocio);
+      alert(`La propuesta para ${propuesta.nombreCandidato} ha sido aprobada. ¡Ahora es miembro activo!`);
+    } catch (err) {
+      console.error("Error approving proposal:", err);
+      alert(`Se aprobó localmente pero falló en Firebase: ${err}`);
+    }
+  };
+
+  const handlePendientePropuesta = async (propuestaId: string) => {
+    setPropuestas(propuestas.map(p => p.id === propuestaId ? { ...p, estado: 'Pendiente' } : p));
+    try {
+      await firebaseService.updateProposalStatus(propuestaId, 'Pendiente');
+    } catch (err) {
+      console.error("Error setting proposal to pending:", err);
+    }
+  };
+
+  const handleRechazarPropuesta = async (propuestaId: string) => {
+    setPropuestas(propuestas.map(p => p.id === propuestaId ? { ...p, estado: 'Rechazado' } : p));
+    try {
+      await firebaseService.updateProposalStatus(propuestaId, 'Rechazado');
+    } catch (err) {
+      console.error("Error rejecting proposal:", err);
+    }
+  };
+
+  const handleDeletePropuesta = async (propuestaId: string) => {
+    if (!window.confirm("¿Está seguro de eliminar esta propuesta permanentemente? Esta acción no se puede deshacer.")) return;
+    setPropuestas(propuestas.filter(p => p.id !== propuestaId));
+    try {
+      await firebaseService.deleteProposal(propuestaId);
+    } catch (err) {
+      console.error("Error deleting proposal:", err);
+      alert("No se pudo eliminar en Firebase.");
+    }
+  };
 
   return (
     <div className="space-y-10 max-w-7xl mx-auto px-4 md:px-8 py-8 animate-in fade-in duration-700">
@@ -105,9 +167,9 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
         >
           <UserCheck size={18} />
           <span>Candidatos Propuestos</span>
-          {propuestasPendientes.length > 0 && (
+          {propuestasAMostrar.length > 0 && (
             <span className="absolute top-2 right-0 bg-yellow-500 text-blue-900 text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full animate-bounce">
-              {propuestasPendientes.length}
+              {propuestasAMostrar.length}
             </span>
           )}
         </button>
@@ -287,7 +349,7 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
               </div>
             </div>
 
-            {propuestasPendientes.length === 0 ? (
+            {propuestasAMostrar.length === 0 ? (
               <div className="bg-white rounded-[2rem] border border-slate-100 p-16 text-center max-w-3xl">
                 <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-500">
                   <UserCheck size={28} />
@@ -305,28 +367,47 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {propuestasPendientes.map((propuesta) => (
+                {propuestasAMostrar.map((propuesta) => (
                   <div 
                     key={propuesta.id} 
-                    className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-xl hover:border-slate-200 transition-all duration-300 flex flex-col space-y-5"
+                    className={`bg-white rounded-3xl p-6 shadow-sm border hover:shadow-xl transition-all duration-300 flex flex-col space-y-5 relative ${
+                      propuesta.estado === 'Aprobado' ? 'border-green-200' : 
+                      propuesta.estado === 'Rechazado' ? 'border-red-200' : 'border-slate-100 hover:border-slate-200'
+                    }`}
                   >
                     {/* Header info */}
-                    <div className="flex items-start space-x-5">
-                      <img 
-                        src={propuesta.fotoCandidato || 'https://picsum.photos/seed/' + propuesta.id + '/200/200'} 
-                        className="w-20 h-20 rounded-2xl object-cover border-4 border-slate-50 shadow-sm flex-shrink-0" 
-                        alt={propuesta.nombreCandidato} 
-                      />
-                      <div className="space-y-1.5 min-w-0">
-                        <span className="bg-yellow-50 text-yellow-800 border border-yellow-250 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                          En Evaluación
-                        </span>
-                        <h3 className="font-bold text-lg text-slate-900 leading-snug truncate mt-1">{propuesta.nombreCandidato}</h3>
-                        <div className="flex items-center text-slate-600 text-xs font-medium">
-                          <Briefcase size={12} className="mr-1.5 text-slate-400 flex-shrink-0" />
-                          <span className="truncate">{propuesta.profesionCandidato}</span>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start space-x-5">
+                        <img 
+                          src={propuesta.fotoCandidato || 'https://picsum.photos/seed/' + propuesta.id + '/200/200'} 
+                          className="w-20 h-20 rounded-2xl object-cover border-4 border-slate-50 shadow-sm flex-shrink-0" 
+                          alt={propuesta.nombreCandidato} 
+                        />
+                        <div className="space-y-1.5 min-w-0">
+                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                            propuesta.estado === 'Aprobado' ? 'bg-green-50 text-green-700 border border-green-200' :
+                            propuesta.estado === 'Rechazado' ? 'bg-red-50 text-red-700 border border-red-200' :
+                            'bg-yellow-50 text-yellow-800 border border-yellow-250'
+                          }`}>
+                            {propuesta.estado === 'Pendiente' ? 'En Evaluación' : propuesta.estado}
+                          </span>
+                          <h3 className="font-bold text-lg text-slate-900 leading-snug truncate mt-1">{propuesta.nombreCandidato}</h3>
+                          <div className="flex items-center text-slate-600 text-xs font-medium">
+                            <Briefcase size={12} className="mr-1.5 text-slate-400 flex-shrink-0" />
+                            <span className="truncate">{propuesta.profesionCandidato}</span>
+                          </div>
                         </div>
                       </div>
+                      
+                      {canEditPropuestas && (
+                        <button 
+                          onClick={() => handleDeletePropuesta(propuesta.id)}
+                          className="p-2 bg-white hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-full transition-all"
+                          title="Eliminar permanentemente"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
 
                     {/* Proponent info */}
@@ -375,6 +456,48 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                         </div>
                       )}
                     </div>
+
+                    {/* Admin Actions */}
+                    {canEditPropuestas && (
+                      <div className="flex flex-col sm:flex-row items-center gap-2 pt-4 border-t border-slate-100/80">
+                        <button
+                          onClick={() => propuesta.estado !== 'Aprobado' && handleAprobarPropuesta(propuesta)}
+                          disabled={propuesta.estado === 'Aprobado'}
+                          className={`flex-1 font-black text-xs px-3 py-2.5 rounded-xl flex justify-center items-center space-x-1.5 transition-all shadow-sm ${
+                            propuesta.estado === 'Aprobado'
+                              ? 'bg-green-100 text-green-700 cursor-not-allowed opacity-70'
+                              : 'bg-emerald-500 hover:bg-emerald-600 text-white active:scale-95 shadow-green-600/20'
+                          }`}
+                        >
+                          <CheckCircle size={14} />
+                          <span>Promover</span>
+                        </button>
+                        <button
+                          onClick={() => propuesta.estado !== 'Pendiente' && handlePendientePropuesta(propuesta.id)}
+                          disabled={propuesta.estado === 'Pendiente'}
+                          className={`flex-1 font-black text-xs px-3 py-2.5 rounded-xl flex justify-center items-center space-x-1.5 transition-all shadow-sm ${
+                            propuesta.estado === 'Pendiente'
+                              ? 'bg-yellow-100 text-yellow-700 cursor-not-allowed opacity-70'
+                              : 'bg-yellow-500 hover:bg-yellow-600 text-white active:scale-95 shadow-yellow-600/20'
+                          }`}
+                        >
+                          <Clock size={14} />
+                          <span>Pendiente</span>
+                        </button>
+                        <button
+                          onClick={() => propuesta.estado !== 'Rechazado' && handleRechazarPropuesta(propuesta.id)}
+                          disabled={propuesta.estado === 'Rechazado'}
+                          className={`flex-1 font-black text-xs px-3 py-2.5 rounded-xl flex justify-center items-center space-x-1.5 transition-all shadow-sm ${
+                            propuesta.estado === 'Rechazado'
+                              ? 'bg-red-100 text-red-700 cursor-not-allowed opacity-70'
+                              : 'bg-rose-500 hover:bg-rose-600 text-white active:scale-95 shadow-red-600/20'
+                          }`}
+                        >
+                          <X size={14} />
+                          <span>Eliminado</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
