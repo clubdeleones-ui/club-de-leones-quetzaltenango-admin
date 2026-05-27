@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserRole, PropuestaSocio } from '../types';
+import { firebaseService } from '../services/firebaseService';
 import { 
   UserPlus, 
   ArrowLeft, 
@@ -35,6 +36,7 @@ const ProponerSocio: React.FC = () => {
   const [motivoPropuesta, setMotivoPropuesta] = useState('');
   const [porQueBuenLeon, setPorQueBuenLeon] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // File Upload Helper (converts to base64)
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,19 +58,32 @@ const ProponerSocio: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!proponente || !nombreCandidato || !profesionCandidato || !motivoPropuesta || !porQueBuenLeon) {
       alert('Por favor complete todos los campos requeridos.');
       return;
     }
 
+    setLoading(true);
+    const candidateId = `prop-${Date.now()}`;
+    let finalPhotoUrl = fotoCandidato || 'https://picsum.photos/seed/' + Math.random() + '/200/200';
+
+    try {
+      // 1. Upload photo to Firebase Storage if it's base64 data
+      if (fotoCandidato && fotoCandidato.startsWith('data:')) {
+        finalPhotoUrl = await firebaseService.uploadCandidatePhoto(fotoCandidato, candidateId);
+      }
+    } catch (storageError) {
+      console.warn("Storage upload failed, using original base64:", storageError);
+    }
+
     const nuevaPropuesta: PropuestaSocio = {
-      id: `prop-${Date.now()}`,
+      id: candidateId,
       proponente,
       nombreCandidato,
       profesionCandidato,
-      fotoCandidato: fotoCandidato || 'https://picsum.photos/seed/' + Math.random() + '/200/200',
+      fotoCandidato: finalPhotoUrl,
       caracteristicas,
       motivoPropuesta,
       porQueBuenLeon,
@@ -76,11 +91,19 @@ const ProponerSocio: React.FC = () => {
       estado: 'Pendiente'
     };
 
-    // Save to localStorage
+    try {
+      // 2. Save proposal to Firestore
+      await firebaseService.saveProposal(nuevaPropuesta);
+    } catch (firestoreError) {
+      console.error("Firestore save failed, falling back to local storage:", firestoreError);
+    }
+
+    // 3. Save to localStorage in any case as fallback/cache
     const localPropuestas = localStorage.getItem('club_leones_propuestas');
     const propuestasActuales = localPropuestas ? JSON.parse(localPropuestas) : [];
     localStorage.setItem('club_leones_propuestas', JSON.stringify([nuevaPropuesta, ...propuestasActuales]));
 
+    setLoading(false);
     setSubmitted(true);
   };
 
@@ -316,10 +339,11 @@ const ProponerSocio: React.FC = () => {
               <div className="pt-6 border-t border-slate-100 flex justify-center sm:justify-end">
                 <button
                   type="submit"
-                  className="w-full sm:w-auto bg-blue-900 hover:bg-blue-800 text-white font-semibold px-6 py-3.5 rounded-2xl flex items-center justify-center space-x-3 shadow-lg shadow-blue-900/10 active:scale-[0.98] transition-all text-sm"
+                  disabled={loading}
+                  className="w-full sm:w-auto bg-blue-900 hover:bg-blue-800 text-white font-semibold px-6 py-3.5 rounded-2xl flex items-center justify-center space-x-3 shadow-lg shadow-blue-900/10 active:scale-[0.98] transition-all text-sm disabled:opacity-50"
                 >
                   <Send size={16} />
-                  <span>Enviar Propuesta al Comité</span>
+                  <span>{loading ? 'Enviando al Comité...' : 'Enviar Propuesta al Comité'}</span>
                 </button>
               </div>
             </div>

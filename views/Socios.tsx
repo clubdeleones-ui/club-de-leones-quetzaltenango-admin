@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MOCK_SOCIOS, MOCK_PROPUESTAS } from '../constants';
 import { Socio, PropuestaSocio } from '../types';
+import { firebaseService } from '../services/firebaseService';
 import { 
   Mail, 
   Calendar, 
@@ -34,6 +35,33 @@ const Socios: React.FC = () => {
     localStorage.setItem('club_leones_propuestas', JSON.stringify(MOCK_PROPUESTAS));
     return MOCK_PROPUESTAS;
   });
+
+  // Fetch from Firebase on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const fetchedSocios = await firebaseService.getSocios();
+        if (fetchedSocios && fetchedSocios.length > 0) {
+          setSocios(fetchedSocios);
+          localStorage.setItem('club_leones_socios_v3', JSON.stringify(fetchedSocios));
+        }
+      } catch (err) {
+        console.error("Error fetching socios from Firebase:", err);
+      }
+
+      try {
+        const fetchedPropuestas = await firebaseService.getProposals();
+        if (fetchedPropuestas && fetchedPropuestas.length > 0) {
+          setPropuestas(fetchedPropuestas);
+          localStorage.setItem('club_leones_propuestas', JSON.stringify(fetchedPropuestas));
+        }
+      } catch (err) {
+        console.error("Error fetching proposals from Firebase:", err);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Filter only pending proposals
   const propuestasPendientes = propuestas.filter(p => p.estado === 'Pendiente');

@@ -16,6 +16,7 @@ import {
   UserRole,
   PropuestaSocio
 } from '../types';
+import { firebaseService } from '../services/firebaseService';
 import { 
   TrendingUp, 
   Calendar, 
@@ -90,6 +91,42 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
     return MOCK_PROPUESTAS;
   });
 
+  // Sync with Firestore and load the latest data on component mount
+  useEffect(() => {
+    const syncAndLoad = async () => {
+      // Sync mock socios if Firestore is empty
+      try {
+        await firebaseService.syncInitialSocios(MOCK_SOCIOS);
+      } catch (err) {
+        console.error("Error syncing initial socios:", err);
+      }
+
+      // Fetch latest socios
+      try {
+        const fetchedSocios = await firebaseService.getSocios();
+        if (fetchedSocios && fetchedSocios.length > 0) {
+          setSocios(fetchedSocios);
+          localStorage.setItem('club_leones_socios_v3', JSON.stringify(fetchedSocios));
+        }
+      } catch (err) {
+        console.error("Error fetching socios from Firestore:", err);
+      }
+
+      // Fetch latest proposals
+      try {
+        const fetchedPropuestas = await firebaseService.getProposals();
+        if (fetchedPropuestas && fetchedPropuestas.length > 0) {
+          setPropuestas(fetchedPropuestas);
+          localStorage.setItem('club_leones_propuestas', JSON.stringify(fetchedPropuestas));
+        }
+      } catch (err) {
+        console.error("Error fetching proposals from Firestore:", err);
+      }
+    };
+
+    syncAndLoad();
+  }, []);
+
   useEffect(() => {
     localStorage.setItem('club_leones_socios_v3', JSON.stringify(socios));
   }, [socios]);
@@ -128,7 +165,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
   const sociosAlDia = useMemo(() => socios.filter(s => s.estadoCuotas === 'Al día').length, [socios]);
   
   // Handle proposals approval and rejection
-  const handleAprobarPropuesta = (propuestaId: string) => {
+  const handleAprobarPropuesta = async (propuestaId: string) => {
     const propuesta = propuestas.find(p => p.id === propuestaId);
     if (!propuesta) return;
 
@@ -153,16 +190,30 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
     };
     setSocios([nuevoSocio, ...socios]);
 
-    alert(`La propuesta para ${propuesta.nombreCandidato} ha sido aprobada. ¡Ahora es miembro activo del club!`);
+    try {
+      await firebaseService.updateProposalStatus(propuestaId, 'Aprobado');
+      await firebaseService.saveSocio(nuevoSocio);
+      alert(`La propuesta para ${propuesta.nombreCandidato} ha sido aprobada. ¡Ahora es miembro activo del club!`);
+    } catch (err) {
+      console.error("Error approving proposal in Firebase:", err);
+      alert(`La propuesta se aprobó localmente, pero no pudo guardarse en Firebase: ${err}`);
+    }
   };
 
-  const handleRechazarPropuesta = (propuestaId: string) => {
+  const handleRechazarPropuesta = async (propuestaId: string) => {
     const nuevasPropuestas = propuestas.map(p => {
       if (p.id === propuestaId) return { ...p, estado: 'Rechazado' as const };
       return p;
     });
     setPropuestas(nuevasPropuestas);
-    alert('La propuesta ha sido rechazada.');
+    
+    try {
+      await firebaseService.updateProposalStatus(propuestaId, 'Rechazado');
+      alert('La propuesta ha sido rechazada.');
+    } catch (err) {
+      console.error("Error rejecting proposal in Firebase:", err);
+      alert(`La propuesta se rechazó localmente, pero no pudo guardarse en Firebase: ${err}`);
+    }
   };
 
   // Handle action handlers
@@ -234,17 +285,23 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
     setShowAddBeneficio(false);
   };
 
-  const handleRegistrarPago = (socioId: string) => {
-    setSocios(socios.map(s => {
-      if (s.id === socioId) {
-        return {
-          ...s,
-          estadoCuotas: 'Al día',
-          montoPendiente: 0
-        };
-      }
-      return s;
-    }));
+  const handleRegistrarPago = async (socioId: string) => {
+    const socio = socios.find(s => s.id === socioId);
+    if (!socio) return;
+    
+    const updatedSocio = {
+      ...socio,
+      estadoCuotas: 'Al día' as const,
+      montoPendiente: 0
+    };
+
+    setSocios(socios.map(s => s.id === socioId ? updatedSocio : s));
+
+    try {
+      await firebaseService.saveSocio(updatedSocio);
+    } catch (err) {
+      console.error("Error saving socio payment to Firebase:", err);
+    }
   };
 
   const handleEnviarRecordatorio = (socio: Socio) => {
