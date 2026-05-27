@@ -19,7 +19,7 @@ const Home: React.FC = () => {
         />
         <div className="relative z-20 text-center text-white px-6 max-w-4xl">
           <div className="mb-8 inline-block">
-            <img src="/images/logo.png" className="w-24 h-24 mx-auto mb-4 bg-white p-2 rounded-full shadow-lg" alt="Lions Logo" />
+            <img src="images/logo.png" className="w-24 h-24 mx-auto mb-4 bg-white p-2 rounded-full shadow-lg" alt="Lions Logo" />
             <span className="bg-yellow-500 text-blue-900 text-xs font-bold px-4 py-1 rounded-full uppercase tracking-widest">Desde 1917 sirviendo</span>
           </div>
           <h1 className="text-6xl md:text-8xl mb-6 font-extrabold leading-tight">Nosotros <span className="text-yellow-400">Servimos</span></h1>

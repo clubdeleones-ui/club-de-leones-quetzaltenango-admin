@@ -108,7 +108,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
             {/* Logo Section */}
             <div className="flex items-center space-x-4 cursor-pointer group" onClick={() => navigate('/')}>
               <div className="bg-white p-1 rounded-2xl overflow-hidden transition-all duration-300 group-hover:scale-105 group-hover:rotate-3 shadow-lg">
-                <img src="/images/logo.png" alt="Logo" className="w-11 h-11 object-contain" />
+                <img src="images/logo.png" alt="Logo" className="w-11 h-11 object-contain" />
               </div>
               <div className="flex flex-col">
                 <span className="font-black text-xl tracking-tight leading-none">Club de Leones</span>
@@ -316,7 +316,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-12">
           <div className="space-y-4">
             <h3 className="text-white text-2xl font-black tracking-tight flex items-center space-x-2">
-              <span className="bg-white p-1 rounded-xl block"><img src="/images/logo.png" alt="Logo" className="w-8 h-8 object-contain" /></span>
+              <span className="bg-white p-1 rounded-xl block"><img src="images/logo.png" alt="Logo" className="w-8 h-8 object-contain" /></span>
               <span>Club de Leones Xela</span>
             </h3>
             <p className="text-sm leading-relaxed">

@@ -127,16 +127,7 @@ const ProponerSocio: React.FC = () => {
   }
 
   return (
-    <div className="max-w-3xl mx-auto my-8 animate-in fade-in duration-700">
-      {/* Header back button */}
-      <button 
-        onClick={() => navigate(-1)} 
-        className="flex items-center space-x-2 text-slate-500 hover:text-blue-900 font-bold transition-colors mb-6"
-      >
-        <ArrowLeft size={18} />
-        <span>Regresar</span>
-      </button>
-
+    <div className="max-w-3xl mx-auto pt-12 pb-8 px-4 animate-in fade-in duration-700">
       <div className="bg-white rounded-[2.5rem] border border-slate-200/80 shadow-2xl p-8 md:p-12 space-y-10 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-900 via-yellow-500 to-blue-900" />
         

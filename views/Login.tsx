@@ -132,7 +132,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         <div className="relative inline-block mb-6">
           <div className="absolute inset-0 bg-yellow-400 blur-2xl opacity-20 rounded-full" />
           <img
-            src="/images/logo.png"
+            src="images/logo.png"
             alt="Club Logo"
             className="relative w-24 h-24 mx-auto object-contain drop-shadow-lg"
           />
