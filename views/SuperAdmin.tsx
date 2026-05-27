@@ -35,7 +35,8 @@ import {
   Check,
   Send,
   X,
-  Download
+  Download,
+  Edit
 } from 'lucide-react';
 import { generateActaPDF } from '../utils/pdfGenerator';
 
@@ -159,6 +160,11 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
   const [showAddBeneficio, setShowAddBeneficio] = useState(false);
   const [newBeneficio, setNewBeneficio] = useState({ titulo: '', descripcion: '', convenioCon: '', descuento: '', categoria: 'Salud' as any });
 
+  const [showEditPropuesta, setShowEditPropuesta] = useState(false);
+  const [editingPropuesta, setEditingPropuesta] = useState<PropuestaSocio | null>(null);
+
+  const canEditPropuestas = user.rol === UserRole.SUPER_ADMIN || user.rol === UserRole.PRESIDENTE_AFILIACION || user.rol === UserRole.SECRETARIO;
+
   // Global KPIs calculation
   const totalDonaciones = useMemo(() => donaciones.reduce((sum, d) => sum + d.monto, 0), [donaciones]);
   const totalCuotasPendientes = useMemo(() => socios.reduce((sum, s) => sum + s.montoPendiente, 0), [socios]);
@@ -213,6 +219,34 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
     } catch (err) {
       console.error("Error rejecting proposal in Firebase:", err);
       alert(`La propuesta se rechazó localmente, pero no pudo guardarse en Firebase: ${err}`);
+    }
+  };
+
+  const handleDeletePropuesta = async (propuestaId: string) => {
+    if (!window.confirm("¿Está seguro de eliminar esta propuesta permanentemente? Esta acción no se puede deshacer.")) return;
+    
+    setPropuestas(propuestas.filter(p => p.id !== propuestaId));
+    try {
+      await firebaseService.deleteProposal(propuestaId);
+    } catch (err) {
+      console.error("Error deleting proposal:", err);
+      alert("No se pudo eliminar en Firebase.");
+    }
+  };
+
+  const handleEditPropuestaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPropuesta) return;
+
+    setPropuestas(propuestas.map(p => p.id === editingPropuesta.id ? editingPropuesta : p));
+    setShowEditPropuesta(false);
+
+    try {
+      await firebaseService.updateProposal(editingPropuesta.id, editingPropuesta);
+      alert("Propuesta actualizada con éxito.");
+    } catch (err) {
+      console.error("Error updating proposal:", err);
+      alert("No se pudo actualizar en Firebase.");
     }
   };
 
@@ -1280,91 +1314,210 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
                 <p className="text-slate-500 text-sm mt-1">Revisa y gestiona las solicitudes de membresía ingresadas por los socios del club.</p>
               </div>
 
-              <div className="grid grid-cols-1 gap-6">
+              {/* Edit Propuesta Modal */}
+              {showEditPropuesta && editingPropuesta && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/40 backdrop-blur-md">
+                  <form onSubmit={handleEditPropuestaSubmit} className="bg-white rounded-[2.5rem] p-6 sm:p-8 max-w-2xl w-full space-y-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-xl sm:text-2xl font-black text-slate-800">Editar Propuesta de Socio</h4>
+                      <button type="button" onClick={() => setShowEditPropuesta(false)} className="p-2 hover:bg-slate-50 rounded-xl transition-colors"><X size={20} /></button>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-bold text-slate-700 mb-2">Nombre del Candidato</label>
+                          <input 
+                            type="text" 
+                            required 
+                            value={editingPropuesta.nombreCandidato} 
+                            onChange={e => setEditingPropuesta({...editingPropuesta, nombreCandidato: e.target.value})}
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-bold text-slate-700 mb-2">Profesión / Ocupación</label>
+                          <input 
+                            type="text" 
+                            required 
+                            value={editingPropuesta.profesionCandidato} 
+                            onChange={e => setEditingPropuesta({...editingPropuesta, profesionCandidato: e.target.value})}
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none transition-all"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">Socio Proponente</label>
+                        <input 
+                          type="text" 
+                          required 
+                          value={editingPropuesta.proponente} 
+                          onChange={e => setEditingPropuesta({...editingPropuesta, proponente: e.target.value})}
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">Motivo de Nominación</label>
+                        <textarea 
+                          rows={3} 
+                          required 
+                          value={editingPropuesta.motivoPropuesta} 
+                          onChange={e => setEditingPropuesta({...editingPropuesta, motivoPropuesta: e.target.value})}
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none transition-all resize-none text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">¿Por qué sería un buen León?</label>
+                        <textarea 
+                          rows={3} 
+                          required 
+                          value={editingPropuesta.porQueBuenLeon} 
+                          onChange={e => setEditingPropuesta({...editingPropuesta, porQueBuenLeon: e.target.value})}
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none transition-all resize-none text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex space-x-4 pt-4">
+                      <button 
+                        type="button" 
+                        onClick={() => setShowEditPropuesta(false)}
+                        className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition-all"
+                      >
+                        Cancelar
+                      </button>
+                      <button 
+                        type="submit" 
+                        className="w-1/2 bg-blue-900 hover:bg-blue-800 text-white font-black py-3 rounded-xl transition-all shadow-lg shadow-blue-900/10"
+                      >
+                        Guardar Cambios
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                 {propuestas.map(prop => {
                   const isPendiente = prop.estado === 'Pendiente';
                   return (
                     <div 
                       key={prop.id} 
-                      className={`bg-white p-6 md:p-8 rounded-[2.5rem] border shadow-sm flex flex-col md:flex-row gap-8 items-start hover:shadow-md transition-shadow relative overflow-hidden ${
+                      className={`bg-white rounded-[2rem] border shadow-md flex flex-col items-start hover:shadow-xl transition-all duration-300 relative overflow-hidden group ${
                         prop.estado === 'Aprobado' 
-                          ? 'border-green-200' 
+                          ? 'border-green-300/60' 
                           : prop.estado === 'Rechazado' 
-                            ? 'border-red-200' 
-                            : 'border-slate-200/80'
+                            ? 'border-red-300/60' 
+                            : 'border-slate-200/80 hover:border-blue-900/20'
                       }`}
                     >
-                      {/* Estado Badge */}
-                      <div className="absolute top-6 right-6">
-                        <span className={`text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-wider ${
-                          prop.estado === 'Aprobado' 
-                            ? 'bg-green-50 text-green-700' 
-                            : prop.estado === 'Rechazado' 
-                              ? 'bg-red-50 text-red-700' 
-                              : 'bg-yellow-50 text-yellow-700 animate-pulse'
-                        }`}>
-                          {prop.estado}
-                        </span>
-                      </div>
+                      {/* Premium Header Background */}
+                      <div className={`absolute top-0 left-0 w-full h-24 bg-gradient-to-br opacity-20 transition-opacity group-hover:opacity-30 ${
+                        prop.estado === 'Aprobado' ? 'from-green-400 to-emerald-600' : 
+                        prop.estado === 'Rechazado' ? 'from-red-400 to-rose-600' : 'from-blue-600 to-indigo-900'
+                      }`}></div>
 
-                      {/* Foto Candidato */}
-                      <div className="w-24 h-24 md:w-32 md:h-32 rounded-3xl overflow-hidden bg-slate-100 border border-slate-200 flex-shrink-0 flex items-center justify-center">
-                        <img src={prop.fotoCandidato} alt={prop.nombreCandidato} className="w-full h-full object-cover" />
-                      </div>
-
-                      {/* Ficha Informativa */}
-                      <div className="flex-1 space-y-4">
-                        <div>
-                          <h4 className="text-2xl font-black text-slate-800">{prop.nombreCandidato}</h4>
-                          <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-0.5">{prop.profesionCandidato}</p>
-                          <p className="text-xs text-slate-500 mt-2">
-                            Propuesto por: <strong className="text-blue-900">{prop.proponente}</strong> • {prop.fechaPropuesta}
-                          </p>
+                      {/* Header Actions & Badge */}
+                      <div className="w-full flex justify-between items-start p-6 pb-0 relative z-10">
+                        <div className="flex space-x-2">
+                          <span className={`text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-wider shadow-sm border backdrop-blur-md ${
+                            prop.estado === 'Aprobado' 
+                              ? 'bg-green-50/90 text-green-700 border-green-200' 
+                              : prop.estado === 'Rechazado' 
+                                ? 'bg-red-50/90 text-red-700 border-red-200' 
+                                : 'bg-yellow-50/90 text-yellow-700 border-yellow-200 animate-pulse'
+                          }`}>
+                            {prop.estado}
+                          </span>
                         </div>
-
-                        {/* Cualidades Badges */}
-                        <div className="flex flex-wrap gap-1.5">
-                          {prop.caracteristicas.map((carac, idx) => (
-                            <span 
-                              key={idx} 
-                              className="text-[9px] font-black bg-blue-50 text-blue-800 px-2.5 py-1 rounded-full uppercase"
+                        {/* Edit & Delete Actions (Guarded) */}
+                        {canEditPropuestas && (
+                          <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                              onClick={() => {
+                                setEditingPropuesta(prop);
+                                setShowEditPropuesta(true);
+                              }}
+                              className="p-2 bg-white/80 hover:bg-white text-slate-500 hover:text-blue-600 rounded-full shadow-sm border border-slate-200/60 transition-all"
+                              title="Editar Propuesta"
                             >
-                              ★ {carac}
-                            </span>
-                          ))}
-                        </div>
-
-                        {/* Justificaciones */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">¿Por qué lo propone?</p>
-                            <p className="text-xs text-slate-600 leading-relaxed text-justify italic">"{prop.motivoPropuesta}"</p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">¿Por qué sería un buen León?</p>
-                            <p className="text-xs text-slate-600 leading-relaxed text-justify italic">"{prop.porQueBuenLeon}"</p>
-                          </div>
-                        </div>
-
-                        {/* Acciones */}
-                        {isPendiente && (
-                          <div className="flex items-center space-x-3 pt-4 border-t border-slate-100">
-                            <button
-                              onClick={() => handleAprobarPropuesta(prop.id)}
-                              className="bg-green-600 hover:bg-green-700 text-white font-black text-xs px-5 py-3 rounded-xl flex items-center space-x-1.5 transition-all shadow-md shadow-green-600/10"
-                            >
-                              <CheckCircle size={14} />
-                              <span>Aprobar Miembro</span>
+                              <Edit size={16} />
                             </button>
-                            <button
-                              onClick={() => handleRechazarPropuesta(prop.id)}
-                              className="bg-white hover:bg-red-50 text-red-600 border border-red-200 font-bold text-xs px-5 py-3 rounded-xl flex items-center space-x-1.5 transition-all"
+                            <button 
+                              onClick={() => handleDeletePropuesta(prop.id)}
+                              className="p-2 bg-white/80 hover:bg-white text-slate-500 hover:text-red-600 rounded-full shadow-sm border border-slate-200/60 transition-all"
+                              title="Eliminar permanentemente"
                             >
-                              <X size={14} />
-                              <span>Rechazar</span>
+                              <Trash2 size={16} />
                             </button>
                           </div>
                         )}
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row gap-6 p-6 md:p-8 w-full relative z-10 pt-4">
+                        {/* Foto Candidato */}
+                        <div className="w-24 h-24 md:w-32 md:h-32 rounded-3xl overflow-hidden bg-slate-100 border-4 border-white shadow-lg flex-shrink-0 flex items-center justify-center transform group-hover:scale-105 transition-transform duration-500">
+                          <img src={prop.fotoCandidato || 'https://picsum.photos/seed/' + prop.id + '/200/200'} alt={prop.nombreCandidato} className="w-full h-full object-cover" />
+                        </div>
+
+                        {/* Ficha Informativa */}
+                        <div className="flex-1 min-w-0 space-y-4">
+                          <div>
+                            <h4 className="text-2xl font-black text-slate-800 tracking-tight truncate" title={prop.nombreCandidato}>{prop.nombreCandidato}</h4>
+                            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1 truncate" title={prop.profesionCandidato}>{prop.profesionCandidato}</p>
+                            <div className="mt-3 bg-slate-50/80 border border-slate-100 rounded-xl p-3 inline-block shadow-inner w-full sm:w-auto">
+                              <p className="text-xs text-slate-500 flex items-center space-x-1.5">
+                                <UserPlus size={14} className="text-blue-900/60 flex-shrink-0" />
+                                <span className="truncate">Propuesto por: <strong className="text-blue-900">{prop.proponente}</strong></span>
+                              </p>
+                              <p className="text-[10px] text-slate-400 mt-1 font-semibold">{prop.fechaPropuesta}</p>
+                            </div>
+                          </div>
+
+                          {/* Cualidades Badges */}
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {prop.caracteristicas.map((carac, idx) => (
+                              <span 
+                                key={idx} 
+                                className="text-[9px] font-bold bg-blue-50/50 border border-blue-100/70 text-blue-900 px-2.5 py-1 rounded-lg uppercase shadow-sm"
+                              >
+                                {carac}
+                              </span>
+                            ))}
+                          </div>
+
+                          {/* Justificaciones */}
+                          <div className="grid grid-cols-1 gap-4 pt-4 mt-2 border-t border-slate-100/80">
+                            <div className="bg-slate-50/50 p-3 rounded-2xl border border-slate-100/60">
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex items-center"><CheckCircle size={10} className="mr-1 text-slate-400" /> Motivo</p>
+                              <p className="text-xs text-slate-700 leading-relaxed italic line-clamp-3" title={prop.motivoPropuesta}>"{prop.motivoPropuesta}"</p>
+                            </div>
+                            <div className="bg-slate-50/50 p-3 rounded-2xl border border-slate-100/60">
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex items-center"><Award size={10} className="mr-1 text-slate-400" /> Valor para el Club</p>
+                              <p className="text-xs text-slate-700 leading-relaxed italic line-clamp-3" title={prop.porQueBuenLeon}>"{prop.porQueBuenLeon}"</p>
+                            </div>
+                          </div>
+
+                          {/* Acciones */}
+                          {isPendiente && (
+                            <div className="flex flex-col sm:flex-row items-center gap-3 pt-5 border-t border-slate-100/80">
+                              <button
+                                onClick={() => handleAprobarPropuesta(prop.id)}
+                                className="w-full sm:flex-1 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-black text-xs px-4 py-3 rounded-xl flex justify-center items-center space-x-2 transition-all shadow-lg shadow-green-600/20 active:scale-95"
+                              >
+                                <CheckCircle size={16} />
+                                <span>Aprobar Candidato</span>
+                              </button>
+                              <button
+                                onClick={() => handleRechazarPropuesta(prop.id)}
+                                className="w-full sm:w-auto bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 font-bold text-xs px-5 py-3 rounded-xl flex justify-center items-center space-x-2 transition-all active:scale-95"
+                              >
+                                <X size={16} />
+                                <span>Rechazar</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );

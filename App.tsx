@@ -51,7 +51,7 @@ const App: React.FC = () => {
             <Route path="/" element={<Home />} />
             <Route path="/actividades" element={<Calendario accessToken={auth.accessToken} />} />
             <Route path="/galeria" element={<Galeria />} />
-            <Route path="/socios" element={<Socios />} />
+            <Route path="/socios" element={<Socios user={auth.user} />} />
             <Route path="/proponer-socio" element={<ProponerSocio />} />
             <Route path="/login" element={auth.isAuthenticated ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />} />
 

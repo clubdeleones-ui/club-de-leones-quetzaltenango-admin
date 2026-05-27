@@ -4,7 +4,8 @@ import {
   doc, 
   setDoc, 
   getDocs, 
-  updateDoc 
+  updateDoc,
+  deleteDoc
 } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { Socio, PropuestaSocio } from "../types";
@@ -60,6 +61,28 @@ export const firebaseService = {
       await updateDoc(docRef, { estado });
     } catch (error) {
       console.error("Error updating proposal status in Firestore:", error);
+      throw error;
+    }
+  },
+
+  // Update full proposal data
+  updateProposal: async (proposalId: string, updatedData: Partial<PropuestaSocio>): Promise<void> => {
+    try {
+      const docRef = doc(db, "propuestas", proposalId);
+      await updateDoc(docRef, updatedData);
+    } catch (error) {
+      console.error("Error updating proposal in Firestore:", error);
+      throw error;
+    }
+  },
+
+  // Delete proposal
+  deleteProposal: async (proposalId: string): Promise<void> => {
+    try {
+      const docRef = doc(db, "propuestas", proposalId);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting proposal from Firestore:", error);
       throw error;
     }
   },

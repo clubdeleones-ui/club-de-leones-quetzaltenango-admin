@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { MOCK_SOCIOS, MOCK_PROPUESTAS } from '../constants';
-import { Socio, PropuestaSocio } from '../types';
+import { Socio, PropuestaSocio, UserRole } from '../types';
 import { firebaseService } from '../services/firebaseService';
 import { 
   Mail, 
@@ -17,7 +18,11 @@ import {
   Building
 } from 'lucide-react';
 
-const Socios: React.FC = () => {
+interface SociosProps {
+  user?: Socio | null;
+}
+
+const Socios: React.FC<SociosProps> = ({ user }) => {
   const [activeTab, setActiveTab] = useState<'activos' | 'propuestos'>('activos');
   
   // Load members from localStorage or fallback to mock
@@ -264,11 +269,21 @@ const Socios: React.FC = () => {
             {/* Note banner */}
             <div className="bg-yellow-50 border border-yellow-200/60 rounded-3xl p-6 flex items-start space-x-4 max-w-4xl">
               <Clock className="text-yellow-750 flex-shrink-0 mt-0.5" size={20} />
-              <div>
+              <div className="flex-1">
                 <h4 className="font-bold text-yellow-950 text-base">Candidaturas en Proceso de Evaluación</h4>
                 <p className="text-yellow-900 text-sm mt-1 leading-relaxed font-medium">
                   Las personas listadas a continuación han sido propuestas por socios activos del club debido a su vocación de servicio y calidades humanas. Sus propuestas se encuentran actualmente bajo revisión por parte de la Junta Directiva para su formalización y aprobación.
                 </p>
+                {/* Enlace para proponer candidato (solo socios) */}
+                {user && user.rol !== UserRole.DONANTE && user.rol !== UserRole.GUEST && (
+                  <div className="mt-5 pt-5 border-t border-yellow-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <span className="text-yellow-900 text-sm font-semibold">¿Conoces a alguien idóneo para ser parte del club?</span>
+                    <Link to="/proponer-socio" className="bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-xl text-sm font-black transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center space-x-2">
+                      <UserCheck size={18} />
+                      <span>Proponer Candidato</span>
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -279,8 +294,14 @@ const Socios: React.FC = () => {
                 </div>
                 <h3 className="text-xl font-bold text-slate-800">No hay propuestas pendientes</h3>
                 <p className="text-slate-600 mt-2 max-w-md mx-auto text-sm font-medium">
-                  Actualmente no existen candidaturas propuestas en evaluación. Si conoces a alguien idóneo para ser parte del club, puedes postularlo usando el formulario público.
+                  Actualmente no existen candidaturas propuestas en evaluación. Si conoces a alguien idóneo para ser parte del club, puedes postularlo usando el formulario correspondiente.
                 </p>
+                {user && user.rol !== UserRole.DONANTE && user.rol !== UserRole.GUEST && (
+                  <Link to="/proponer-socio" className="mt-6 inline-flex bg-blue-900 hover:bg-blue-800 text-white px-6 py-3 rounded-xl text-sm font-black transition-all shadow-lg shadow-blue-900/20 items-center justify-center space-x-2">
+                    <UserCheck size={18} />
+                    <span>Ir al Formulario de Propuesta</span>
+                  </Link>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
