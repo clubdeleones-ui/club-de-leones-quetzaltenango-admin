@@ -38,7 +38,7 @@ const Socios: React.FC = () => {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-5xl font-black text-blue-900 tracking-tight">Directorio de Socios</h1>
-          <p className="text-lg text-slate-500 mt-2">
+          <p className="text-lg text-slate-700 mt-2 font-medium">
             Conoce a los miembros activos que hacen posible nuestro servicio y a los nuevos candidatos en evaluación.
           </p>
         </div>
@@ -51,7 +51,7 @@ const Socios: React.FC = () => {
           className={`flex items-center space-x-3 px-8 py-4 font-bold text-lg border-b-4 transition-all ${
             activeTab === 'activos'
               ? 'border-blue-900 text-blue-900'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
+              : 'border-transparent text-slate-650 hover:text-slate-850'
           }`}
         >
           <Users size={20} />
@@ -62,7 +62,7 @@ const Socios: React.FC = () => {
           className={`flex items-center space-x-3 px-8 py-4 font-bold text-lg border-b-4 transition-all relative ${
             activeTab === 'propuestos'
               ? 'border-blue-900 text-blue-900'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
+              : 'border-transparent text-slate-650 hover:text-slate-850'
           }`}
         >
           <UserCheck size={20} />
@@ -92,8 +92,8 @@ const Socios: React.FC = () => {
                 />
                 <div className="space-y-3 flex-grow min-w-0">
                   <div>
-                    <h3 className="font-extrabold text-xl text-slate-800 leading-tight truncate">{socio.nombre}</h3>
-                    <span className={`inline-block text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full mt-1.5 ${
+                    <h3 className="font-extrabold text-xl text-slate-900 leading-tight truncate">{socio.nombre}</h3>
+                    <span className={`inline-block text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full mt-1.5 ${
                       socio.puesto 
                         ? 'bg-yellow-500 text-blue-900' 
                         : 'bg-blue-50 text-blue-800'
@@ -102,12 +102,12 @@ const Socios: React.FC = () => {
                     </span>
                   </div>
                   <div className="space-y-1.5 pt-1">
-                    <div className="flex items-center text-slate-500 text-sm truncate">
-                      <Mail size={14} className="mr-2.5 text-slate-400 flex-shrink-0" />
+                    <div className="flex items-center text-slate-700 text-sm truncate font-medium">
+                      <Mail size={14} className="mr-2.5 text-slate-500 flex-shrink-0" />
                       <span className="truncate">{socio.correo}</span>
                     </div>
-                    <div className="flex items-center text-slate-500 text-sm">
-                      <Calendar size={14} className="mr-2.5 text-slate-400 flex-shrink-0" />
+                    <div className="flex items-center text-slate-700 text-sm font-medium">
+                      <Calendar size={14} className="mr-2.5 text-slate-500 flex-shrink-0" />
                       <span>Ingreso: {socio.fechaIngreso}</span>
                     </div>
                     {socio.puesto && (
@@ -126,10 +126,10 @@ const Socios: React.FC = () => {
           <div className="space-y-8">
             {/* Note banner */}
             <div className="bg-yellow-50 border border-yellow-200/60 rounded-3xl p-6 flex items-start space-x-4 max-w-4xl">
-              <Clock className="text-yellow-600 flex-shrink-0 mt-0.5" size={24} />
+              <Clock className="text-yellow-750 flex-shrink-0 mt-0.5" size={24} />
               <div>
-                <h4 className="font-bold text-yellow-900 text-lg">Candidaturas en Proceso de Evaluación</h4>
-                <p className="text-yellow-800 text-sm mt-1 leading-relaxed">
+                <h4 className="font-bold text-yellow-950 text-lg">Candidaturas en Proceso de Evaluación</h4>
+                <p className="text-yellow-900 text-sm mt-1 leading-relaxed font-medium">
                   Las personas listadas a continuación han sido propuestas por socios activos del club debido a su vocación de servicio y calidades humanas. Sus propuestas se encuentran actualmente bajo revisión por parte de la Junta Directiva para su formalización y aprobación.
                 </p>
               </div>
@@ -137,11 +137,11 @@ const Socios: React.FC = () => {
 
             {propuestasPendientes.length === 0 ? (
               <div className="bg-white rounded-[2rem] border border-slate-100 p-16 text-center max-w-3xl">
-                <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-400">
+                <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-500">
                   <UserCheck size={36} />
                 </div>
-                <h3 className="text-2xl font-black text-slate-700">No hay propuestas pendientes</h3>
-                <p className="text-slate-500 mt-2 max-w-md mx-auto">
+                <h3 className="text-2xl font-black text-slate-800">No hay propuestas pendientes</h3>
+                <p className="text-slate-750 mt-2 max-w-md mx-auto font-medium">
                   Actualmente no existen candidaturas propuestas en evaluación. Si conoces a alguien idóneo para ser parte del club, puedes postularlo usando el formulario público.
                 </p>
               </div>
@@ -160,12 +160,12 @@ const Socios: React.FC = () => {
                         alt={propuesta.nombreCandidato} 
                       />
                       <div className="space-y-2 min-w-0">
-                        <span className="bg-yellow-50 text-yellow-700 border border-yellow-200 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                        <span className="bg-yellow-50 text-yellow-800 border border-yellow-250 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider">
                           En Evaluación
                         </span>
-                        <h3 className="font-extrabold text-2xl text-slate-800 leading-snug truncate mt-1">{propuesta.nombreCandidato}</h3>
-                        <div className="flex items-center text-slate-500 text-sm">
-                          <Briefcase size={14} className="mr-2 text-slate-400 flex-shrink-0" />
+                        <h3 className="font-extrabold text-2xl text-slate-900 leading-snug truncate mt-1">{propuesta.nombreCandidato}</h3>
+                        <div className="flex items-center text-slate-700 text-sm font-medium">
+                          <Briefcase size={14} className="mr-2 text-slate-500 flex-shrink-0" />
                           <span className="truncate">{propuesta.profesionCandidato}</span>
                         </div>
                       </div>
@@ -173,7 +173,7 @@ const Socios: React.FC = () => {
 
                     {/* Proponent info */}
                     <div className="bg-slate-50/80 rounded-2xl p-4 flex items-center justify-between border border-slate-100">
-                      <div className="flex items-center space-x-2 text-sm text-slate-600">
+                      <div className="flex items-center space-x-2 text-sm text-slate-750">
                         <ShieldCheck size={16} className="text-blue-900" />
                         <span>Propuesto por el socio activo:</span>
                       </div>
@@ -184,8 +184,8 @@ const Socios: React.FC = () => {
 
                     {/* Qualities / characteristics tags */}
                     <div className="space-y-3">
-                      <h4 className="font-extrabold text-sm text-slate-600 uppercase tracking-widest flex items-center">
-                        <ThumbsUp size={14} className="mr-2 text-slate-400" />
+                      <h4 className="font-extrabold text-base text-slate-800 uppercase tracking-widest flex items-center">
+                        <ThumbsUp size={14} className="mr-2 text-slate-500" />
                         Cualidades Destacadas
                       </h4>
                       <div className="flex flex-wrap gap-2">
@@ -203,15 +203,15 @@ const Socios: React.FC = () => {
                     {/* Justification details */}
                     <div className="space-y-3 pt-2 border-t border-slate-100 flex-grow">
                       <div>
-                        <h4 className="font-bold text-xs text-slate-400 uppercase tracking-wider">Motivo de Nominación</h4>
-                        <p className="text-slate-600 text-sm mt-1 leading-relaxed italic bg-slate-50/30 p-3 rounded-2xl border border-slate-100/50">
+                        <h4 className="font-bold text-sm text-slate-650 uppercase tracking-wider">Motivo de Nominación</h4>
+                        <p className="text-slate-800 text-sm mt-1 leading-relaxed italic bg-slate-50/30 p-3 rounded-2xl border border-slate-100/50 font-medium">
                           "{propuesta.motivoPropuesta}"
                         </p>
                       </div>
                       {propuesta.porQueBuenLeon && (
                         <div>
-                          <h4 className="font-bold text-xs text-slate-400 uppercase tracking-wider mt-3">¿Por qué sería un buen León?</h4>
-                          <p className="text-slate-600 text-sm mt-1 leading-relaxed italic bg-slate-50/30 p-3 rounded-2xl border border-slate-100/50">
+                          <h4 className="font-bold text-sm text-slate-650 uppercase tracking-wider mt-3">¿Por qué sería un buen León?</h4>
+                          <p className="text-slate-800 text-sm mt-1 leading-relaxed italic bg-slate-50/30 p-3 rounded-2xl border border-slate-100/50 font-medium">
                             "{propuesta.porQueBuenLeon}"
                           </p>
                         </div>

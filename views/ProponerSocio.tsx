@@ -137,7 +137,7 @@ const ProponerSocio: React.FC = () => {
             Comité de Membresía y Afiliación
           </span>
           <h1 className="text-4xl md:text-5xl font-black text-blue-900 tracking-tight">Propuesta de Nuevo Socio</h1>
-          <p className="text-slate-500 text-base max-w-lg mx-auto leading-relaxed">
+          <p className="text-slate-700 text-base max-w-lg mx-auto leading-relaxed font-medium">
             Nuestra fuerza radica en el servicio y la calidad humana. Si conoces a alguien comprometido con la comunidad, preséntalo para ser un León.
           </p>
         </div>
@@ -150,7 +150,7 @@ const ProponerSocio: React.FC = () => {
               1. Socio Proponente
             </h3>
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Nombre del Socio Activo que lo Propone *</label>
+              <label className="block text-sm font-bold text-slate-750 uppercase tracking-wide mb-2">Nombre del Socio Activo que lo Propone *</label>
               <input 
                 type="text"
                 required
@@ -159,7 +159,7 @@ const ProponerSocio: React.FC = () => {
                 placeholder="Ej. Elena Castillo Castillo"
                 className="w-full px-4 py-3 border border-slate-200 bg-white rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all font-semibold"
               />
-              <p className="text-[10px] text-slate-400 mt-1.5">
+              <p className="text-xs text-slate-600 mt-1.5 font-medium">
                 Para proponer formalmente, debe ser un miembro activo y solvente de la institución.
               </p>
             </div>
@@ -194,7 +194,7 @@ const ProponerSocio: React.FC = () => {
               {/* Candidato Name and Profession */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Nombre Completo del Candidato *</label>
+                  <label className="block text-sm font-bold text-slate-750 uppercase tracking-wide mb-2">Nombre Completo del Candidato *</label>
                   <input 
                     type="text"
                     required
@@ -205,7 +205,7 @@ const ProponerSocio: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Campo Profesional / Ocupación *</label>
+                  <label className="block text-sm font-bold text-slate-750 uppercase tracking-wide mb-2">Campo Profesional / Ocupación *</label>
                   <input 
                     type="text"
                     required
@@ -219,13 +219,13 @@ const ProponerSocio: React.FC = () => {
 
               {/* Photo Upload (Opcional) */}
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Fotografía del Candidato (Opcional)</label>
+                <label className="block text-sm font-bold text-slate-750 uppercase tracking-wide mb-2">Fotografía del Candidato (Opcional)</label>
                 <div className="flex items-center space-x-6 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                   <div className="w-16 h-16 rounded-full bg-slate-200 flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-300">
                     {fotoCandidato ? (
                       <img src={fotoCandidato} alt="Previsualización" className="w-full h-full object-cover" />
                     ) : (
-                      <ImageIcon className="text-slate-400" size={24} />
+                      <ImageIcon className="text-slate-500" size={24} />
                     )}
                   </div>
                   <div className="flex-1">
@@ -242,15 +242,15 @@ const ProponerSocio: React.FC = () => {
                     >
                       Subir Imagen
                     </label>
-                    <p className="text-[10px] text-slate-400 mt-1">Formatos recomendados: JPG, PNG. Tamaño máximo 2MB.</p>
+                    <p className="text-xs text-slate-600 mt-1.5 font-medium">Formatos recomendados: JPG, PNG. Tamaño máximo 2MB.</p>
                   </div>
                 </div>
               </div>
 
               {/* Fila de checkboxes (Características de Lions International) */}
               <div className="space-y-3">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">Cualidades y Características Destacadas *</label>
-                <p className="text-[10px] text-slate-400">Marque las características y aptitudes sobresalientes que describe al candidato en su ética y servicio.</p>
+                <label className="block text-sm font-bold text-slate-750 uppercase tracking-wide">Cualidades y Características Destacadas *</label>
+                <p className="text-xs text-slate-600 font-medium">Marque las características y aptitudes sobresalientes que describe al candidato en su ética y servicio.</p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                   {CARACTERISTICAS_OPCIONES.map(opc => {
@@ -273,11 +273,11 @@ const ProponerSocio: React.FC = () => {
                           className="w-4 h-4 text-blue-900 border-slate-300 rounded focus:ring-blue-900 mt-0.5 cursor-pointer"
                         />
                         <div>
-                          <p className="text-xs font-black text-slate-800 flex items-center">
+                          <p className="text-sm font-black text-slate-900 flex items-center">
                             <SelectedIcon size={14} className="mr-1.5 text-blue-900/60" />
                             {opc.label}
                           </p>
-                          <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">{opc.description}</p>
+                          <p className="text-xs text-slate-600 mt-0.5 leading-tight font-medium">{opc.description}</p>
                         </div>
                       </div>
                     );
@@ -288,7 +288,7 @@ const ProponerSocio: React.FC = () => {
               {/* Justification Textareas */}
               <div className="space-y-6 pt-2">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">¿Por qué propone a esta persona? *</label>
+                  <label className="block text-sm font-bold text-slate-750 uppercase tracking-wide mb-2">¿Por qué propone a esta persona? *</label>
                   <textarea 
                     rows={4}
                     required
@@ -300,7 +300,7 @@ const ProponerSocio: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">¿Por qué considera que sería un buen León en el club? *</label>
+                  <label className="block text-sm font-bold text-slate-750 uppercase tracking-wide mb-2">¿Por qué considera que sería un buen León en el club? *</label>
                   <textarea 
                     rows={4}
                     required

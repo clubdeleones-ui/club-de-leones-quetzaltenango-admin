@@ -66,7 +66,7 @@ const Home: React.FC = () => {
         <div className="flex justify-between items-end mb-8">
           <div>
             <h2 className="text-4xl">Próximas Actividades</h2>
-            <p className="text-slate-500 mt-2">Participa y sé parte del cambio en Xela.</p>
+            <p className="text-slate-700 mt-2 font-medium">Participa y sé parte del cambio en Xela.</p>
           </div>
           <button
             onClick={() => navigate('/actividades')}
@@ -84,15 +84,15 @@ const Home: React.FC = () => {
               <div className="p-6 flex flex-col justify-between">
                 <div>
                   <h3 className="text-2xl mb-2">{act.titulo}</h3>
-                  <div className="flex items-center text-sm text-slate-500 mb-2">
-                    <Calendar size={14} className="mr-2" />
+                  <div className="flex items-center text-sm text-slate-700 mb-2 font-medium">
+                    <Calendar size={14} className="mr-2 text-slate-500" />
                     <span>{act.fecha}</span>
                   </div>
-                  <div className="flex items-center text-sm text-slate-500 mb-4">
-                    <MapPin size={14} className="mr-2" />
+                  <div className="flex items-center text-sm text-slate-700 mb-4 font-medium">
+                    <MapPin size={14} className="mr-2 text-slate-500" />
                     <span>{act.lugar}</span>
                   </div>
-                  <p className="text-slate-600 text-sm line-clamp-2">{act.descripcion}</p>
+                  <p className="text-slate-750 text-sm line-clamp-2 leading-relaxed font-medium">{act.descripcion}</p>
                 </div>
               </div>
             </div>
