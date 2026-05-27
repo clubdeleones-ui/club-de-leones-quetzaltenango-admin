@@ -29,17 +29,30 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, isAuthenticat
 };
 
 const App: React.FC = () => {
-  const [auth, setAuth] = useState<AuthState>({
-    user: null,
-    isAuthenticated: false,
+  const [auth, setAuth] = useState<AuthState>(() => {
+    try {
+      const savedAuth = localStorage.getItem('club_leones_auth');
+      if (savedAuth) {
+        return JSON.parse(savedAuth);
+      }
+    } catch (e) {
+      console.error("Error reading auth from localStorage", e);
+    }
+    return {
+      user: null,
+      isAuthenticated: false,
+    };
   });
 
   const handleLogin = (user: Socio, accessToken?: string) => {
-    setAuth({ user, isAuthenticated: true, accessToken });
+    const newAuth = { user, isAuthenticated: true, accessToken };
+    setAuth(newAuth);
+    localStorage.setItem('club_leones_auth', JSON.stringify(newAuth));
   };
 
   const handleLogout = () => {
     setAuth({ user: null, isAuthenticated: false, accessToken: undefined });
+    localStorage.removeItem('club_leones_auth');
   };
 
   return (
