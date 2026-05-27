@@ -90,4 +90,7 @@ export interface PropuestaSocio {
   porQueBuenLeon: string;
   fechaPropuesta: string;
   estado: 'Pendiente' | 'Aprobado' | 'Rechazado';
+  estadoCivil?: string;
+  hijos?: string;
+  nombreEsposa?: string;
 }

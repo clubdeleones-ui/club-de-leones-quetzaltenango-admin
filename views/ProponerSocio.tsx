@@ -35,6 +35,9 @@ const ProponerSocio: React.FC = () => {
   const [caracteristicas, setCaracteristicas] = useState<string[]>([]);
   const [motivoPropuesta, setMotivoPropuesta] = useState('');
   const [porQueBuenLeon, setPorQueBuenLeon] = useState('');
+  const [estadoCivil, setEstadoCivil] = useState('');
+  const [hijos, setHijos] = useState('');
+  const [nombreEsposa, setNombreEsposa] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -60,8 +63,12 @@ const ProponerSocio: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!proponente || !nombreCandidato || !profesionCandidato || !motivoPropuesta || !porQueBuenLeon) {
+    if (!proponente || !nombreCandidato || !profesionCandidato || !motivoPropuesta || !porQueBuenLeon || !estadoCivil || !hijos) {
       alert('Por favor complete todos los campos requeridos.');
+      return;
+    }
+    if (estadoCivil === 'Casado' && !nombreEsposa) {
+      alert('Por favor ingrese el nombre del cónyuge.');
       return;
     }
 
@@ -88,7 +95,10 @@ const ProponerSocio: React.FC = () => {
       motivoPropuesta,
       porQueBuenLeon,
       fechaPropuesta: new Date().toISOString().split('T')[0],
-      estado: 'Pendiente'
+      estado: 'Pendiente',
+      estadoCivil,
+      hijos,
+      nombreEsposa: estadoCivil === 'Casado' ? nombreEsposa : undefined
     };
 
     try {
@@ -114,6 +124,9 @@ const ProponerSocio: React.FC = () => {
     setCaracteristicas([]);
     setMotivoPropuesta('');
     setPorQueBuenLeon('');
+    setEstadoCivil('');
+    setHijos('');
+    setNombreEsposa('');
     setSubmitted(false);
     setMostrarCamposPropuesta(false);
   };
@@ -159,7 +172,10 @@ const ProponerSocio: React.FC = () => {
           <span className="bg-blue-50 text-blue-900 text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-widest">
             Comité de Membresía y Afiliación
           </span>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-900 tracking-tight">Propuesta de Nuevo Socio</h1>
+          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-2">
+            Preside C.L. José Mérida
+          </p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-900 tracking-tight mt-3">Propuesta de Nuevo Socio</h1>
           <p className="text-slate-650 text-xs sm:text-sm max-w-lg mx-auto leading-relaxed font-medium">
             Nuestra fuerza radica en el servicio y la calidad humana. Si conoces a alguien comprometido con la comunidad, preséntalo para ser un León.
           </p>
@@ -332,6 +348,65 @@ const ProponerSocio: React.FC = () => {
                     placeholder="Describa el valor agregado que traerá al club: compromiso, tiempo, ideas frescas o redes de ayuda para fortalecer la labor del Club de Leones..."
                     className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all resize-none text-sm"
                   />
+                </div>
+              </div>
+
+              {/* Datos Complementarios */}
+              <div className="space-y-6 pt-6 border-t border-slate-100/80">
+                <h3 className="text-base font-bold text-slate-800 flex items-center">
+                  <span className="text-yellow-500 mr-2">📋</span>
+                  3. Datos Complementarios
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Estado Civil *</label>
+                    <div className="relative">
+                      <select 
+                        required
+                        value={estadoCivil}
+                        onChange={e => setEstadoCivil(e.target.value)}
+                        className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all font-semibold appearance-none bg-white cursor-pointer"
+                      >
+                        <option value="">Seleccione una opción</option>
+                        <option value="Soltero">Soltero(a)</option>
+                        <option value="Casado">Casado(a)</option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Hijos *</label>
+                    <div className="relative">
+                      <select 
+                        required
+                        value={hijos}
+                        onChange={e => setHijos(e.target.value)}
+                        className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all font-semibold appearance-none bg-white cursor-pointer"
+                      >
+                        <option value="">Seleccione una opción</option>
+                        <option value="Sin hijos">Sin hijos</option>
+                        <option value="Con hijos">Con hijos</option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                      </div>
+                    </div>
+                  </div>
+                  {estadoCivil === 'Casado' && (
+                    <div className="md:col-span-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Nombre del Cónyuge *</label>
+                      <input 
+                        type="text"
+                        required={estadoCivil === 'Casado'}
+                        value={nombreEsposa}
+                        onChange={e => setNombreEsposa(e.target.value)}
+                        placeholder="Ej. María Fernanda López"
+                        className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all font-semibold"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
