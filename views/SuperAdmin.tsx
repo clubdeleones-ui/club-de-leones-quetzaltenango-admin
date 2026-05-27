@@ -36,7 +36,8 @@ import {
   Send,
   X,
   Download,
-  Edit
+  Edit,
+  Clock
 } from 'lucide-react';
 import { generateActaPDF } from '../utils/pdfGenerator';
 
@@ -203,6 +204,21 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
     } catch (err) {
       console.error("Error approving proposal in Firebase:", err);
       alert(`La propuesta se aprobó localmente, pero no pudo guardarse en Firebase: ${err}`);
+    }
+  };
+
+  const handlePendientePropuesta = async (propuestaId: string) => {
+    const nuevasPropuestas = propuestas.map(p => {
+      if (p.id === propuestaId) return { ...p, estado: 'Pendiente' as const };
+      return p;
+    });
+    setPropuestas(nuevasPropuestas);
+    
+    try {
+      await firebaseService.updateProposalStatus(propuestaId, 'Pendiente');
+    } catch (err) {
+      console.error("Error setting proposal to pending in Firebase:", err);
+      alert(`No pudo guardarse en Firebase: ${err}`);
     }
   };
 
@@ -1498,22 +1514,47 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
                             </div>
                           </div>
 
-                          {/* Acciones */}
-                          {isPendiente && (
-                            <div className="flex flex-col sm:flex-row items-center gap-3 pt-5 border-t border-slate-100/80">
+                          {/* Acciones de Estado (Solo Admins Autorizados) */}
+                          {canEditPropuestas && (
+                            <div className="flex flex-col sm:flex-row items-center gap-2 pt-5 border-t border-slate-100/80">
                               <button
-                                onClick={() => handleAprobarPropuesta(prop.id)}
-                                className="w-full sm:flex-1 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-black text-xs px-4 py-3 rounded-xl flex justify-center items-center space-x-2 transition-all shadow-lg shadow-green-600/20 active:scale-95"
+                                onClick={() => prop.estado !== 'Aprobado' && handleAprobarPropuesta(prop.id)}
+                                disabled={prop.estado === 'Aprobado'}
+                                className={`flex-1 font-black text-xs px-4 py-3 rounded-xl flex justify-center items-center space-x-2 transition-all shadow-sm ${
+                                  prop.estado === 'Aprobado'
+                                    ? 'bg-green-100 text-green-700 cursor-not-allowed opacity-70'
+                                    : 'bg-emerald-500 hover:bg-emerald-600 text-white active:scale-95 shadow-green-600/20'
+                                }`}
+                                title="Aprobar y crear miembro activo"
                               >
-                                <CheckCircle size={16} />
-                                <span>Aprobar Candidato</span>
+                                <CheckCircle size={14} />
+                                <span>Promover</span>
                               </button>
                               <button
-                                onClick={() => handleRechazarPropuesta(prop.id)}
-                                className="w-full sm:w-auto bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 font-bold text-xs px-5 py-3 rounded-xl flex justify-center items-center space-x-2 transition-all active:scale-95"
+                                onClick={() => prop.estado !== 'Pendiente' && handlePendientePropuesta(prop.id)}
+                                disabled={prop.estado === 'Pendiente'}
+                                className={`flex-1 font-black text-xs px-4 py-3 rounded-xl flex justify-center items-center space-x-2 transition-all shadow-sm ${
+                                  prop.estado === 'Pendiente'
+                                    ? 'bg-yellow-100 text-yellow-700 cursor-not-allowed opacity-70'
+                                    : 'bg-yellow-500 hover:bg-yellow-600 text-white active:scale-95 shadow-yellow-600/20'
+                                }`}
+                                title="Marcar como pendiente (en evaluación)"
                               >
-                                <X size={16} />
-                                <span>Rechazar</span>
+                                <Clock size={14} />
+                                <span>Pendiente</span>
+                              </button>
+                              <button
+                                onClick={() => prop.estado !== 'Rechazado' && handleRechazarPropuesta(prop.id)}
+                                disabled={prop.estado === 'Rechazado'}
+                                className={`flex-1 font-black text-xs px-4 py-3 rounded-xl flex justify-center items-center space-x-2 transition-all shadow-sm ${
+                                  prop.estado === 'Rechazado'
+                                    ? 'bg-red-100 text-red-700 cursor-not-allowed opacity-70'
+                                    : 'bg-rose-500 hover:bg-rose-600 text-white active:scale-95 shadow-red-600/20'
+                                }`}
+                                title="Marcar como rechazado o eliminado de la lista"
+                              >
+                                <X size={14} />
+                                <span>Eliminado</span>
                               </button>
                             </div>
                           )}
