@@ -1,5 +1,5 @@
 
-import { Socio, UserRole, Acta, Actividad, GaleriaItem, Donacion, Beneficio } from './types';
+import { Socio, UserRole, Acta, Actividad, GaleriaItem, Donacion, Beneficio, PropuestaSocio } from './types';
 export const MOCK_SOCIOS: Socio[] = [
   {
     id: '1',
@@ -294,3 +294,19 @@ export const MOCK_BENEFICIOS: Beneficio[] = [
     categoria: 'Salud'
   }
 ];
+
+export const MOCK_PROPUESTAS: PropuestaSocio[] = [
+  {
+    id: 'prop-ejemplo-1',
+    proponente: 'Elena Castillo Castillo',
+    nombreCandidato: 'Dr. Mario Juárez Sandoval',
+    profesionCandidato: 'Médico Pediatra',
+    fotoCandidato: 'https://picsum.photos/seed/mario/200/200',
+    caracteristicas: ['Altruismo y Solidaridad', 'Vocación de Servicio', 'Sensibilidad Comunitaria'],
+    motivoPropuesta: 'El Dr. Mario es reconocido en Quetzaltenango por sus constantes jornadas de salud pediátrica sin costo para niños de escasos recursos. Su espíritu altruista y compromiso social encajan perfectamente con la visión de ayuda del Club de Leones.',
+    porQueBuenLeon: 'Mario aportará su conocimiento médico y redes de apoyo para robustecer nuestras jornadas oftalmológicas y médicas en el valle de Palajunoj. Su capacidad de liderazgo facilitará la consecución de donaciones de insumos de salud.',
+    fechaPropuesta: '2026-05-26',
+    estado: 'Pendiente'
+  }
+];
+

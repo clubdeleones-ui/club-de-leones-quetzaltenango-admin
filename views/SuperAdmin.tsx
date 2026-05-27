@@ -4,7 +4,8 @@ import {
   MOCK_ACTIVIDADES, 
   MOCK_ACTAS, 
   MOCK_DONACIONES, 
-  MOCK_BENEFICIOS 
+  MOCK_BENEFICIOS,
+  MOCK_PROPUESTAS
 } from '../constants';
 import { 
   Socio, 
@@ -84,7 +85,9 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
 
   const [propuestas, setPropuestas] = useState<PropuestaSocio[]>(() => {
     const local = localStorage.getItem('club_leones_propuestas');
-    return local ? JSON.parse(local) : [];
+    if (local) return JSON.parse(local);
+    localStorage.setItem('club_leones_propuestas', JSON.stringify(MOCK_PROPUESTAS));
+    return MOCK_PROPUESTAS;
   });
 
   useEffect(() => {

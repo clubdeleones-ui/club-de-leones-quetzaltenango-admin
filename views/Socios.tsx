@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MOCK_SOCIOS } from '../constants';
+import { MOCK_SOCIOS, MOCK_PROPUESTAS } from '../constants';
 import { Socio, PropuestaSocio } from '../types';
 import { 
   Mail, 
@@ -26,10 +26,13 @@ const Socios: React.FC = () => {
     return MOCK_SOCIOS;
   });
 
-  // Load proposals from localStorage
+  // Load proposals from localStorage or fallback to mock
   const [propuestas, setPropuestas] = useState<PropuestaSocio[]>(() => {
     const local = localStorage.getItem('club_leones_propuestas');
-    return local ? JSON.parse(local) : [];
+    if (local) return JSON.parse(local);
+    // Initialize with mock proposal
+    localStorage.setItem('club_leones_propuestas', JSON.stringify(MOCK_PROPUESTAS));
+    return MOCK_PROPUESTAS;
   });
 
   // Filter only pending proposals
