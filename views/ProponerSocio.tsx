@@ -98,10 +98,7 @@ const ProponerSocio: React.FC = () => {
       alert('Por favor complete todos los campos requeridos.');
       return;
     }
-    if (estadoCivil === 'Casado' && !nombreEsposa) {
-      alert('Por favor ingrese el nombre del cónyuge.');
-      return;
-    }
+
 
     setLoading(true);
     const candidateId = `prop-${Date.now()}`;
@@ -446,10 +443,9 @@ const ProponerSocio: React.FC = () => {
                   </div>
                   {estadoCivil === 'Casado' && (
                     <div className="md:col-span-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Nombre del Cónyuge *</label>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Nombre del Cónyuge (Opcional)</label>
                       <input 
                         type="text"
-                        required={estadoCivil === 'Casado'}
                         value={nombreEsposa}
                         onChange={e => setNombreEsposa(e.target.value)}
                         placeholder="Ej. María Fernanda López"
