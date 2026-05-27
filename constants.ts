@@ -1,42 +1,74 @@
 
 import { Socio, UserRole, Acta, Actividad, GaleriaItem, Donacion, Beneficio } from './types';
-
 export const MOCK_SOCIOS: Socio[] = [
   {
     id: '1',
-    nombre: 'Ricardo Méndez',
-    correo: 'ricardo@leonesxela.com',
-    rol: UserRole.SOCIO,
-    puesto: 'Presidente',
+    nombre: 'Jorge De Leon Alconero',
+    correo: 'alconerodeleonjm@gmail.com',
+    rol: UserRole.SUPER_ADMIN,
+    puesto: 'Presidente del Club',
     estadoCuotas: 'Al día',
     montoPendiente: 0,
-    foto: 'https://picsum.photos/seed/socio1/200/200',
-    fechaIngreso: '2015-06-12'
+    foto: 'https://picsum.photos/seed/jorge/200/200',
+    fechaIngreso: '2025-07-01'
   },
   {
     id: '2',
-    nombre: 'Elena Castillo',
-    correo: 'elena@leonesxela.com',
+    nombre: 'Edwin Ernesto Pacheco López',
+    correo: 'innovandoxela@gmail.com',
     rol: UserRole.SECRETARIO,
-    puesto: 'Secretaria',
-    estadoCuotas: 'Pendiente',
-    montoPendiente: 150,
-    foto: 'https://picsum.photos/seed/socio2/200/200',
-    fechaIngreso: '2018-09-20'
+    puesto: 'Secretario del Club',
+    estadoCuotas: 'Al día',
+    montoPendiente: 0,
+    foto: 'https://picsum.photos/seed/edwin/200/200',
+    fechaIngreso: '2025-07-01'
   },
   {
     id: '3',
-    nombre: 'Juan Carlos Pérez',
-    correo: 'admin@leonesxela.com',
+    nombre: 'Mynor Gómez López',
+    correo: 'mynorgl@hotmail.com',
     rol: UserRole.TESORERO,
-    puesto: 'Tesorero',
+    puesto: 'Tesorero del Club',
     estadoCuotas: 'Al día',
     montoPendiente: 0,
-    foto: 'https://picsum.photos/seed/socio3/200/200',
-    fechaIngreso: '2010-01-15'
+    foto: 'https://picsum.photos/seed/mynor/200/200',
+    fechaIngreso: '2025-07-01'
   },
   {
     id: '4',
+    nombre: 'Mariantonia Cruz De León De Toralla',
+    correo: 'mariancruzdl@gmail.com',
+    rol: UserRole.ASESOR_SERVICIOS,
+    puesto: 'Asesor de Mercadotecnia',
+    estadoCuotas: 'Al día',
+    montoPendiente: 0,
+    foto: 'https://picsum.photos/seed/mariantonia/200/200',
+    fechaIngreso: '2025-07-01'
+  },
+  {
+    id: '5',
+    nombre: 'Gladis Violeta Gramajo Estrada De Solorzano',
+    correo: 'ggramajodesolorzano@gmail.com',
+    rol: UserRole.PRESIDENTE_AFILIACION,
+    puesto: 'Administrador del club',
+    estadoCuotas: 'Al día',
+    montoPendiente: 0,
+    foto: 'https://picsum.photos/seed/gladis/200/200',
+    fechaIngreso: '2025-10-12'
+  },
+  {
+    id: '6',
+    nombre: 'Ricardo Solorzano Guillen',
+    correo: 'ricardo.solorzano.g@gmail.com',
+    rol: UserRole.SOCIO,
+    puesto: 'Vicepresidente de club',
+    estadoCuotas: 'Al día',
+    montoPendiente: 0,
+    foto: 'https://picsum.photos/seed/ricardo/200/200',
+    fechaIngreso: '2025-07-01'
+  },
+  {
+    id: '7',
     nombre: 'Club de Leones Quetzaltenango',
     correo: 'clubdeleonesquetzaltenango@gmail.com',
     rol: UserRole.SUPER_ADMIN,
@@ -47,18 +79,7 @@ export const MOCK_SOCIOS: Socio[] = [
     fechaIngreso: '2026-01-01'
   },
   {
-    id: '5',
-    nombre: 'Carlos Gómez',
-    correo: 'carlos@leonesxela.com',
-    rol: UserRole.ASESOR_SERVICIOS,
-    puesto: 'Asesor de Servicios',
-    estadoCuotas: 'Al día',
-    montoPendiente: 0,
-    foto: 'https://picsum.photos/seed/socio5/200/200',
-    fechaIngreso: '2020-11-05'
-  },
-  {
-    id: '6',
+    id: '8',
     nombre: 'Sofía Ramos',
     correo: 'donante@leonesxela.com',
     rol: UserRole.DONANTE,
@@ -67,17 +88,6 @@ export const MOCK_SOCIOS: Socio[] = [
     montoPendiente: 0,
     foto: 'https://picsum.photos/seed/donante1/200/200',
     fechaIngreso: '2025-02-14'
-  },
-  {
-    id: '7',
-    nombre: 'Mariela López',
-    correo: 'mariela@leonesxela.com',
-    rol: UserRole.PRESIDENTE_AFILIACION,
-    puesto: 'Presidente de Afiliación',
-    estadoCuotas: 'Al día',
-    montoPendiente: 0,
-    foto: 'https://picsum.photos/seed/socio6/200/200',
-    fechaIngreso: '2019-05-10'
   }
 ];
 

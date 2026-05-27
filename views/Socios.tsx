@@ -19,7 +19,7 @@ const Socios: React.FC = () => {
   
   // Load members from localStorage or fallback to mock
   const [socios, setSocios] = useState<Socio[]>(() => {
-    const local = localStorage.getItem('club_leones_socios');
+    const local = localStorage.getItem('club_leones_socios_v2');
     if (local) return JSON.parse(local);
     return MOCK_SOCIOS;
   });
