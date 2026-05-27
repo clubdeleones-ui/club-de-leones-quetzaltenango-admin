@@ -31,7 +31,8 @@ export const firebaseService = {
   saveProposal: async (proposal: PropuestaSocio): Promise<void> => {
     try {
       const docRef = doc(db, "propuestas", proposal.id);
-      await setDoc(docRef, proposal);
+      const cleanData = JSON.parse(JSON.stringify(proposal));
+      await setDoc(docRef, cleanData);
     } catch (error) {
       console.error("Error saving proposal in Firestore:", error);
       throw error;
@@ -69,7 +70,8 @@ export const firebaseService = {
   updateProposal: async (proposalId: string, updatedData: Partial<PropuestaSocio>): Promise<void> => {
     try {
       const docRef = doc(db, "propuestas", proposalId);
-      await updateDoc(docRef, updatedData);
+      const cleanData = JSON.parse(JSON.stringify(updatedData));
+      await updateDoc(docRef, cleanData);
     } catch (error) {
       console.error("Error updating proposal in Firestore:", error);
       throw error;
@@ -107,7 +109,8 @@ export const firebaseService = {
   saveSocio: async (socio: Socio): Promise<void> => {
     try {
       const docRef = doc(db, "socios", socio.id);
-      await setDoc(docRef, socio);
+      const cleanData = JSON.parse(JSON.stringify(socio));
+      await setDoc(docRef, cleanData);
     } catch (error) {
       console.error("Error saving socio in Firestore:", error);
       throw error;
