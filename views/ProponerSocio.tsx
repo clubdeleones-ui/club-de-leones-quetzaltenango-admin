@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserRole, PropuestaSocio } from '../types';
 import { firebaseService } from '../services/firebaseService';
+import { compressImageFile } from '../utils/imageCompressor';
 import { 
   UserPlus, 
   ArrowLeft, 
@@ -23,6 +24,25 @@ const CARACTERISTICAS_OPCIONES = [
   { id: 'sensibilidad', label: 'Sensibilidad Comunitaria', icon: ShieldCheck, description: 'Empatía y preocupación real por el desarrollo local.' }
 ];
 
+// Helper to wrap promises in a timeout to avoid indefinite hanging on bad mobile networks
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage = "Timeout exceeded"): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(errorMessage));
+    }, timeoutMs);
+
+    promise
+      .then((res) => {
+        clearTimeout(timer);
+        resolve(res);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
+
 const ProponerSocio: React.FC = () => {
   const navigate = useNavigate();
   
@@ -40,16 +60,27 @@ const ProponerSocio: React.FC = () => {
   const [nombreEsposa, setNombreEsposa] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [compressing, setCompressing] = useState(false);
 
-  // File Upload Helper (converts to base64)
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // File Upload Helper (converts to base64 with client-side canvas compression)
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFotoCandidato(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      setCompressing(true);
+      try {
+        const compressedBase64 = await compressImageFile(file, 800, 800, 0.7);
+        setFotoCandidato(compressedBase64);
+      } catch (error) {
+        console.error("Error compressing image, falling back to original:", error);
+        // Fallback: read original file as DataURL if compression fails
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setFotoCandidato(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      } finally {
+        setCompressing(false);
+      }
     }
   };
 
@@ -79,42 +110,57 @@ const ProponerSocio: React.FC = () => {
     try {
       // 1. Upload photo to Firebase Storage if it's base64 data
       if (fotoCandidato && fotoCandidato.startsWith('data:')) {
-        finalPhotoUrl = await firebaseService.uploadCandidatePhoto(fotoCandidato, candidateId);
+        try {
+          // Wrapped in a 15-second timeout
+          finalPhotoUrl = await withTimeout(
+            firebaseService.uploadCandidatePhoto(fotoCandidato, candidateId),
+            15000,
+            "Storage upload timeout"
+          );
+        } catch (storageError) {
+          console.warn("Storage upload failed, using compressed base64:", storageError);
+        }
       }
-    } catch (storageError) {
-      console.warn("Storage upload failed, using original base64:", storageError);
+
+      const nuevaPropuesta: PropuestaSocio = {
+        id: candidateId,
+        proponente,
+        nombreCandidato,
+        profesionCandidato,
+        fotoCandidato: finalPhotoUrl,
+        caracteristicas,
+        motivoPropuesta,
+        porQueBuenLeon,
+        fechaPropuesta: new Date().toISOString().split('T')[0],
+        estado: 'Pendiente',
+        estadoCivil,
+        hijos,
+        nombreEsposa: estadoCivil === 'Casado' ? nombreEsposa : undefined
+      };
+
+      try {
+        // 2. Save proposal to Firestore (Wrapped in a 10-second timeout)
+        await withTimeout(
+          firebaseService.saveProposal(nuevaPropuesta),
+          10000,
+          "Firestore save timeout"
+        );
+      } catch (firestoreError) {
+        console.error("Firestore save failed, falling back to local storage:", firestoreError);
+      }
+
+      // 3. Save to localStorage in any case as fallback/cache
+      const localPropuestas = localStorage.getItem('club_leones_propuestas');
+      const propuestasActuales = localPropuestas ? JSON.parse(localPropuestas) : [];
+      localStorage.setItem('club_leones_propuestas', JSON.stringify([nuevaPropuesta, ...propuestasActuales]));
+
+      setSubmitted(true);
+    } catch (err) {
+      console.error("Error submitting proposal:", err);
+      alert("Ocurrió un error inesperado al procesar la propuesta. Por favor intente de nuevo.");
+    } finally {
+      setLoading(false);
     }
-
-    const nuevaPropuesta: PropuestaSocio = {
-      id: candidateId,
-      proponente,
-      nombreCandidato,
-      profesionCandidato,
-      fotoCandidato: finalPhotoUrl,
-      caracteristicas,
-      motivoPropuesta,
-      porQueBuenLeon,
-      fechaPropuesta: new Date().toISOString().split('T')[0],
-      estado: 'Pendiente',
-      estadoCivil,
-      hijos,
-      nombreEsposa: estadoCivil === 'Casado' ? nombreEsposa : undefined
-    };
-
-    try {
-      // 2. Save proposal to Firestore
-      await firebaseService.saveProposal(nuevaPropuesta);
-    } catch (firestoreError) {
-      console.error("Firestore save failed, falling back to local storage:", firestoreError);
-    }
-
-    // 3. Save to localStorage in any case as fallback/cache
-    const localPropuestas = localStorage.getItem('club_leones_propuestas');
-    const propuestasActuales = localPropuestas ? JSON.parse(localPropuestas) : [];
-    localStorage.setItem('club_leones_propuestas', JSON.stringify([nuevaPropuesta, ...propuestasActuales]));
-
-    setLoading(false);
-    setSubmitted(true);
   };
 
   const handleReset = () => {
@@ -281,7 +327,11 @@ const ProponerSocio: React.FC = () => {
                     >
                       Subir Imagen
                     </label>
-                    <p className="text-[11px] text-slate-500 mt-2 font-medium">Formatos recomendados: JPG, PNG. Tamaño máximo 2MB.</p>
+                    {compressing ? (
+                      <p className="text-[11px] text-blue-900 mt-2 font-bold animate-pulse">Comprimiendo imagen...</p>
+                    ) : (
+                      <p className="text-[11px] text-slate-500 mt-2 font-medium">Formatos recomendados: JPG, PNG. Tamaño máximo 2MB.</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -414,11 +464,11 @@ const ProponerSocio: React.FC = () => {
               <div className="pt-6 border-t border-slate-100 flex justify-center sm:justify-end">
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || compressing}
                   className="w-full sm:w-auto bg-blue-900 hover:bg-blue-800 text-white font-semibold px-6 py-3.5 rounded-2xl flex items-center justify-center space-x-3 shadow-lg shadow-blue-900/10 active:scale-[0.98] transition-all text-sm disabled:opacity-50"
                 >
                   <Send size={16} />
-                  <span>{loading ? 'Enviando al Comité...' : 'Enviar Propuesta al Comité'}</span>
+                  <span>{loading ? 'Enviando al Comité...' : compressing ? 'Procesando Imagen...' : 'Enviar Propuesta al Comité'}</span>
                 </button>
               </div>
             </div>
