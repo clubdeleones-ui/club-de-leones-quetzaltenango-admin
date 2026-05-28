@@ -382,6 +382,8 @@ const ProponerSocio: React.FC = () => {
                     onChange={e => setMotivoPropuesta(e.target.value)}
                     placeholder="Redacte un breve párrafo describiendo los antecedentes de servicio, trayectoria moral o amistad comunitaria..."
                     className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all resize-none text-sm"
+                    spellCheck={true}
+                    autoCorrect="on"
                   />
                 </div>
 
@@ -394,6 +396,8 @@ const ProponerSocio: React.FC = () => {
                     onChange={e => setPorQueBuenLeon(e.target.value)}
                     placeholder="Describa el valor agregado que traerá al club: compromiso, tiempo, ideas frescas o redes de ayuda para fortalecer la labor del Club de Leones..."
                     className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all resize-none text-sm"
+                    spellCheck={true}
+                    autoCorrect="on"
                   />
                 </div>
               </div>

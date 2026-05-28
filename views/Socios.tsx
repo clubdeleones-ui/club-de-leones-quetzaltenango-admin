@@ -625,6 +625,8 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                     value={editingPropuesta.motivoPropuesta}
                     onChange={e => setEditingPropuesta({ ...editingPropuesta, motivoPropuesta: e.target.value })}
                     className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all resize-none text-sm font-semibold"
+                    spellCheck={true}
+                    autoCorrect="on"
                   />
                 </div>
 
@@ -637,6 +639,8 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                     value={editingPropuesta.porQueBuenLeon}
                     onChange={e => setEditingPropuesta({ ...editingPropuesta, porQueBuenLeon: e.target.value })}
                     className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all resize-none text-sm font-semibold"
+                    spellCheck={true}
+                    autoCorrect="on"
                   />
                 </div>
 
