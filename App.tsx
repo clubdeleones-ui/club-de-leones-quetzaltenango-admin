@@ -14,6 +14,7 @@ import Calendario from './views/Calendario';
 import SuperAdmin from './views/SuperAdmin';
 import ProponerSocio from './views/ProponerSocio';
 import Donar from './views/Donar';
+import Solicitudes from './views/Solicitudes';
 import { AuthState, Socio, UserRole } from './types';
 import { firebaseService } from './services/firebaseService';
 
@@ -100,6 +101,7 @@ const App: React.FC = () => {
             <Route path="/socios" element={<Socios user={auth.user} />} />
             <Route path="/proponer-socio" element={<ProponerSocio />} />
             <Route path="/donar" element={<Donar />} />
+            <Route path="/solicitudes" element={<Solicitudes user={auth.user} />} />
             <Route path="/login" element={auth.isAuthenticated ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />} />
 
             {/* Protected Routes */}

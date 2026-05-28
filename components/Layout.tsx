@@ -65,6 +65,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
     { label: 'Actividades', path: '/actividades', icon: Calendar, public: true },
     { label: 'Galería', path: '/galeria', icon: Image, public: true },
     { label: 'Directorio', path: '/socios', icon: Users, public: true },
+    { label: 'Solicitudes', path: '/solicitudes', icon: FileText, public: true },
   ];
 
   const getProtectedItems = () => {

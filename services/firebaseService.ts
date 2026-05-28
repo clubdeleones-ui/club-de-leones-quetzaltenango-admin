@@ -8,7 +8,7 @@ import {
   deleteDoc
 } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { Socio, PropuestaSocio } from "../types";
+import { Socio, PropuestaSocio, Solicitud } from "../types";
 
 export const firebaseService = {
   // Upload candidate photo to Firebase Storage (Supports Base64 data_url format)
@@ -136,6 +136,45 @@ export const firebaseService = {
       await deleteDoc(docRef);
     } catch (error) {
       console.error("Error deleting socio from Firestore:", error);
+      throw error;
+    }
+  },
+
+  // Save a new request (solicitud)
+  saveSolicitud: async (solicitud: Solicitud): Promise<void> => {
+    try {
+      const docRef = doc(db, "solicitudes", solicitud.id);
+      const cleanData = JSON.parse(JSON.stringify(solicitud));
+      await setDoc(docRef, cleanData);
+    } catch (error) {
+      console.error("Error saving solicitud in Firestore:", error);
+      throw error;
+    }
+  },
+
+  // Fetch requests (solicitudes)
+  getSolicitudes: async (): Promise<Solicitud[]> => {
+    try {
+      const colRef = collection(db, "solicitudes");
+      const snapshot = await getDocs(colRef);
+      const list: Solicitud[] = [];
+      snapshot.forEach(doc => {
+        list.push(doc.data() as Solicitud);
+      });
+      return list;
+    } catch (error) {
+      console.error("Error fetching solicitudes from Firestore:", error);
+      throw error;
+    }
+  },
+
+  // Delete a request (solicitud)
+  deleteSolicitud: async (solicitudId: string): Promise<void> => {
+    try {
+      const docRef = doc(db, "solicitudes", solicitudId);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting solicitud from Firestore:", error);
       throw error;
     }
   }

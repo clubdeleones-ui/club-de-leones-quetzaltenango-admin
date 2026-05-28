@@ -94,3 +94,22 @@ export interface PropuestaSocio {
   hijos?: string;
   nombreEsposa?: string;
 }
+
+export interface Responsable {
+  nombre: string;
+  telefono: string;
+}
+
+export interface Solicitud {
+  id: string;
+  nombre: string; // Nombre de la solicitud
+  fecha: string;
+  descripcion: string;
+  responsables: Responsable[]; // de 1 a 3 responsables
+  tema: string; // Diabetes, Visión, Mitigación del Hambre, Cáncer Infantil, Medio Ambiente, Alivio del Desastre, Apoyo a la Juventud, Causas Humanitarias, Otra
+  otroTemaDescripcion?: string; // si escoge Otra
+  tipo: 'Abierta' | 'Interna';
+  estado: 'Pendiente' | 'Aprobada' | 'Rechazada';
+  usuarioCreador?: string; // email o id del socio/admin o 'público'
+  fechaCreacion: string;
+}
