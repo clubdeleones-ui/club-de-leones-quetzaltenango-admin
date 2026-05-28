@@ -24,6 +24,7 @@ export interface Socio {
   estatus?: string;
   fechaFin?: string;
   club?: string;
+  qrToken?: string;
 }
 
 export interface Acta {

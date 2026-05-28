@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
-import { ShieldCheck, Lock, Mail, ArrowRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { ShieldCheck, Lock, Mail, ArrowRight, Loader2, QrCode, AlertCircle } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import { MOCK_SOCIOS } from '../constants';
 import { Socio, UserRole } from '../types';
@@ -15,7 +15,51 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isQrLoggingIn, setIsQrLoggingIn] = useState(false);
+  const [qrLoginError, setQrLoginError] = useState<string | null>(null);
+  
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const hashQuery = window.location.hash.split('?')[1];
+    const searchParams = new URLSearchParams(hashQuery || window.location.search);
+    const qrToken = searchParams.get('qr_token');
+
+    if (qrToken) {
+      const loginWithQrToken = async () => {
+        setIsQrLoggingIn(true);
+        setQrLoginError(null);
+        try {
+          const list = await firebaseService.getSocios();
+          const matchingSocio = list.find(s => s.qrToken === qrToken);
+
+          if (matchingSocio) {
+            onLogin(matchingSocio);
+            const isAdministrative = 
+              matchingSocio.rol === UserRole.SUPER_ADMIN || 
+              matchingSocio.rol === UserRole.TESORERO || 
+              matchingSocio.rol === UserRole.SECRETARIO || 
+              matchingSocio.rol === UserRole.ASESOR_SERVICIOS ||
+              matchingSocio.rol === UserRole.PRESIDENTE_AFILIACION;
+            if (isAdministrative) {
+              navigate('/admin');
+            } else {
+              navigate('/dashboard');
+            }
+          } else {
+            setQrLoginError("Código QR inválido, expirado o revocado por el administrador.");
+          }
+        } catch (err) {
+          console.error("Error logging in via QR token:", err);
+          setQrLoginError("Error de conexión al procesar el inicio de sesión QR.");
+        } finally {
+          setIsQrLoggingIn(false);
+        }
+      };
+      loginWithQrToken();
+    }
+  }, [location.search, location.hash]);
 
   const loginWithGoogle = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -162,6 +206,23 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     }
   };
 
+  if (isQrLoggingIn) {
+    return (
+      <div className="max-w-md mx-auto mt-12 mb-20 bg-white/80 backdrop-blur-xl rounded-[2rem] shadow-2xl p-10 border border-white/20 relative overflow-hidden text-center flex flex-col items-center justify-center py-20 space-y-6">
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-900 via-yellow-500 to-blue-900" />
+        <div className="relative inline-block">
+          <div className="absolute inset-0 bg-yellow-400 blur-2xl opacity-20 rounded-full" />
+          <QrCode className="relative text-blue-900 animate-pulse" size={64} />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-bold text-blue-900">Autenticación por QR</h2>
+          <p className="text-sm text-slate-550 font-medium">Validando tus credenciales con Firestore...</p>
+        </div>
+        <Loader2 className="animate-spin text-blue-900 mt-4" size={32} />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-md mx-auto mt-12 mb-20 bg-white/80 backdrop-blur-xl rounded-[2rem] shadow-2xl p-10 border border-white/20 relative overflow-hidden">
       <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-900 via-yellow-500 to-blue-900" />
@@ -178,6 +239,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         <h2 className="text-2xl md:text-3xl font-bold text-blue-900 tracking-tight">Acceso Socios</h2>
         <p className="text-sm text-slate-550 mt-1.5 font-medium">Panel Administrativo</p>
       </div>
+
+      {qrLoginError && (
+        <div className="bg-red-50 text-red-700 p-4 rounded-2xl text-xs mb-6 border border-red-100 font-semibold flex items-start space-x-2 animate-in fade-in">
+          <AlertCircle className="flex-shrink-0 mt-0.5 text-red-500" size={14} />
+          <span>{qrLoginError}</span>
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-6 border border-red-100">

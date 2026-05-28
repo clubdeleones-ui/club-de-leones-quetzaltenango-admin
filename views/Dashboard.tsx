@@ -28,7 +28,8 @@ import {
   AlertTriangle,
   Building,
   Plus,
-  Trash2
+  Trash2,
+  QrCode
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { MOCK_DONACIONES, MOCK_SOCIOS } from '../constants';
@@ -101,6 +102,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
   const [socioSaveSuccess, setSocioSaveSuccess] = useState(false);
   const [socioSaveError, setSocioSaveError] = useState<string | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; title: string } | null>(null);
+  
+  // QR code state
+  const [qrSocio, setQrSocio] = useState<Socio | null>(null);
+  const [isGeneratingQr, setIsGeneratingQr] = useState(false);
 
   // Check if editingSocio is a new registration
   const isNewSocio = useMemo(() => {
@@ -135,6 +140,82 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
   useEffect(() => {
     fetchSociosList();
   }, [isAdministrative]);
+
+  const handleQrClick = async (socio: Socio) => {
+    if (socio.qrToken) {
+      setQrSocio(socio);
+      return;
+    }
+
+    setIsGeneratingQr(true);
+    try {
+      const token = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+      const updatedSocio = { ...socio, qrToken: token };
+      await firebaseService.saveSocio(updatedSocio);
+      
+      const newList = socios.map(s => s.id === socio.id ? updatedSocio : s);
+      setSocios(newList);
+      localStorage.setItem('club_leones_socios_v3', JSON.stringify(newList));
+      
+      setQrSocio(updatedSocio);
+    } catch (err) {
+      console.error("Error generating QR token:", err);
+      alert("Error al generar el token del código QR.");
+    } finally {
+      setIsGeneratingQr(false);
+    }
+  };
+
+  const handleRegenerarQrToken = async (socioId: string) => {
+    const socio = socios.find(s => s.id === socioId);
+    if (!socio) return;
+
+    const confirmed = window.confirm("¿Está seguro de regenerar el código QR? El código QR anterior dejará de funcionar inmediatamente para iniciar sesión.");
+    if (!confirmed) return;
+
+    setIsGeneratingQr(true);
+    try {
+      const token = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+      const updatedSocio = { ...socio, qrToken: token };
+      await firebaseService.saveSocio(updatedSocio);
+      
+      const newList = socios.map(s => s.id === socioId ? updatedSocio : s);
+      setSocios(newList);
+      localStorage.setItem('club_leones_socios_v3', JSON.stringify(newList));
+      
+      setQrSocio(updatedSocio);
+      alert("Código QR regenerado con éxito. El anterior ha sido invalidado.");
+    } catch (err) {
+      console.error("Error regenerating QR token:", err);
+      alert("Error al regenerar el código QR.");
+    } finally {
+      setIsGeneratingQr(false);
+    }
+  };
+
+  const handleDownloadQr = async (socio: Socio) => {
+    if (!socio.qrToken) return;
+    
+    const qrUrl = window.location.origin + window.location.pathname + '#/login?qr_token=' + socio.qrToken;
+    const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(qrUrl)}`;
+    
+    try {
+      const response = await fetch(apiUrl);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `QR_Acceso_${socio.nombre.replace(/\s+/g, '_')}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error("Error downloading QR image blob:", err);
+      // Fallback
+      window.open(apiUrl, '_blank');
+    }
+  };
 
   const handleEditSocioClick = (socio: Socio) => {
     setEditingSocio(socio);
@@ -1027,6 +1108,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                           <td className="p-5 text-right">
                             <div className="flex items-center justify-end space-x-2">
                               <button
+                                onClick={() => handleQrClick(socio)}
+                                className="bg-white hover:bg-yellow-50 text-amber-600 hover:text-amber-700 border border-slate-200/60 p-2 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm disabled:opacity-50"
+                                title="Generar código QR de acceso"
+                                disabled={isGeneratingQr}
+                              >
+                                <QrCode size={13} className="mr-1" />
+                                <span>QR</span>
+                              </button>
+                              <button
                                 onClick={() => handleEditSocioClick(socio)}
                                 className="bg-white hover:bg-blue-50 text-slate-605 hover:text-blue-900 border border-slate-200/60 p-2 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm"
                                 title="Editar Ficha"
@@ -1297,6 +1387,77 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
       )}
 
       {/* Shared Lightbox Photo Preview Modal */}
+      {/* QR Code Viewer Modal */}
+      {qrSocio && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full max-w-md p-6 sm:p-10 text-center space-y-6 relative animate-in zoom-in-95 duration-300">
+            <button 
+              type="button"
+              onClick={() => setQrSocio(null)}
+              className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="space-y-1">
+              <h2 className="text-2xl font-black text-blue-900">Código QR de Acceso</h2>
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+                {qrSocio.nombre}
+              </p>
+              <p className="text-[11px] text-slate-400 font-medium">
+                {qrSocio.puesto || 'Socio Regular'}
+              </p>
+            </div>
+
+            {/* QR Image Display */}
+            {qrSocio.qrToken ? (
+              <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-col items-center justify-center space-y-4">
+                <div className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-inner">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
+                      window.location.origin + window.location.pathname + '#/login?qr_token=' + qrSocio.qrToken
+                    )}`}
+                    alt="Acceso QR"
+                    className="w-56 h-56 object-contain"
+                  />
+                </div>
+                
+                <p className="text-[10px] text-slate-450 leading-relaxed font-semibold max-w-xs">
+                  Escanea este código con la cámara de tu móvil para iniciar sesión automáticamente como este usuario.
+                </p>
+              </div>
+            ) : (
+              <div className="py-10 text-slate-450">
+                <Loader2 className="animate-spin mx-auto text-blue-900 mb-2" size={32} />
+                <p className="text-sm font-semibold">Generando credenciales QR...</p>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => handleDownloadQr(qrSocio)}
+                className="w-full bg-blue-900 hover:bg-blue-800 text-white font-black py-3.5 rounded-2xl transition-all shadow-md hover:shadow-lg flex items-center justify-center space-x-2 text-sm"
+              >
+                <Download size={16} />
+                <span>Descargar Código QR (PNG)</span>
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => handleRegenerarQrToken(qrSocio.id)}
+                disabled={isGeneratingQr}
+                className="w-full bg-slate-100 hover:bg-slate-200 hover:text-slate-800 text-slate-655 py-3 rounded-2xl transition-all flex items-center justify-center space-x-2 text-xs border border-slate-200 disabled:opacity-55"
+              >
+                <QrCode size={14} />
+                <span>Regenerar / Invalidar Anterior</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selectedPhoto && (
         <div 
           className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300"
