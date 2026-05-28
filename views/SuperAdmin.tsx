@@ -119,7 +119,12 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
         if (fetchedPropuestas) {
           setPropuestas(prev => {
             const fetchedIds = new Set(fetchedPropuestas.map(p => p.id));
-            const unsynced = prev.filter(p => (p as any).synced === false && !fetchedIds.has(p.id));
+            const fetchedNames = new Set(fetchedPropuestas.map(p => p.nombreCandidato.trim().toLowerCase()));
+            const unsynced = prev.filter(p => 
+              (p as any).synced === false && 
+              !fetchedIds.has(p.id) &&
+              !fetchedNames.has(p.nombreCandidato.trim().toLowerCase())
+            );
             const syncedFetched = fetchedPropuestas.map(p => ({ ...p, synced: true }));
             const merged = [...syncedFetched, ...unsynced];
             localStorage.setItem('club_leones_propuestas', JSON.stringify(merged));

@@ -19,7 +19,8 @@ import {
   CheckCircle,
   X,
   Trash2,
-  Pencil
+  Pencil,
+  ChevronDown
 } from 'lucide-react';
 
 interface SociosProps {
@@ -28,6 +29,7 @@ interface SociosProps {
 
 const Socios: React.FC<SociosProps> = ({ user }) => {
   const [activeTab, setActiveTab] = useState<'activos' | 'propuestos'>('activos');
+  const [isMobileTabMenuOpen, setIsMobileTabMenuOpen] = useState(false);
   
   // Load members from localStorage or fallback to mock
   const [socios, setSocios] = useState<Socio[]>(() => {
@@ -66,7 +68,12 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
         if (fetchedPropuestas) {
           setPropuestas(prev => {
             const fetchedIds = new Set(fetchedPropuestas.map(p => p.id));
-            const unsynced = prev.filter(p => (p as any).synced === false && !fetchedIds.has(p.id));
+            const fetchedNames = new Set(fetchedPropuestas.map(p => p.nombreCandidato.trim().toLowerCase()));
+            const unsynced = prev.filter(p => 
+              (p as any).synced === false && 
+              !fetchedIds.has(p.id) &&
+              !fetchedNames.has(p.nombreCandidato.trim().toLowerCase())
+            );
             const syncedFetched = fetchedPropuestas.map(p => ({ ...p, synced: true }));
             const merged = [...syncedFetched, ...unsynced];
             localStorage.setItem('club_leones_propuestas', JSON.stringify(merged));
@@ -80,6 +87,11 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
 
     fetchData();
   }, []);
+
+  // Save proposals to localStorage when state changes to avoid stale local cache
+  useEffect(() => {
+    localStorage.setItem('club_leones_propuestas', JSON.stringify(propuestas));
+  }, [propuestas]);
 
   const canEditPropuestas = user?.rol === UserRole.SUPER_ADMIN || user?.rol === UserRole.PRESIDENTE_AFILIACION || user?.rol === UserRole.SECRETARIO;
   
@@ -154,11 +166,71 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
         </div>
       </header>
 
-      {/* Tabs Navigation */}
-      <div className="flex border-b border-slate-200 overflow-x-auto scrollbar-none w-full whitespace-nowrap">
+      {/* Tabs Navigation (Responsive Dropdown on Mobile, Tabs on Desktop) */}
+      <div className="md:hidden w-full max-w-sm relative z-30">
+        <button
+          type="button"
+          onClick={() => setIsMobileTabMenuOpen(!isMobileTabMenuOpen)}
+          className="w-full flex items-center justify-between px-5 py-3.5 bg-blue-900 text-white font-extrabold rounded-2xl shadow-lg border border-blue-800/60 transition-all hover:bg-blue-850 active:scale-[0.99] text-sm"
+        >
+          <div className="flex items-center space-x-2.5">
+            {activeTab === 'activos' ? <Users size={18} className="text-yellow-400" /> : <UserCheck size={18} className="text-yellow-400" />}
+            <span>
+              {activeTab === 'activos' ? `Socios Activos (${socios.length})` : 'Candidatos Propuestos'}
+            </span>
+            {activeTab === 'propuestos' && propuestasAMostrar.length > 0 && (
+              <span className="bg-yellow-500 text-blue-900 text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full">
+                {propuestasAMostrar.length}
+              </span>
+            )}
+          </div>
+          <ChevronDown size={18} className={`text-slate-300 transition-transform duration-300 ${isMobileTabMenuOpen ? 'rotate-180' : ''}`} />
+        </button>
+
+        {isMobileTabMenuOpen && (
+          <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2.5 z-40 animate-in fade-in slide-in-from-top-1 duration-200">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('activos');
+                setIsMobileTabMenuOpen(false);
+              }}
+              className={`w-full flex items-center space-x-3 px-5 py-3 text-sm font-extrabold transition-colors text-left ${
+                activeTab === 'activos' ? 'bg-blue-50 text-blue-900' : 'text-slate-655 hover:bg-slate-50'
+              }`}
+            >
+              <Users size={18} className={activeTab === 'activos' ? 'text-blue-900' : 'text-slate-400'} />
+              <span>Socios Activos ({socios.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('propuestos');
+                setIsMobileTabMenuOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-5 py-3 text-sm font-extrabold transition-colors text-left ${
+                activeTab === 'propuestos' ? 'bg-blue-50 text-blue-900' : 'text-slate-655 hover:bg-slate-50'
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <UserCheck size={18} className={activeTab === 'propuestos' ? 'text-blue-900' : 'text-slate-400'} />
+                <span>Candidatos Propuestos</span>
+              </div>
+              {propuestasAMostrar.length > 0 && (
+                <span className="bg-yellow-500 text-blue-900 text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full">
+                  {propuestasAMostrar.length}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Tabs Navigation */}
+      <div className="hidden md:flex border-b border-slate-200">
         <button
           onClick={() => setActiveTab('activos')}
-          className={`flex-shrink-0 flex items-center space-x-2 md:space-x-3 px-4 md:px-6 py-2.5 md:py-3 font-semibold text-sm md:text-base border-b-4 transition-all ${
+          className={`flex items-center space-x-3 px-6 py-3 font-semibold text-base border-b-4 transition-all ${
             activeTab === 'activos'
               ? 'border-blue-900 text-blue-900'
               : 'border-transparent text-slate-600 hover:text-slate-800'
@@ -169,7 +241,7 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
         </button>
         <button
           onClick={() => setActiveTab('propuestos')}
-          className={`flex-shrink-0 flex items-center space-x-2 md:space-x-3 px-4 md:px-6 py-2.5 md:py-3 font-semibold text-sm md:text-base border-b-4 transition-all relative ${
+          className={`flex items-center space-x-3 px-6 py-3 font-semibold text-base border-b-4 transition-all relative ${
             activeTab === 'propuestos'
               ? 'border-blue-900 text-blue-900'
               : 'border-transparent text-slate-600 hover:text-slate-800'
@@ -178,7 +250,7 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
           <UserCheck size={18} />
           <span>Candidatos Propuestos</span>
           {propuestasAMostrar.length > 0 && (
-            <span className="absolute -top-1 -right-1 sm:top-2 sm:right-0 bg-yellow-500 text-blue-900 text-[10px] font-bold w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center rounded-full animate-bounce">
+            <span className="absolute top-2 right-0 bg-yellow-500 text-blue-900 text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full animate-bounce">
               {propuestasAMostrar.length}
             </span>
           )}
