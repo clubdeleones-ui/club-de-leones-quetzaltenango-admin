@@ -82,86 +82,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
 
   const isDonante = user.rol === UserRole.DONANTE;
 
-  // --- Profile (Autoservicio) States ---
-  const [profileForm, setProfileForm] = useState({
-    nombre: user.nombre,
-    correo: user.correo,
-    telefono: user.telefono || '',
-    foto: user.foto || ''
-  });
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [profileSuccess, setProfileSuccess] = useState(false);
-  const [profileError, setProfileError] = useState<string | null>(null);
-
-  // Sync profile form state if user changes
-  useEffect(() => {
-    setProfileForm({
-      nombre: user.nombre,
-      correo: user.correo,
-      telefono: user.telefono || '',
-      foto: user.foto || ''
-    });
-  }, [user]);
-
-  const handleProfilePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const compressed = await compressImageFile(file, 400, 400, 0.7);
-      setProfileForm(prev => ({ ...prev, foto: compressed }));
-    } catch (err) {
-      console.error("Error compressing image:", err);
-      setProfileError("No se pudo procesar la imagen.");
-    }
-  };
-
-  const handleProfileSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!profileForm.nombre.trim() || !profileForm.correo.trim()) {
-      setProfileError("El nombre y el correo son obligatorios.");
-      return;
-    }
-    if (!/\S+@\S+\.\S+/.test(profileForm.correo)) {
-      setProfileError("Ingrese un correo electrónico válido.");
-      return;
-    }
-
-    setIsSavingProfile(true);
-    setProfileError(null);
-    setProfileSuccess(false);
-
-    try {
-      const updatedSocio: Socio = {
-        ...user,
-        nombre: profileForm.nombre,
-        correo: profileForm.correo,
-        telefono: profileForm.telefono,
-        foto: profileForm.foto,
-        editadoPor: user.nombre,
-        fechaEdicion: new Date().toISOString()
-      };
-
-      await firebaseService.saveSocio(updatedSocio);
-      onUpdateUser(updatedSocio);
-      
-      // Keep socios cache updated
-      const local = localStorage.getItem('club_leones_socios_v3');
-      if (local) {
-        const parsed: Socio[] = JSON.parse(local);
-        const updatedList = parsed.map(s => s.id === updatedSocio.id ? updatedSocio : s);
-        localStorage.setItem('club_leones_socios_v3', JSON.stringify(updatedList));
-      }
-
-      setProfileSuccess(true);
-      setTimeout(() => setProfileSuccess(false), 3000);
-    } catch (err: any) {
-      console.error("Error saving profile:", err);
-      setProfileError(err?.message || "Ocurrió un error al guardar tu perfil.");
-    } finally {
-      setIsSavingProfile(false);
-    }
-  };
-
   // --- Administrative: Partner Management States ---
   const [socios, setSocios] = useState<Socio[]>(() => {
     const local = localStorage.getItem('club_leones_socios_v3');
@@ -187,6 +107,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
     if (!editingSocio) return false;
     return !socios.some(s => s.id === editingSocio.id);
   }, [editingSocio, socios]);
+
+  // Check if current edit session is a self-edit
+  const isSelfEdit = useMemo(() => {
+    if (!editingSocio) return false;
+    return editingSocio.id === user.id;
+  }, [editingSocio, user.id]);
 
   const fetchSociosList = async () => {
     if (!isAdministrative) return;
@@ -277,6 +203,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
       setSocioSaveError("El nombre y el correo son obligatorios.");
       return;
     }
+    if (!/\S+@\S+\.\S+/.test(editSocioForm.correo)) {
+      setSocioSaveError("Ingrese un correo electrónico válido.");
+      return;
+    }
 
     setIsSavingSocio(true);
     setSocioSaveError(null);
@@ -300,7 +230,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
       setSocios(newSociosList);
       localStorage.setItem('club_leones_socios_v3', JSON.stringify(newSociosList));
 
-      // If editing self, notify parent
+      // If editing self, notify parent to refresh auth state
       if (updated.id === user.id) {
         onUpdateUser(updated);
       }
@@ -360,6 +290,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
   ];
   const COLORS = ['#1e3a8a', '#eab308'];
 
+  // Styling properties for visual categories
+  const userIsInactive = user.estatus === 'Inactive';
+  const userIsDirectiva = !userIsInactive && (
+    user.rol === UserRole.SUPER_ADMIN ||
+    user.rol === UserRole.SECRETARIO ||
+    user.rol === UserRole.TESORERO ||
+    user.rol === UserRole.ASESOR_SERVICIOS ||
+    user.rol === UserRole.PRESIDENTE_AFILIACION
+  );
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       {/* Header Section (Changes Dynamically) */}
@@ -383,7 +323,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
         {activeTab === 'perfil' && (
           <div>
             <h1 className="text-4xl font-black text-blue-900 tracking-tight">Mi Perfil</h1>
-            <p className="text-slate-500 mt-1">Modifica tus datos de contacto y sube tu foto de perfil.</p>
+            <p className="text-slate-500 mt-1">Visualiza tu ficha oficial y actualiza tus datos de contacto.</p>
           </div>
         )}
         {activeTab === 'socios' && (
@@ -438,7 +378,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                   setIsMobileTabMenuOpen(false);
                 }}
                 className={`w-full flex items-center space-x-3 px-5 py-3 text-sm font-extrabold transition-colors text-left ${
-                  activeTab === 'resumen' ? 'bg-blue-50 text-blue-900' : 'text-slate-650 hover:bg-slate-50'
+                  activeTab === 'resumen' ? 'bg-blue-50 text-blue-900' : 'text-slate-655 hover:bg-slate-50'
                 }`}
               >
                 <TrendingUp size={18} className={activeTab === 'resumen' ? 'text-blue-900' : 'text-slate-400'} />
@@ -737,151 +677,126 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
         </div>
       )}
 
-      {/* --- TAB CONTENT: MI PERFIL (AUTOSERVICIO) --- */}
+      {/* --- TAB CONTENT: MI PERFIL (UNIFICADO CON LA TARJETA DEL DIRECTORIO) --- */}
       {activeTab === 'perfil' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in duration-500">
-          {/* Card: Foto & Institutional Info */}
-          <div className="bg-white rounded-3xl border border-slate-200/80 p-8 shadow-sm flex flex-col items-center text-center space-y-6">
-            <div className="relative group">
-              <img 
-                src={profileForm.foto || `https://picsum.photos/seed/${user.id}/200/200`} 
-                alt="Foto de perfil" 
-                className="w-32 h-32 rounded-full object-cover border-4 border-slate-100 shadow-lg group-hover:opacity-90 transition-opacity" 
-              />
-              <label 
-                htmlFor="profile-upload" 
-                className="absolute bottom-1 right-1 bg-yellow-500 text-blue-900 p-2.5 rounded-full border-2 border-white shadow-md hover:bg-yellow-600 transition-all cursor-pointer transform hover:scale-105 active:scale-95 flex items-center justify-center"
-                title="Cambiar foto de perfil"
-              >
-                <Upload size={16} />
-                <input 
-                  type="file" 
-                  id="profile-upload" 
-                  accept="image/*" 
-                  className="hidden" 
-                  onChange={handleProfilePhotoChange} 
-                />
-              </label>
-            </div>
-
-            <div>
-              <h3 className="font-extrabold text-xl text-slate-800 leading-tight">{profileForm.nombre || user.nombre}</h3>
-              <p className="text-xs font-black uppercase text-yellow-600 tracking-wider mt-1.5">{user.puesto || 'Socio Regular'}</p>
-            </div>
-
-            {/* Read-only Institutional Fields */}
-            <div className="w-full bg-slate-50 rounded-2xl p-5 text-left text-xs font-bold text-slate-550 space-y-4 border border-slate-100">
-              <div className="text-[10px] text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1 flex items-center">
-                <Lock size={12} className="mr-1.5 text-slate-400" />
-                Información de Membresía
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-450 flex items-center"><Building size={14} className="mr-1.5 text-slate-400" /> Club</span>
-                <span className="text-slate-800 font-extrabold">{user.club || 'QUETZALTENANGO'}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-450 flex items-center"><User size={14} className="mr-1.5 text-slate-400" /> Rol</span>
-                <span className="text-slate-800 font-extrabold">
-                  {user.rol === UserRole.SUPER_ADMIN ? 'Super Administrador' :
-                   user.rol === UserRole.SECRETARIO ? 'Secretario' :
-                   user.rol === UserRole.TESORERO ? 'Tesorero' :
-                   user.rol === UserRole.ASESOR_SERVICIOS ? 'Asesor de Servicios' :
-                   user.rol === UserRole.PRESIDENTE_AFILIACION ? 'Presidente de Afiliación' :
-                   user.rol === UserRole.DONANTE ? 'Donante' : 'Socio Activo'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-450 flex items-center"><Calendar size={14} className="mr-1.5 text-slate-400" /> Miembro desde</span>
-                <span className="text-slate-800 font-extrabold">{user.fechaIngreso}</span>
-              </div>
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100/80">
-                <span className="text-slate-450 flex items-center"><CreditCard size={14} className="mr-1.5 text-slate-400" /> Solvencia</span>
-                <span className={`px-2 py-0.5 rounded-md text-[10px] ${
-                  user.estadoCuotas === 'Al día' ? 'bg-green-50 text-green-700' :
-                  user.estadoCuotas === 'Pendiente' ? 'bg-yellow-50 text-yellow-700' : 'bg-red-50 text-red-700'
+        <div className="py-6 animate-in fade-in duration-500">
+          <div 
+            className="bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl border border-slate-100 hover:border-blue-900/10 transition-all duration-500 flex flex-col relative max-w-md mx-auto w-full group"
+          >
+            {/* Cabecera decorativa idéntica */}
+            <div className="h-28 bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 relative">
+              <div className="absolute inset-0 opacity-15 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-yellow-300 via-transparent to-transparent"></div>
+              
+              {/* Badge de Estatus flotante premium */}
+              <div className="absolute top-4 right-4">
+                <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center space-x-1.5 border backdrop-blur-md ${
+                  userIsInactive 
+                    ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' 
+                    : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                 }`}>
-                  ● {user.estadoCuotas}
+                  <span className={`w-1.5 h-1.5 rounded-full ${userIsInactive ? 'bg-yellow-500 animate-pulse' : 'bg-emerald-400 animate-pulse'}`} />
+                  <span>{userIsInactive ? 'Inactivo' : 'Activo'}</span>
                 </span>
               </div>
             </div>
-          </div>
 
-          {/* Form: Editable Fields */}
-          <div className="bg-white rounded-3xl border border-slate-200/80 p-8 shadow-sm lg:col-span-2 space-y-6">
-            <h3 className="text-2xl font-black text-slate-800 tracking-tight">Editar Datos Personales</h3>
-            <p className="text-sm text-slate-450 leading-relaxed font-medium">
-              Por favor, mantén tu nombre, dirección de correo electrónico y teléfono móvil de contacto actualizados para que la directiva y otros socios puedan comunicarse contigo.
-            </p>
-
-            {profileError && (
-              <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start space-x-3 text-red-700 text-sm animate-in fade-in">
-                <AlertCircle className="flex-shrink-0 mt-0.5" size={18} />
-                <span>{profileError}</span>
-              </div>
-            )}
-
-            {profileSuccess && (
-              <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-start space-x-3 text-green-700 text-sm animate-in fade-in">
-                <CheckCircle className="flex-shrink-0 mt-0.5" size={18} />
-                <span>¡Tu perfil se ha actualizado y guardado correctamente!</span>
-              </div>
-            )}
-
-            <form onSubmit={handleProfileSave} className="space-y-5">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nombre Completo *</label>
-                <input 
-                  type="text"
-                  required
-                  value={profileForm.nombre}
-                  onChange={e => setProfileForm(prev => ({ ...prev, nombre: e.target.value }))}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all font-semibold text-slate-800"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Correo Electrónico *</label>
-                  <input 
-                    type="email"
-                    required
-                    value={profileForm.correo}
-                    onChange={e => setProfileForm(prev => ({ ...prev, correo: e.target.value }))}
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all font-semibold text-slate-800"
+            {/* Avatar y Contenido */}
+            <div className="px-6 pb-8 pt-14 flex flex-col items-center text-center relative">
+              {/* Contenedor del Avatar flotando sobre la cabecera */}
+              <div className="absolute -top-12 left-1/2 transform -translate-x-1/2">
+                <div className="relative">
+                  <img 
+                    src={user.foto || `https://picsum.photos/seed/${user.id}/100/100`} 
+                    className={`w-24 h-24 rounded-full object-cover border-4 border-white shadow-xl group-hover:scale-105 transition-all duration-500 cursor-zoom-in ring-4 ring-offset-2 ${
+                      userIsInactive ? 'ring-slate-400' : userIsDirectiva ? 'ring-amber-400' : 'ring-blue-900'
+                    }`} 
+                    alt={user.nombre}
+                    onClick={() => setSelectedPhoto({ url: user.foto, title: user.nombre })}
                   />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Teléfono de Contacto</label>
-                  <input 
-                    type="tel"
-                    placeholder="Ej. +502 5555-5555"
-                    value={profileForm.telefono}
-                    onChange={e => setProfileForm(prev => ({ ...prev, telefono: e.target.value }))}
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all font-semibold text-slate-800"
-                  />
+                  <div className="absolute bottom-0 right-0 bg-blue-950 text-amber-400 p-1.5 rounded-full border-2 border-white shadow-md">
+                    <Award size={14} />
+                  </div>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-100 flex justify-end">
+              {/* Nombre y Cargo */}
+              <div className="space-y-2.5 w-full">
+                <h3 className="font-bold text-lg text-slate-900 tracking-tight leading-snug">
+                  {user.nombre}
+                </h3>
+                
+                {/* Badge de Puesto */}
+                <div className="flex justify-center">
+                  <span className={`text-xs font-semibold uppercase tracking-wider px-3.5 py-1 rounded-full border ${
+                    userIsDirectiva ? 'bg-amber-50 text-amber-800 border-amber-200/70' : 'bg-slate-50 text-slate-700 border-slate-200/70'
+                  }`}>
+                    {user.puesto || 'Socio Regular'}
+                  </span>
+                </div>
+                
+                {/* Caja de Datos Premium */}
+                <div className="w-full bg-slate-50/50 rounded-2xl p-4 border border-slate-100/90 text-left text-sm font-medium text-slate-700 space-y-3 mt-5">
+                  {/* Club */}
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100/60">
+                    <span className="text-slate-450 flex items-center space-x-1.5">
+                      <Building size={16} className="text-slate-400 flex-shrink-0" />
+                      <span>Club</span>
+                    </span>
+                    <span className="font-bold text-slate-800 text-right truncate max-w-[150px]">{user.club || 'QUETZALTENANGO'}</span>
+                  </div>
+
+                  {/* Correo */}
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100/60">
+                    <span className="text-slate-450 flex items-center space-x-1.5">
+                      <Mail size={16} className="text-slate-400 flex-shrink-0" />
+                      <span>Correo</span>
+                    </span>
+                    <span className="font-bold text-slate-800 text-right truncate max-w-[180px]">{user.correo}</span>
+                  </div>
+
+                  {/* Teléfono */}
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100/60">
+                    <span className="text-slate-450 flex items-center space-x-1.5">
+                      <Phone size={16} className="text-slate-400 flex-shrink-0" />
+                      <span>Teléfono</span>
+                    </span>
+                    <span className="font-bold text-slate-800 text-right">{user.telefono || 'Sin teléfono'}</span>
+                  </div>
+
+                  {/* Gestión / Período */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-450 flex items-center space-x-1.5">
+                      <Calendar size={16} className="text-slate-400 flex-shrink-0" />
+                      <span>Gestión</span>
+                    </span>
+                    <span className="font-bold text-slate-800 text-right truncate">
+                      Miembro desde: {user.fechaIngreso}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Membresía / Solvencia */}
+                <div className="flex items-center justify-between px-2 pt-2 text-xs text-slate-400 font-bold uppercase tracking-wider">
+                  <span>Membresía Financiera</span>
+                  <span className={`flex items-center space-x-1 ${
+                    user.estadoCuotas === 'Al día' ? 'text-emerald-600' : 'text-yellow-600'
+                  }`}>
+                    <span>●</span>
+                    <span>{user.estadoCuotas}</span>
+                  </span>
+                </div>
+
+                {/* Botón Editar Ficha de Perfil */}
                 <button
-                  type="submit"
-                  disabled={isSavingProfile}
-                  className="bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-black px-6 py-3 rounded-xl transition-all shadow-lg shadow-blue-900/10 flex items-center justify-center space-x-2"
+                  type="button"
+                  onClick={() => handleEditSocioClick(user)}
+                  className="w-full mt-6 bg-blue-900 hover:bg-blue-800 text-white font-black py-3.5 rounded-2xl transition-all shadow-md hover:shadow-lg flex items-center justify-center space-x-2"
                 >
-                  {isSavingProfile ? (
-                    <>
-                      <Loader2 className="animate-spin" size={18} />
-                      <span>Guardando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle size={18} />
-                      <span>Guardar Perfil</span>
-                    </>
-                  )}
+                  <Pencil size={16} />
+                  <span>Editar Perfil</span>
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
@@ -906,11 +821,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                 <p className="text-[10px] text-blue-700">Miembros activos con rol estándar.</p>
               </div>
             </div>
-            <div className="flex items-center space-x-3 p-3 bg-slate-105/60 rounded-2xl border border-slate-200 bg-slate-50">
+            <div className="flex items-center space-x-3 p-3 bg-slate-100/60 rounded-2xl border border-slate-200 flex-shrink-0 bg-slate-50">
               <div className="w-4 h-4 rounded-full bg-slate-400 border border-slate-500 flex-shrink-0" />
               <div>
                 <p className="font-extrabold text-slate-800">Inactivo</p>
-                <p className="text-[10px] text-slate-650">Miembros retirados u ocultos del directorio.</p>
+                <p className="text-[10px] text-slate-600">Miembros retirados u ocultos del directorio.</p>
               </div>
             </div>
           </div>
@@ -1137,221 +1052,247 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
               </div>
             )}
           </div>
+        </div>
+      )}
 
-          {/* Modal "Editar / Registrar Socio" */}
-          {editingSocio && (
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300">
-              <div className="bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 sm:p-10 space-y-6 relative animate-in zoom-in-95 duration-300">
-                <button 
-                  type="button"
-                  onClick={() => setEditingSocio(null)}
-                  className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors"
-                >
-                  <X size={20} />
-                </button>
+      {/* --- UNIFIED MODAL FOR EDITING / REGISTERING SOCIO --- */}
+      {editingSocio && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 sm:p-10 space-y-6 relative animate-in zoom-in-95 duration-300">
+            <button 
+              type="button"
+              onClick={() => setEditingSocio(null)}
+              className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors"
+            >
+              <X size={20} />
+            </button>
 
-                <div className="space-y-1">
-                  <h2 className="text-2xl font-black text-blue-900">
-                    {isNewSocio ? 'Registrar Nuevo Socio' : 'Editar Ficha de Socio'}
-                  </h2>
-                  <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Panel Administrativo de Control</p>
+            <div className="space-y-1">
+              <h2 className="text-2xl font-black text-blue-900">
+                {isNewSocio ? 'Registrar Nuevo Socio' : isSelfEdit ? 'Editar Mi Perfil' : 'Editar Ficha de Socio'}
+              </h2>
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
+                {isSelfEdit ? 'Actualizar mis datos personales de contacto' : 'Panel Administrativo de Control'}
+              </p>
+            </div>
+
+            {socioSaveError && (
+              <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start space-x-3 text-red-700 text-sm animate-in fade-in">
+                <AlertCircle className="flex-shrink-0 mt-0.5" size={18} />
+                <span>{socioSaveError}</span>
+              </div>
+            )}
+
+            {socioSaveSuccess && (
+              <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-start space-x-3 text-green-700 text-sm animate-in fade-in">
+                <CheckCircle className="flex-shrink-0 mt-0.5" size={18} />
+                <span>¡Ficha guardada exitosamente!</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveSocioSubmit} className="space-y-6">
+              {/* Photo & Estatus Row */}
+              <div className="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-slate-100">
+                <div className="relative group flex-shrink-0">
+                  <img 
+                    src={editSocioForm.foto || `https://picsum.photos/seed/${editingSocio.id}/150/150`} 
+                    alt="Avatar de socio" 
+                    className="w-24 h-24 rounded-full object-cover border-4 border-slate-100 shadow-md"
+                  />
+                  <label 
+                    htmlFor="socio-photo-upload"
+                    className="absolute bottom-0 right-0 bg-yellow-500 text-blue-900 p-2 rounded-full border-2 border-white shadow-sm hover:bg-yellow-600 cursor-pointer flex items-center justify-center"
+                    title="Cambiar foto de socio"
+                  >
+                    <Upload size={14} />
+                    <input 
+                      type="file" 
+                      id="socio-photo-upload" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={handleEditSocioPhotoChange} 
+                    />
+                  </label>
                 </div>
 
-                {socioSaveError && (
-                  <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start space-x-3 text-red-700 text-sm animate-in fade-in">
-                    <AlertCircle className="flex-shrink-0 mt-0.5" size={18} />
-                    <span>{socioSaveError}</span>
-                  </div>
-                )}
-
-                {socioSaveSuccess && (
-                  <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-start space-x-3 text-green-700 text-sm animate-in fade-in">
-                    <CheckCircle className="flex-shrink-0 mt-0.5" size={18} />
-                    <span>¡Ficha de socio guardada exitosamente!</span>
-                  </div>
-                )}
-
-                <form onSubmit={handleSaveSocioSubmit} className="space-y-6">
-                  {/* Photo & Estatus Row */}
-                  <div className="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-slate-100">
-                    <div className="relative group flex-shrink-0">
-                      <img 
-                        src={editSocioForm.foto || `https://picsum.photos/seed/${editingSocio.id}/150/150`} 
-                        alt="Avatar de socio" 
-                        className="w-24 h-24 rounded-full object-cover border-4 border-slate-100 shadow-md"
-                      />
-                      <label 
-                        htmlFor="socio-photo-upload"
-                        className="absolute bottom-0 right-0 bg-yellow-500 text-blue-900 p-2 rounded-full border-2 border-white shadow-sm hover:bg-yellow-600 cursor-pointer flex items-center justify-center"
-                        title="Cambiar foto de socio"
-                      >
-                        <Upload size={14} />
-                        <input 
-                          type="file" 
-                          id="socio-photo-upload" 
-                          accept="image/*" 
-                          className="hidden" 
-                          onChange={handleEditSocioPhotoChange} 
-                        />
-                      </label>
-                    </div>
-
-                    <div className="flex-grow space-y-4 w-full">
-                      {/* Estatus Institucional select */}
-                      <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Estatus Institucional *</label>
-                        <select 
-                          value={editSocioForm.estatus === 'Inactive' ? 'Inactive' : 'Active'}
-                          onChange={e => setEditSocioForm(prev => ({ ...prev, estatus: e.target.value }))}
-                          className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold bg-white"
-                        >
-                          <option value="Active">Activo (Visible en Directorio)</option>
-                          <option value="Inactive">Inactivo (Oculto en Directorio)</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Name & Contact */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nombre Completo *</label>
-                      <input 
-                        type="text"
-                        required
-                        placeholder="Ej. Carlos Roberto Méndez"
-                        value={editSocioForm.nombre || ''}
-                        onChange={e => setEditSocioForm(prev => ({ ...prev, nombre: e.target.value }))}
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Correo Electrónico *</label>
-                      <input 
-                        type="email"
-                        required
-                        placeholder="Ej. carlosmendez@gmail.com"
-                        value={editSocioForm.correo || ''}
-                        onChange={e => setEditSocioForm(prev => ({ ...prev, correo: e.target.value }))}
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Teléfono</label>
-                      <input 
-                        type="text"
-                        placeholder="Ej. +502 5555-5555"
-                        value={editSocioForm.telefono || ''}
-                        onChange={e => setEditSocioForm(prev => ({ ...prev, telefono: e.target.value }))}
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Club de Leones</label>
-                      <input 
-                        type="text"
-                        value={editSocioForm.club || 'QUETZALTENANGO'}
-                        onChange={e => setEditSocioForm(prev => ({ ...prev, club: e.target.value }))}
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Puesto & Rol */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Puesto en Junta Directiva *</label>
-                      <select 
-                        value={editSocioForm.puesto || 'Socio Regular'}
-                        onChange={e => setEditSocioForm(prev => ({ ...prev, puesto: e.target.value }))}
-                        className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold bg-white"
-                      >
-                        {PUESTOS_PREDEFINIDOS.map(p => (
-                          <option key={p} value={p}>{p}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Rol del Sistema (Permisos) *</label>
-                      <select 
-                        value={editSocioForm.rol || UserRole.SOCIO}
-                        onChange={e => setEditSocioForm(prev => ({ ...prev, rol: e.target.value as UserRole }))}
-                        className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold bg-white"
-                      >
-                        {ROLES_LIST.map(r => (
-                          <option key={r.value} value={r.value}>{r.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Financiero: Cuotas y Saldo */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Estado de Solvencia de Cuota *</label>
-                      <select 
-                        value={editSocioForm.estadoCuotas || 'Al día'}
-                        onChange={e => setEditSocioForm(prev => ({ ...prev, estadoCuotas: e.target.value as any }))}
-                        className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold bg-white"
-                      >
-                        <option value="Al día">Al día</option>
-                        <option value="Pendiente">Pendiente</option>
-                        <option value="En mora">En mora</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Monto Pendiente (Q) *</label>
-                      <input 
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        required
-                        value={editSocioForm.montoPendiente === undefined ? 0 : editSocioForm.montoPendiente}
-                        onChange={e => setEditSocioForm(prev => ({ ...prev, montoPendiente: parseFloat(e.target.value) || 0 }))}
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Audit details at the bottom */}
-                  {!isNewSocio && editingSocio.fechaEdicion && (
-                    <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-100 flex flex-col sm:flex-row gap-2 justify-between text-[11px] font-bold text-slate-400">
-                      <span>Última modificación: {new Date(editingSocio.fechaEdicion).toLocaleString('es-GT')}</span>
-                      {editingSocio.editadoPor && <span>Por: {editingSocio.editadoPor}</span>}
-                    </div>
-                  )}
-
-                  {/* Buttons */}
-                  <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
-                    <button
-                      type="button"
-                      onClick={() => setEditingSocio(null)}
-                      className="px-5 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-colors text-sm"
+                <div className="flex-grow space-y-4 w-full">
+                  {/* Estatus Institucional select */}
+                  <div>
+                    <label className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                      <span>Estatus Institucional *</span>
+                      {isSelfEdit && <Lock size={12} className="ml-1.5 text-slate-400" title="Campo protegido - Solo modificable por Administradores" />}
+                    </label>
+                    <select 
+                      disabled={isSelfEdit}
+                      value={editSocioForm.estatus === 'Inactive' ? 'Inactive' : 'Active'}
+                      onChange={e => setEditSocioForm(prev => ({ ...prev, estatus: e.target.value }))}
+                      className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold bg-white disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                     >
-                      Cancelar
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isSavingSocio}
-                      className="px-5 py-2.5 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-black rounded-xl shadow-lg transition-all text-sm flex items-center justify-center space-x-2"
-                    >
-                      {isSavingSocio ? (
-                        <>
-                          <Loader2 className="animate-spin" size={14} />
-                          <span>Guardando...</span>
-                        </>
-                      ) : (
-                        <span>{isNewSocio ? 'Registrar Socio' : 'Guardar Cambios'}</span>
-                      )}
-                    </button>
+                      <option value="Active">Activo (Visible en Directorio)</option>
+                      <option value="Inactive">Inactivo (Oculto en Directorio)</option>
+                    </select>
                   </div>
-                </form>
+                </div>
               </div>
-            </div>
-          )}
+
+              {/* Name & Contact */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nombre Completo *</label>
+                  <input 
+                    type="text"
+                    required
+                    placeholder="Ej. Carlos Roberto Méndez"
+                    value={editSocioForm.nombre || ''}
+                    onChange={e => setEditSocioForm(prev => ({ ...prev, nombre: e.target.value }))}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Correo Electrónico *</label>
+                  <input 
+                    type="email"
+                    required
+                    placeholder="Ej. carlosmendez@gmail.com"
+                    value={editSocioForm.correo || ''}
+                    onChange={e => setEditSocioForm(prev => ({ ...prev, correo: e.target.value }))}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Teléfono</label>
+                  <input 
+                    type="text"
+                    placeholder="Ej. +502 5555-5555"
+                    value={editSocioForm.telefono || ''}
+                    onChange={e => setEditSocioForm(prev => ({ ...prev, telefono: e.target.value }))}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                    <span>Club de Leones</span>
+                    {isSelfEdit && <Lock size={12} className="ml-1.5 text-slate-400" title="Campo protegido - Solo modificable por Administradores" />}
+                  </label>
+                  <input 
+                    type="text"
+                    disabled={isSelfEdit}
+                    value={editSocioForm.club || 'QUETZALTENANGO'}
+                    onChange={e => setEditSocioForm(prev => ({ ...prev, club: e.target.value }))}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              {/* Puesto & Rol */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                    <span>Puesto en Junta Directiva *</span>
+                    {isSelfEdit && <Lock size={12} className="ml-1.5 text-slate-400" title="Campo protegido - Solo modificable por Administradores" />}
+                  </label>
+                  <select 
+                    disabled={isSelfEdit}
+                    value={editSocioForm.puesto || 'Socio Regular'}
+                    onChange={e => setEditSocioForm(prev => ({ ...prev, puesto: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold bg-white disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
+                  >
+                    {PUESTOS_PREDEFINIDOS.map(p => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                    <span>Rol del Sistema (Permisos) *</span>
+                    {isSelfEdit && <Lock size={12} className="ml-1.5 text-slate-400" title="Campo protegido - Solo modificable por Administradores" />}
+                  </label>
+                  <select 
+                    disabled={isSelfEdit}
+                    value={editSocioForm.rol || UserRole.SOCIO}
+                    onChange={e => setEditSocioForm(prev => ({ ...prev, rol: e.target.value as UserRole }))}
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold bg-white disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
+                  >
+                    {ROLES_LIST.map(r => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Financiero: Cuotas y Saldo */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                <div>
+                  <label className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                    <span>Estado de Solvencia de Cuota *</span>
+                    {isSelfEdit && <Lock size={12} className="ml-1.5 text-slate-400" title="Campo protegido - Solo modificable por Administradores" />}
+                  </label>
+                  <select 
+                    disabled={isSelfEdit}
+                    value={editSocioForm.estadoCuotas || 'Al día'}
+                    onChange={e => setEditSocioForm(prev => ({ ...prev, estadoCuotas: e.target.value as any }))}
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold bg-white disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
+                  >
+                    <option value="Al día">Al día</option>
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="En mora">En mora</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                    <span>Monto Pendiente (Q) *</span>
+                    {isSelfEdit && <Lock size={12} className="ml-1.5 text-slate-400" title="Campo protegido - Solo modificable por Administradores" />}
+                  </label>
+                  <input 
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    required
+                    disabled={isSelfEdit}
+                    value={editSocioForm.montoPendiente === undefined ? 0 : editSocioForm.montoPendiente}
+                    onChange={e => setEditSocioForm(prev => ({ ...prev, montoPendiente: parseFloat(e.target.value) || 0 }))}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              {/* Audit details at the bottom */}
+              {!isNewSocio && editingSocio.fechaEdicion && (
+                <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-100 flex flex-col sm:flex-row gap-2 justify-between text-[11px] font-bold text-slate-400">
+                  <span>Última modificación: {new Date(editingSocio.fechaEdicion).toLocaleString('es-GT')}</span>
+                  {editingSocio.editadoPor && <span>Por: {editingSocio.editadoPor}</span>}
+                </div>
+              )}
+
+              {/* Buttons */}
+              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingSocio(null)}
+                  className="px-5 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-colors text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingSocio}
+                  className="px-5 py-2.5 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-black rounded-xl shadow-lg transition-all text-sm flex items-center justify-center space-x-2"
+                >
+                  {isSavingSocio ? (
+                    <>
+                      <Loader2 className="animate-spin" size={14} />
+                      <span>Guardando...</span>
+                    </>
+                  ) : (
+                    <span>{isNewSocio ? 'Registrar Socio' : isSelfEdit ? 'Guardar Perfil' : 'Guardar Cambios'}</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
