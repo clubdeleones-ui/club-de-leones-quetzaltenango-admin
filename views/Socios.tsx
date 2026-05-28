@@ -442,6 +442,28 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                       </span>
                     </div>
 
+                    {/* Family Status Info (Datos Complementarios) */}
+                    {(propuesta.estadoCivil || propuesta.hijos) && (
+                      <div className="bg-slate-50/50 rounded-2xl p-3.5 border border-slate-100/80 space-y-2 text-xs text-slate-700">
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-slate-500 flex items-center">
+                            <span className="mr-1.5">👪</span> Estado Civil y Familia
+                          </span>
+                          <span className="font-black text-slate-800">
+                            {propuesta.estadoCivil || 'No indicado'} • {propuesta.hijos || 'No indicado'}
+                          </span>
+                        </div>
+                        {propuesta.estadoCivil === 'Casado' && propuesta.nombreEsposa && (
+                          <div className="flex justify-between items-center pt-2 border-t border-slate-100">
+                            <span className="text-slate-500 font-bold flex items-center">
+                              <span className="mr-1.5">💍</span> Cónyuge
+                            </span>
+                            <span className="font-black text-slate-900">{propuesta.nombreEsposa}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Qualities / characteristics tags */}
                     <div className="space-y-2">
                       <h4 className="font-bold text-xs text-slate-555 uppercase tracking-wider flex items-center">
