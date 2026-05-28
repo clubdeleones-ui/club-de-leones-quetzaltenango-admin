@@ -13,7 +13,8 @@ import {
   Home,
   Users,
   ChevronDown,
-  Info
+  Info,
+  Gift
 } from 'lucide-react';
 import { AuthState, UserRole } from '../types';
 import { googleService } from '../services/googleService';
@@ -135,6 +136,14 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
                 );
               })}
 
+              <Link
+                to="/donar"
+                className="ml-3 px-4 py-2.5 rounded-xl text-sm font-black transition-all duration-305 flex items-center space-x-2 bg-gradient-to-r from-yellow-500 to-amber-500 text-blue-955 hover:from-yellow-400 hover:to-amber-400 shadow-lg shadow-yellow-500/10 hover:scale-105 active:scale-95"
+              >
+                <Gift size={16} />
+                <span>Donar</span>
+              </Link>
+
               {/* Authentication Actions / Dropdown */}
               {auth.isAuthenticated ? (
                 <>
@@ -244,6 +253,13 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
                   <span>{item.label}</span>
                 </button>
               ))}
+              <button
+                onClick={() => handleNav('/donar')}
+                className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-left text-base font-black transition-all bg-gradient-to-r from-yellow-500 to-amber-500 text-blue-955 hover:from-yellow-450 hover:to-amber-450 mt-2"
+              >
+                <Gift size={18} />
+                <span>Donar</span>
+              </button>
             </div>
 
             {/* Private Links / Profile */}

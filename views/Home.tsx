@@ -148,7 +148,7 @@ const Home: React.FC = () => {
                     Afiliado número 015705 a Lions Clubs International.
                   </p>
                   <p className="text-[10px] text-yellow-400/90 font-black uppercase tracking-wider">
-                    ★ Desde el 25 de Octubre de 1947 ★
+                    ★ Desde el 20 de Febrero de 1947 ★
                   </p>
                 </div>
               </div>

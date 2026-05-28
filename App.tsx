@@ -13,6 +13,7 @@ import Estatutos from './views/Estatutos';
 import Calendario from './views/Calendario';
 import SuperAdmin from './views/SuperAdmin';
 import ProponerSocio from './views/ProponerSocio';
+import Donar from './views/Donar';
 import { AuthState, Socio, UserRole } from './types';
 
 // ProtectedRoute moved outside of App to resolve typing errors and improve performance
@@ -66,6 +67,7 @@ const App: React.FC = () => {
             <Route path="/galeria" element={<Galeria />} />
             <Route path="/socios" element={<Socios user={auth.user} />} />
             <Route path="/proponer-socio" element={<ProponerSocio />} />
+            <Route path="/donar" element={<Donar />} />
             <Route path="/login" element={auth.isAuthenticated ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />} />
 
             {/* Protected Routes */}
