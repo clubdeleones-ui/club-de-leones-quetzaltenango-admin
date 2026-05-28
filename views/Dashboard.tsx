@@ -26,7 +26,9 @@ import {
   Lock,
   Pencil,
   AlertTriangle,
-  Building
+  Building,
+  Plus,
+  Trash2
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { MOCK_DONACIONES, MOCK_SOCIOS } from '../constants';
@@ -172,7 +174,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
   const [statusFilter, setStatusFilter] = useState('Todos');
   const [financialFilter, setFinancialFilter] = useState('Todos');
 
-  // Modal edit state
+  // Modal edit/creation state
   const [editingSocio, setEditingSocio] = useState<Socio | null>(null);
   const [editSocioForm, setEditSocioForm] = useState<Partial<Socio>>({});
   const [isSavingSocio, setIsSavingSocio] = useState(false);
@@ -180,10 +182,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
   const [socioSaveError, setSocioSaveError] = useState<string | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; title: string } | null>(null);
 
+  // Check if editingSocio is a new registration
+  const isNewSocio = useMemo(() => {
+    if (!editingSocio) return false;
+    return !socios.some(s => s.id === editingSocio.id);
+  }, [editingSocio, socios]);
+
   const fetchSociosList = async () => {
     if (!isAdministrative) return;
     setIsLoadingSocios(true);
     try {
+      // Sync any missing default mock members to Firestore granularly first
+      await firebaseService.syncInitialSocios(MOCK_SOCIOS);
       const list = await firebaseService.getSocios();
       if (list && list.length > 0) {
         setSocios(list);
@@ -205,6 +215,48 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
     setEditSocioForm({ ...socio });
     setSocioSaveError(null);
     setSocioSaveSuccess(false);
+  };
+
+  const handleCreateSocioClick = () => {
+    const blankSocio: Socio = {
+      id: `socio-${Date.now()}`,
+      nombre: '',
+      correo: '',
+      telefono: '',
+      rol: UserRole.SOCIO,
+      puesto: 'Socio Regular',
+      estadoCuotas: 'Al día',
+      montoPendiente: 0,
+      foto: 'https://picsum.photos/seed/member-' + Math.floor(Math.random() * 1000) + '/200/200',
+      fechaIngreso: new Date().toISOString().split('T')[0],
+      estatus: 'Active',
+      club: 'QUETZALTENANGO'
+    };
+    setEditingSocio(blankSocio);
+    setEditSocioForm({ ...blankSocio });
+    setSocioSaveError(null);
+    setSocioSaveSuccess(false);
+  };
+
+  const handleDeleteSocio = async (socio: Socio) => {
+    if (socio.id === user.id) {
+      alert("No puedes eliminar tu propia ficha desde el panel administrativo.");
+      return;
+    }
+    const confirmed = window.confirm(`¿Está completamente seguro de que desea eliminar permanentemente la ficha de ${socio.nombre}? Esta acción no se puede deshacer y borrará al socio de Firestore y del Directorio público.`);
+    if (!confirmed) return;
+
+    try {
+      await firebaseService.deleteSocio(socio.id);
+      
+      const newSociosList = socios.filter(s => s.id !== socio.id);
+      setSocios(newSociosList);
+      localStorage.setItem('club_leones_socios_v3', JSON.stringify(newSociosList));
+      alert("Socio eliminado con éxito.");
+    } catch (err: any) {
+      console.error("Error deleting socio:", err);
+      alert(`Ocurrió un error al eliminar el socio: ${err?.message || err}`);
+    }
   };
 
   const handleEditSocioPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -239,7 +291,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
 
       await firebaseService.saveSocio(updated);
       
-      const newSociosList = socios.map(s => s.id === updated.id ? updated : s);
+      let newSociosList: Socio[];
+      if (isNewSocio) {
+        newSociosList = [updated, ...socios];
+      } else {
+        newSociosList = socios.map(s => s.id === updated.id ? updated : s);
+      }
       setSocios(newSociosList);
       localStorage.setItem('club_leones_socios_v3', JSON.stringify(newSociosList));
 
@@ -832,11 +889,47 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
       {/* --- TAB CONTENT: GESTIONAR SOCIOS (ADMINISTRATIVO) --- */}
       {activeTab === 'socios' && isAdministrative && (
         <div className="space-y-6 animate-in fade-in duration-500">
+          
+          {/* Legend visual card */}
+          <div className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-semibold">
+            <div className="flex items-center space-x-3 p-3 bg-amber-50/60 rounded-2xl border border-amber-100">
+              <div className="w-4 h-4 rounded-full bg-amber-500 border border-amber-600 flex-shrink-0" />
+              <div>
+                <p className="font-extrabold text-amber-900">Junta Directiva</p>
+                <p className="text-[10px] text-amber-700">Miembros con cargos directivos activos.</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3 p-3 bg-blue-50/60 rounded-2xl border border-blue-100">
+              <div className="w-4 h-4 rounded-full bg-blue-900 border border-blue-800 flex-shrink-0" />
+              <div>
+                <p className="font-extrabold text-blue-900">Socio Activo</p>
+                <p className="text-[10px] text-blue-700">Miembros activos con rol estándar.</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3 p-3 bg-slate-105/60 rounded-2xl border border-slate-200 bg-slate-50">
+              <div className="w-4 h-4 rounded-full bg-slate-400 border border-slate-500 flex-shrink-0" />
+              <div>
+                <p className="font-extrabold text-slate-800">Inactivo</p>
+                <p className="text-[10px] text-slate-650">Miembros retirados u ocultos del directorio.</p>
+              </div>
+            </div>
+          </div>
+
           {/* Filters card */}
           <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-4">
-            <div className="text-xs font-bold text-slate-450 uppercase tracking-widest flex items-center">
-              <Filter size={14} className="mr-1.5 text-slate-400" />
-              Búsqueda y Filtros de Directorio
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="text-xs font-bold text-slate-450 uppercase tracking-widest flex items-center">
+                <Filter size={14} className="mr-1.5 text-slate-400" />
+                Búsqueda y Filtros de Directorio
+              </div>
+              <button
+                type="button"
+                onClick={handleCreateSocioClick}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white font-black px-5 py-2.5 rounded-xl text-sm transition-all shadow-md hover:shadow-lg flex items-center justify-center space-x-2 w-full sm:w-auto"
+              >
+                <Plus size={16} />
+                <span>Registrar Socio</span>
+              </button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -921,82 +1014,131 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredSocios.map(socio => (
-                      <tr key={socio.id} className={`hover:bg-slate-50/50 transition-colors ${socio.estatus === 'Inactive' ? 'opacity-60 bg-slate-50/30' : ''}`}>
-                        <td className="p-5">
-                          <div className="flex items-center space-x-3.5">
-                            <img 
-                              src={socio.foto || `https://picsum.photos/seed/${socio.id}/100/100`} 
-                              alt={socio.nombre} 
-                              className="w-11 h-11 rounded-full object-cover border border-slate-100 shadow-sm cursor-zoom-in"
-                              onClick={() => setSelectedPhoto({ url: socio.foto, title: socio.nombre })}
-                            />
-                            <div className="min-w-0">
-                              <p className="font-extrabold text-slate-800 text-sm leading-tight flex items-center">
-                                {socio.nombre}
-                                {socio.estatus === 'Inactive' && (
-                                  <span className="ml-2 bg-slate-200 text-slate-700 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">Inactivo</span>
+                    {filteredSocios.map(socio => {
+                      const isInactive = socio.estatus === 'Inactive';
+                      const isDirectiva = !isInactive && (
+                        socio.rol === UserRole.SUPER_ADMIN ||
+                        socio.rol === UserRole.SECRETARIO ||
+                        socio.rol === UserRole.TESORERO ||
+                        socio.rol === UserRole.ASESOR_SERVICIOS ||
+                        socio.rol === UserRole.PRESIDENTE_AFILIACION
+                      );
+                      
+                      const rowBorderColor = isInactive 
+                        ? 'border-l-4 border-l-slate-400' 
+                        : isDirectiva 
+                        ? 'border-l-4 border-l-amber-500' 
+                        : 'border-l-4 border-l-blue-900';
+
+                      return (
+                        <tr 
+                          key={socio.id} 
+                          className={`hover:bg-slate-50/50 transition-colors ${rowBorderColor} ${
+                            isInactive ? 'opacity-65 bg-slate-50/20' : ''
+                          }`}
+                        >
+                          <td className="p-5">
+                            <div className="flex items-center space-x-3.5">
+                              <img 
+                                src={socio.foto || `https://picsum.photos/seed/${socio.id}/100/100`} 
+                                alt={socio.nombre} 
+                                className={`w-11 h-11 rounded-full object-cover border-2 shadow-sm cursor-zoom-in ${
+                                  isInactive ? 'border-slate-300' : isDirectiva ? 'border-amber-400' : 'border-blue-900'
+                                }`}
+                                onClick={() => setSelectedPhoto({ url: socio.foto, title: socio.nombre })}
+                              />
+                              <div className="min-w-0">
+                                <p className="font-extrabold text-slate-800 text-sm leading-tight flex items-center">
+                                  {socio.nombre || <span className="text-slate-400 italic">Sin nombre</span>}
+                                  {isInactive && (
+                                    <span className="ml-2 bg-slate-200 text-slate-700 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">Inactivo</span>
+                                  )}
+                                </p>
+                                <p className="text-xs text-slate-400 mt-1 font-semibold">Ingresó: {socio.fechaIngreso}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-5">
+                            <div className="text-xs space-y-1 font-semibold">
+                              <div className="flex items-center text-slate-700">
+                                <Mail size={12} className="mr-1.5 text-slate-400" />
+                                <span className="truncate max-w-[180px]">{socio.correo}</span>
+                              </div>
+                              <div className="flex items-center text-slate-600">
+                                <Phone size={12} className="mr-1.5 text-slate-400" />
+                                <span>{socio.telefono || 'Sin teléfono'}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-5">
+                            <div className="space-y-1.5">
+                              <span className="text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-0.5 rounded-lg border border-slate-200/50 block w-fit">
+                                {socio.puesto || 'Socio Regular'}
+                              </span>
+                              <div className="flex items-center space-x-1.5">
+                                {isInactive ? (
+                                  <span className="bg-slate-100 text-slate-600 border border-slate-250 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                    Inactivo
+                                  </span>
+                                ) : isDirectiva ? (
+                                  <span className="bg-amber-100 text-amber-800 border border-amber-250 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                    Directiva
+                                  </span>
+                                ) : (
+                                  <span className="bg-blue-50 text-blue-900 border border-blue-250 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                    Socio Activo
+                                  </span>
                                 )}
-                              </p>
-                              <p className="text-xs text-slate-400 mt-1 font-semibold">Ingresó: {socio.fechaIngreso}</p>
+                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                                  ({socio.rol})
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="p-5">
-                          <div className="text-xs space-y-1 font-semibold">
-                            <div className="flex items-center text-slate-700">
-                              <Mail size={12} className="mr-1.5 text-slate-400" />
-                              <span>{socio.correo}</span>
+                          </td>
+                          <td className="p-5">
+                            <div className="space-y-1">
+                              <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                                socio.estadoCuotas === 'Al día' ? 'bg-green-50 text-green-700 border border-green-100' :
+                                socio.estadoCuotas === 'Pendiente' ? 'bg-yellow-50 text-yellow-700 border border-yellow-100' :
+                                'bg-red-50 text-red-700 border border-red-100'
+                              }`}>
+                                ● {socio.estadoCuotas}
+                              </span>
+                              {socio.montoPendiente > 0 && (
+                                <p className="text-xs font-bold text-slate-700 mt-1">Q {socio.montoPendiente.toFixed(2)}</p>
+                              )}
                             </div>
-                            <div className="flex items-center text-slate-600">
-                              <Phone size={12} className="mr-1.5 text-slate-400" />
-                              <span>{socio.telefono || 'Sin teléfono'}</span>
+                          </td>
+                          <td className="p-5 text-right">
+                            <div className="flex items-center justify-end space-x-2">
+                              <button
+                                onClick={() => handleEditSocioClick(socio)}
+                                className="bg-white hover:bg-blue-50 text-slate-605 hover:text-blue-900 border border-slate-200/60 p-2 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm"
+                                title="Editar Ficha"
+                              >
+                                <Pencil size={13} className="mr-1" />
+                                <span>Editar</span>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSocio(socio)}
+                                className="bg-white hover:bg-red-50 text-slate-605 hover:text-red-600 border border-slate-200/60 p-2 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm"
+                                title="Eliminar Socio"
+                              >
+                                <Trash2 size={13} className="mr-1" />
+                                <span>Eliminar</span>
+                              </button>
                             </div>
-                          </div>
-                        </td>
-                        <td className="p-5">
-                          <div className="space-y-1">
-                            <span className="text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-0.5 rounded-lg border border-slate-200/50 block w-fit">
-                              {socio.puesto || 'Socio Regular'}
-                            </span>
-                            <span className="text-[10px] text-blue-900 font-bold uppercase tracking-wider block pl-1">
-                              {socio.rol}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="p-5">
-                          <div className="space-y-1">
-                            <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
-                              socio.estadoCuotas === 'Al día' ? 'bg-green-50 text-green-700 border border-green-100' :
-                              socio.estadoCuotas === 'Pendiente' ? 'bg-yellow-50 text-yellow-700 border border-yellow-100' :
-                              'bg-red-50 text-red-700 border border-red-100'
-                            }`}>
-                              ● {socio.estadoCuotas}
-                            </span>
-                            {socio.montoPendiente > 0 && (
-                              <p className="text-xs font-bold text-slate-700 mt-1">Q {socio.montoPendiente.toFixed(2)}</p>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-5 text-right">
-                          <button
-                            onClick={() => handleEditSocioClick(socio)}
-                            className="bg-slate-55/60 hover:bg-blue-50 text-slate-600 hover:text-blue-900 border border-slate-200/60 p-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center ml-auto shadow-sm"
-                            title="Editar Ficha"
-                          >
-                            <Pencil size={14} className="mr-1.5" />
-                            <span>Editar</span>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             )}
           </div>
 
-          {/* Modal "Editar Ficha de Socio" */}
+          {/* Modal "Editar / Registrar Socio" */}
           {editingSocio && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300">
               <div className="bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 sm:p-10 space-y-6 relative animate-in zoom-in-95 duration-300">
@@ -1009,7 +1151,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                 </button>
 
                 <div className="space-y-1">
-                  <h2 className="text-2xl font-black text-blue-900">Editar Ficha de Socio</h2>
+                  <h2 className="text-2xl font-black text-blue-900">
+                    {isNewSocio ? 'Registrar Nuevo Socio' : 'Editar Ficha de Socio'}
+                  </h2>
                   <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Panel Administrativo de Control</p>
                 </div>
 
@@ -1023,7 +1167,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                 {socioSaveSuccess && (
                   <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-start space-x-3 text-green-700 text-sm animate-in fade-in">
                     <CheckCircle className="flex-shrink-0 mt-0.5" size={18} />
-                    <span>¡Ficha de socio actualizada exitosamente!</span>
+                    <span>¡Ficha de socio guardada exitosamente!</span>
                   </div>
                 )}
 
@@ -1075,6 +1219,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                       <input 
                         type="text"
                         required
+                        placeholder="Ej. Carlos Roberto Méndez"
                         value={editSocioForm.nombre || ''}
                         onChange={e => setEditSocioForm(prev => ({ ...prev, nombre: e.target.value }))}
                         className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
@@ -1085,6 +1230,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                       <input 
                         type="email"
                         required
+                        placeholder="Ej. carlosmendez@gmail.com"
                         value={editSocioForm.correo || ''}
                         onChange={e => setEditSocioForm(prev => ({ ...prev, correo: e.target.value }))}
                         className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
@@ -1171,7 +1317,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                   </div>
 
                   {/* Audit details at the bottom */}
-                  {editingSocio.fechaEdicion && (
+                  {!isNewSocio && editingSocio.fechaEdicion && (
                     <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-100 flex flex-col sm:flex-row gap-2 justify-between text-[11px] font-bold text-slate-400">
                       <span>Última modificación: {new Date(editingSocio.fechaEdicion).toLocaleString('es-GT')}</span>
                       {editingSocio.editadoPor && <span>Por: {editingSocio.editadoPor}</span>}
@@ -1198,7 +1344,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                           <span>Guardando...</span>
                         </>
                       ) : (
-                        <span>Guardar Cambios</span>
+                        <span>{isNewSocio ? 'Registrar Socio' : 'Guardar Cambios'}</span>
                       )}
                     </button>
                   </div>

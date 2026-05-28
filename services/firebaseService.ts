@@ -107,21 +107,36 @@ export const firebaseService = {
     }
   },
 
-  // Synchronize initial mock members to Firestore
+  // Synchronize initial mock members to Firestore by ID if they do not exist
   syncInitialSocios: async (initialSocios: Socio[]): Promise<void> => {
     try {
       const colRef = collection(db, "socios");
       const snapshot = await getDocs(colRef);
-      // Only sync if Firestore collection is empty
-      if (snapshot.empty) {
-        console.log("Firestore 'socios' collection is empty. Syncing MOCK_SOCIOS...");
-        for (const socio of initialSocios) {
+      const existingIds = new Set(snapshot.docs.map(doc => doc.id));
+      
+      let syncedCount = 0;
+      for (const socio of initialSocios) {
+        if (!existingIds.has(socio.id)) {
           await setDoc(doc(db, "socios", socio.id), socio);
+          syncedCount++;
         }
-        console.log("MOCK_SOCIOS synced to Firestore successfully.");
+      }
+      if (syncedCount > 0) {
+        console.log(`Sincronizados ${syncedCount} socios preestablecidos faltantes en Firestore.`);
       }
     } catch (error) {
       console.error("Error syncing initial socios to Firestore:", error);
+    }
+  },
+
+  // Delete an active member from Firestore
+  deleteSocio: async (socioId: string): Promise<void> => {
+    try {
+      const docRef = doc(db, "socios", socioId);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting socio from Firestore:", error);
+      throw error;
     }
   }
 };

@@ -38,6 +38,10 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
     return MOCK_SOCIOS;
   });
 
+  const sociosActivos = React.useMemo(() => {
+    return socios.filter(s => s.estatus !== 'Inactive');
+  }, [socios]);
+
   // Load proposals from localStorage or fallback to mock
   const [propuestas, setPropuestas] = useState<PropuestaSocio[]>(() => {
     const local = localStorage.getItem('club_leones_propuestas');
@@ -176,7 +180,7 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
           <div className="flex items-center space-x-2.5">
             {activeTab === 'activos' ? <Users size={18} className="text-yellow-400" /> : <UserCheck size={18} className="text-yellow-400" />}
             <span>
-              {activeTab === 'activos' ? `Socios Activos (${socios.length})` : 'Candidatos Propuestos'}
+              {activeTab === 'activos' ? `Socios Activos (${sociosActivos.length})` : 'Candidatos Propuestos'}
             </span>
             {activeTab === 'propuestos' && propuestasAMostrar.length > 0 && (
               <span className="bg-yellow-500 text-blue-900 text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full">
@@ -200,7 +204,7 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
               }`}
             >
               <Users size={18} className={activeTab === 'activos' ? 'text-blue-900' : 'text-slate-400'} />
-              <span>Socios Activos ({socios.length})</span>
+              <span>Socios Activos ({sociosActivos.length})</span>
             </button>
             <button
               type="button"
@@ -237,7 +241,7 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
           }`}
         >
           <Users size={18} />
-          <span>Socios Activos ({socios.length})</span>
+          <span>Socios Activos ({sociosActivos.length})</span>
         </button>
         <button
           onClick={() => setActiveTab('propuestos')}
@@ -262,7 +266,7 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
         {activeTab === 'activos' ? (
           /* ACTIVE MEMBERS LIST */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 pt-10">
-            {socios.map((socio) => (
+            {sociosActivos.map((socio) => (
               <div 
                 key={socio.id} 
                 className="bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-2xl border border-slate-100 hover:border-blue-900/10 transition-all duration-500 flex flex-col relative group hover:-translate-y-2"
