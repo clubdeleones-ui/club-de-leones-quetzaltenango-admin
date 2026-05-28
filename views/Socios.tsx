@@ -18,7 +18,8 @@ import {
   Building,
   CheckCircle,
   X,
-  Trash2
+  Trash2,
+  Pencil
 } from 'lucide-react';
 
 interface SociosProps {
@@ -43,6 +44,8 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
     localStorage.setItem('club_leones_propuestas', JSON.stringify(MOCK_PROPUESTAS));
     return MOCK_PROPUESTAS;
   });
+
+  const [editingPropuesta, setEditingPropuesta] = useState<PropuestaSocio | null>(null);
 
   // Fetch from Firebase on component mount
   useEffect(() => {
@@ -409,13 +412,22 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                         </div>
                         
                         {canEditPropuestas && (
-                          <button 
-                            onClick={() => handleDeletePropuesta(propuesta.id)}
-                            className="p-2 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-full transition-all border border-slate-100 shadow-sm"
-                            title="Eliminar permanentemente"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          <div className="flex items-center space-x-2 flex-shrink-0">
+                            <button 
+                              onClick={() => setEditingPropuesta(propuesta)}
+                              className="p-2 bg-slate-50 hover:bg-blue-50 text-slate-450 hover:text-blue-900 rounded-full transition-all border border-slate-100 shadow-sm flex items-center justify-center animate-in fade-in"
+                              title="Editar propuesta"
+                            >
+                              <Pencil size={16} />
+                            </button>
+                            <button 
+                              onClick={() => handleDeletePropuesta(propuesta.id)}
+                              className="p-2 bg-slate-50 hover:bg-red-50 text-slate-450 hover:text-red-600 rounded-full transition-all border border-slate-100 shadow-sm flex items-center justify-center animate-in fade-in"
+                              title="Eliminar permanentemente"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         )}
                       </div>
 
@@ -512,6 +524,184 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                 ))}
               </div>
             )}
+          </div>
+        )}
+        {editingPropuesta && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300">
+            <div className="bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 sm:p-10 space-y-6 relative animate-in zoom-in-95 duration-300">
+              <button 
+                type="button"
+                onClick={() => setEditingPropuesta(null)}
+                className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="space-y-1">
+                <h2 className="text-xl sm:text-2xl font-bold text-blue-900">Editar Propuesta de Candidato</h2>
+                <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Modificar información del postulado</p>
+              </div>
+
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                if (!editingPropuesta.proponente || !editingPropuesta.nombreCandidato || !editingPropuesta.profesionCandidato || !editingPropuesta.motivoPropuesta || !editingPropuesta.porQueBuenLeon || !editingPropuesta.estadoCivil || !editingPropuesta.hijos) {
+                  alert('Por favor complete todos los campos obligatorios.');
+                  return;
+                }
+
+                // Update local state
+                setPropuestas(propuestas.map(p => p.id === editingPropuesta.id ? editingPropuesta : p));
+
+                try {
+                  // Save to Firebase
+                  await firebaseService.updateProposal(editingPropuesta.id, editingPropuesta);
+                  
+                  // Also update localStorage
+                  const localPropuestas = localStorage.getItem('club_leones_propuestas');
+                  const propuestasActuales: PropuestaSocio[] = localPropuestas ? JSON.parse(localPropuestas) : [];
+                  localStorage.setItem('club_leones_propuestas', JSON.stringify(
+                    propuestasActuales.map(p => p.id === editingPropuesta.id ? { ...editingPropuesta, synced: true } : p)
+                  ));
+                  
+                  alert('Propuesta actualizada exitosamente.');
+                  setEditingPropuesta(null);
+                } catch (err: any) {
+                  console.error("Error updating proposal in Firestore:", err);
+                  
+                  // fallback localStorage update
+                  const localPropuestas = localStorage.getItem('club_leones_propuestas');
+                  const propuestasActuales: PropuestaSocio[] = localPropuestas ? JSON.parse(localPropuestas) : [];
+                  localStorage.setItem('club_leones_propuestas', JSON.stringify(
+                    propuestasActuales.map(p => p.id === editingPropuesta.id ? { ...editingPropuesta, synced: false } : p)
+                  ));
+                  
+                  alert(`Se guardó localmente pero no se pudo sincronizar: ${err?.message || err}`);
+                  setEditingPropuesta(null);
+                }
+              }} className="space-y-6">
+                
+                {/* Proponente */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Socio Proponente *</label>
+                  <input 
+                    type="text"
+                    required
+                    value={editingPropuesta.proponente}
+                    onChange={e => setEditingPropuesta({ ...editingPropuesta, proponente: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all font-semibold"
+                  />
+                </div>
+
+                {/* Nombre y Profesión */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Nombre del Candidato *</label>
+                    <input 
+                      type="text"
+                      required
+                      value={editingPropuesta.nombreCandidato}
+                      onChange={e => setEditingPropuesta({ ...editingPropuesta, nombreCandidato: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all font-semibold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Campo Profesional / Ocupación *</label>
+                    <input 
+                      type="text"
+                      required
+                      value={editingPropuesta.profesionCandidato}
+                      onChange={e => setEditingPropuesta({ ...editingPropuesta, profesionCandidato: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all font-semibold"
+                    />
+                  </div>
+                </div>
+
+                {/* Motivo Nominación */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">¿Por qué propone a esta persona? *</label>
+                  <textarea 
+                    rows={3}
+                    required
+                    value={editingPropuesta.motivoPropuesta}
+                    onChange={e => setEditingPropuesta({ ...editingPropuesta, motivoPropuesta: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all resize-none text-sm font-semibold"
+                  />
+                </div>
+
+                {/* Buen Leon */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">¿Por qué considera que sería un buen León? *</label>
+                  <textarea 
+                    rows={3}
+                    required
+                    value={editingPropuesta.porQueBuenLeon}
+                    onChange={e => setEditingPropuesta({ ...editingPropuesta, porQueBuenLeon: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all resize-none text-sm font-semibold"
+                  />
+                </div>
+
+                {/* Datos Complementarios */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Estado Civil *</label>
+                    <select 
+                      required
+                      value={editingPropuesta.estadoCivil || ''}
+                      onChange={e => setEditingPropuesta({ ...editingPropuesta, estadoCivil: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all font-semibold bg-white"
+                    >
+                      <option value="">Seleccione...</option>
+                      <option value="Soltero">Soltero(a)</option>
+                      <option value="Casado">Casado(a)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Hijos *</label>
+                    <select 
+                      required
+                      value={editingPropuesta.hijos || ''}
+                      onChange={e => setEditingPropuesta({ ...editingPropuesta, hijos: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all font-semibold bg-white"
+                    >
+                      <option value="">Seleccione...</option>
+                      <option value="Sin hijos">Sin hijos</option>
+                      <option value="Con hijos">Con hijos</option>
+                    </select>
+                  </div>
+                </div>
+
+                {editingPropuesta.estadoCivil === 'Casado' && (
+                  <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Nombre del Cónyuge (Opcional)</label>
+                    <input 
+                      type="text"
+                      value={editingPropuesta.nombreEsposa || ''}
+                      onChange={e => setEditingPropuesta({ ...editingPropuesta, nombreEsposa: e.target.value })}
+                      placeholder="Ej. María Fernanda López"
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all font-semibold"
+                    />
+                  </div>
+                )}
+
+                {/* Botones de acción */}
+                <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setEditingPropuesta(null)}
+                    className="px-5 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-colors text-sm"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-black rounded-xl shadow-lg shadow-blue-900/10 transition-all text-sm"
+                  >
+                    Guardar Cambios
+                  </button>
+                </div>
+
+              </form>
+            </div>
           </div>
         )}
       </div>
