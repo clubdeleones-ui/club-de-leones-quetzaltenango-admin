@@ -51,6 +51,14 @@ const App: React.FC = () => {
     localStorage.setItem('club_leones_auth', JSON.stringify(newAuth));
   };
 
+  const handleUpdateUser = (updatedUser: Socio) => {
+    setAuth(prev => {
+      const newAuth = { ...prev, user: updatedUser };
+      localStorage.setItem('club_leones_auth', JSON.stringify(newAuth));
+      return newAuth;
+    });
+  };
+
   const handleLogout = () => {
     setAuth({ user: null, isAuthenticated: false, accessToken: undefined });
     localStorage.removeItem('club_leones_auth');
@@ -83,7 +91,7 @@ const App: React.FC = () => {
               path="/dashboard"
               element={
                 <ProtectedRoute isAuthenticated={auth.isAuthenticated}>
-                  <Dashboard user={auth.user!} />
+                  <Dashboard user={auth.user!} onUpdateUser={handleUpdateUser} />
                 </ProtectedRoute>
               }
             />
