@@ -155,10 +155,10 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
       </header>
 
       {/* Tabs Navigation */}
-      <div className="flex border-b border-slate-200">
+      <div className="flex border-b border-slate-200 overflow-x-auto scrollbar-none w-full whitespace-nowrap">
         <button
           onClick={() => setActiveTab('activos')}
-          className={`flex items-center space-x-3 px-6 py-3 font-semibold text-base border-b-4 transition-all ${
+          className={`flex-shrink-0 flex items-center space-x-2 md:space-x-3 px-4 md:px-6 py-2.5 md:py-3 font-semibold text-sm md:text-base border-b-4 transition-all ${
             activeTab === 'activos'
               ? 'border-blue-900 text-blue-900'
               : 'border-transparent text-slate-600 hover:text-slate-800'
@@ -169,7 +169,7 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
         </button>
         <button
           onClick={() => setActiveTab('propuestos')}
-          className={`flex items-center space-x-3 px-6 py-3 font-semibold text-base border-b-4 transition-all relative ${
+          className={`flex-shrink-0 flex items-center space-x-2 md:space-x-3 px-4 md:px-6 py-2.5 md:py-3 font-semibold text-sm md:text-base border-b-4 transition-all relative ${
             activeTab === 'propuestos'
               ? 'border-blue-900 text-blue-900'
               : 'border-transparent text-slate-600 hover:text-slate-800'
@@ -178,7 +178,7 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
           <UserCheck size={18} />
           <span>Candidatos Propuestos</span>
           {propuestasAMostrar.length > 0 && (
-            <span className="absolute top-2 right-0 bg-yellow-500 text-blue-900 text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full animate-bounce">
+            <span className="absolute -top-1 -right-1 sm:top-2 sm:right-0 bg-yellow-500 text-blue-900 text-[10px] font-bold w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center rounded-full animate-bounce">
               {propuestasAMostrar.length}
             </span>
           )}
@@ -398,22 +398,22 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                       {propuesta.estado === 'Pendiente' ? 'En Evaluación' : propuesta.estado}
                     </div>
 
-                    <div className="p-6 flex flex-col space-y-5">
+                    <div className="p-4 sm:p-6 flex flex-col space-y-5">
                       {/* Header info */}
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start space-x-5">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                        <div className="flex items-center sm:items-start space-x-4 sm:space-x-5 min-w-0">
                           <img 
                             src={propuesta.fotoCandidato || 'https://picsum.photos/seed/' + propuesta.id + '/200/200'} 
-                            className="w-20 h-20 rounded-2xl object-cover border-4 border-slate-50 shadow-sm flex-shrink-0 cursor-zoom-in" 
+                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-4 border-slate-50 shadow-sm flex-shrink-0 cursor-zoom-in" 
                             alt={propuesta.nombreCandidato} 
                             onClick={() => setSelectedPhoto({
                               url: propuesta.fotoCandidato || 'https://picsum.photos/seed/' + propuesta.id + '/200/200',
                               title: propuesta.nombreCandidato
                             })}
                           />
-                          <div className="space-y-1.5 min-w-0 pt-1">
-                            <h3 className="font-black text-xl text-slate-900 leading-snug truncate mt-1">{propuesta.nombreCandidato}</h3>
-                            <div className="flex items-center text-slate-600 text-xs font-medium">
+                          <div className="space-y-1.5 min-w-0 pt-1 flex-1">
+                            <h3 className="font-black text-lg sm:text-xl text-slate-900 leading-snug break-words">{propuesta.nombreCandidato}</h3>
+                            <div className="flex items-center text-slate-650 text-xs font-medium">
                               <Briefcase size={12} className="mr-1.5 text-slate-400 flex-shrink-0" />
                               <span className="truncate">{propuesta.profesionCandidato}</span>
                             </div>
@@ -421,17 +421,17 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                         </div>
                         
                         {canEditPropuestas && (
-                          <div className="flex items-center space-x-2 flex-shrink-0">
+                          <div className="flex items-center space-x-2 sm:self-start self-end flex-shrink-0">
                             <button 
                               onClick={() => setEditingPropuesta(propuesta)}
-                              className="p-2 bg-slate-50 hover:bg-blue-50 text-slate-450 hover:text-blue-900 rounded-full transition-all border border-slate-100 shadow-sm flex items-center justify-center animate-in fade-in"
+                              className="p-2.5 sm:p-2 bg-slate-50 hover:bg-blue-50 text-slate-450 hover:text-blue-900 rounded-full transition-all border border-slate-100 shadow-sm flex items-center justify-center animate-in fade-in"
                               title="Editar propuesta"
                             >
                               <Pencil size={16} />
                             </button>
                             <button 
                               onClick={() => handleDeletePropuesta(propuesta.id)}
-                              className="p-2 bg-slate-50 hover:bg-red-50 text-slate-450 hover:text-red-600 rounded-full transition-all border border-slate-100 shadow-sm flex items-center justify-center animate-in fade-in"
+                              className="p-2.5 sm:p-2 bg-slate-50 hover:bg-red-50 text-slate-450 hover:text-red-600 rounded-full transition-all border border-slate-100 shadow-sm flex items-center justify-center animate-in fade-in"
                               title="Eliminar permanentemente"
                             >
                               <Trash2 size={16} />
@@ -441,20 +441,20 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                       </div>
 
                     {/* Proponent info */}
-                    <div className="bg-slate-50/85 rounded-xl p-3.5 flex items-center justify-between border border-slate-100/80">
-                      <div className="flex items-center space-x-1.5 text-xs text-slate-600">
-                        <ShieldCheck size={14} className="text-blue-900" />
+                    <div className="bg-slate-50/85 rounded-xl p-3.5 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between border border-slate-100/80">
+                      <div className="flex items-center space-x-1.5 text-xs text-slate-650">
+                        <ShieldCheck size={14} className="text-blue-900 flex-shrink-0" />
                         <span>Propuesto por:</span>
                       </div>
-                      <span className="font-bold text-xs text-blue-900 bg-blue-50/80 px-2.5 py-1 rounded-lg">
+                      <span className="font-bold text-xs text-blue-900 bg-blue-50/80 px-2.5 py-1 rounded-lg break-words text-left sm:text-right sm:max-w-[200px]" title={propuesta.proponente}>
                         {propuesta.proponente}
                       </span>
                     </div>
 
                     {/* Family Status Info (Datos Complementarios) */}
                     {(propuesta.estadoCivil || propuesta.hijos) && (
-                      <div className="bg-slate-50/50 rounded-2xl p-3.5 border border-slate-100/80 space-y-2 text-xs text-slate-700">
-                        <div className="flex justify-between items-center">
+                      <div className="bg-slate-50/50 rounded-2xl p-3.5 border border-slate-100/80 space-y-2.5 text-xs text-slate-700">
+                        <div className="flex flex-col sm:flex-row gap-1 sm:items-center sm:justify-between">
                           <span className="font-bold text-slate-500 flex items-center">
                             <span className="mr-1.5">👪</span> Estado Civil y Familia
                           </span>
@@ -463,11 +463,11 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                           </span>
                         </div>
                         {propuesta.estadoCivil === 'Casado' && propuesta.nombreEsposa && (
-                          <div className="flex justify-between items-center pt-2 border-t border-slate-100">
+                          <div className="flex flex-col sm:flex-row gap-1 sm:items-center sm:justify-between pt-2 border-t border-slate-100">
                             <span className="text-slate-500 font-bold flex items-center">
                               <span className="mr-1.5">💍</span> Cónyuge
                             </span>
-                            <span className="font-black text-slate-900">{propuesta.nombreEsposa}</span>
+                            <span className="font-black text-slate-900 break-words text-left sm:text-right sm:max-w-[200px]">{propuesta.nombreEsposa}</span>
                           </div>
                         )}
                       </div>
@@ -483,7 +483,7 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                         {propuesta.caracteristicas.map((carac, index) => (
                           <span 
                             key={index} 
-                            className="bg-blue-50/50 hover:bg-blue-50 border border-blue-100/70 text-blue-950 font-medium px-2.5 py-0.5 rounded-lg text-xs transition-colors"
+                            className="bg-blue-50/50 hover:bg-blue-50 border border-blue-100/70 text-blue-955 font-medium px-2.5 py-0.5 rounded-lg text-xs transition-colors"
                           >
                             ✨ {carac}
                           </span>
@@ -495,14 +495,14 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                     <div className="space-y-3 pt-2 border-t border-slate-100 flex-grow">
                       <div>
                         <h4 className="font-bold text-[10px] text-slate-500 uppercase tracking-wider">Motivo de Nominación</h4>
-                        <p className="text-slate-800 text-xs mt-1 leading-relaxed italic bg-slate-50/30 p-2.5 rounded-xl border border-slate-100/50 font-medium">
+                        <p className="text-slate-800 text-xs mt-1 leading-relaxed italic bg-slate-50/30 p-2.5 rounded-xl border border-slate-100/50 font-medium break-words">
                           "{propuesta.motivoPropuesta}"
                         </p>
                       </div>
                       {propuesta.porQueBuenLeon && (
                         <div>
                           <h4 className="font-bold text-[10px] text-slate-500 uppercase tracking-wider mt-2">¿Por qué sería un buen León?</h4>
-                          <p className="text-slate-800 text-xs mt-1 leading-relaxed italic bg-slate-50/30 p-2.5 rounded-xl border border-slate-100/50 font-medium">
+                          <p className="text-slate-800 text-xs mt-1 leading-relaxed italic bg-slate-50/30 p-2.5 rounded-xl border border-slate-100/50 font-medium break-words">
                             "{propuesta.porQueBuenLeon}"
                           </p>
                         </div>

@@ -1584,8 +1584,8 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
 
                           {/* Family Status Info (Datos Complementarios) */}
                           {(prop.estadoCivil || prop.hijos) && (
-                            <div className="bg-slate-50/50 rounded-2xl p-3.5 border border-slate-100/80 space-y-2 text-xs text-slate-700">
-                              <div className="flex justify-between items-center">
+                            <div className="bg-slate-50/50 rounded-2xl p-3.5 border border-slate-100/80 space-y-2.5 text-xs text-slate-700">
+                              <div className="flex flex-col sm:flex-row gap-1 sm:items-center sm:justify-between">
                                 <span className="font-bold text-slate-500 flex items-center">
                                   <span className="mr-1.5">👪</span> Estado Civil y Familia
                                 </span>
@@ -1594,11 +1594,11 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
                                 </span>
                               </div>
                               {prop.estadoCivil === 'Casado' && prop.nombreEsposa && (
-                                <div className="flex justify-between items-center pt-2 border-t border-slate-100">
+                                <div className="flex flex-col sm:flex-row gap-1 sm:items-center sm:justify-between pt-2 border-t border-slate-100">
                                   <span className="text-slate-500 font-bold flex items-center">
                                     <span className="mr-1.5">💍</span> Cónyuge
                                   </span>
-                                  <span className="font-black text-slate-900">{prop.nombreEsposa}</span>
+                                  <span className="font-black text-slate-900 break-words text-left sm:text-right sm:max-w-[200px]">{prop.nombreEsposa}</span>
                                 </div>
                               )}
                             </div>
