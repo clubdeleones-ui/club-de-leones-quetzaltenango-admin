@@ -4,7 +4,8 @@ import { ShieldCheck, Lock, Mail, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import { MOCK_SOCIOS } from '../constants';
-import { UserRole } from '../types';
+import { Socio, UserRole } from '../types';
+import { firebaseService } from '../services/firebaseService';
 
 interface LoginProps {
   onLogin: (user: any, accessToken?: string) => void;
@@ -28,11 +29,22 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         const profile = await res.json();
         console.log('Google profile details:', profile);
 
-        let user = MOCK_SOCIOS.find(s => s.correo.toLowerCase() === profile.email?.toLowerCase());
+        // Fetch latest socios list from Firestore to get updated details (like photos)
+        let sociosList: Socio[] = [];
+        try {
+          sociosList = await firebaseService.getSocios();
+        } catch (e) {
+          console.error("Error fetching socios on Google Login:", e);
+        }
+
+        let user = sociosList.find(s => s.correo.toLowerCase() === profile.email?.toLowerCase());
+        if (!user) {
+          user = MOCK_SOCIOS.find(s => s.correo.toLowerCase() === profile.email?.toLowerCase());
+        }
         
         if (!user && profile.email?.toLowerCase() === 'clubdeleonesquetzaltenango@gmail.com') {
           user = {
-            id: 'admin-gmail',
+            id: '8', // Sync with constants ID 8 for main admin
             nombre: 'Club de Leones Quetzaltenango',
             correo: 'clubdeleonesquetzaltenango@gmail.com',
             rol: UserRole.SUPER_ADMIN,
@@ -62,7 +74,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           user.rol === UserRole.SUPER_ADMIN || 
           user.rol === UserRole.TESORERO || 
           user.rol === UserRole.SECRETARIO || 
-          user.rol === UserRole.ASESOR_SERVICIOS;
+          user.rol === UserRole.ASESOR_SERVICIOS ||
+          user.rol === UserRole.PRESIDENTE_AFILIACION;
         if (isAdministrative) {
           navigate('/admin');
         } else {
@@ -77,10 +90,22 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/documents.readonly'
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simple mock logic
-    const user = MOCK_SOCIOS.find(s => s.correo.toLowerCase() === email.toLowerCase());
+    setError('');
+
+    // Fetch latest socios list from Firestore to get updated details
+    let sociosList: Socio[] = [];
+    try {
+      sociosList = await firebaseService.getSocios();
+    } catch (err) {
+      console.error("Error fetching socios on credentials login:", err);
+    }
+
+    let user = sociosList.find(s => s.correo.toLowerCase() === email.toLowerCase());
+    if (!user) {
+      user = MOCK_SOCIOS.find(s => s.correo.toLowerCase() === email.toLowerCase());
+    }
     
     const isCorrectPassword = 
       (email.toLowerCase() === 'clubdeleonesquetzaltenango@gmail.com' && password === 'Nuevadirectiva2627!') ||
@@ -92,7 +117,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         user.rol === UserRole.SUPER_ADMIN || 
         user.rol === UserRole.TESORERO || 
         user.rol === UserRole.SECRETARIO || 
-        user.rol === UserRole.ASESOR_SERVICIOS;
+        user.rol === UserRole.ASESOR_SERVICIOS ||
+        user.rol === UserRole.PRESIDENTE_AFILIACION;
       if (isAdministrative) {
         navigate('/admin');
       } else {
@@ -107,15 +133,27 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     }
   };
 
-  const handleQuickLogin = (email: string) => {
-    const user = MOCK_SOCIOS.find(s => s.correo === email);
+  const handleQuickLogin = async (email: string) => {
+    let sociosList: Socio[] = [];
+    try {
+      sociosList = await firebaseService.getSocios();
+    } catch (err) {
+      console.error("Error fetching socios on quick login:", err);
+    }
+
+    let user = sociosList.find(s => s.correo.toLowerCase() === email.toLowerCase());
+    if (!user) {
+      user = MOCK_SOCIOS.find(s => s.correo.toLowerCase() === email.toLowerCase());
+    }
+
     if (user) {
       onLogin(user);
       const isAdministrative = 
         user.rol === UserRole.SUPER_ADMIN || 
         user.rol === UserRole.TESORERO || 
         user.rol === UserRole.SECRETARIO || 
-        user.rol === UserRole.ASESOR_SERVICIOS;
+        user.rol === UserRole.ASESOR_SERVICIOS ||
+        user.rol === UserRole.PRESIDENTE_AFILIACION;
       if (isAdministrative) {
         navigate('/admin');
       } else {

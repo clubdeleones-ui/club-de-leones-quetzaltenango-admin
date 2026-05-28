@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import Layout from './components/Layout';
@@ -15,6 +15,7 @@ import SuperAdmin from './views/SuperAdmin';
 import ProponerSocio from './views/ProponerSocio';
 import Donar from './views/Donar';
 import { AuthState, Socio, UserRole } from './types';
+import { firebaseService } from './services/firebaseService';
 
 // ProtectedRoute moved outside of App to resolve typing errors and improve performance
 interface ProtectedRouteProps {
@@ -44,6 +45,29 @@ const App: React.FC = () => {
       isAuthenticated: false,
     };
   });
+
+  useEffect(() => {
+    if (auth.isAuthenticated && auth.user) {
+      const refreshUserSession = async () => {
+        try {
+          const list = await firebaseService.getSocios();
+          const freshUser = list.find(s => 
+            s.correo.toLowerCase() === auth.user?.correo?.toLowerCase() || 
+            s.id === auth.user?.id
+          );
+          if (freshUser) {
+            // Compare stringified versions to avoid unnecessary updates
+            if (JSON.stringify(freshUser) !== JSON.stringify(auth.user)) {
+              handleUpdateUser(freshUser);
+            }
+          }
+        } catch (e) {
+          console.error("Error refreshing user session on load:", e);
+        }
+      };
+      refreshUserSession();
+    }
+  }, [auth.isAuthenticated]);
 
   const handleLogin = (user: Socio, accessToken?: string) => {
     const newAuth = { user, isAuthenticated: true, accessToken };
