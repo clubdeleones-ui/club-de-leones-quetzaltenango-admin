@@ -737,39 +737,39 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                 {/* Caja de Datos Premium */}
                 <div className="w-full bg-slate-50/50 rounded-2xl p-4 border border-slate-100/90 text-left text-sm font-medium text-slate-700 space-y-3 mt-5">
                   {/* Club */}
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-100/60">
-                    <span className="text-slate-450 flex items-center space-x-1.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100/60 gap-1">
+                    <span className="text-slate-450 flex items-center space-x-1.5 flex-shrink-0">
                       <Building size={16} className="text-slate-400 flex-shrink-0" />
                       <span>Club</span>
                     </span>
-                    <span className="font-bold text-slate-800 text-right truncate max-w-[150px]">{user.club || 'QUETZALTENANGO'}</span>
+                    <span className="font-bold text-slate-800 text-left sm:text-right break-words w-full sm:w-auto">{user.club || 'QUETZALTENANGO'}</span>
                   </div>
 
                   {/* Correo */}
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-100/60">
-                    <span className="text-slate-450 flex items-center space-x-1.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100/60 gap-1">
+                    <span className="text-slate-450 flex items-center space-x-1.5 flex-shrink-0">
                       <Mail size={16} className="text-slate-400 flex-shrink-0" />
                       <span>Correo</span>
                     </span>
-                    <span className="font-bold text-slate-800 text-right truncate max-w-[180px]">{user.correo}</span>
+                    <span className="font-bold text-slate-800 text-left sm:text-right break-all w-full sm:w-auto">{user.correo}</span>
                   </div>
 
                   {/* Teléfono */}
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-100/60">
-                    <span className="text-slate-450 flex items-center space-x-1.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100/60 gap-1">
+                    <span className="text-slate-450 flex items-center space-x-1.5 flex-shrink-0">
                       <Phone size={16} className="text-slate-400 flex-shrink-0" />
                       <span>Teléfono</span>
                     </span>
-                    <span className="font-bold text-slate-800 text-right">{user.telefono || 'Sin teléfono'}</span>
+                    <span className="font-bold text-slate-800 text-left sm:text-right break-words w-full sm:w-auto">{user.telefono || 'Sin teléfono'}</span>
                   </div>
 
                   {/* Gestión / Período */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-450 flex items-center space-x-1.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <span className="text-slate-450 flex items-center space-x-1.5 flex-shrink-0">
                       <Calendar size={16} className="text-slate-400 flex-shrink-0" />
                       <span>Gestión</span>
                     </span>
-                    <span className="font-bold text-slate-800 text-right truncate">
+                    <span className="font-bold text-slate-800 text-left sm:text-right break-words w-full sm:w-auto">
                       Miembro desde: {user.fechaIngreso}
                     </span>
                   </div>

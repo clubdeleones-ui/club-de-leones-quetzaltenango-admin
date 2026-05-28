@@ -338,58 +338,58 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                     {/* Caja de Datos Premium */}
                     <div className="w-full bg-slate-50/50 rounded-2xl p-4 border border-slate-100/90 text-left text-sm font-medium text-slate-700 space-y-3 mt-5">
                       {/* Club */}
-                      <div className="flex items-center justify-between pb-2 border-b border-slate-100/60">
-                        <span className="text-slate-450 flex items-center space-x-1.5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100/60 gap-1">
+                        <span className="text-slate-450 flex items-center space-x-1.5 flex-shrink-0">
                           <Building size={16} className="text-slate-400 flex-shrink-0" />
                           <span>Club</span>
                         </span>
-                        <span className="font-bold text-slate-800 text-right truncate max-w-[150px]">{socio.club || 'QUETZALTENANGO'}</span>
+                        <span className="font-bold text-slate-800 text-left sm:text-right break-words w-full sm:w-auto">{socio.club || 'QUETZALTENANGO'}</span>
                       </div>
 
                       {/* Correo */}
-                      <div className="flex items-center justify-between pb-2 border-b border-slate-100/60">
-                        <span className="text-slate-450 flex items-center space-x-1.5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100/60 gap-1">
+                        <span className="text-slate-450 flex items-center space-x-1.5 flex-shrink-0">
                           <Mail size={16} className="text-slate-400 flex-shrink-0" />
                           <span>Correo</span>
                         </span>
                         {socio.correo ? (
                           <a 
                             href={`mailto:${socio.correo}`}
-                            className="font-bold text-blue-900 hover:text-blue-700 truncate max-w-[170px] transition-colors"
+                            className="font-bold text-blue-900 hover:text-blue-700 break-all text-left sm:text-right transition-colors w-full sm:w-auto"
                             title={socio.correo}
                           >
                             {socio.correo}
                           </a>
                         ) : (
-                          <span className="text-slate-450 font-normal italic">Sin correo registrado</span>
+                          <span className="text-slate-450 font-normal italic text-left sm:text-right w-full sm:w-auto">Sin correo registrado</span>
                         )}
                       </div>
 
                       {/* Teléfono */}
-                      <div className="flex items-center justify-between pb-2 border-b border-slate-100/60">
-                        <span className="text-slate-450 flex items-center space-x-1.5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100/60 gap-1">
+                        <span className="text-slate-450 flex items-center space-x-1.5 flex-shrink-0">
                           <Phone size={16} className="text-slate-400 flex-shrink-0" />
                           <span>Teléfono</span>
                         </span>
                         {socio.telefono && socio.telefono !== 'Sin teléfono' && socio.telefono !== '' ? (
                           <a 
                             href={`tel:${socio.telefono}`}
-                            className="font-bold text-slate-800 hover:text-blue-900 transition-colors"
+                            className="font-bold text-slate-800 hover:text-blue-900 transition-colors break-words text-left sm:text-right w-full sm:w-auto"
                           >
                             {socio.telefono}
                           </a>
                         ) : (
-                          <span className="text-slate-450 font-normal italic">Sin teléfono registrado</span>
+                          <span className="text-slate-450 font-normal italic text-left sm:text-right w-full sm:w-auto">Sin teléfono registrado</span>
                         )}
                       </div>
 
                       {/* Gestión / Período */}
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-450 flex items-center space-x-1.5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                        <span className="text-slate-450 flex items-center space-x-1.5 flex-shrink-0">
                           <Calendar size={16} className="text-slate-400 flex-shrink-0" />
                           <span>Gestión</span>
                         </span>
-                        <span className="font-bold text-slate-800 text-right truncate">
+                        <span className="font-bold text-slate-800 text-left sm:text-right break-words w-full sm:w-auto">
                           {socio.fechaIngreso} al {socio.fechaFin && socio.fechaFin !== 'Sin fecha fin' ? socio.fechaFin : 'Indefinido'}
                         </span>
                       </div>
@@ -489,9 +489,9 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                           />
                           <div className="space-y-1.5 min-w-0 pt-1 flex-1">
                             <h3 className="font-black text-lg sm:text-xl text-slate-900 leading-snug break-words">{propuesta.nombreCandidato}</h3>
-                            <div className="flex items-center text-slate-650 text-xs font-medium">
+                            <div className="flex items-center text-slate-650 text-xs font-medium w-full">
                               <Briefcase size={12} className="mr-1.5 text-slate-400 flex-shrink-0" />
-                              <span className="truncate">{propuesta.profesionCandidato}</span>
+                              <span className="break-words w-full">{propuesta.profesionCandidato}</span>
                             </div>
                           </div>
                         </div>
@@ -518,11 +518,11 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
 
                     {/* Proponent info */}
                     <div className="bg-slate-50/85 rounded-xl p-3.5 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between border border-slate-100/80">
-                      <div className="flex items-center space-x-1.5 text-xs text-slate-650">
+                      <div className="flex items-center space-x-1.5 text-xs text-slate-650 flex-shrink-0">
                         <ShieldCheck size={14} className="text-blue-900 flex-shrink-0" />
                         <span>Propuesto por:</span>
                       </div>
-                      <span className="font-bold text-xs text-blue-900 bg-blue-50/80 px-2.5 py-1 rounded-lg break-words text-left sm:text-right sm:max-w-[200px]" title={propuesta.proponente}>
+                      <span className="font-bold text-xs text-blue-900 bg-blue-50/80 px-2.5 py-1 rounded-lg break-words text-left sm:text-right w-full sm:w-auto" title={propuesta.proponente}>
                         {propuesta.proponente}
                       </span>
                     </div>
@@ -531,19 +531,19 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                     {(propuesta.estadoCivil || propuesta.hijos) && (
                       <div className="bg-slate-50/50 rounded-2xl p-3.5 border border-slate-100/80 space-y-2.5 text-xs text-slate-700">
                         <div className="flex flex-col sm:flex-row gap-1 sm:items-center sm:justify-between">
-                          <span className="font-bold text-slate-500 flex items-center">
+                          <span className="font-bold text-slate-500 flex items-center flex-shrink-0">
                             <span className="mr-1.5">👪</span> Estado Civil y Familia
                           </span>
-                          <span className="font-black text-slate-800">
+                          <span className="font-black text-slate-800 text-left sm:text-right w-full sm:w-auto">
                             {propuesta.estadoCivil || 'No indicado'} • {propuesta.hijos || 'No indicado'}
                           </span>
                         </div>
                         {propuesta.estadoCivil === 'Casado' && propuesta.nombreEsposa && (
                           <div className="flex flex-col sm:flex-row gap-1 sm:items-center sm:justify-between pt-2 border-t border-slate-100">
-                            <span className="text-slate-500 font-bold flex items-center">
-                              <span className="mr-1.5">💍</span> Cónyuge
+                            <span className="text-slate-500 font-bold flex items-center flex-shrink-0">
+                               <span className="mr-1.5">💍</span> Cónyuge
                             </span>
-                            <span className="font-black text-slate-900 break-words text-left sm:text-right sm:max-w-[200px]">{propuesta.nombreEsposa}</span>
+                            <span className="font-black text-slate-900 break-words text-left sm:text-right w-full sm:w-auto">{propuesta.nombreEsposa}</span>
                           </div>
                         )}
                       </div>
