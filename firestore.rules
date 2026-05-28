@@ -1,0 +1,19 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Colecciones del Club de Leones (Permitir lectura y escritura pública indefinidamente)
+    match /propuestas/{document} {
+      allow read, write: if true;
+    }
+    
+    match /socios/{document} {
+      allow read, write: if true;
+    }
+
+    // Regla de compatibilidad para otros desarrollos en el proyecto parqueo-cueva (Válido hasta finales de 2027)
+    match /{document=**} {
+      allow read, write: if request.time < timestamp.date(2027, 12, 31);
+    }
+  }
+}
