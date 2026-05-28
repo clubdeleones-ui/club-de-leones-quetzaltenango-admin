@@ -46,6 +46,7 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
   });
 
   const [editingPropuesta, setEditingPropuesta] = useState<PropuestaSocio | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; title: string } | null>(null);
 
   // Fetch from Firebase on component mount
   useEffect(() => {
@@ -222,12 +223,16 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                       {/* Anillo de color según jerarquía */}
                       <img 
                         src={socio.foto || `https://picsum.photos/seed/${socio.nombre}/200/200`} 
-                        className={`w-24 h-24 rounded-full object-cover border-4 border-white shadow-xl group-hover:scale-105 transition-all duration-500 ${
+                        className={`w-24 h-24 rounded-full object-cover border-4 border-white shadow-xl group-hover:scale-105 transition-all duration-500 cursor-zoom-in ${
                           socio.rol === 'SUPER_ADMIN' || socio.rol === 'TESORERO' || socio.rol === 'SECRETARIO'
                             ? 'ring-4 ring-amber-400/80 ring-offset-2'
                             : 'ring-4 ring-blue-900/60 ring-offset-2'
                         }`} 
-                        alt={socio.nombre} 
+                        alt={socio.nombre}
+                        onClick={() => setSelectedPhoto({
+                          url: socio.foto || `https://picsum.photos/seed/${socio.nombre}/200/200`,
+                          title: socio.nombre
+                        })}
                       />
                       <div className="absolute bottom-0 right-0 bg-blue-950 text-amber-400 p-1.5 rounded-full border-2 border-white shadow-md">
                         <Award size={14} />
@@ -399,8 +404,12 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                         <div className="flex items-start space-x-5">
                           <img 
                             src={propuesta.fotoCandidato || 'https://picsum.photos/seed/' + propuesta.id + '/200/200'} 
-                            className="w-20 h-20 rounded-2xl object-cover border-4 border-slate-50 shadow-sm flex-shrink-0" 
+                            className="w-20 h-20 rounded-2xl object-cover border-4 border-slate-50 shadow-sm flex-shrink-0 cursor-zoom-in" 
                             alt={propuesta.nombreCandidato} 
+                            onClick={() => setSelectedPhoto({
+                              url: propuesta.fotoCandidato || 'https://picsum.photos/seed/' + propuesta.id + '/200/200',
+                              title: propuesta.nombreCandidato
+                            })}
                           />
                           <div className="space-y-1.5 min-w-0 pt-1">
                             <h3 className="font-black text-xl text-slate-900 leading-snug truncate mt-1">{propuesta.nombreCandidato}</h3>
@@ -732,6 +741,31 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                 </div>
 
               </form>
+            </div>
+          </div>
+        )}
+        {selectedPhoto && (
+          <div 
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300"
+            onClick={() => setSelectedPhoto(null)}
+          >
+            <div className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center animate-in zoom-in-95 duration-300">
+              <button 
+                type="button"
+                className="absolute -top-12 right-0 p-2 text-white/80 hover:text-white bg-slate-900/60 hover:bg-slate-900/90 rounded-full transition-colors"
+                onClick={() => setSelectedPhoto(null)}
+              >
+                <X size={24} />
+              </button>
+              <img 
+                src={selectedPhoto.url} 
+                alt={selectedPhoto.title} 
+                className="max-w-full max-h-[80vh] rounded-2xl object-contain shadow-2xl border border-white/10"
+                onClick={(e) => e.stopPropagation()}
+              />
+              <p className="text-white text-base font-bold mt-4 bg-slate-900/80 px-4 py-2 rounded-xl shadow-lg border border-white/5">
+                {selectedPhoto.title}
+              </p>
             </div>
           </div>
         )}

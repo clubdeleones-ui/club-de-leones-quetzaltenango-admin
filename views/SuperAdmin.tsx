@@ -168,6 +168,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
 
   const [showEditPropuesta, setShowEditPropuesta] = useState(false);
   const [editingPropuesta, setEditingPropuesta] = useState<PropuestaSocio | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; title: string } | null>(null);
 
   const canEditPropuestas = user.rol === UserRole.SUPER_ADMIN || user.rol === UserRole.PRESIDENTE_AFILIACION || user.rol === UserRole.SECRETARIO;
 
@@ -540,7 +541,12 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
                     <div className="space-y-4">
                       {socios.filter(s => s.montoPendiente > 0).slice(0, 3).map(s => (
                         <div key={s.id} className="flex items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-slate-100/50 transition-colors">
-                          <img src={s.foto} alt={s.nombre} className="w-10 h-10 rounded-full border border-slate-100 object-cover mr-4" />
+                          <img 
+                            src={s.foto} 
+                            alt={s.nombre} 
+                            className="w-10 h-10 rounded-full border border-slate-100 object-cover mr-4 cursor-zoom-in" 
+                            onClick={() => setSelectedPhoto({ url: s.foto, title: s.nombre })}
+                          />
                           <div className="flex-grow min-w-0">
                             <p className="font-extrabold text-slate-800 truncate">{s.nombre}</p>
                             <p className="text-xs text-slate-400 mt-1 truncate">{s.puesto || 'Socio Regular'}</p>
@@ -615,7 +621,12 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
                     <div className="space-y-4">
                       {socios.slice().reverse().slice(0, 3).map(s => (
                         <div key={s.id} className="flex items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-slate-100/50 transition-colors">
-                          <img src={s.foto} alt={s.nombre} className="w-10 h-10 rounded-full border border-slate-100 object-cover mr-4" />
+                          <img 
+                            src={s.foto} 
+                            alt={s.nombre} 
+                            className="w-10 h-10 rounded-full border border-slate-100 object-cover mr-4 cursor-zoom-in" 
+                            onClick={() => setSelectedPhoto({ url: s.foto, title: s.nombre })}
+                          />
                           <div className="flex-grow min-w-0">
                             <p className="font-extrabold text-slate-800 truncate">{s.nombre}</p>
                             <p className="text-xs text-slate-400 mt-1 truncate">Ingreso: {s.fechaIngreso}</p>
@@ -832,7 +843,12 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
                     {filteredSocios.map(s => (
                       <tr key={s.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="p-6 flex items-center space-x-4">
-                          <img src={s.foto} alt={s.nombre} className="w-10 h-10 rounded-full border border-slate-100 object-cover" />
+                          <img 
+                            src={s.foto} 
+                            alt={s.nombre} 
+                            className="w-10 h-10 rounded-full border border-slate-100 object-cover cursor-zoom-in" 
+                            onClick={() => setSelectedPhoto({ url: s.foto, title: s.nombre })}
+                          />
                           <div>
                             <p className="font-extrabold text-slate-800">{s.nombre}</p>
                             <p className="text-xs text-slate-400">{s.correo}</p>
@@ -1529,7 +1545,15 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
                       <div className="flex flex-col sm:flex-row gap-6 p-6 md:p-8 w-full relative z-10 pt-4">
                         {/* Foto Candidato */}
                         <div className="w-24 h-24 md:w-32 md:h-32 rounded-3xl overflow-hidden bg-slate-100 border-4 border-white shadow-lg flex-shrink-0 flex items-center justify-center transform group-hover:scale-105 transition-transform duration-500">
-                          <img src={prop.fotoCandidato || 'https://picsum.photos/seed/' + prop.id + '/200/200'} alt={prop.nombreCandidato} className="w-full h-full object-cover" />
+                          <img 
+                            src={prop.fotoCandidato || 'https://picsum.photos/seed/' + prop.id + '/200/200'} 
+                            alt={prop.nombreCandidato} 
+                            className="w-full h-full object-cover cursor-zoom-in" 
+                            onClick={() => setSelectedPhoto({
+                              url: prop.fotoCandidato || 'https://picsum.photos/seed/' + prop.id + '/200/200',
+                              title: prop.nombreCandidato
+                            })}
+                          />
                         </div>
 
                         {/* Ficha Informativa */}
@@ -1651,6 +1675,31 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
           )}
         </main>
       </div>
+      {selectedPhoto && (
+        <div 
+          className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300"
+          onClick={() => setSelectedPhoto(null)}
+        >
+          <div className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center animate-in zoom-in-95 duration-300">
+            <button 
+              type="button"
+              className="absolute -top-12 right-0 p-2 text-white/80 hover:text-white bg-slate-900/60 hover:bg-slate-900/90 rounded-full transition-colors"
+              onClick={() => setSelectedPhoto(null)}
+            >
+              <X size={24} />
+            </button>
+            <img 
+              src={selectedPhoto.url} 
+              alt={selectedPhoto.title} 
+              className="max-w-full max-h-[80vh] rounded-2xl object-contain shadow-2xl border border-white/10"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <p className="text-white text-base font-bold mt-4 bg-slate-900/80 px-4 py-2 rounded-xl shadow-lg border border-white/5">
+              {selectedPhoto.title}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
