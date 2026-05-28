@@ -259,11 +259,21 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
     e.preventDefault();
     if (!editingPropuesta) return;
 
-    setPropuestas(propuestas.map(p => p.id === editingPropuesta.id ? editingPropuesta : p));
+    if (!editingPropuesta.proponente || !editingPropuesta.nombreCandidato || !editingPropuesta.profesionCandidato || !editingPropuesta.motivoPropuesta || !editingPropuesta.porQueBuenLeon || !editingPropuesta.estadoCivil || !editingPropuesta.hijos) {
+      alert('Por favor complete todos los campos obligatorios.');
+      return;
+    }
+
+    const updatedPropuesta = {
+      ...editingPropuesta,
+      nombreEsposa: editingPropuesta.estadoCivil === 'Casado' ? editingPropuesta.nombreEsposa : ''
+    };
+
+    setPropuestas(propuestas.map(p => p.id === updatedPropuesta.id ? updatedPropuesta : p));
     setShowEditPropuesta(false);
 
     try {
-      await firebaseService.updateProposal(editingPropuesta.id, editingPropuesta);
+      await firebaseService.updateProposal(updatedPropuesta.id, updatedPropuesta);
       alert("Propuesta actualizada con éxito.");
     } catch (err) {
       console.error("Error updating proposal:", err);
@@ -1397,6 +1407,49 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
                           className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none transition-all resize-none text-sm"
                         />
                       </div>
+
+                      {/* Datos Complementarios */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-bold text-slate-700 mb-2">Estado Civil</label>
+                          <select 
+                            required
+                            value={editingPropuesta.estadoCivil || ''}
+                            onChange={e => setEditingPropuesta({...editingPropuesta, estadoCivil: e.target.value})}
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none transition-all bg-white"
+                          >
+                            <option value="">Seleccione...</option>
+                            <option value="Soltero">Soltero(a)</option>
+                            <option value="Casado">Casado(a)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-bold text-slate-700 mb-2">Hijos</label>
+                          <select 
+                            required
+                            value={editingPropuesta.hijos || ''}
+                            onChange={e => setEditingPropuesta({...editingPropuesta, hijos: e.target.value})}
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none transition-all bg-white"
+                          >
+                            <option value="">Seleccione...</option>
+                            <option value="Sin hijos">Sin hijos</option>
+                            <option value="Con hijos">Con hijos</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {editingPropuesta.estadoCivil === 'Casado' && (
+                        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                          <label className="block text-sm font-bold text-slate-700 mb-2">Nombre del Cónyuge (Opcional)</label>
+                          <input 
+                            type="text"
+                            value={editingPropuesta.nombreEsposa || ''}
+                            onChange={e => setEditingPropuesta({...editingPropuesta, nombreEsposa: e.target.value})}
+                            placeholder="Ej. María Fernanda López"
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none transition-all"
+                          />
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex space-x-4 pt-4">
@@ -1504,6 +1557,28 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user }) => {
                               </span>
                             ))}
                           </div>
+
+                          {/* Family Status Info (Datos Complementarios) */}
+                          {(prop.estadoCivil || prop.hijos) && (
+                            <div className="bg-slate-50/50 rounded-2xl p-3.5 border border-slate-100/80 space-y-2 text-xs text-slate-700">
+                              <div className="flex justify-between items-center">
+                                <span className="font-bold text-slate-500 flex items-center">
+                                  <span className="mr-1.5">👪</span> Estado Civil y Familia
+                                </span>
+                                <span className="font-black text-slate-800">
+                                  {prop.estadoCivil || 'No indicado'} • {prop.hijos || 'No indicado'}
+                                </span>
+                              </div>
+                              {prop.estadoCivil === 'Casado' && prop.nombreEsposa && (
+                                <div className="flex justify-between items-center pt-2 border-t border-slate-100">
+                                  <span className="text-slate-500 font-bold flex items-center">
+                                    <span className="mr-1.5">💍</span> Cónyuge
+                                  </span>
+                                  <span className="font-black text-slate-900">{prop.nombreEsposa}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
 
                           {/* Justificaciones */}
                           <div className="grid grid-cols-1 gap-4 pt-4 mt-2 border-t border-slate-100/80">

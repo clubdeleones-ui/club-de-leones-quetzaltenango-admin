@@ -571,18 +571,23 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                   return;
                 }
 
+                const updatedPropuesta = {
+                  ...editingPropuesta,
+                  nombreEsposa: editingPropuesta.estadoCivil === 'Casado' ? editingPropuesta.nombreEsposa : ''
+                };
+
                 // Update local state
-                setPropuestas(propuestas.map(p => p.id === editingPropuesta.id ? editingPropuesta : p));
+                setPropuestas(propuestas.map(p => p.id === updatedPropuesta.id ? updatedPropuesta : p));
 
                 try {
                   // Save to Firebase
-                  await firebaseService.updateProposal(editingPropuesta.id, editingPropuesta);
+                  await firebaseService.updateProposal(updatedPropuesta.id, updatedPropuesta);
                   
                   // Also update localStorage
                   const localPropuestas = localStorage.getItem('club_leones_propuestas');
                   const propuestasActuales: PropuestaSocio[] = localPropuestas ? JSON.parse(localPropuestas) : [];
                   localStorage.setItem('club_leones_propuestas', JSON.stringify(
-                    propuestasActuales.map(p => p.id === editingPropuesta.id ? { ...editingPropuesta, synced: true } : p)
+                    propuestasActuales.map(p => p.id === updatedPropuesta.id ? { ...updatedPropuesta, synced: true } : p)
                   ));
                   
                   alert('Propuesta actualizada exitosamente.');
@@ -594,7 +599,7 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                   const localPropuestas = localStorage.getItem('club_leones_propuestas');
                   const propuestasActuales: PropuestaSocio[] = localPropuestas ? JSON.parse(localPropuestas) : [];
                   localStorage.setItem('club_leones_propuestas', JSON.stringify(
-                    propuestasActuales.map(p => p.id === editingPropuesta.id ? { ...editingPropuesta, synced: false } : p)
+                    propuestasActuales.map(p => p.id === updatedPropuesta.id ? { ...updatedPropuesta, synced: false } : p)
                   ));
                   
                   alert(`Se guardó localmente pero no se pudo sincronizar: ${err?.message || err}`);

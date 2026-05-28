@@ -306,7 +306,10 @@ export const MOCK_PROPUESTAS: PropuestaSocio[] = [
     motivoPropuesta: 'El Dr. Mario es reconocido en Quetzaltenango por sus constantes jornadas de salud pediátrica sin costo para niños de escasos recursos. Su espíritu altruista y compromiso social encajan perfectamente con la visión de ayuda del Club de Leones.',
     porQueBuenLeon: 'Mario aportará su conocimiento médico y redes de apoyo para robustecer nuestras jornadas oftalmológicas y médicas en el valle de Palajunoj. Su capacidad de liderazgo facilitará la consecución de donaciones de insumos de salud.',
     fechaPropuesta: '2026-05-26',
-    estado: 'Pendiente'
+    estado: 'Pendiente',
+    estadoCivil: 'Casado',
+    hijos: 'Con hijos',
+    nombreEsposa: 'María Fernanda López'
   }
 ];
 
