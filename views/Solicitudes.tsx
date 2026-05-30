@@ -18,7 +18,10 @@ import {
   Check, 
   Clock, 
   XOctagon,
-  Users
+  Users,
+  Accessibility,
+  Heart,
+  RefreshCw
 } from 'lucide-react';
 
 interface SolicitudesProps {
@@ -50,7 +53,7 @@ const TEMA_COLORS: { [key: string]: string } = {
 };
 
 const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
-  const [activeTab, setActiveTab] = useState<'abiertas' | 'internas'>('abiertas');
+  const [activeTab, setActiveTab] = useState<'abiertas' | 'internas' | 'sillas'>('abiertas');
   const [isMobileTabMenuOpen, setIsMobileTabMenuOpen] = useState(false);
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -63,6 +66,14 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   const [tema, setTema] = useState(TEMAS_SOLICITUD[0]);
   const [otroTemaDescripcion, setOtroTemaDescripcion] = useState('');
   const [responsables, setResponsables] = useState<Responsable[]>([{ nombre: '', telefono: '' }]);
+
+  // Form State específicos de Sillas de Ruedas
+  const [nombreSolicitante, setNombreSolicitante] = useState('');
+  const [dpiSolicitante, setDpiSolicitante] = useState('');
+  const [telefonoSolicitante, setTelefonoSolicitante] = useState('');
+  const [nombreBeneficiario, setNombreBeneficiario] = useState('');
+  const [edadBeneficiario, setEdadBeneficiario] = useState('');
+  const [tiempoUso, setTiempoUso] = useState('');
   
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -146,40 +157,77 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     setSaveError(null);
     setSaveSuccess(false);
 
-    // Validations
-    if (!nombre.trim() || !fecha || !descripcion.trim()) {
-      setSaveError("Por favor, complete todos los campos obligatorios.");
-      return;
-    }
+    let nuevaSolicitud: Solicitud;
 
-    if (tema === 'Otra' && !otroTemaDescripcion.trim()) {
-      setSaveError("Por favor, describa la categoría en el campo 'Otro Tema'.");
-      return;
-    }
-
-    // Validate responsible inputs
-    for (let i = 0; i < responsables.length; i++) {
-      if (!responsables[i].nombre.trim() || !responsables[i].telefono.trim()) {
-        setSaveError(`Por favor, complete los datos del Responsable ${i + 1}.`);
+    if (activeTab === 'sillas') {
+      // Wheelchair request validations
+      if (
+        !nombreSolicitante.trim() || 
+        !dpiSolicitante.trim() || 
+        !telefonoSolicitante.trim() || 
+        !nombreBeneficiario.trim() || 
+        !edadBeneficiario || 
+        !tiempoUso.trim()
+      ) {
+        setSaveError("Por favor, complete todos los campos obligatorios.");
         return;
       }
+
+      if (dpiSolicitante.trim().length !== 13) {
+        setSaveError("El número de DPI debe tener exactamente 13 dígitos.");
+        return;
+      }
+
+      nuevaSolicitud = {
+        id: `sol-${Date.now()}`,
+        nombre: `Silla de Ruedas - ${nombreBeneficiario.trim()}`,
+        tipo: 'sillas',
+        estado: 'Pendiente',
+        usuarioCreador: user ? `${user.nombre} (${user.correo})` : 'Público',
+        fechaCreacion: new Date().toISOString().split('T')[0],
+        nombreSolicitante: nombreSolicitante.trim(),
+        dpiSolicitante: dpiSolicitante.trim(),
+        telefonoSolicitante: telefonoSolicitante.trim(),
+        nombreBeneficiario: nombreBeneficiario.trim(),
+        edadBeneficiario: parseInt(edadBeneficiario),
+        tiempoUso: tiempoUso.trim()
+      };
+    } else {
+      // Standard validations
+      if (!nombre.trim() || !fecha || !descripcion.trim()) {
+        setSaveError("Por favor, complete todos los campos obligatorios.");
+        return;
+      }
+
+      if (tema === 'Otra' && !otroTemaDescripcion.trim()) {
+        setSaveError("Por favor, describa la categoría en el campo 'Otro Tema'.");
+        return;
+      }
+
+      // Validate responsible inputs
+      for (let i = 0; i < responsables.length; i++) {
+        if (!responsables[i].nombre.trim() || !responsables[i].telefono.trim()) {
+          setSaveError(`Por favor, complete los datos del Responsable ${i + 1}.`);
+          return;
+        }
+      }
+
+      nuevaSolicitud = {
+        id: `sol-${Date.now()}`,
+        nombre: nombre.trim(),
+        fecha,
+        descripcion: descripcion.trim(),
+        responsables,
+        tema,
+        otroTemaDescripcion: tema === 'Otra' ? otroTemaDescripcion.trim() : undefined,
+        tipo: activeTab, // Save to current open tab ('abiertas' or 'internas')
+        estado: 'Pendiente',
+        usuarioCreador: user ? `${user.nombre} (${user.correo})` : 'Público',
+        fechaCreacion: new Date().toISOString().split('T')[0]
+      };
     }
 
     setIsSaving(true);
-
-    const nuevaSolicitud: Solicitud = {
-      id: `sol-${Date.now()}`,
-      nombre: nombre.trim(),
-      fecha,
-      descripcion: descripcion.trim(),
-      responsables,
-      tema,
-      otroTemaDescripcion: tema === 'Otra' ? otroTemaDescripcion.trim() : undefined,
-      tipo: activeTab, // Save to current open tab (Abiertas or Internas)
-      estado: 'Pendiente',
-      usuarioCreador: user ? `${user.nombre} (${user.correo})` : 'Público',
-      fechaCreacion: new Date().toISOString().split('T')[0]
-    };
 
     try {
       await firebaseService.saveSolicitud(nuevaSolicitud);
@@ -197,6 +245,15 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
         setTema(TEMAS_SOLICITUD[0]);
         setOtroTemaDescripcion('');
         setResponsables([{ nombre: '', telefono: '' }]);
+        
+        // Reset wheelchair form
+        setNombreSolicitante('');
+        setDpiSolicitante('');
+        setTelefonoSolicitante('');
+        setNombreBeneficiario('');
+        setEdadBeneficiario('');
+        setTiempoUso('');
+        
         setSaveSuccess(false);
       }, 1500);
     } catch (err: any) {
@@ -261,7 +318,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
             Administra y crea solicitudes de servicios, proyectos y donaciones alineadas a nuestras causas globales.
           </p>
         </div>
-        {(activeTab === 'abiertas' || hasInternalAccess) && (
+        {(activeTab === 'abiertas' || activeTab === 'sillas' || hasInternalAccess) && (
           <button
             onClick={() => setIsModalOpen(true)}
             className="bg-blue-900 hover:bg-blue-800 text-white font-black px-6 py-3.5 rounded-2xl transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center space-x-2 w-full md:w-auto active:scale-95"
@@ -280,9 +337,13 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
           className="w-full flex items-center justify-between px-5 py-3.5 bg-blue-900 text-white font-extrabold rounded-2xl shadow-lg border border-blue-800/60 transition-all hover:bg-blue-850 active:scale-[0.99] text-sm"
         >
           <div className="flex items-center space-x-2.5">
-            <Users size={18} className="text-yellow-400" />
+            {activeTab === 'sillas' ? (
+              <Accessibility size={18} className="text-yellow-400" />
+            ) : (
+              <Users size={18} className="text-yellow-400" />
+            )}
             <span>
-              {activeTab === 'abiertas' ? 'Solicitudes Abiertas' : 'Solicitudes Internas'}
+              {activeTab === 'abiertas' ? 'Solicitudes Abiertas' : activeTab === 'internas' ? 'Solicitudes Internas' : 'Sillas de Ruedas'}
             </span>
           </div>
           <ChevronDown size={18} className={`text-slate-300 transition-transform duration-300 ${isMobileTabMenuOpen ? 'rotate-180' : ''}`} />
@@ -314,6 +375,18 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
             >
               <span>Solicitudes Internas</span>
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('sillas');
+                setIsMobileTabMenuOpen(false);
+              }}
+              className={`w-full flex items-center space-x-3 px-5 py-3 text-sm font-extrabold transition-colors text-left ${
+                activeTab === 'sillas' ? 'bg-blue-50 text-blue-900' : 'text-slate-655 hover:bg-slate-50'
+              }`}
+            >
+              <span>Solicitudes de Sillas de Ruedas</span>
+            </button>
           </div>
         )}
       </div>
@@ -339,6 +412,16 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
           }`}
         >
           Solicitudes Internas
+        </button>
+        <button
+          onClick={() => setActiveTab('sillas')}
+          className={`px-6 py-3 font-semibold text-base border-b-4 transition-all ${
+            activeTab === 'sillas'
+              ? 'border-blue-900 text-blue-900'
+              : 'border-transparent text-slate-600 hover:text-slate-800'
+          }`}
+        >
+          Sillas de Ruedas
         </button>
       </div>
 
@@ -384,6 +467,111 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                     sol.estado === 'Rechazada' ? 'border-l-4 border-l-rose-500' :
                     'border-l-4 border-l-yellow-500';
 
+                  if (sol.tipo === 'sillas') {
+                    return (
+                      <div 
+                        key={sol.id}
+                        className={`bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-xl border border-slate-100 transition-all duration-300 flex flex-col justify-between ${statusBorderColor}`}
+                      >
+                        <div className="p-6 space-y-4 flex-grow">
+                          {/* Tags and Status */}
+                          <div className="flex justify-between items-start gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border bg-blue-50 text-blue-700 border-blue-200 flex items-center space-x-1">
+                              <Accessibility size={12} className="mr-0.5" />
+                              <span>Silla de Ruedas</span>
+                            </span>
+                            
+                            <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center space-x-1 ${
+                              sol.estado === 'Aprobada' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                              sol.estado === 'Rechazada' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+                              'bg-yellow-50 text-yellow-700 border border-yellow-100'
+                            }`}>
+                              {sol.estado === 'Aprobada' && <CheckCircle size={10} className="mr-1" />}
+                              {sol.estado === 'Rechazada' && <XOctagon size={10} className="mr-1" />}
+                              {sol.estado === 'Pendiente' && <Clock size={10} className="mr-1" />}
+                              <span>{sol.estado}</span>
+                            </span>
+                          </div>
+
+                          {/* Info details */}
+                          <div className="space-y-1">
+                            <h3 className="font-extrabold text-lg text-slate-900 leading-snug break-words">
+                              Para: {sol.nombreBeneficiario}
+                            </h3>
+                            <div className="flex items-center text-xs font-semibold text-slate-400">
+                              <Calendar size={12} className="mr-1 text-slate-400 flex-shrink-0" />
+                              <span>Edad: {sol.edadBeneficiario} años • Registro: {sol.fechaCreacion}</span>
+                            </div>
+                          </div>
+
+                          {/* Wheelchair specific details */}
+                          <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50 space-y-2.5 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-slate-400 font-bold">Solicitante:</span>
+                              <span className="font-extrabold text-slate-800">{sol.nombreSolicitante}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-400 font-bold">DPI:</span>
+                              <span className="font-mono text-slate-700">{sol.dpiSolicitante}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-400 font-bold">Teléfono:</span>
+                              <a href={`tel:${sol.telefonoSolicitante}`} className="text-blue-900 hover:underline font-extrabold flex items-center space-x-1">
+                                <Phone size={10} className="mr-0.5" />
+                                <span>{sol.telefonoSolicitante}</span>
+                              </a>
+                            </div>
+                            <div className="flex justify-between pt-1.5 border-t border-slate-200/50">
+                              <span className="text-slate-400 font-bold">Tiempo de Uso:</span>
+                              <span className="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">{sol.tiempoUso}</span>
+                            </div>
+                          </div>
+
+                          {/* Return Note/Indicator */}
+                          <div className="bg-blue-50/50 border border-blue-100/70 p-3 rounded-xl flex items-start space-x-2 text-[10px] text-blue-800 font-medium leading-relaxed">
+                            <RefreshCw size={12} className="flex-shrink-0 mt-0.5 text-blue-600 animate-pulse" />
+                            <span>Compromiso de devolver la silla al finalizar su uso para beneficiar a otros.</span>
+                          </div>
+                        </div>
+
+                        {/* Footer actions for Admin */}
+                        <div className="bg-slate-50/80 px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row gap-2 justify-between items-center text-[10px] font-bold text-slate-400">
+                          <span className="truncate max-w-[130px]" title={sol.usuarioCreador}>Por: {sol.usuarioCreador || 'Público'}</span>
+                          
+                          {(isAdministrative || (user && sol.usuarioCreador?.includes(user.correo))) && (
+                            <div className="flex items-center space-x-1 flex-shrink-0 mt-2 sm:mt-0">
+                              {isAdministrative && sol.estado === 'Pendiente' && (
+                                <>
+                                  <button
+                                    onClick={() => handleUpdateStatus(sol.id, 'Aprobada')}
+                                    className="bg-emerald-500 hover:bg-emerald-600 text-white p-1.5 rounded-lg shadow-sm"
+                                    title="Aprobar Solicitud"
+                                  >
+                                    <Check size={12} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleUpdateStatus(sol.id, 'Rechazada')}
+                                    className="bg-rose-500 hover:bg-rose-600 text-white p-1.5 rounded-lg shadow-sm"
+                                    title="Rechazar Solicitud"
+                                  >
+                                    <X size={12} />
+                                  </button>
+                                </>
+                              )}
+                              <button
+                                onClick={() => handleDeleteSolicitud(sol.id)}
+                                className="bg-slate-200 hover:bg-red-50 text-slate-500 hover:text-red-600 p-1.5 rounded-lg border border-slate-300/30 transition-colors"
+                                title="Eliminar Solicitud"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+
                   return (
                     <div 
                       key={sol.id}
@@ -393,7 +581,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                         {/* Tags and Status */}
                         <div className="flex justify-between items-start gap-2">
                           <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border ${
-                            TEMA_COLORS[sol.tema] || TEMA_COLORS['Otra']
+                            (sol.tema && TEMA_COLORS[sol.tema]) || TEMA_COLORS['Otra']
                           }`}>
                             {sol.tema === 'Otra' ? (sol.otroTemaDescripcion || 'Otra') : sol.tema}
                           </span>
@@ -430,10 +618,10 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                         <div className="space-y-2 pt-2 border-t border-slate-100">
                           <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center">
                             <Users size={10} className="mr-1 text-slate-400" />
-                            Responsables ({sol.responsables.length})
+                            Responsables ({sol.responsables?.length || 0})
                           </h4>
                           <div className="space-y-1.5">
-                            {sol.responsables.map((resp, i) => (
+                            {sol.responsables?.map((resp, i) => (
                               <div key={i} className="flex flex-col sm:flex-row justify-between sm:items-center text-xs bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100 gap-1">
                                 <span className="font-bold text-slate-700 truncate max-w-[150px]">{resp.nombre}</span>
                                 <a 
@@ -505,10 +693,10 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
 
             <div className="space-y-1">
               <h2 className="text-2xl font-black text-blue-900">
-                Crear Nueva Solicitud {activeTab === 'abiertas' ? 'Abierta' : 'Interna'}
+                {activeTab === 'sillas' ? 'Solicitud de Silla de Ruedas' : `Crear Nueva Solicitud ${activeTab === 'abiertas' ? 'Abierta' : 'Interna'}`}
               </h2>
               <p className="text-xs text-slate-550 font-bold uppercase tracking-wider">
-                {activeTab === 'abiertas' ? 'Formulario Público de Proyectos' : 'Formulario de Coordinación Interna'}
+                {activeTab === 'sillas' ? 'Formulario de Préstamo Temporal' : activeTab === 'abiertas' ? 'Formulario Público de Proyectos' : 'Formulario de Coordinación Interna'}
               </p>
             </div>
 
@@ -526,183 +714,326 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5 text-left">
-              {/* Request Name and Date */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                    Nombre de la Solicitud *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={nombre}
-                    onChange={(e) => setNombre(e.target.value)}
-                    placeholder="Ej. Compra de Glucómetros para Campaña"
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                    Fecha Sugerida / Límite *
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={fecha}
-                    onChange={(e) => setFecha(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-850 bg-white"
-                  />
-                </div>
-              </div>
-
-              {/* Theme Dropdown Cause */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                    Tema / Causa Global *
-                  </label>
-                  <select
-                    value={tema}
-                    onChange={(e) => setTema(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold bg-white cursor-pointer"
-                  >
-                    {TEMAS_SOLICITUD.map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
+            {activeTab === 'sillas' ? (
+              <form onSubmit={handleSubmit} className="space-y-5 text-left animate-in fade-in duration-300">
+                {/* Solidarity Note */}
+                <div className="bg-blue-50 border border-blue-200/80 rounded-2xl p-5 flex items-start space-x-3 text-blue-900 text-xs md:text-sm shadow-sm">
+                  <Heart className="flex-shrink-0 text-yellow-500 fill-yellow-500 mt-0.5 animate-pulse" size={18} />
+                  <div className="space-y-1">
+                    <p className="font-extrabold text-blue-955 text-sm">💡 Nota de Solidaridad y Compromiso</p>
+                    <p className="leading-relaxed font-medium text-slate-750">
+                      Las sillas de ruedas se entregan en calidad de **préstamo temporal**. Para que este beneficio siga activo y ayude a más personas, **te solicitamos amablemente que devuelvas la silla al Club** una vez que el beneficiario ya no la requiera. ¡De esta manera, más personas de nuestra comunidad en Quetzaltenango podrán beneficiarse!
+                    </p>
+                  </div>
                 </div>
 
-                {tema === 'Otra' && (
-                  <div className="animate-in fade-in duration-300">
+                {/* Section: Applicant Details */}
+                <div className="space-y-4">
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1 flex items-center">
+                    <User size={14} className="mr-1.5 text-slate-450" />
+                    Datos del Solicitante (Responsable del compromiso)
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                        Nombre Completo *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={nombreSolicitante}
+                        onChange={(e) => setNombreSolicitante(e.target.value)}
+                        placeholder="Ej. Juan Carlos Pérez Pérez"
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                        Número de DPI *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={dpiSolicitante}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, ''); // numbers only
+                          if (val.length <= 13) setDpiSolicitante(val);
+                        }}
+                        placeholder="CUI / DPI (13 dígitos)"
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+                      />
+                    </div>
+                  </div>
+                  <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      Describa la Categoría / Tema *
+                      Número de Teléfono *
                     </label>
                     <input
                       type="text"
                       required
-                      value={otroTemaDescripcion}
-                      onChange={(e) => setOtroTemaDescripcion(e.target.value)}
-                      placeholder="Ej. Suministros Escolares"
+                      value={telefonoSolicitante}
+                      onChange={(e) => setTelefonoSolicitante(e.target.value)}
+                      placeholder="Ej. +502 5555-5555"
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+                    />
+                  </div>
+                </div>
+
+                {/* Section: Beneficiary Details */}
+                <div className="space-y-4 pt-2">
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1 flex items-center">
+                    <Accessibility size={14} className="mr-1.5 text-slate-455" />
+                    Datos del Beneficiario (Persona que usará la silla)
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                        ¿Para quién es la silla? (Nombre Completo) *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={nombreBeneficiario}
+                        onChange={(e) => setNombreBeneficiario(e.target.value)}
+                        placeholder="Ej. María Elena Pérez"
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                        Edad del Beneficiario (Años) *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min="0"
+                        max="120"
+                        value={edadBeneficiario}
+                        onChange={(e) => setEdadBeneficiario(e.target.value)}
+                        placeholder="Ej. 75"
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                      ¿Cuánto tiempo pretende usarla? *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={tiempoUso}
+                      onChange={(e) => setTiempoUso(e.target.value)}
+                      placeholder="Ej. 3 meses (recuperación de cirugía), permanente, etc."
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+                    />
+                  </div>
+                </div>
+
+                {/* Submit Buttons */}
+                <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-5 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-colors text-sm"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-black rounded-xl shadow-lg transition-all text-sm flex items-center justify-center space-x-2"
+                  >
+                    {isSaving ? (
+                      <>
+                        <div className="animate-spin text-white flex-shrink-0"><Users size={14} /></div>
+                        <span>Enviando...</span>
+                      </>
+                    ) : (
+                      <span>Enviar Solicitud</span>
+                    )}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-5 text-left">
+                {/* Request Name and Date */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                      Nombre de la Solicitud *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={nombre}
+                      onChange={(e) => setNombre(e.target.value)}
+                      placeholder="Ej. Compra de Glucómetros para Campaña"
                       className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
                     />
                   </div>
-                )}
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                  Descripción Detallada *
-                </label>
-                <textarea
-                  rows={3}
-                  required
-                  value={descripcion}
-                  onChange={(e) => setDescripcion(e.target.value)}
-                  placeholder="Detalla los objetivos, recursos necesarios e impacto comunitario..."
-                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold resize-none"
-                />
-              </div>
-
-              {/* Responsibles Dynamic Header */}
-              <div className="pt-2 border-t border-slate-100 space-y-3">
-                <div className="flex justify-between items-center">
-                  <label className="block text-xs font-black text-slate-500 uppercase tracking-wider">
-                    Responsables de la Solicitud (Máx. 3) *
-                  </label>
-                  {responsables.length < 3 && (
-                    <button
-                      type="button"
-                      onClick={handleAddResponsable}
-                      className="text-xs font-black text-blue-900 hover:text-blue-700 flex items-center space-x-1 bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-100 shadow-sm"
-                    >
-                      <UserPlus size={12} />
-                      <span>Añadir Responsable</span>
-                    </button>
-                  )}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                      Fecha Sugerida / Límite *
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={fecha}
+                      onChange={(e) => setFecha(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-855 bg-white"
+                    />
+                  </div>
                 </div>
 
-                {/* Responsibles List */}
-                <div className="space-y-3">
-                  {responsables.map((resp, index) => (
-                    <div 
-                      key={index}
-                      className="bg-slate-50 p-4 rounded-2xl border border-slate-200/60 flex flex-col sm:flex-row gap-3 items-end sm:items-center relative"
+                {/* Theme Dropdown Cause */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                      Tema / Causa Global *
+                    </label>
+                    <select
+                      value={tema}
+                      onChange={(e) => setTema(e.target.value)}
+                      className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold bg-white cursor-pointer"
                     >
-                      <span className="absolute top-3 left-4 bg-slate-200/80 text-slate-600 text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full">
-                        {index + 1}
-                      </span>
+                      {TEMAS_SOLICITUD.map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
 
-                      <div className="flex-1 w-full pl-6 grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                            Nombre Completo *
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            value={resp.nombre}
-                            onChange={(e) => handleUpdateResponsable(index, 'nombre', e.target.value)}
-                            placeholder="Nombre del responsable"
-                            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-xs font-semibold text-slate-800 bg-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                            Número de Teléfono *
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            value={resp.telefono}
-                            onChange={(e) => handleUpdateResponsable(index, 'telefono', e.target.value)}
-                            placeholder="+502 Xxxx-xxxx"
-                            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-xs font-semibold text-slate-800 bg-white"
-                          />
-                        </div>
-                      </div>
-
-                      {responsables.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveResponsable(index)}
-                          className="bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-lg border border-red-200 flex items-center justify-center flex-shrink-0"
-                          title="Eliminar responsable"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      )}
+                  {tema === 'Otra' && (
+                    <div className="animate-in fade-in duration-300">
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                        Describa la Categoría / Tema *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={otroTemaDescripcion}
+                        onChange={(e) => setOtroTemaDescripcion(e.target.value)}
+                        placeholder="Ej. Suministros Escolares"
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
+                      />
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Submit Buttons */}
-              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-5 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-colors text-sm"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-black rounded-xl shadow-lg transition-all text-sm flex items-center justify-center space-x-2"
-                >
-                  {isSaving ? (
-                    <>
-                      <div className="animate-spin text-white flex-shrink-0"><Users size={14} /></div>
-                      <span>Enviando...</span>
-                    </>
-                  ) : (
-                    <span>Enviar Solicitud</span>
                   )}
-                </button>
-              </div>
-            </form>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                    Descripción Detallada *
+                  </label>
+                  <textarea
+                    rows={3}
+                    required
+                    value={descripcion}
+                    onChange={(e) => setDescripcion(e.target.value)}
+                    placeholder="Detalla los objetivos, recursos necesarios e impacto comunitario..."
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold resize-none"
+                  />
+                </div>
+
+                {/* Responsibles Dynamic Header */}
+                <div className="pt-2 border-t border-slate-100 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <label className="block text-xs font-black text-slate-500 uppercase tracking-wider">
+                      Responsables de la Solicitud (Máx. 3) *
+                    </label>
+                    {responsables.length < 3 && (
+                      <button
+                        type="button"
+                        onClick={handleAddResponsable}
+                        className="text-xs font-black text-blue-900 hover:text-blue-750 flex items-center space-x-1 bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-100 shadow-sm"
+                      >
+                        <UserPlus size={12} />
+                        <span>Añadir Responsable</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Responsibles List */}
+                  <div className="space-y-3">
+                    {responsables.map((resp, index) => (
+                      <div 
+                        key={index}
+                        className="bg-slate-50 p-4 rounded-2xl border border-slate-200/60 flex flex-col sm:flex-row gap-3 items-end sm:items-center relative"
+                      >
+                        <span className="absolute top-3 left-4 bg-slate-200/80 text-slate-600 text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full">
+                          {index + 1}
+                        </span>
+
+                        <div className="flex-1 w-full pl-6 grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                              Nombre Completo *
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={resp.nombre}
+                              onChange={(e) => handleUpdateResponsable(index, 'nombre', e.target.value)}
+                              placeholder="Nombre del responsable"
+                              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-xs font-semibold text-slate-800 bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                              Número de Teléfono *
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              value={resp.telefono}
+                              onChange={(e) => handleUpdateResponsable(index, 'telefono', e.target.value)}
+                              placeholder="+502 Xxxx-xxxx"
+                              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-xs font-semibold text-slate-800 bg-white"
+                            />
+                          </div>
+                        </div>
+
+                        {responsables.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveResponsable(index)}
+                            className="bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-lg border border-red-200 flex items-center justify-center flex-shrink-0"
+                            title="Eliminar responsable"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Submit Buttons */}
+                <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-5 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-colors text-sm"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-black rounded-xl shadow-lg transition-all text-sm flex items-center justify-center space-x-2"
+                  >
+                    {isSaving ? (
+                      <>
+                        <div className="animate-spin text-white flex-shrink-0"><Users size={14} /></div>
+                        <span>Enviando...</span>
+                      </>
+                    ) : (
+                      <span>Enviar Solicitud</span>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

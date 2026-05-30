@@ -364,6 +364,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
     return misDonaciones.reduce((sum, d) => sum + d.monto, 0);
   }, [misDonaciones]);
 
+  const handleDescargarDiploma = () => {
+    generateDiplomaDonacionPDF(user.nombre, montoTotalDonado);
+  };
+
   // --- Standard statistics ---
   const data = [
     { name: 'Pagado', value: 850 },

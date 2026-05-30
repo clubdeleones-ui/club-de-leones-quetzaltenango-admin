@@ -103,14 +103,22 @@ export interface Responsable {
 
 export interface Solicitud {
   id: string;
-  nombre: string; // Nombre de la solicitud
-  fecha: string;
-  descripcion: string;
-  responsables: Responsable[]; // de 1 a 3 responsables
-  tema: string; // Diabetes, Visión, Mitigación del Hambre, Cáncer Infantil, Medio Ambiente, Alivio del Desastre, Apoyo a la Juventud, Causas Humanitarias, Otra
-  otroTemaDescripcion?: string; // si escoge Otra
-  tipo: 'Abierta' | 'Interna';
+  nombre: string; // Nombre de la solicitud (o nombre de la persona que solicita en caso de silla de ruedas)
+  fecha?: string; // Opcional para sillas de ruedas
+  descripcion?: string; // Opcional para sillas de ruedas (detalles extra)
+  responsables?: Responsable[]; // Opcional para sillas de ruedas (de 1 a 3 responsables)
+  tema?: string; // Opcional para sillas de ruedas (Diabetes, Visión, etc.)
+  otroTemaDescripcion?: string; // Opcional
+  tipo: 'abiertas' | 'internas' | 'sillas'; // Tipos alineados a minúsculas
   estado: 'Pendiente' | 'Aprobada' | 'Rechazada';
   usuarioCreador?: string; // email o id del socio/admin o 'público'
   fechaCreacion: string;
+
+  // Campos específicos para solicitudes de Sillas de Ruedas
+  nombreSolicitante?: string;
+  dpiSolicitante?: string;
+  telefonoSolicitante?: string;
+  nombreBeneficiario?: string;
+  edadBeneficiario?: number;
+  tiempoUso?: string;
 }
