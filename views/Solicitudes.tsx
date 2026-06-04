@@ -58,6 +58,18 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Count calculations
+  const counts = useMemo(() => {
+    return {
+      abiertas: solicitudes.filter(s => s.tipo === 'abiertas').length,
+      abiertasPendientes: solicitudes.filter(s => s.tipo === 'abiertas' && s.estado === 'Pendiente').length,
+      internas: solicitudes.filter(s => s.tipo === 'internas').length,
+      internasPendientes: solicitudes.filter(s => s.tipo === 'internas' && s.estado === 'Pendiente').length,
+      sillas: solicitudes.filter(s => s.tipo === 'sillas').length,
+      sillasPendientes: solicitudes.filter(s => s.tipo === 'sillas' && s.estado === 'Pendiente').length,
+    };
+  }, [solicitudes]);
+
   // Form State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [nombre, setNombre] = useState('');
@@ -337,14 +349,27 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
           className="w-full flex items-center justify-between px-5 py-3.5 bg-blue-900 text-white font-extrabold rounded-2xl shadow-lg border border-blue-800/60 transition-all hover:bg-blue-850 active:scale-[0.99] text-sm"
         >
           <div className="flex items-center space-x-2.5">
-            {activeTab === 'sillas' ? (
-              <Accessibility size={18} className="text-yellow-400" />
-            ) : (
-              <Users size={18} className="text-yellow-400" />
-            )}
+            {activeTab === 'abiertas' && <FileText size={18} className="text-yellow-400" />}
+            {activeTab === 'internas' && <Lock size={18} className="text-yellow-400" />}
+            {activeTab === 'sillas' && <Accessibility size={18} className="text-yellow-400" />}
             <span>
               {activeTab === 'abiertas' ? 'Solicitudes Abiertas' : activeTab === 'internas' ? 'Solicitudes Internas' : 'Sillas de Ruedas'}
             </span>
+            {activeTab === 'abiertas' && counts.abiertasPendientes > 0 && (
+              <span className="bg-yellow-500 text-blue-900 text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full animate-pulse ml-1.5">
+                {counts.abiertasPendientes}
+              </span>
+            )}
+            {activeTab === 'internas' && hasInternalAccess && counts.internasPendientes > 0 && (
+              <span className="bg-yellow-500 text-blue-900 text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full animate-pulse ml-1.5">
+                {counts.internasPendientes}
+              </span>
+            )}
+            {activeTab === 'sillas' && counts.sillasPendientes > 0 && (
+              <span className="bg-yellow-500 text-blue-900 text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full animate-pulse ml-1.5">
+                {counts.sillasPendientes}
+              </span>
+            )}
           </div>
           <ChevronDown size={18} className={`text-slate-300 transition-transform duration-300 ${isMobileTabMenuOpen ? 'rotate-180' : ''}`} />
         </button>
@@ -357,11 +382,21 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                 setActiveTab('abiertas');
                 setIsMobileTabMenuOpen(false);
               }}
-              className={`w-full flex items-center space-x-3 px-5 py-3 text-sm font-extrabold transition-colors text-left ${
+              className={`w-full flex items-center justify-between px-5 py-3 text-sm font-extrabold transition-colors text-left ${
                 activeTab === 'abiertas' ? 'bg-blue-50 text-blue-900' : 'text-slate-655 hover:bg-slate-50'
               }`}
             >
-              <span>Solicitudes Abiertas</span>
+              <div className="flex items-center space-x-3">
+                <FileText size={18} className={activeTab === 'abiertas' ? 'text-blue-900' : 'text-slate-400'} />
+                <span>Solicitudes Abiertas</span>
+              </div>
+              {counts.abiertas > 0 && (
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  counts.abiertasPendientes > 0 ? 'bg-yellow-500 text-blue-900 animate-pulse' : 'bg-slate-100 text-slate-650'
+                }`}>
+                  {counts.abiertas}
+                </span>
+              )}
             </button>
             <button
               type="button"
@@ -369,11 +404,21 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                 setActiveTab('internas');
                 setIsMobileTabMenuOpen(false);
               }}
-              className={`w-full flex items-center space-x-3 px-5 py-3 text-sm font-extrabold transition-colors text-left ${
+              className={`w-full flex items-center justify-between px-5 py-3 text-sm font-extrabold transition-colors text-left ${
                 activeTab === 'internas' ? 'bg-blue-50 text-blue-900' : 'text-slate-655 hover:bg-slate-50'
               }`}
             >
-              <span>Solicitudes Internas</span>
+              <div className="flex items-center space-x-3">
+                <Lock size={18} className={activeTab === 'internas' ? 'text-blue-900' : 'text-slate-400'} />
+                <span>Solicitudes Internas</span>
+              </div>
+              {hasInternalAccess && counts.internas > 0 && (
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  counts.internasPendientes > 0 ? 'bg-yellow-500 text-blue-900 animate-pulse' : 'bg-slate-100 text-slate-650'
+                }`}>
+                  {counts.internas}
+                </span>
+              )}
             </button>
             <button
               type="button"
@@ -381,11 +426,21 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                 setActiveTab('sillas');
                 setIsMobileTabMenuOpen(false);
               }}
-              className={`w-full flex items-center space-x-3 px-5 py-3 text-sm font-extrabold transition-colors text-left ${
+              className={`w-full flex items-center justify-between px-5 py-3 text-sm font-extrabold transition-colors text-left ${
                 activeTab === 'sillas' ? 'bg-blue-50 text-blue-900' : 'text-slate-655 hover:bg-slate-50'
               }`}
             >
-              <span>Solicitudes de Sillas de Ruedas</span>
+              <div className="flex items-center space-x-3">
+                <Accessibility size={18} className={activeTab === 'sillas' ? 'text-blue-900' : 'text-slate-400'} />
+                <span>Sillas de Ruedas</span>
+              </div>
+              {counts.sillas > 0 && (
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                  counts.sillasPendientes > 0 ? 'bg-yellow-500 text-blue-900 animate-pulse' : 'bg-slate-100 text-slate-650'
+                }`}>
+                  {counts.sillas}
+                </span>
+              )}
             </button>
           </div>
         )}
@@ -395,33 +450,57 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       <div className="hidden md:flex border-b border-slate-200">
         <button
           onClick={() => setActiveTab('abiertas')}
-          className={`px-6 py-3 font-semibold text-base border-b-4 transition-all ${
+          className={`flex items-center space-x-3 px-6 py-3 font-semibold text-base border-b-4 transition-all ${
             activeTab === 'abiertas'
               ? 'border-blue-900 text-blue-900'
               : 'border-transparent text-slate-600 hover:text-slate-800'
           }`}
         >
-          Solicitudes Abiertas
+          <FileText size={18} />
+          <span>Solicitudes Abiertas</span>
+          {counts.abiertas > 0 && (
+            <span className={`ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              counts.abiertasPendientes > 0 ? 'bg-yellow-500 text-blue-900 animate-pulse' : 'bg-slate-100 text-slate-600'
+            }`}>
+              {counts.abiertas}
+            </span>
+          )}
         </button>
         <button
           onClick={() => setActiveTab('internas')}
-          className={`px-6 py-3 font-semibold text-base border-b-4 transition-all ${
+          className={`flex items-center space-x-3 px-6 py-3 font-semibold text-base border-b-4 transition-all ${
             activeTab === 'internas'
               ? 'border-blue-900 text-blue-900'
               : 'border-transparent text-slate-600 hover:text-slate-800'
           }`}
         >
-          Solicitudes Internas
+          <Lock size={18} />
+          <span>Solicitudes Internas</span>
+          {hasInternalAccess && counts.internas > 0 && (
+            <span className={`ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              counts.internasPendientes > 0 ? 'bg-yellow-500 text-blue-900 animate-pulse' : 'bg-slate-100 text-slate-600'
+            }`}>
+              {counts.internas}
+            </span>
+          )}
         </button>
         <button
           onClick={() => setActiveTab('sillas')}
-          className={`px-6 py-3 font-semibold text-base border-b-4 transition-all ${
+          className={`flex items-center space-x-3 px-6 py-3 font-semibold text-base border-b-4 transition-all ${
             activeTab === 'sillas'
               ? 'border-blue-900 text-blue-900'
               : 'border-transparent text-slate-600 hover:text-slate-800'
           }`}
         >
-          Sillas de Ruedas
+          <Accessibility size={18} />
+          <span>Sillas de Ruedas</span>
+          {counts.sillas > 0 && (
+            <span className={`ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              counts.sillasPendientes > 0 ? 'bg-yellow-500 text-blue-900 animate-pulse' : 'bg-slate-100 text-slate-600'
+            }`}>
+              {counts.sillas}
+            </span>
+          )}
         </button>
       </div>
 
