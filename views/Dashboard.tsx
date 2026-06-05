@@ -83,7 +83,76 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
 
   const isDonante = user.rol === UserRole.DONANTE;
 
-    const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; title: string } | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; title: string } | null>(null);
+  
+  // States for Editing Profile
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTelefono, setEditTelefono] = useState(user.telefono || '');
+  const [editFoto, setEditFoto] = useState(user.foto || '');
+  const [isSavingSocio, setIsSavingSocio] = useState(false);
+  const [socioSaveError, setSocioSaveError] = useState<string | null>(null);
+  const [socioSaveSuccess, setSocioSaveSuccess] = useState(false);
+
+  // Synchronize edits when user details change
+  useEffect(() => {
+    setEditTelefono(user.telefono || '');
+    setEditFoto(user.foto || '');
+  }, [user]);
+
+  const handleEditSocioClick = () => {
+    setIsEditing(true);
+    setSocioSaveError(null);
+    setSocioSaveSuccess(false);
+  };
+
+  const handleEditSocioPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImageFile(file, 400, 400, 0.7);
+      setEditFoto(compressed);
+    } catch (err) {
+      console.error("Error compressing image:", err);
+      setSocioSaveError("No se pudo procesar la imagen.");
+    }
+  };
+
+  const handleSaveSocioSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingSocio(true);
+    setSocioSaveError(null);
+    setSocioSaveSuccess(false);
+
+    try {
+      const updated: Socio = {
+        ...user,
+        telefono: editTelefono,
+        foto: editFoto,
+      };
+
+      await firebaseService.saveSocio(updated);
+      
+      // Update local storage directory cache backup if it exists
+      const local = localStorage.getItem('club_leones_socios_v3');
+      if (local) {
+        const list: Socio[] = JSON.parse(local);
+        const newList = list.map(s => s.id === updated.id ? updated : s);
+        localStorage.setItem('club_leones_socios_v3', JSON.stringify(newList));
+      }
+
+      onUpdateUser(updated);
+      setSocioSaveSuccess(true);
+      setTimeout(() => {
+        setSocioSaveSuccess(false);
+        setIsEditing(false);
+      }, 1500);
+    } catch (err: any) {
+      console.error("Error updating profile in Firebase:", err);
+      setSocioSaveError(err?.message || "No se pudo actualizar el perfil.");
+    } finally {
+      setIsSavingSocio(false);
+    }
+  };
 
   // --- Donor calculations ---
   const misDonaciones = useMemo(() => {
@@ -592,7 +661,131 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
         </div>
       )}
 
-            {selectedPhoto && (
+      {/* Modal para Editar Perfil */}
+      {isEditing && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2rem] border border-slate-200/80 shadow-2xl w-full max-w-md p-6 sm:p-10 space-y-6 relative animate-in zoom-in-95 duration-300 text-left">
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="space-y-1">
+              <h2 className="text-2xl font-black text-blue-900">Editar Mi Perfil</h2>
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Actualiza tus datos de contacto y foto</p>
+            </div>
+
+            {socioSaveError && (
+              <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start space-x-3 text-red-700 text-sm animate-in fade-in">
+                <AlertCircle className="flex-shrink-0 mt-0.5" size={18} />
+                <span>{socioSaveError}</span>
+              </div>
+            )}
+
+            {socioSaveSuccess && (
+              <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-start space-x-3 text-green-700 text-sm animate-in fade-in">
+                <CheckCircle className="flex-shrink-0 mt-0.5" size={18} />
+                <span>¡Perfil actualizado con éxito!</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveSocioSubmit} className="space-y-6">
+              {/* Profile Photo Preview / Upload */}
+              <div className="flex flex-col items-center space-y-3">
+                <div className="relative group">
+                  <img
+                    src={editFoto || 'https://picsum.photos/seed/placeholder/200/200'}
+                    alt="Vista previa"
+                    className="w-28 h-28 rounded-full object-cover border-4 border-slate-100 shadow-md"
+                  />
+                  <label className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer text-white text-xs font-bold">
+                    <Upload size={18} className="mr-1" />
+                    <span>Cambiar</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleEditSocioPhotoChange}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider">
+                  Foto de Perfil (PNG, JPG)
+                </span>
+              </div>
+
+              {/* Form Fields */}
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-450 uppercase tracking-wide mb-1.5">Nombre Completo</label>
+                  <input
+                    type="text"
+                    value={user.nombre}
+                    disabled
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 font-semibold cursor-not-allowed text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-450 uppercase tracking-wide mb-1.5">Correo Electrónico</label>
+                  <input
+                    type="email"
+                    value={user.correo}
+                    disabled
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 font-semibold cursor-not-allowed text-sm"
+                  />
+                </div>
+
+                {/* Editable Phone */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-450 uppercase tracking-wide mb-1.5">Teléfono / WhatsApp *</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-3.5 text-slate-400" size={16} />
+                    <input
+                      type="tel"
+                      required
+                      value={editTelefono}
+                      onChange={(e) => setEditTelefono(e.target.value)}
+                      placeholder="Ej. +502 5555 5555"
+                      className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all font-semibold text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex space-x-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="flex-1 px-4 py-3 border border-slate-200 rounded-xl text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingSocio}
+                  className="flex-1 bg-blue-900 hover:bg-blue-800 text-white font-black py-3 rounded-xl text-sm transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center justify-center space-x-2 active:scale-95"
+                >
+                  {isSavingSocio ? (
+                    <>
+                      <Loader2 className="animate-spin" size={16} />
+                      <span>Guardando...</span>
+                    </>
+                  ) : (
+                    <span>Guardar Cambios</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {selectedPhoto && (
         <div 
           className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300"
           onClick={() => setSelectedPhoto(null)}

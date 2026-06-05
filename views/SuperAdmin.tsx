@@ -271,8 +271,10 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     saludoSocioId: '',
     saludoInvitadoName: '',
     solicitudesResoluciones: {} as Record<string, { decision: 'Aprobada' | 'Rechazada' | 'Pendiente', razon: string }>,
-    libreContenido: ''
+    puntosAgenda: [] as { tema: string; debate: string; acuerdo: string }[]
   });
+
+  const [newAgendaPoint, setNewAgendaPoint] = useState({ tema: '', debate: '', acuerdo: '' });
 
   const [showAddActividad, setShowAddActividad] = useState(false);
   const [newActividad, setNewActividad] = useState({ titulo: '', descripcion: '', fecha: '', lugar: '', publica: true });
@@ -434,9 +436,15 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
       });
     }
 
-    const libreText = data.libreContenido.trim() 
-      ? `\nOTROS ASUNTOS Y ACUERDOS:\n${data.libreContenido.trim()}\n` 
-      : '';
+    let agendaSection = '';
+    if (data.puntosAgenda && data.puntosAgenda.length > 0) {
+      agendaSection = '\nPUNTOS DE AGENDA DISCUTIDOS:\n\n';
+      data.puntosAgenda.forEach((p, idx) => {
+        agendaSection += `Punto ${idx + 1}: ${p.tema.trim() || 'Sin tema'}\n`;
+        agendaSection += `   - Debate: ${p.debate.trim() || 'Sin debate registrado.'}\n`;
+        agendaSection += `   - Acuerdo: ${p.acuerdo.trim() || 'Sin acuerdo registrado.'}\n\n`;
+      });
+    }
 
     return `En la ciudad de Quetzaltenango, siendo la fecha y hora ${data.fechaHoraText}, se reunieron los miembros en la Sede Social denominada "La Cueva", ubicada en la Calle Rodolfo Robles, 24-53 de la zona 1, con el fin de celebrar la sesión de ${data.categoria} correspondiente, bajo la redacción de este documento.
 
@@ -445,8 +453,7 @@ PROTOCOLO DE APERTURA:
 2. Saludo a la Bandera: Dirigido por ${saludoLabel}.
 
 LECTURA DE SOLICITUDES:
-${solicitudesSection}${libreText}
-
+${solicitudesSection}${agendaSection}
 No habiendo más asuntos que tratar, se da por finalizada la presente sesión, procediéndose a la firma de conformidad del acta por los comparecientes en el registro oficial del club.`;
   };
 
@@ -472,10 +479,29 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       saludoSocioId: socios[0]?.id || '',
       saludoInvitadoName: '',
       solicitudesResoluciones: initialResoluciones,
-      libreContenido: ''
+      puntosAgenda: []
     });
     setActaWizardStep('datos');
     setShowAddActa(true);
+  };
+
+  const handleAddAgendaPoint = () => {
+    if (!newAgendaPoint.tema.trim()) {
+      alert("Por favor ingrese el tema del punto de agenda.");
+      return;
+    }
+    setActaWizardData(prev => ({
+      ...prev,
+      puntosAgenda: [...(prev.puntosAgenda || []), { ...newAgendaPoint }]
+    }));
+    setNewAgendaPoint({ tema: '', debate: '', acuerdo: '' });
+  };
+
+  const handleRemoveAgendaPoint = (index: number) => {
+    setActaWizardData(prev => ({
+      ...prev,
+      puntosAgenda: (prev.puntosAgenda || []).filter((_, i) => i !== index)
+    }));
   };
 
   const handleSaveStructuredActa = async (e: React.FormEvent) => {
@@ -1637,25 +1663,33 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                       { id: 'datos', label: '1. Datos' },
                       { id: 'protocolo', label: '2. Protocolo' },
                       { id: 'solicitudes', label: '3. Solicitudes' },
-                      { id: 'libre', label: '4. Acuerdos' },
+                      { id: 'libre', label: '4. Puntos de Agenda' },
                       { id: 'vista_previa', label: '5. Vista Previa' }
                     ].map((s, idx) => {
                       const active = actaWizardStep === s.id;
                       const past = idx < ['datos', 'protocolo', 'solicitudes', 'libre', 'vista_previa'].indexOf(actaWizardStep);
                       return (
-                        <div 
+                        <button 
                           key={s.id}
-                          className={`py-2 rounded-xl border transition-all ${
+                          type="button"
+                          onClick={() => {
+                            if (s.id !== 'datos' && !actaWizardData.titulo.trim()) {
+                              alert("Por favor complete el título de la sesión en el Paso 1 antes de navegar.");
+                              return;
+                            }
+                            setActaWizardStep(s.id as any);
+                          }}
+                          className={`py-3 rounded-xl border transition-all cursor-pointer font-bold focus:outline-none ${
                             active 
-                              ? 'bg-blue-900 text-white border-blue-900 shadow-md' 
+                              ? 'bg-blue-900 text-white border-blue-900 shadow-md scale-102' 
                               : past
-                                ? 'bg-blue-50 text-blue-900 border-blue-100 font-bold'
-                                : 'bg-slate-50 text-slate-450 border-slate-100'
+                                ? 'bg-blue-50 text-blue-900 border-blue-100 hover:bg-blue-100/50'
+                                : 'bg-slate-50 text-slate-450 border-slate-100 hover:bg-slate-100'
                           }`}
                         >
                           <span className="hidden md:inline">{s.label}</span>
                           <span className="md:hidden">{idx + 1}</span>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -1964,16 +1998,94 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     )}
 
                     {actaWizardStep === 'libre' && (
-                      <div className="space-y-4 animate-in fade-in duration-350">
-                        <div>
-                          <label className="block text-sm font-bold text-slate-700 mb-2">Acuerdos, Informes y Puntos Libres (Opcional)</label>
-                          <textarea 
-                            rows={8}
-                            value={actaWizardData.libreContenido}
-                            onChange={e => setActaWizardData(prev => ({ ...prev, libreContenido: e.target.value }))}
-                            placeholder="Redacte aquí detalles adicionales discutidos, compromisos adquiridos o temas varios de la sesión..."
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold font-serif resize-none text-justify"
-                          />
+                      <div className="space-y-6 animate-in fade-in duration-350">
+                        <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100 space-y-4 text-left">
+                          <h3 className="text-sm font-black text-blue-900 uppercase tracking-wider">Agregar Punto de Agenda</h3>
+                          <div className="grid grid-cols-1 gap-4">
+                            <div>
+                              <label className="block text-xs font-bold text-slate-550 uppercase tracking-wide mb-1.5">Tema *</label>
+                              <input 
+                                type="text"
+                                value={newAgendaPoint.tema}
+                                onChange={e => setNewAgendaPoint(prev => ({ ...prev, tema: e.target.value }))}
+                                placeholder="Ej. Aprobación del presupuesto para la jornada oftalmológica"
+                                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold"
+                              />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-xs font-bold text-slate-550 uppercase tracking-wide mb-1.5">Debate / Discusión</label>
+                                <textarea 
+                                  rows={4}
+                                  value={newAgendaPoint.debate}
+                                  onChange={e => setNewAgendaPoint(prev => ({ ...prev, debate: e.target.value }))}
+                                  placeholder="Describa los puntos clave discutidos por los socios..."
+                                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold resize-none text-justify"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-bold text-slate-550 uppercase tracking-wide mb-1.5">Acuerdo / Resolución</label>
+                                <textarea 
+                                  rows={4}
+                                  value={newAgendaPoint.acuerdo}
+                                  onChange={e => setNewAgendaPoint(prev => ({ ...prev, acuerdo: e.target.value }))}
+                                  placeholder="Describa el acuerdo final tomado..."
+                                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold resize-none text-justify"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleAddAgendaPoint}
+                            className="bg-blue-900 hover:bg-blue-800 text-white font-black px-5 py-2.5 rounded-xl text-sm transition-all shadow-md flex items-center justify-center space-x-1.5 active:scale-95"
+                          >
+                            <Plus size={16} />
+                            <span>Agregar Punto a la Agenda</span>
+                          </button>
+                        </div>
+
+                        {/* List of current agenda points */}
+                        <div className="space-y-4 text-left">
+                          <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Puntos en esta Acta ({(actaWizardData.puntosAgenda || []).length})</h4>
+                          {(actaWizardData.puntosAgenda || []).length === 0 ? (
+                            <div className="text-center py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 text-xs font-semibold italic">
+                              No se han agregado puntos de agenda aún. Utiliza el formulario superior para añadir temas.
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              {(actaWizardData.puntosAgenda || []).map((p, idx) => (
+                                <div key={idx} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm relative group flex flex-col justify-between hover:shadow-md transition-shadow">
+                                  <div className="space-y-3">
+                                    <div className="flex justify-between items-start">
+                                      <span className="bg-blue-50 text-blue-900 text-[10px] font-black px-2.5 py-0.5 rounded-md uppercase tracking-wider">
+                                        Punto {idx + 1}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveAgendaPoint(idx)}
+                                        className="text-slate-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-slate-50 transition-colors"
+                                        title="Eliminar punto"
+                                      >
+                                        <Trash2 size={16} />
+                                      </button>
+                                    </div>
+                                    <h5 className="font-extrabold text-slate-800 text-sm">{p.tema}</h5>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-medium pt-2 border-t border-slate-100">
+                                      <div>
+                                        <span className="text-slate-400 font-bold block mb-1">Debate / Discusión:</span>
+                                        <p className="text-slate-650 bg-slate-50 p-2.5 rounded-lg border border-slate-100 leading-relaxed whitespace-pre-wrap text-justify">{p.debate || 'Sin debate registrado.'}</p>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-400 font-bold block mb-1">Acuerdo / Resolución:</span>
+                                        <p className="text-slate-700 bg-amber-50/50 p-2.5 rounded-lg border border-amber-100/50 leading-relaxed whitespace-pre-wrap text-justify">{p.acuerdo || 'Sin acuerdo registrado.'}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
