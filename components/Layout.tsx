@@ -28,9 +28,17 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [mobileTab, setMobileTab] = useState<'public' | 'private'>('public');
   const navigate = useNavigate();
   const location = useLocation();
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Reset mobile menu tab to public when mobile drawer is closed
+  useEffect(() => {
+    if (!isOpen) {
+      setMobileTab('public');
+    }
+  }, [isOpen]);
 
   // Initialize Gapi client
   useEffect(() => {
@@ -117,7 +125,6 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
                 <span className="text-[11px] font-black text-yellow-400 uppercase tracking-widest mt-1">Quetzaltenango</span>
               </div>
             </div>
-
             {/* Desktop Nav Items */}
             <div className="hidden md:flex items-center space-x-2">
               {navItems.map((item) => {
@@ -126,10 +133,10 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 flex items-center space-x-2 ${
+                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 flex items-center space-x-2 border border-transparent ${
                       active 
-                        ? 'bg-blue-850/65 text-yellow-400 shadow-inner' 
-                        : 'text-slate-200 hover:bg-blue-800/50 hover:text-white'
+                        ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20 shadow-sm' 
+                        : 'text-slate-200 hover:bg-white/5 hover:text-white'
                     }`}
                   >
                     <span>{item.label}</span>
@@ -166,17 +173,17 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
 
                     {/* Dropdown Menu Floating Card */}
                     {isUserDropdownOpen && (
-                      <div className="absolute right-0 mt-3 w-64 bg-white text-slate-800 rounded-[1.5rem] shadow-2xl border border-slate-100 py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="absolute right-0 mt-3 w-64 bg-white/95 backdrop-blur-md text-slate-800 rounded-[1.75rem] shadow-2xl border border-slate-100/90 py-3.5 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                         {/* Member Details */}
-                        <div className="px-5 py-3 border-b border-slate-100">
-                          <p className="font-extrabold text-slate-805 truncate leading-snug">{auth.user?.nombre}</p>
-                          <p className="text-xs text-blue-900 font-bold uppercase tracking-wider mt-1 truncate">
+                        <div className="px-5 py-3.5 mx-2 mb-2 bg-blue-50/50 rounded-2xl border border-blue-100/40">
+                          <p className="font-black text-slate-850 text-base truncate leading-tight">{auth.user?.nombre}</p>
+                          <p className="text-[10px] text-blue-800 font-extrabold uppercase tracking-wider mt-1 inline-block bg-blue-100/80 px-2.5 py-0.5 rounded-md">
                             {auth.user?.puesto || 'Socio Regular'}
                           </p>
                         </div>
                         
                         {/* Protected links */}
-                        <div className="py-2">
+                        <div className="py-1 px-2 space-y-1">
                           {protectedItems.map((item) => {
                             const Icon = item.icon;
                             const isLinkActive = location.pathname === item.path;
@@ -185,13 +192,13 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
                                 key={item.path}
                                 to={item.path}
                                 onClick={() => setIsUserDropdownOpen(false)}
-                                className={`flex items-center space-x-3 px-5 py-3 text-sm font-bold transition-colors ${
+                                className={`flex items-center space-x-3 px-4 py-2.5 text-sm font-bold rounded-xl transition-all duration-200 group ${
                                   isLinkActive 
-                                    ? 'bg-blue-50 text-blue-900' 
-                                    : 'text-slate-600 hover:bg-slate-50'
+                                    ? 'bg-blue-900 text-white shadow-md shadow-blue-900/10' 
+                                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                                 }`}
                               >
-                                <Icon size={18} className={isLinkActive ? 'text-blue-900' : 'text-slate-400'} />
+                                <Icon size={18} className={`transition-transform duration-200 group-hover:scale-110 ${isLinkActive ? 'text-white' : 'text-slate-400 group-hover:text-blue-900'}`} />
                                 <span>{item.label}</span>
                               </Link>
                             );
@@ -205,9 +212,9 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
                               setIsUserDropdownOpen(false);
                               onLogout();
                             }}
-                            className="w-full flex items-center space-x-3 px-4 py-3 text-sm font-bold text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                            className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-red-650 hover:bg-red-50 rounded-xl transition-all duration-200 group"
                           >
-                            <LogOut size={18} />
+                            <LogOut size={18} className="transition-transform duration-200 group-hover:-translate-x-0.5 text-red-400 group-hover:text-red-650" />
                             <span>Cerrar Sesión</span>
                           </button>
                         </div>
@@ -240,84 +247,134 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
 
         {/* Mobile Navigation Drawer */}
         {isOpen && (
-          <div className="md:hidden bg-blue-900 border-t border-blue-800 px-4 py-4 space-y-3 animate-in slide-in-from-top duration-300">
-            {/* Public Links */}
-            <div className="space-y-1">
-              {navItems.map((item) => (
-                <button
-                  key={item.path}
-                  onClick={() => handleNav(item.path)}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-left text-base font-bold transition-all ${
-                    location.pathname === item.path ? 'bg-blue-800 text-yellow-400' : 'text-slate-200 hover:bg-blue-850'
-                  }`}
-                >
-                  <span>{item.label}</span>
-                </button>
-              ))}
+          <div className="md:hidden bg-blue-900 border-t border-blue-800 px-4 py-5 space-y-4 animate-in slide-in-from-top duration-300">
+            {/* Segmented Tab Control */}
+            <div className="bg-blue-950/60 p-1.5 rounded-2xl flex border border-blue-800/40">
               <button
-                onClick={() => handleNav('/donar')}
-                className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-left text-base font-black transition-all bg-gradient-to-r from-yellow-500 to-amber-500 text-blue-955 hover:from-yellow-450 hover:to-amber-450 mt-2"
+                onClick={() => setMobileTab('public')}
+                className={`flex-1 py-2.5 text-center text-xs font-black uppercase tracking-wider rounded-xl transition-all duration-300 ${
+                  mobileTab === 'public'
+                    ? 'bg-yellow-500 text-blue-955 shadow-md font-black'
+                    : 'text-slate-300 hover:text-white'
+                }`}
               >
-                <Gift size={18} />
-                <span>Donar</span>
+                Menú
+              </button>
+              <button
+                onClick={() => setMobileTab('private')}
+                className={`flex-1 py-2.5 text-center text-xs font-black uppercase tracking-wider rounded-xl transition-all duration-300 flex items-center justify-center space-x-1.5 ${
+                  mobileTab === 'private'
+                    ? 'bg-yellow-500 text-blue-955 shadow-md font-black'
+                    : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                <span>Mi Cuenta</span>
+                {auth.isAuthenticated && (
+                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                )}
               </button>
             </div>
 
-            {/* Private Links / Profile */}
-            {auth.isAuthenticated ? (
-              <div className="border-t border-blue-850 pt-4 space-y-4">
-                {/* Profile card mobile */}
-                <div className="flex items-center space-x-4 px-4 py-2 bg-blue-850/40 rounded-2xl border border-blue-800/40">
-                  <img 
-                    src={auth.user?.foto || 'https://picsum.photos/seed/' + auth.user?.id + '/100/100'} 
-                    alt={auth.user?.nombre} 
-                    className="w-12 h-12 rounded-xl object-cover" 
-                  />
-                  <div className="min-w-0">
-                    <p className="font-extrabold text-white text-base truncate">{auth.user?.nombre}</p>
-                    <p className="text-xs text-yellow-400 font-bold uppercase tracking-wider mt-0.5 truncate">{auth.user?.puesto || 'Socio'}</p>
-                  </div>
-                </div>
-
-                {/* Sub links */}
-                <div className="space-y-1">
-                  {protectedItems.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <button
-                        key={item.path}
-                        onClick={() => handleNav(item.path)}
-                        className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-left text-base font-bold transition-all ${
-                          location.pathname === item.path ? 'bg-blue-800 text-yellow-400' : 'text-slate-200 hover:bg-blue-850'
-                        }`}
-                      >
-                        <Icon size={18} className="text-slate-400" />
-                        <span>{item.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Logout Button */}
+            {/* Public Links (General Tab) */}
+            {mobileTab === 'public' && (
+              <div className="space-y-1 animate-in fade-in duration-200">
+                {navItems.map((item) => (
+                  <button
+                    key={item.path}
+                    onClick={() => handleNav(item.path)}
+                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-left text-base font-bold transition-all ${
+                      location.pathname === item.path 
+                        ? 'bg-blue-800 text-yellow-400' 
+                        : 'text-slate-200 hover:bg-blue-850'
+                    }`}
+                  >
+                    <span>{item.label}</span>
+                  </button>
+                ))}
                 <button
-                  onClick={() => {
-                    setIsOpen(false);
-                    onLogout();
-                  }}
-                  className="w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-left text-base font-bold text-red-400 hover:bg-red-500/10 transition-all border border-transparent hover:border-red-500/20"
+                  onClick={() => handleNav('/donar')}
+                  className="w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-left text-base font-black transition-all bg-gradient-to-r from-yellow-500 to-amber-500 text-blue-955 hover:from-yellow-450 hover:to-amber-450 mt-3 shadow-lg shadow-yellow-500/10"
                 >
-                  <LogOut size={18} />
-                  <span>Cerrar Sesión</span>
+                  <Gift size={18} />
+                  <span>Donar</span>
                 </button>
               </div>
-            ) : (
-              <button
-                onClick={() => handleNav('/login')}
-                className="w-full flex items-center justify-center space-x-2 px-4 py-3.5 rounded-xl text-base font-black bg-yellow-500 text-blue-955 hover:bg-yellow-600 transition-all"
-              >
-                <LogIn size={18} />
-                <span>Acceso Socios</span>
-              </button>
+            )}
+
+            {/* Private Links / Profile (Mi Cuenta Tab) */}
+            {mobileTab === 'private' && (
+              <div className="animate-in fade-in duration-200 space-y-4">
+                {auth.isAuthenticated ? (
+                  <div className="space-y-4">
+                    {/* Profile card mobile */}
+                    <div className="flex items-center space-x-4 px-4 py-3 bg-blue-850/40 rounded-2xl border border-blue-850/70">
+                      <img 
+                        src={auth.user?.foto || 'https://picsum.photos/seed/' + auth.user?.id + '/100/100'} 
+                        alt={auth.user?.nombre} 
+                        className="w-12 h-12 rounded-xl object-cover border border-blue-800"
+                      />
+                      <div className="min-w-0 flex-grow">
+                        <p className="font-extrabold text-white text-base truncate leading-snug">{auth.user?.nombre}</p>
+                        <p className="text-xs text-yellow-400 font-bold uppercase tracking-wider mt-0.5 truncate">{auth.user?.puesto || 'Socio'}</p>
+                      </div>
+                    </div>
+
+                    {/* Sub links */}
+                    <div className="space-y-1">
+                      {protectedItems.map((item) => {
+                        const Icon = item.icon;
+                        const isLinkActive = location.pathname === item.path;
+                        return (
+                          <button
+                            key={item.path}
+                            onClick={() => handleNav(item.path)}
+                            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-left text-base font-bold transition-all ${
+                              isLinkActive 
+                                ? 'bg-blue-800 text-yellow-400' 
+                                : 'text-slate-200 hover:bg-blue-850'
+                            }`}
+                          >
+                            <Icon size={18} className={isLinkActive ? 'text-yellow-400' : 'text-slate-400'} />
+                            <span>{item.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Logout Button */}
+                    <button
+                      onClick={() => {
+                        setIsOpen(false);
+                        onLogout();
+                      }}
+                      className="w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl text-left text-base font-bold text-red-400 hover:bg-red-500/10 transition-all border border-transparent hover:border-red-500/20"
+                    >
+                      <LogOut size={18} />
+                      <span>Cerrar Sesión</span>
+                    </button>
+                  </div>
+                ) : (
+                  /* Guest User Teaser Card */
+                  <div className="bg-blue-850/30 border border-blue-800/60 p-5 rounded-2xl space-y-4 text-center">
+                    <div className="w-12 h-12 rounded-full bg-blue-800/50 flex items-center justify-center mx-auto text-yellow-400">
+                      <User size={24} />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="font-extrabold text-white text-base">Área de Socios</p>
+                      <p className="text-xs text-slate-350 leading-relaxed">
+                        Ingresa a tu cuenta de socio para acceder a actas oficiales, estatutos de la asociación, directorio privado y funciones administrativas del Club.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleNav('/login')}
+                      className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-xl text-sm font-black bg-yellow-500 text-blue-955 hover:bg-yellow-600 transition-all shadow-lg shadow-yellow-500/10 active:scale-95"
+                    >
+                      <LogIn size={16} />
+                      <span>Acceso Socios</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}
