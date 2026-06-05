@@ -132,7 +132,7 @@ const App: React.FC = () => {
                    auth.user?.rol === UserRole.ASESOR_SERVICIOS ||
                    auth.user?.rol === UserRole.PRESIDENTE_AFILIACION)
                 }>
-                  <SuperAdmin user={auth.user!} />
+                  <SuperAdmin user={auth.user!} onUpdateUser={handleUpdateUser} />
                 </ProtectedRoute>
               }
             />
