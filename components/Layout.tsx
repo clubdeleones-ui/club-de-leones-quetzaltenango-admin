@@ -96,7 +96,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
       auth.user.rol === UserRole.PRESIDENTE_AFILIACION;
       
     if (isAdministrative) {
-      items.push({ label: 'Administrador', path: '/admin', icon: ShieldCheck });
+      items.push({ label: 'Gestión', path: '/admin', icon: ShieldCheck });
     }
     
     return items;
