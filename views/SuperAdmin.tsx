@@ -255,13 +255,13 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   
   // Modals / Form States
   const [showAddActa, setShowAddActa] = useState(false);
-  const [newActa, setNewActa] = useState({ titulo: '', autor: '', contenido: '', categoria: 'Asamblea' });
+  const [newActa, setNewActa] = useState({ titulo: '', autor: '', contenido: '', categoria: 'Ordinaria' });
 
   // Wizard state for structured minutes
   const [actaWizardStep, setActaWizardStep] = useState<'datos' | 'protocolo' | 'solicitudes' | 'libre' | 'vista_previa'>('datos');
   const [actaWizardData, setActaWizardData] = useState({
     titulo: '',
-    categoria: 'Asamblea' as 'Asamblea' | 'Directiva' | 'Comité',
+    categoria: 'Ordinaria' as 'Ordinaria' | 'Extraordinaria' | 'Reunión de Comisión',
     lugar: 'Quetzaltenango, Sede Social denominada "La Cueva", ubicada en la Calle Rodolfo Robles, 24-53 de la zona 1.',
     fechaHoraText: '',
     invocacionResponsableType: 'socio' as 'socio' | 'invitado',
@@ -462,7 +462,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
     setActaWizardData({
       titulo: '',
-      categoria: 'Asamblea',
+      categoria: 'Ordinaria',
       lugar: defaultLugar,
       fechaHoraText: autoDateTime,
       invocacionResponsableType: 'socio',
@@ -1643,9 +1643,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-900"
                   >
                     <option value="Todas">Todas las categorías</option>
-                    <option value="Asamblea">Asamblea</option>
-                    <option value="Directiva">Junta Directiva</option>
-                    <option value="Comité">Comités</option>
+                    <option value="Ordinaria">Ordinaria</option>
+                    <option value="Extraordinaria">Extraordinaria</option>
+                    <option value="Reunión de Comisión">Reunión de Comisión</option>
                   </select>
                 </div>
               </div>
@@ -1725,9 +1725,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                 onChange={e => setActaWizardData(prev => ({ ...prev, categoria: e.target.value as any }))}
                                 className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-bold text-slate-700 bg-white"
                               >
-                                <option value="Asamblea">Asamblea General</option>
-                                <option value="Directiva">Junta Directiva</option>
-                                <option value="Comité">Comités</option>
+                                <option value="Ordinaria">Ordinaria</option>
+                                <option value="Extraordinaria">Extraordinaria</option>
+                                <option value="Reunión de Comisión">Reunión de Comisión</option>
                               </select>
                             </div>
                           </div>
@@ -2120,7 +2120,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     </div>
                     <div className="flex items-center space-x-4">
                       <span className="text-xs font-black bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full uppercase">
-                        {acta.categoria || 'Asamblea'}
+                        {acta.categoria || 'Ordinaria'}
                       </span>
                       <button
                         onClick={() => generateActaPDF(acta)}
