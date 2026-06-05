@@ -14,9 +14,11 @@ import {
   Donacion, 
   Beneficio, 
   UserRole,
-  PropuestaSocio
+  PropuestaSocio,
+  Solicitud
 } from '../types';
 import { firebaseService } from '../services/firebaseService';
+import { getWrittenDateTimeSpanish } from '../utils/dateSpanishFormatter';
 import { 
   TrendingUp, 
   Calendar, 
@@ -128,6 +130,12 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     return MOCK_PROPUESTAS;
   });
 
+  const [solicitudes, setSolicitudes] = useState<Solicitud[]>(() => {
+    const local = localStorage.getItem('club_leones_solicitudes');
+    if (local) return JSON.parse(local);
+    return [];
+  });
+
   // Sync with Firestore and load the latest data on component mount
   useEffect(() => {
     const syncAndLoad = async () => {
@@ -172,6 +180,16 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
       } catch (err) {
         console.error("Error fetching proposals from Firestore:", err);
       }
+
+      try {
+        const fetchedSolicitudes = await firebaseService.getSolicitudes();
+        if (fetchedSolicitudes) {
+          setSolicitudes(fetchedSolicitudes);
+          localStorage.setItem('club_leones_solicitudes', JSON.stringify(fetchedSolicitudes));
+        }
+      } catch (err) {
+        console.error("Error fetching solicitudes from Firestore:", err);
+      }
     };
 
     syncAndLoad();
@@ -185,8 +203,21 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     localStorage.setItem('club_leones_propuestas', JSON.stringify(propuestas));
   }, [propuestas]);
 
+  useEffect(() => {
+    localStorage.setItem('club_leones_solicitudes', JSON.stringify(solicitudes));
+  }, [solicitudes]);
+
   const [actividades, setActividades] = useState<Actividad[]>(MOCK_ACTIVIDADES);
-  const [actas, setActas] = useState<Acta[]>(MOCK_ACTAS);
+  const [actas, setActas] = useState<Acta[]>(() => {
+    const local = localStorage.getItem('club_leones_actas');
+    if (local) return JSON.parse(local);
+    localStorage.setItem('club_leones_actas', JSON.stringify(MOCK_ACTAS));
+    return MOCK_ACTAS;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('club_leones_actas', JSON.stringify(actas));
+  }, [actas]);
   const [donaciones, setDonaciones] = useState<Donacion[]>(MOCK_DONACIONES);
   const [beneficios, setBeneficios] = useState<Beneficio[]>(MOCK_BENEFICIOS);
 
@@ -225,6 +256,23 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   // Modals / Form States
   const [showAddActa, setShowAddActa] = useState(false);
   const [newActa, setNewActa] = useState({ titulo: '', autor: '', contenido: '', categoria: 'Asamblea' });
+
+  // Wizard state for structured minutes
+  const [actaWizardStep, setActaWizardStep] = useState<'datos' | 'protocolo' | 'solicitudes' | 'libre' | 'vista_previa'>('datos');
+  const [actaWizardData, setActaWizardData] = useState({
+    titulo: '',
+    categoria: 'Asamblea' as 'Asamblea' | 'Directiva' | 'Comité',
+    lugar: 'Quetzaltenango, Sede Social denominada "La Cueva", ubicada en la Calle Rodolfo Robles, 24-53 de la zona 1.',
+    fechaHoraText: '',
+    invocacionResponsableType: 'socio' as 'socio' | 'invitado',
+    invocacionSocioId: '',
+    invocacionInvitadoName: '',
+    saludoResponsableType: 'socio' as 'socio' | 'invitado',
+    saludoSocioId: '',
+    saludoInvitadoName: '',
+    solicitudesResoluciones: {} as Record<string, { decision: 'Aprobada' | 'Rechazada' | 'Pendiente', razon: string }>,
+    libreContenido: ''
+  });
 
   const [showAddActividad, setShowAddActividad] = useState(false);
   const [newActividad, setNewActividad] = useState({ titulo: '', descripcion: '', fecha: '', lugar: '', publica: true });
@@ -352,22 +400,139 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   };
 
   // Handle action handlers
-  const handleAddActa = (e: React.FormEvent) => {
+  const compileActaText = (data: typeof actaWizardData): string => {
+    const getSocioName = (id: string) => {
+      const s = socios.find(member => member.id === id);
+      return s ? s.nombre : 'Socio no encontrado';
+    };
+
+    const invocacionLabel = data.invocacionResponsableType === 'socio' 
+      ? getSocioName(data.invocacionSocioId)
+      : data.invocacionInvitadoName || 'Invitado especial';
+
+    const saludoLabel = data.saludoResponsableType === 'socio' 
+      ? getSocioName(data.saludoSocioId)
+      : data.saludoInvitadoName || 'Invitado especial';
+
+    const pendingSols = solicitudes.filter(s => s.estado === 'Pendiente');
+    let solicitudesSection = '';
+    if (pendingSols.length === 0) {
+      solicitudesSection = 'No se conocieron solicitudes en esta sesión.\n';
+    } else {
+      solicitudesSection = 'Se procedió a dar lectura a las solicitudes ingresadas en el sistema, resolviéndose de la siguiente manera:\n\n';
+      pendingSols.forEach((sol, idx) => {
+        const res = data.solicitudesResoluciones[sol.id] || { decision: 'Pendiente', razon: '' };
+        
+        let details = `Solicitud de ${sol.nombre} (Tipo: ${sol.tipo.toUpperCase()})`;
+        if (sol.tipo === 'sillas') {
+          details = `Solicitud de Silla de Ruedas para el beneficiario ${sol.nombreBeneficiario || sol.nombre} (Solicitante: ${sol.nombreSolicitante || 'N/A'})`;
+        }
+        
+        solicitudesSection += `${idx + 1}. ${details}:\n`;
+        solicitudesSection += `   - Decisión: ${res.decision}\n`;
+        solicitudesSection += `   - Justificación: ${res.razon || 'Sin justificación registrada.'}\n\n`;
+      });
+    }
+
+    const libreText = data.libreContenido.trim() 
+      ? `\nOTROS ASUNTOS Y ACUERDOS:\n${data.libreContenido.trim()}\n` 
+      : '';
+
+    return `En la ciudad de Quetzaltenango, siendo la fecha y hora ${data.fechaHoraText}, se reunieron los miembros en la Sede Social denominada "La Cueva", ubicada en la Calle Rodolfo Robles, 24-53 de la zona 1, con el fin de celebrar la sesión de ${data.categoria} correspondiente, bajo la redacción de este documento.
+
+PROTOCOLO DE APERTURA:
+1. Invocación: Realizada por ${invocacionLabel}.
+2. Saludo a la Bandera: Dirigido por ${saludoLabel}.
+
+LECTURA DE SOLICITUDES:
+${solicitudesSection}${libreText}
+
+No habiendo más asuntos que tratar, se da por finalizada la presente sesión, procediéndose a la firma de conformidad del acta por los comparecientes en el registro oficial del club.`;
+  };
+
+  const handleOpenRedactarActa = () => {
+    const defaultLugar = 'Quetzaltenango, Sede Social denominada "La Cueva", ubicada en la Calle Rodolfo Robles, 24-53 de la zona 1.';
+    const autoDateTime = getWrittenDateTimeSpanish(new Date());
+    
+    const initialResoluciones: Record<string, { decision: 'Aprobada' | 'Rechazada' | 'Pendiente', razon: string }> = {};
+    const pendingSols = solicitudes.filter(s => s.estado === 'Pendiente');
+    pendingSols.forEach(s => {
+      initialResoluciones[s.id] = { decision: 'Pendiente', razon: '' };
+    });
+
+    setActaWizardData({
+      titulo: '',
+      categoria: 'Asamblea',
+      lugar: defaultLugar,
+      fechaHoraText: autoDateTime,
+      invocacionResponsableType: 'socio',
+      invocacionSocioId: socios[0]?.id || '',
+      invocacionInvitadoName: '',
+      saludoResponsableType: 'socio',
+      saludoSocioId: socios[0]?.id || '',
+      saludoInvitadoName: '',
+      solicitudesResoluciones: initialResoluciones,
+      libreContenido: ''
+    });
+    setActaWizardStep('datos');
+    setShowAddActa(true);
+  };
+
+  const handleSaveStructuredActa = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newActa.titulo || !newActa.contenido || !newActa.autor) return;
+    if (!actaWizardData.titulo.trim()) {
+      alert("Por favor complete el título de la sesión.");
+      return;
+    }
+
+    const compiledText = compileActaText(actaWizardData);
+    
     const created: Acta = {
       id: `acta-${Date.now()}`,
-      titulo: newActa.titulo,
+      titulo: actaWizardData.titulo,
       fecha: new Date().toISOString().split('T')[0],
-      contenido: newActa.contenido,
-      autor: newActa.autor,
+      contenido: compiledText,
+      autor: user.nombre,
       pdfUrl: '#',
-      categoria: newActa.categoria,
+      categoria: actaWizardData.categoria,
       estado: 'Publicada'
     };
-    setActas([created, ...actas]);
-    setNewActa({ titulo: '', autor: '', contenido: '', categoria: 'Asamblea' });
+
+    const newActas = [created, ...actas];
+    setActas(newActas);
+    localStorage.setItem('club_leones_actas', JSON.stringify(newActas));
+
+    const pendingSols = solicitudes.filter(s => s.estado === 'Pendiente');
+    const updatedSolicitudes = [...solicitudes];
+    
+    for (const sol of pendingSols) {
+      const res = actaWizardData.solicitudesResoluciones[sol.id];
+      if (res && (res.decision === 'Aprobada' || res.decision === 'Rechazada')) {
+        const updatedSol: Solicitud = {
+          ...sol,
+          estado: res.decision,
+          resolucionRazon: res.razon,
+          fechaResolucion: new Date().toISOString()
+        };
+
+        try {
+          await firebaseService.saveSolicitud(updatedSol);
+        } catch (err) {
+          console.error(`Error saving resolution for request ${sol.id}:`, err);
+        }
+
+        const idx = updatedSolicitudes.findIndex(s => s.id === sol.id);
+        if (idx !== -1) {
+          updatedSolicitudes[idx] = updatedSol;
+        }
+      }
+    }
+
+    setSolicitudes(updatedSolicitudes);
+    localStorage.setItem('club_leones_solicitudes', JSON.stringify(updatedSolicitudes));
+
     setShowAddActa(false);
+    alert("¡Acta de sesión guardada y solicitudes actualizadas con éxito!");
   };
 
   const handleAddActividad = (e: React.FormEvent) => {
@@ -1450,7 +1615,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <h3 className="text-3xl font-black text-slate-800 tracking-tight">Biblioteca y Redacción de Actas</h3>
                 <button 
-                  onClick={() => setShowAddActa(true)}
+                  onClick={handleOpenRedactarActa}
                   className="bg-blue-900 hover:bg-blue-800 text-white font-black px-6 py-3 rounded-xl flex items-center space-x-2 shadow-lg shadow-blue-900/10"
                 >
                   <Plus size={18} />
@@ -1486,93 +1651,455 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
               </div>
 
               {/* Add Acta Modal */}
+              {/* Add Acta Modal */}
               {showAddActa && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-md">
-                  <form onSubmit={handleAddActa} className="bg-white rounded-[2.5rem] p-8 max-w-2xl w-full space-y-6 shadow-2xl border border-slate-100">
-                    <div className="flex justify-between items-center">
-                      <h4 className="text-2xl font-black text-slate-800">Redactar Nueva Acta de Sesión</h4>
-                      <button type="button" onClick={() => setShowAddActa(false)} className="p-2 hover:bg-slate-50 rounded-xl transition-colors"><X size={20} /></button>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-bold text-slate-700 mb-2">Título de Sesión</label>
-                          <input 
-                            type="text" 
-                            required 
-                            value={newActa.titulo} 
-                            onChange={e => setNewActa({...newActa, titulo: e.target.value})}
-                            placeholder="Ej. Sesión Ordinaria de Abril"
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-bold text-slate-700 mb-2">Categoría</label>
-                          <select
-                            value={newActa.categoria}
-                            onChange={e => setNewActa({...newActa, categoria: e.target.value})}
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700 font-bold"
-                          >
-                            <option value="Asamblea">Asamblea</option>
-                            <option value="Directiva">Junta Directiva</option>
-                            <option value="Comité">Comités</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-bold text-slate-700 mb-2">Redactor / Autor</label>
-                          <input 
-                            type="text" 
-                            required 
-                            value={newActa.autor} 
-                            onChange={e => setNewActa({...newActa, autor: e.target.value})}
-                            placeholder="Ej. Elena Castillo (Secretaria)"
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-bold text-slate-700 mb-2">Fecha (Automática)</label>
-                          <input 
-                            type="text" 
-                            disabled 
-                            value={new Date().toLocaleDateString()}
-                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-400 outline-none"
-                          />
-                        </div>
-                      </div>
-
+                  <div className="bg-white rounded-[2.5rem] p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto space-y-6 shadow-2xl border border-slate-100 flex flex-col justify-between">
+                    
+                    {/* Header */}
+                    <div className="flex justify-between items-center pb-4 border-b border-slate-100 flex-shrink-0">
                       <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2">Contenido del Acta (Transmisión / Acuerdos)</label>
-                        <textarea 
-                          rows={6} 
-                          required
-                          value={newActa.contenido} 
-                          onChange={e => setNewActa({...newActa, contenido: e.target.value})}
-                          placeholder="Redacte aquí todos los puntos discutidos y acuerdos tomados en la reunión..."
-                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all resize-none text-justify font-serif"
-                        />
+                        <h4 className="text-2xl font-black text-slate-800">Redactar Acta de Sesión</h4>
+                        <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Estandarización y Gestión Digital</p>
                       </div>
-                    </div>
-
-                    <div className="flex space-x-4 pt-4">
                       <button 
                         type="button" 
-                        onClick={() => setShowAddActa(false)}
-                        className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition-all"
+                        onClick={() => setShowAddActa(false)} 
+                        className="p-2 hover:bg-slate-50 rounded-xl transition-colors"
                       >
-                        Descartar Borrador
-                      </button>
-                      <button 
-                        type="submit" 
-                        className="w-1/2 bg-blue-900 hover:bg-blue-800 text-white font-black py-3 rounded-xl transition-all shadow-lg shadow-blue-900/10"
-                      >
-                        Publicar Acta
+                        <X size={20} />
                       </button>
                     </div>
-                  </form>
+
+                    {/* Step Indicator */}
+                    <div className="grid grid-cols-5 gap-2 text-center text-xs font-black uppercase tracking-wider flex-shrink-0">
+                      {[
+                        { id: 'datos', label: '1. Datos' },
+                        { id: 'protocolo', label: '2. Protocolo' },
+                        { id: 'solicitudes', label: '3. Solicitudes' },
+                        { id: 'libre', label: '4. Acuerdos' },
+                        { id: 'vista_previa', label: '5. Vista Previa' }
+                      ].map((s, idx) => {
+                        const active = actaWizardStep === s.id;
+                        const past = idx < ['datos', 'protocolo', 'solicitudes', 'libre', 'vista_previa'].indexOf(actaWizardStep);
+                        return (
+                          <div 
+                            key={s.id}
+                            className={`py-2 rounded-xl border transition-all ${
+                              active 
+                                ? 'bg-blue-900 text-white border-blue-900 shadow-md' 
+                                : past 
+                                  ? 'bg-blue-50 text-blue-900 border-blue-100' 
+                                  : 'bg-slate-50 text-slate-450 border-slate-100'
+                            }`}
+                          >
+                            <span className="hidden sm:inline">{s.label}</span>
+                            <span className="sm:hidden">{idx + 1}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Body */}
+                    <div className="flex-grow min-h-0 overflow-y-auto py-2">
+                      
+                      {/* Step 1: Datos */}
+                      {actaWizardStep === 'datos' && (
+                        <div className="space-y-4 animate-in fade-in duration-350">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-bold text-slate-700 mb-2">Título de la Sesión *</label>
+                              <input 
+                                type="text"
+                                required
+                                value={actaWizardData.titulo}
+                                onChange={e => setActaWizardData(prev => ({ ...prev, titulo: e.target.value }))}
+                                placeholder="Ej. Sesión Ordinaria de Junta Directiva No. 05-2026"
+                                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-bold text-slate-700 mb-2">Categoría *</label>
+                              <select
+                                value={actaWizardData.categoria}
+                                onChange={e => setActaWizardData(prev => ({ ...prev, categoria: e.target.value as any }))}
+                                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-bold text-slate-700 bg-white"
+                              >
+                                <option value="Asamblea">Asamblea General</option>
+                                <option value="Directiva">Junta Directiva</option>
+                                <option value="Comité">Comités</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-2">Lugar Preestablecido (con Ciudad al inicio) *</label>
+                            <input 
+                              type="text"
+                              required
+                              value={actaWizardData.lugar}
+                              onChange={e => setActaWizardData(prev => ({ ...prev, lugar: e.target.value }))}
+                              placeholder="Quetzaltenango..."
+                              className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold"
+                            />
+                          </div>
+
+                          <div>
+                            <div className="flex justify-between items-center mb-2">
+                              <label className="block text-sm font-bold text-slate-700">Fecha y Hora Automática (Numérica y Escrita) *</label>
+                              <button 
+                                type="button"
+                                onClick={() => setActaWizardData(prev => ({ ...prev, fechaHoraText: getWrittenDateTimeSpanish(new Date()) }))}
+                                className="text-[10px] font-black text-blue-900 uppercase tracking-wider hover:underline flex items-center space-x-1"
+                              >
+                                <span>Refrescar hora</span>
+                              </button>
+                            </div>
+                            <input 
+                              type="text"
+                              disabled
+                              value={actaWizardData.fechaHoraText}
+                              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 font-semibold text-xs outline-none cursor-not-allowed"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Step 2: Protocolo */}
+                      {actaWizardStep === 'protocolo' && (
+                        <div className="space-y-6 animate-in fade-in duration-350">
+                          {/* Invocacion */}
+                          <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100 space-y-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                              <h5 className="text-base font-extrabold text-blue-900">1. Invocación Leonística</h5>
+                              
+                              <div className="flex bg-white p-1 rounded-xl border border-slate-200 w-fit">
+                                <button
+                                  type="button"
+                                  onClick={() => setActaWizardData(prev => ({ ...prev, invocacionResponsableType: 'socio' }))}
+                                  className={`px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                                    actaWizardData.invocacionResponsableType === 'socio' 
+                                      ? 'bg-blue-900 text-white shadow-sm' 
+                                      : 'text-slate-500 hover:text-slate-750'
+                                  }`}
+                                >
+                                  Socio Activo
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setActaWizardData(prev => ({ ...prev, invocacionResponsableType: 'invitado' }))}
+                                  className={`px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                                    actaWizardData.invocacionResponsableType === 'invitado' 
+                                      ? 'bg-blue-900 text-white shadow-sm' 
+                                      : 'text-slate-500 hover:text-slate-750'
+                                  }`}
+                                >
+                                  Invitado
+                                </button>
+                              </div>
+                            </div>
+
+                            {actaWizardData.invocacionResponsableType === 'socio' ? (
+                              <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Seleccionar Socio</label>
+                                <select 
+                                  value={actaWizardData.invocacionSocioId}
+                                  onChange={e => setActaWizardData(prev => ({ ...prev, invocacionSocioId: e.target.value }))}
+                                  className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-bold text-slate-700 bg-white"
+                                >
+                                  {socios.filter(s => s.estatus !== 'Inactive').map(s => (
+                                    <option key={s.id} value={s.id}>{s.nombre} ({s.puesto || 'Socio Regular'})</option>
+                                  ))}
+                                </select>
+                              </div>
+                            ) : (
+                              <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nombre del Invitado</label>
+                                <input 
+                                  type="text"
+                                  value={actaWizardData.invocacionInvitadoName}
+                                  onChange={e => setActaWizardData(prev => ({ ...prev, invocacionInvitadoName: e.target.value }))}
+                                  placeholder="Ej. Ing. Juan Gómez (Gobernador de Distrito)"
+                                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold text-slate-800"
+                                />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Saludo a la Bandera */}
+                          <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100 space-y-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                              <h5 className="text-base font-extrabold text-blue-900">2. Saludo a la Bandera</h5>
+                              
+                              <div className="flex bg-white p-1 rounded-xl border border-slate-200 w-fit">
+                                <button
+                                  type="button"
+                                  onClick={() => setActaWizardData(prev => ({ ...prev, saludoResponsableType: 'socio' }))}
+                                  className={`px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                                    actaWizardData.saludoResponsableType === 'socio' 
+                                      ? 'bg-blue-900 text-white shadow-sm' 
+                                      : 'text-slate-500 hover:text-slate-750'
+                                  }`}
+                                >
+                                  Socio Activo
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setActaWizardData(prev => ({ ...prev, saludoResponsableType: 'invitado' }))}
+                                  className={`px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                                    actaWizardData.saludoResponsableType === 'invitado' 
+                                      ? 'bg-blue-900 text-white shadow-sm' 
+                                      : 'text-slate-500 hover:text-slate-750'
+                                  }`}
+                                >
+                                  Invitado
+                                </button>
+                              </div>
+                            </div>
+
+                            {actaWizardData.saludoResponsableType === 'socio' ? (
+                              <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Seleccionar Socio</label>
+                                <select 
+                                  value={actaWizardData.saludoSocioId}
+                                  onChange={e => setActaWizardData(prev => ({ ...prev, saludoSocioId: e.target.value }))}
+                                  className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-bold text-slate-700 bg-white"
+                                >
+                                  {socios.filter(s => s.estatus !== 'Inactive').map(s => (
+                                    <option key={s.id} value={s.id}>{s.nombre} ({s.puesto || 'Socio Regular'})</option>
+                                  ))}
+                                </select>
+                              </div>
+                            ) : (
+                              <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nombre del Invitado</label>
+                                <input 
+                                  type="text"
+                                  value={actaWizardData.saludoInvitadoName}
+                                  onChange={e => setActaWizardData(prev => ({ ...prev, saludoInvitadoName: e.target.value }))}
+                                  placeholder="Ej. Sra. Ana Martínez"
+                                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold text-slate-800"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Step 3: Solicitudes */}
+                      {actaWizardStep === 'solicitudes' && (
+                        <div className="space-y-4 animate-in fade-in duration-350">
+                          <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center">
+                            <FileText size={14} className="mr-1 text-slate-400" />
+                            Lectura y Resolución de Solicitudes Pendientes
+                          </div>
+
+                          <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-1">
+                            {solicitudes.filter(s => s.estado === 'Pendiente').length === 0 ? (
+                              <div className="text-center py-12 bg-slate-50 rounded-3xl border border-slate-100 text-slate-400 italic text-sm">
+                                No hay solicitudes con estado "Pendiente" registradas en el sistema para evaluar en esta sesión.
+                              </div>
+                            ) : (
+                              solicitudes.filter(s => s.estado === 'Pendiente').map(sol => {
+                                const res = actaWizardData.solicitudesResoluciones[sol.id] || { decision: 'Pendiente', razon: '' };
+                                return (
+                                  <div key={sol.id} className="bg-slate-50 p-5 rounded-3xl border border-slate-200/60 shadow-sm space-y-4">
+                                    <div className="flex justify-between items-start gap-4">
+                                      <div>
+                                        <h6 className="font-extrabold text-slate-800 text-sm">{sol.nombre}</h6>
+                                        <p className="text-[10px] text-slate-400 mt-1 font-semibold">
+                                          Tipo: <span className="text-blue-900 font-bold uppercase">{sol.tipo}</span> • Creado: {sol.fechaCreacion ? new Date(sol.fechaCreacion).toLocaleDateString() : 'N/A'}
+                                        </p>
+                                        {sol.descripcion && (
+                                          <p className="text-xs text-slate-500 mt-2 font-medium bg-white p-2.5 rounded-xl border border-slate-100">{sol.descripcion}</p>
+                                        )}
+                                      </div>
+
+                                      {/* Buttons group for decision */}
+                                      <div className="flex bg-white p-1 rounded-xl border border-slate-200 flex-shrink-0">
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setActaWizardData(prev => ({
+                                              ...prev,
+                                              solicitudesResoluciones: {
+                                                ...prev.solicitudesResoluciones,
+                                                [sol.id]: { ...res, decision: 'Aprobada' }
+                                              }
+                                            }));
+                                          }}
+                                          className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                                            res.decision === 'Aprobada' 
+                                              ? 'bg-green-500 text-white shadow-sm' 
+                                              : 'text-slate-500 hover:text-green-600'
+                                          }`}
+                                        >
+                                          Aprobar
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setActaWizardData(prev => ({
+                                              ...prev,
+                                              solicitudesResoluciones: {
+                                                ...prev.solicitudesResoluciones,
+                                                [sol.id]: { ...res, decision: 'Rechazada' }
+                                              }
+                                            }));
+                                          }}
+                                          className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                                            res.decision === 'Rechazada' 
+                                              ? 'bg-red-500 text-white shadow-sm' 
+                                              : 'text-slate-500 hover:text-red-600'
+                                          }`}
+                                        >
+                                          Rechazar
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setActaWizardData(prev => ({
+                                              ...prev,
+                                              solicitudesResoluciones: {
+                                                ...prev.solicitudesResoluciones,
+                                                [sol.id]: { ...res, decision: 'Pendiente' }
+                                              }
+                                            }));
+                                          }}
+                                          className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                                            res.decision === 'Pendiente' 
+                                              ? 'bg-slate-200 text-slate-700 shadow-sm' 
+                                              : 'text-slate-500'
+                                          }`}
+                                        >
+                                          Pendiente
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {/* Resolution reason */}
+                                    {res.decision !== 'Pendiente' && (
+                                      <div className="animate-in slide-in-from-top-1 duration-200">
+                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Justificación de la resolución *</label>
+                                        <textarea
+                                          rows={2}
+                                          required
+                                          value={res.razon}
+                                          onChange={e => {
+                                            setActaWizardData(prev => ({
+                                              ...prev,
+                                              solicitudesResoluciones: {
+                                                ...prev.solicitudesResoluciones,
+                                                [sol.id]: { ...res, razon: e.target.value }
+                                              }
+                                            }));
+                                          }}
+                                          placeholder="Escriba aquí los motivos técnicos o sociales de la aprobación/rechazo..."
+                                          className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-xs font-semibold"
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Step 4: Adicional */}
+                      {actaWizardStep === 'libre' && (
+                        <div className="space-y-4 animate-in fade-in duration-350">
+                          <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-2">Acuerdos, Informes y Puntos Libres (Opcional)</label>
+                            <textarea 
+                              rows={8}
+                              value={actaWizardData.libreContenido}
+                              onChange={e => setActaWizardData(prev => ({ ...prev, libreContenido: e.target.value }))}
+                              placeholder="Redacte aquí detalles adicionales discutidos, compromisos adquiridos o temas varios de la sesión..."
+                              className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold font-serif resize-none text-justify"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Step 5: Vista Previa */}
+                      {actaWizardStep === 'vista_previa' && (
+                        <div className="space-y-4 animate-in fade-in duration-350">
+                          <div>
+                            <div className="flex justify-between items-center mb-2">
+                              <label className="block text-sm font-bold text-slate-700">Previsualización Narrativa del Acta</label>
+                              <span className="text-[10px] font-black bg-yellow-50 text-yellow-750 px-2 py-0.5 rounded-md uppercase">Generado automáticamente</span>
+                            </div>
+                            <textarea 
+                              readOnly
+                              rows={10}
+                              value={compileActaText(actaWizardData)}
+                              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-semibold text-xs font-serif outline-none resize-none text-justify select-all"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                    </div>
+
+                    {/* Footer / Navigation */}
+                    <div className="pt-4 border-t border-slate-100 flex justify-between gap-4 flex-shrink-0">
+                      <div>
+                        {actaWizardStep !== 'datos' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const steps: typeof actaWizardStep[] = ['datos', 'protocolo', 'solicitudes', 'libre', 'vista_previa'];
+                              const idx = steps.indexOf(actaWizardStep);
+                              if (idx > 0) setActaWizardStep(steps[idx - 1]);
+                            }}
+                            className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold px-6 py-2.5 rounded-xl transition-all text-sm"
+                          >
+                            Atrás
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex space-x-3">
+                        <button
+                          type="button"
+                          onClick={() => setShowAddActa(false)}
+                          className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-500 font-extrabold px-6 py-2.5 rounded-xl transition-all text-sm"
+                        >
+                          Cancelar
+                        </button>
+                        
+                        {actaWizardStep !== 'vista_previa' ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (actaWizardStep === 'datos' && !actaWizardData.titulo.trim()) {
+                                alert("Por favor complete el título de la sesión.");
+                                return;
+                              }
+                              
+                              const steps: typeof actaWizardStep[] = ['datos', 'protocolo', 'solicitudes', 'libre', 'vista_previa'];
+                              const idx = steps.indexOf(actaWizardStep);
+                              if (idx < steps.length - 1) setActaWizardStep(steps[idx + 1]);
+                            }}
+                            className="bg-blue-900 hover:bg-blue-800 text-white font-black px-6 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg text-sm"
+                          >
+                            Siguiente
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleSaveStructuredActa}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white font-black px-6 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg text-sm"
+                          >
+                            Publicar Acta
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
                 </div>
               )}
 

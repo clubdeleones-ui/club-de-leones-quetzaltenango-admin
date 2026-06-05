@@ -113,6 +113,8 @@ export interface Solicitud {
   estado: 'Pendiente' | 'Aprobada' | 'Rechazada';
   usuarioCreador?: string; // email o id del socio/admin o 'público'
   fechaCreacion: string;
+  resolucionRazon?: string;
+  fechaResolucion?: string;
 
   // Campos específicos para solicitudes de Sillas de Ruedas
   nombreSolicitante?: string;
