@@ -1398,7 +1398,6 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                             <th className="py-6.5 px-6">Miembro</th>
                             <th className="py-6.5 px-6">Contacto</th>
                             <th className="py-6.5 px-6">Puesto y Rol</th>
-                            <th className="py-6.5 px-6">Estado Financiero</th>
                             <th className="py-6.5 px-6 text-right">Acciones</th>
                           </tr>
                         </thead>
@@ -1494,20 +1493,6 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                     </div>
                                   </div>
                                 </td>
-                                <td className="py-6.5 px-6">
-                                  <div className="space-y-1">
-                                    <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
-                                      socio.estadoCuotas === 'Al día' ? 'bg-green-50 text-green-700 border border-green-100' :
-                                      socio.estadoCuotas === 'Pendiente' ? 'bg-yellow-50 text-yellow-700 border border-yellow-100' :
-                                      'bg-red-50 text-red-700 border border-red-100'
-                                    }`}>
-                                      ● {socio.estadoCuotas}
-                                    </span>
-                                    {socio.montoPendiente > 0 && (
-                                      <p className="text-xs font-bold text-slate-700 mt-1">Q {socio.montoPendiente.toFixed(2)}</p>
-                                    )}
-                                  </div>
-                                </td>
                                 <td className="py-6.5 px-6 text-right">
                                   <div className="flex items-center justify-end space-x-2">
                                     <button
@@ -1599,33 +1584,16 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4 text-xs font-semibold pt-1">
-                              <div>
-                                <span className="text-slate-400 text-[10px] uppercase tracking-wider block mb-0.5">Contacto</span>
-                                <div className="space-y-1 text-slate-700">
-                                  <div className="flex items-center truncate">
-                                    <Mail size={12} className="mr-1.5 text-slate-400 flex-shrink-0" />
-                                    <span className="truncate">{socio.correo}</span>
-                                  </div>
-                                  <div className="flex items-center">
-                                    <Phone size={12} className="mr-1.5 text-slate-400 flex-shrink-0" />
-                                    <span>{socio.telefono || 'Sin teléfono'}</span>
-                                  </div>
+                            <div className="text-xs font-semibold pt-1">
+                              <span className="text-slate-400 text-[10px] uppercase tracking-wider block mb-1">Contacto</span>
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-slate-700">
+                                <div className="flex items-center truncate">
+                                  <Mail size={12} className="mr-1.5 text-slate-400 flex-shrink-0" />
+                                  <span className="truncate">{socio.correo}</span>
                                 </div>
-                              </div>
-                              <div>
-                                <span className="text-slate-400 text-[10px] uppercase tracking-wider block mb-0.5">Estatus Financiero</span>
-                                <div className="space-y-1">
-                                  <span className={`inline-block text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
-                                    socio.estadoCuotas === 'Al día' ? 'bg-green-50 text-green-700 border border-green-100' :
-                                    socio.estadoCuotas === 'Pendiente' ? 'bg-yellow-50 text-yellow-700 border border-yellow-100' :
-                                    'bg-red-50 text-red-700 border border-red-100'
-                                  }`}>
-                                    ● {socio.estadoCuotas}
-                                  </span>
-                                  {socio.montoPendiente > 0 && (
-                                    <p className="font-extrabold text-slate-800 text-xs">Q {socio.montoPendiente.toFixed(2)}</p>
-                                  )}
+                                <div className="flex items-center">
+                                  <Phone size={12} className="mr-1.5 text-slate-400 flex-shrink-0" />
+                                  <span>{socio.telefono || 'Sin teléfono'}</span>
                                 </div>
                               </div>
                             </div>
@@ -3525,7 +3493,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       {/* --- UNIFIED MODAL FOR EDITING / REGISTERING SOCIO --- */}
       {editingSocio && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 sm:p-10 space-y-6 relative animate-in zoom-in-95 duration-300">
+          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-6 sm:p-10 space-y-6 relative animate-in zoom-in-95 duration-300">
             <button 
               type="button"
               onClick={() => setEditingSocio(null)}
@@ -3786,10 +3754,10 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                       )}
                     </div>
                     {/* Agregar nuevo puesto adicional */}
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <select
                         id="nuevo-puesto-adicional"
-                        className="flex-1 px-3 py-2 border border-amber-300 rounded-xl text-sm font-semibold bg-white focus:ring-2 focus:ring-amber-500 outline-none"
+                        className="w-full sm:flex-1 min-w-0 px-3 py-2.5 border border-amber-300 rounded-xl text-sm font-semibold bg-white focus:ring-2 focus:ring-amber-500 outline-none"
                         defaultValue=""
                       >
                         <option value="" disabled>Seleccionar cargo adicional...</option>
@@ -3809,7 +3777,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                           }
                           sel.value = '';
                         }}
-                        className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-sm transition-colors flex items-center gap-1.5"
+                        className="w-full sm:w-auto px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-sm transition-colors flex items-center justify-center gap-1.5 flex-shrink-0"
                       >
                         <Plus size={14} />
                         Agregar
