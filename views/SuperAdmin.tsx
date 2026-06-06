@@ -283,7 +283,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const [newActa, setNewActa] = useState({ titulo: '', autor: '', contenido: '', categoria: 'Ordinaria' });
 
   // Wizard state for structured minutes
-  const [actaWizardStep, setActaWizardStep] = useState<'datos' | 'protocolo' | 'solicitudes' | 'libre' | 'vista_previa'>('datos');
+  const [actaWizardStep, setActaWizardStep] = useState<'datos' | 'asistencia' | 'protocolo' | 'solicitudes' | 'libre' | 'vista_previa'>('datos');
   const [actaWizardData, setActaWizardData] = useState({
     titulo: '',
     categoria: 'Ordinaria' as 'Ordinaria' | 'Extraordinaria' | 'Reunión de Comisión',
@@ -296,10 +296,12 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     saludoSocioId: '',
     saludoInvitadoName: '',
     solicitudesResoluciones: {} as Record<string, { decision: 'Aprobada' | 'Rechazada' | 'Pendiente', razon: string }>,
-    puntosAgenda: [] as { tema: string; debate: string; acuerdo: string }[]
+    puntosAgenda: [] as { tema: string; debate: string; acuerdo: string }[],
+    asistencia: [] as string[]
   });
 
   const [newAgendaPoint, setNewAgendaPoint] = useState({ tema: '', debate: '', acuerdo: '' });
+  const [asistenciaSearch, setAsistenciaSearch] = useState('');
 
   const [showAddActividad, setShowAddActividad] = useState(false);
   const [newActividad, setNewActividad] = useState({ titulo: '', descripcion: '', fecha: '', lugar: '', publica: true });
@@ -315,6 +317,58 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; title: string } | null>(null);
 
   const canEditPropuestas = user.rol === UserRole.SUPER_ADMIN || user.rol === UserRole.PRESIDENTE_AFILIACION || user.rol === UserRole.SECRETARIO;
+
+  // Attendance and Quorum helpers
+  const sortedAllSocios = useMemo(() => {
+    return [...socios].sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [socios]);
+
+  const absentSocios = useMemo(() => {
+    const presentIds = new Set(actaWizardData.asistencia || []);
+    return sortedAllSocios.filter(s => !presentIds.has(s.id));
+  }, [sortedAllSocios, actaWizardData.asistencia]);
+
+  const filteredAbsentSocios = useMemo(() => {
+    if (!asistenciaSearch.trim()) return absentSocios;
+    const q = asistenciaSearch.toLowerCase();
+    return absentSocios.filter(s => 
+      s.nombre.toLowerCase().includes(q) || 
+      (s.puesto && s.puesto.toLowerCase().includes(q))
+    );
+  }, [absentSocios, asistenciaSearch]);
+
+  const presentSocios = useMemo(() => {
+    const presentIds = new Set(actaWizardData.asistencia || []);
+    return sortedAllSocios.filter(s => presentIds.has(s.id));
+  }, [sortedAllSocios, actaWizardData.asistencia]);
+
+  const handleMarkPresent = (id: string) => {
+    setActaWizardData(prev => {
+      const current = prev.asistencia || [];
+      if (current.includes(id)) return prev;
+      return {
+        ...prev,
+        asistencia: [...current, id]
+      };
+    });
+    setAsistenciaSearch('');
+  };
+
+  const handleMarkAbsent = (id: string) => {
+    setActaWizardData(prev => ({
+      ...prev,
+      asistencia: (prev.asistencia || []).filter(item => item !== id)
+    }));
+  };
+
+  const handleAsistenciaSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (filteredAbsentSocios.length > 0) {
+        handleMarkPresent(filteredAbsentSocios[0].id);
+      }
+    }
+  };
 
   // Global KPIs calculation
   const totalDonaciones = useMemo(() => donaciones.reduce((sum, d) => sum + d.monto, 0), [donaciones]);
@@ -441,6 +495,24 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
       ? getSocioName(data.saludoSocioId)
       : data.saludoInvitadoName || 'Invitado especial';
 
+    // Attendance (Quorum) Formatting
+    const presentNames = (data.asistencia || [])
+      .map(id => {
+        const s = socios.find(member => member.id === id);
+        return s ? s.nombre : null;
+      })
+      .filter((name): name is string => name !== null)
+      .sort((a, b) => a.localeCompare(b));
+
+    let asistenciaSection = '';
+    if (presentNames.length === 0) {
+      asistenciaSection = 'No se registró asistencia de miembros en esta sesión.\n';
+    } else {
+      asistenciaSection = 'Se constató la asistencia y el quórum reglamentario de los siguientes miembros:\n' +
+        presentNames.map((name, idx) => `   ${idx + 1}. ${name}`).join('\n') +
+        `\n\n   Total de miembros presentes: ${presentNames.length} de ${socios.length}.\n`;
+    }
+
     const pendingSols = solicitudes.filter(s => s.estado === 'Pendiente');
     let solicitudesSection = '';
     if (pendingSols.length === 0) {
@@ -473,6 +545,8 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
 
     return `En la ciudad de Quetzaltenango, siendo la fecha y hora ${data.fechaHoraText}, se reunieron los miembros en la Sede Social denominada "La Cueva", ubicada en la Calle Rodolfo Robles, 24-53 de la zona 1, con el fin de celebrar la sesión de ${data.categoria} correspondiente, bajo la redacción de este documento.
 
+ASISTENCIA Y QUÓRUM:
+${asistenciaSection}
 PROTOCOLO DE APERTURA:
 1. Invocación: Realizada por ${invocacionLabel}.
 2. Saludo a la Bandera: Dirigido por ${saludoLabel}.
@@ -505,7 +579,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       saludoSocioId: socios[0]?.id || '',
       saludoInvitadoName: '',
       solicitudesResoluciones: initialResoluciones,
-      puntosAgenda: []
+      puntosAgenda: [],
+      asistencia: []
     });
     setActaWizardStep('datos');
     setShowAddActa(true);
@@ -525,8 +600,13 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       saludoSocioId: socios[0]?.id || '',
       saludoInvitadoName: '',
       solicitudesResoluciones: {},
-      puntosAgenda: []
+      puntosAgenda: [],
+      asistencia: []
     };
+
+    if (!wData.asistencia) {
+      wData.asistencia = [];
+    }
 
     setActaWizardData(wData);
     setEditingActaId(acta.id);
@@ -1996,18 +2076,19 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     <div className="absolute left-2 sm:left-8 right-2 sm:right-8 top-1/2 -translate-y-1/2 h-1 bg-slate-100 rounded-full z-0"></div>
                     <div 
                       className="absolute left-2 sm:left-8 top-1/2 -translate-y-1/2 h-1 bg-amber-500 rounded-full z-0 transition-all duration-500"
-                      style={{ width: `${(['datos', 'protocolo', 'solicitudes', 'libre', 'vista_previa'].indexOf(actaWizardStep)) * 25}%` }}
+                      style={{ width: `${(['datos', 'asistencia', 'protocolo', 'solicitudes', 'libre', 'vista_previa'].indexOf(actaWizardStep)) * 20}%` }}
                     ></div>
                     
                     {[
                       { id: 'datos', label: 'Datos', icon: FileText },
+                      { id: 'asistencia', label: 'Asistencia', icon: Users },
                       { id: 'protocolo', label: 'Protocolo', icon: Building },
                       { id: 'solicitudes', label: 'Solicitudes', icon: Mail },
                       { id: 'libre', label: 'Agenda', icon: Briefcase },
                       { id: 'vista_previa', label: 'Previa', icon: CheckCircle }
                     ].map((s, idx) => {
                       const active = actaWizardStep === s.id;
-                      const past = idx <= ['datos', 'protocolo', 'solicitudes', 'libre', 'vista_previa'].indexOf(actaWizardStep);
+                      const past = idx <= ['datos', 'asistencia', 'protocolo', 'solicitudes', 'libre', 'vista_previa'].indexOf(actaWizardStep);
                       const Icon = s.icon;
                       return (
                         <button 
@@ -2090,6 +2171,146 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                               value={actaWizardData.fechaHoraText}
                               className="w-full px-5 py-3.5 bg-slate-100/50 border border-slate-200 rounded-2xl text-slate-500 font-semibold text-sm outline-none cursor-not-allowed"
                             />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {actaWizardStep === 'asistencia' && (
+                      <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 max-w-5xl mx-auto text-left">
+                        <div className="bg-slate-50/50 rounded-3xl p-6 md:p-8 border border-slate-100/60 shadow-sm space-y-6">
+                          
+                          {/* Attendance stats */}
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm">
+                            <div className="text-center sm:border-r border-slate-100 py-2">
+                              <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Total de Miembros</span>
+                              <span className="text-2xl font-black text-slate-800">{socios.length}</span>
+                            </div>
+                            <div className="text-center sm:border-r border-slate-100 py-2">
+                              <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Presentes (Quórum)</span>
+                              <span className="text-2xl font-black text-amber-500">{(actaWizardData.asistencia || []).length}</span>
+                            </div>
+                            <div className="text-center py-2">
+                              <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Ausentes</span>
+                              <span className="text-2xl font-black text-slate-400">{socios.length - (actaWizardData.asistencia || []).length}</span>
+                            </div>
+                          </div>
+
+                          {/* Search and Columns */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            
+                            {/* Absent Column (Search & Add) */}
+                            <div className="space-y-4">
+                              <h5 className="font-extrabold text-slate-700 text-sm flex items-center justify-between">
+                                <span>Buscar y Marcar Asistencia</span>
+                                <span className="bg-slate-200 text-slate-700 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">
+                                  {filteredAbsentSocios.length} Disponibles
+                                </span>
+                              </h5>
+                              
+                              <div className="relative">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                <input
+                                  type="text"
+                                  value={asistenciaSearch}
+                                  onChange={e => setAsistenciaSearch(e.target.value)}
+                                  onKeyDown={handleAsistenciaSearchKeyDown}
+                                  placeholder="Buscar por nombre o puesto... (Enter para marcar el 1ro)"
+                                  className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold text-slate-800 shadow-sm"
+                                />
+                              </div>
+
+                              <div className="bg-white border border-slate-200/80 rounded-2xl max-h-[400px] overflow-y-auto divide-y divide-slate-100 shadow-sm">
+                                {filteredAbsentSocios.length === 0 ? (
+                                  <div className="p-8 text-center text-slate-400 text-xs italic font-medium">
+                                    {asistenciaSearch ? 'No se encontraron miembros coincidentes.' : 'Todos los miembros han sido marcados como presentes.'}
+                                  </div>
+                                ) : (
+                                  filteredAbsentSocios.map(member => (
+                                    <div 
+                                      key={member.id} 
+                                      onClick={() => handleMarkPresent(member.id)}
+                                      className="p-3.5 flex items-center justify-between hover:bg-slate-50 cursor-pointer transition-colors group"
+                                    >
+                                      <div className="flex items-center space-x-3">
+                                        <img 
+                                          src={member.foto || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=60'} 
+                                          alt={member.nombre} 
+                                          className="w-9 h-9 rounded-full object-cover border border-slate-100 shadow-sm"
+                                          onError={(e) => {
+                                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=60';
+                                          }}
+                                        />
+                                        <div>
+                                          <p className="text-sm font-extrabold text-slate-700 group-hover:text-amber-600 transition-colors leading-tight">{member.nombre}</p>
+                                          {member.puesto && <p className="text-[10px] font-black text-slate-400 uppercase tracking-wide mt-0.5">{member.puesto}</p>}
+                                        </div>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        className="bg-slate-100 hover:bg-amber-100 text-slate-500 hover:text-amber-600 p-2 rounded-xl transition-all active:scale-90"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleMarkPresent(member.id);
+                                        }}
+                                      >
+                                        <Plus size={16} />
+                                      </button>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Present Column (Quorum / Remove) */}
+                            <div className="space-y-4">
+                              <h5 className="font-extrabold text-slate-700 text-sm flex items-center justify-between">
+                                <span>Miembros Presentes en Reunión</span>
+                                <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">
+                                  {presentSocios.length} Marcados
+                                </span>
+                              </h5>
+
+                              <div className="bg-white border border-slate-200/80 rounded-2xl max-h-[460px] overflow-y-auto divide-y divide-slate-100 shadow-sm">
+                                {presentSocios.length === 0 ? (
+                                  <div className="p-12 text-center text-slate-400 text-sm italic font-medium">
+                                    No se ha marcado asistencia aún. Utiliza la lista de la izquierda para agregar miembros.
+                                  </div>
+                                ) : (
+                                  presentSocios.map((member, index) => (
+                                    <div 
+                                      key={member.id} 
+                                      className="p-3.5 flex items-center justify-between hover:bg-slate-50/50 transition-colors"
+                                    >
+                                      <div className="flex items-center space-x-3">
+                                        <span className="text-[10px] font-black text-slate-400 w-5 text-right">{index + 1}.</span>
+                                        <img 
+                                          src={member.foto || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=60'} 
+                                          alt={member.nombre} 
+                                          className="w-9 h-9 rounded-full object-cover border border-slate-100 shadow-sm"
+                                          onError={(e) => {
+                                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=60';
+                                          }}
+                                        />
+                                        <div>
+                                          <p className="text-sm font-extrabold text-slate-805 leading-tight">{member.nombre}</p>
+                                          {member.puesto && <p className="text-[10px] font-black text-amber-600 uppercase tracking-wide mt-0.5">{member.puesto}</p>}
+                                        </div>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleMarkAbsent(member.id)}
+                                        className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all active:scale-90"
+                                        title="Remover de asistencia"
+                                      >
+                                        <X size={16} />
+                                      </button>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+
                           </div>
                         </div>
                       </div>
@@ -2471,7 +2692,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                         <button
                           type="button"
                           onClick={() => {
-                            const steps: typeof actaWizardStep[] = ['datos', 'protocolo', 'solicitudes', 'libre', 'vista_previa'];
+                            const steps: typeof actaWizardStep[] = ['datos', 'asistencia', 'protocolo', 'solicitudes', 'libre', 'vista_previa'];
                             const idx = steps.indexOf(actaWizardStep);
                             if (idx > 0) setActaWizardStep(steps[idx - 1]);
                           }}
@@ -2495,7 +2716,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                         <button
                           type="button"
                           onClick={() => {
-                            const steps: typeof actaWizardStep[] = ['datos', 'protocolo', 'solicitudes', 'libre', 'vista_previa'];
+                            const steps: typeof actaWizardStep[] = ['datos', 'asistencia', 'protocolo', 'solicitudes', 'libre', 'vista_previa'];
                             const idx = steps.indexOf(actaWizardStep);
                             if (idx < steps.length - 1) setActaWizardStep(steps[idx + 1]);
                           }}
