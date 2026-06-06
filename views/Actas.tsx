@@ -1,9 +1,9 @@
-
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { MOCK_ACTAS } from '../constants';
-import { Search, FileText, Download, Eye, Sparkles, MessageCircle, X, Loader2 } from 'lucide-react';
-import { googleService, GOOGLE_CONFIG } from '../services/googleService';
+import { Search, FileText, Download, Eye, Sparkles, MessageCircle, X, Loader2, Calendar, User, HelpCircle } from 'lucide-react';
+import { googleService } from '../services/googleService';
 import { geminiService } from '../services/geminiService';
+import { Acta } from '../types';
 import { generateActaPDF } from '../utils/pdfGenerator';
 import { FormattedActa } from '../components/FormattedActa';
 
@@ -12,14 +12,31 @@ interface ActasProps {
 }
 
 const Actas: React.FC<ActasProps> = ({ accessToken }) => {
-  const [actas, setActas] = useState<Acta[]>(MOCK_ACTAS);
+  // Load real actas from localStorage synced with SuperAdmin
+  const [actas, setActas] = useState<Acta[]>(() => {
+    const local = localStorage.getItem('club_leones_actas');
+    if (!local) {
+      localStorage.setItem('club_leones_actas', JSON.stringify(MOCK_ACTAS));
+      return MOCK_ACTAS;
+    }
+    try {
+      return JSON.parse(local);
+    } catch (e) {
+      return MOCK_ACTAS;
+    }
+  });
+
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<'Todas' | 'Ordinaria' | 'Extraordinaria' | 'Reunión de Comisión'>('Todas');
+  const [selectedYear, setSelectedYear] = useState<string>('Todos');
+  
   const [aiQuery, setAiQuery] = useState('');
   const [aiResult, setAiResult] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
   const [loadingActas, setLoadingActas] = useState(false);
   const [selectedActa, setSelectedActa] = useState<Acta | null>(null);
 
+  // Sync Google Drive files if logged in
   React.useEffect(() => {
     const fetchActas = async () => {
       if (!accessToken) return;
@@ -27,19 +44,28 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
       try {
         await googleService.initClient();
         googleService.setAccessToken(accessToken);
-        // En una implementación real buscaríamos una carpeta específica
-        // Por ahora listamos archivos recientes si estamos logueados
         const driveFiles = await googleService.fetchActasFromDrive('root');
         if (driveFiles && driveFiles.length > 0) {
           const transformedActas: Acta[] = driveFiles.map((file: any) => ({
             id: file.id,
             titulo: file.name,
-            fecha: new Date(file.createdTime).toLocaleDateString(),
-            contenido: 'Documento en Google Drive. Haz clic en "Leer ahora" para abrirlo.',
+            fecha: new Date(file.createdTime).toISOString().split('T')[0],
+            contenido: 'Documento en Google Drive. Haz clic en "Ver en Drive" para abrirlo.',
             autor: 'Sistema Drive',
-            pdfUrl: file.webViewLink
+            pdfUrl: file.webViewLink,
+            categoria: 'Ordinaria'
           }));
-          setActas([...MOCK_ACTAS, ...transformedActas]);
+          
+          // Merge with localStorage
+          setActas(prev => {
+            const merged = [...prev];
+            transformedActas.forEach(ta => {
+              if (!merged.some(m => m.id === ta.id)) {
+                merged.push(ta);
+              }
+            });
+            return merged;
+          });
         }
       } catch (error) {
         console.error('Error fetching actas from Drive:', error);
@@ -50,21 +76,60 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
     fetchActas();
   }, [accessToken]);
 
-  const filteredActas = actas.filter(a =>
-    a.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    a.contenido.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Extract years
+  const years = useMemo(() => {
+    const yearsSet = new Set<string>();
+    actas.forEach(a => {
+      if (a.fecha) {
+        const yStr = a.fecha.split('-')[0];
+        if (yStr && yStr.length === 4) {
+          yearsSet.add(yStr);
+        }
+      }
+    });
+    return Array.from(yearsSet).sort((a, b) => b.localeCompare(a));
+  }, [actas]);
+
+  // Stats calculation
+  const stats = useMemo(() => {
+    const total = actas.length;
+    const latest = actas.length > 0 
+      ? [...actas].sort((a, b) => b.fecha.localeCompare(a.fecha))[0].fecha 
+      : 'Sin registros';
+
+    const authors: Record<string, number> = {};
+    actas.forEach(a => {
+      authors[a.autor] = (authors[a.autor] || 0) + 1;
+    });
+    let topAuthor = 'N/A';
+    let maxCount = 0;
+    Object.entries(authors).forEach(([auth, count]) => {
+      if (count > maxCount) {
+        maxCount = count;
+        topAuthor = auth;
+      }
+    });
+
+    return { total, latest, topAuthor };
+  }, [actas]);
+
+  // Filter logic
+  const filteredActas = useMemo(() => {
+    return actas.filter(a => {
+      const matchesSearch = a.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            a.contenido.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = selectedCategory === 'Todas' || a.categoria === selectedCategory;
+      const matchesYear = selectedYear === 'Todos' || (a.fecha && a.fecha.startsWith(selectedYear));
+      return matchesSearch && matchesCategory && matchesYear;
+    });
+  }, [actas, searchTerm, selectedCategory, selectedYear]);
 
   const handleAiSearch = async () => {
     if (!aiQuery.trim()) return;
     setLoadingAi(true);
-    const result = await geminiService.summarizeActas(MOCK_ACTAS, aiQuery);
+    const result = await geminiService.summarizeActas(actas, aiQuery);
     setAiResult(result);
     setLoadingAi(false);
-  };
-
-  const downloadPDF = (acta: Acta) => {
-    generateActaPDF(acta);
   };
 
   return (
@@ -72,36 +137,69 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-5xl font-extrabold text-blue-900 tracking-tight">Libro de Actas Digital</h1>
-          <p className="text-lg text-slate-500 mt-2">Consulta y descarga información histórica de las sesiones.</p>
+          <p className="text-lg text-slate-500 mt-2 font-medium">Consulta, visualiza e imprime el registro histórico oficial de nuestras sesiones.</p>
         </div>
       </header>
+
+      {/* Statistics Bar */}
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-6 animate-in fade-in duration-300">
+        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm flex items-center space-x-4">
+          <div className="bg-blue-50 text-blue-900 p-3.5 rounded-2xl">
+            <FileText size={24} />
+          </div>
+          <div>
+            <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">Actas Archivadas</span>
+            <span className="text-2xl font-black text-slate-800">{stats.total}</span>
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm flex items-center space-x-4">
+          <div className="bg-amber-50 text-amber-600 p-3.5 rounded-2xl">
+            <Calendar size={24} />
+          </div>
+          <div>
+            <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">Última Sesión</span>
+            <span className="text-base font-extrabold text-slate-800">{stats.latest}</span>
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm flex items-center space-x-4">
+          <div className="bg-emerald-50 text-emerald-600 p-3.5 rounded-2xl">
+            <User size={24} />
+          </div>
+          <div>
+            <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">Redactor Principal</span>
+            <span className="text-sm font-extrabold text-slate-800 truncate block max-w-[150px]">{stats.topAuthor}</span>
+          </div>
+        </div>
+      </section>
 
       {/* Smart AI Search Box */}
       <section className="bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-950 rounded-[2.5rem] p-10 text-white shadow-2xl relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/10 blur-3xl -mr-32 -mt-32 rounded-full group-hover:bg-yellow-500/20 transition-colors" />
         <div className="relative z-10">
           <div className="flex items-center space-x-3 mb-6">
-            <div className="bg-yellow-500 p-2 rounded-xl">
-              <Sparkles className="text-blue-900" size={24} />
+            <div className="bg-yellow-500 p-2.5 rounded-xl">
+              <Sparkles className="text-blue-900" size={22} />
             </div>
             <h2 className="text-2xl font-black italic tracking-tight uppercase">Búsqueda Inteligente</h2>
           </div>
-          <p className="text-blue-100 mb-8 text-lg font-light leading-relaxed">
-            Pregúntale a nuestra IA sobre temas discutidos en actas pasadas. <br />
-            <span className="text-yellow-400 font-medium italic opacity-80">Por ejemplo: "¿Qué se acordó sobre la remodelación de la cueva?"</span>
+          <p className="text-blue-100 mb-6 text-base font-light leading-relaxed">
+            Pregúntale a nuestra IA sobre resoluciones, debates, acuerdos o temas tratados en actas anteriores.
           </p>
+          
           <div className="flex gap-2">
             <input
               type="text"
               value={aiQuery}
               onChange={(e) => setAiQuery(e.target.value)}
               placeholder="Escribe tu duda aquí..."
-              className="flex-grow bg-white/10 border border-white/20 rounded-2xl px-6 py-4 text-white placeholder:text-blue-200 focus:outline-none focus:ring-2 focus:ring-yellow-400 backdrop-blur-md"
+              className="flex-grow bg-white/10 border border-white/20 rounded-2xl px-6 py-4 text-white placeholder:text-blue-200 focus:outline-none focus:ring-2 focus:ring-yellow-400 backdrop-blur-md text-sm font-semibold"
             />
             <button
               onClick={handleAiSearch}
               disabled={loadingAi}
-              className="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-black px-8 py-4 rounded-2xl transition-all disabled:opacity-50 shadow-lg shadow-yellow-500/20 flex items-center space-x-2"
+              className="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-black px-8 py-4 rounded-2xl transition-all disabled:opacity-50 shadow-lg shadow-yellow-500/20 flex items-center space-x-2 cursor-pointer active:scale-95 shrink-0"
             >
               {loadingAi ? 'Buscando...' : (
                 <>
@@ -111,6 +209,29 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
               )}
             </button>
           </div>
+
+          {/* AI Suggestion Chips */}
+          <div className="mt-6 flex flex-wrap gap-2 items-center">
+            <span className="text-[10px] font-black text-blue-200 uppercase tracking-wider flex items-center shrink-0">
+              <HelpCircle size={13} className="mr-1" /> Preguntas sugeridas:
+            </span>
+            {[
+              '¿Qué se acordó sobre la remodelación de la cueva?',
+              'Resumen de asambleas ordinarias',
+              '¿Qué solicitudes de sillas de ruedas se aprobaron?'
+            ].map((q, idx) => (
+              <button
+                key={idx}
+                onClick={() => {
+                  setAiQuery(q);
+                }}
+                className="bg-white/10 hover:bg-white/20 border border-white/10 px-3.5 py-1.5 rounded-xl text-xs text-blue-100 hover:text-white font-medium transition-all cursor-pointer"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+
           {aiResult && (
             <div className="mt-8 bg-white/10 p-6 rounded-[2rem] border border-white/20 animate-in fade-in slide-in-from-top-4 duration-300 backdrop-blur-md">
               <div className="flex justify-between items-start mb-4">
@@ -119,13 +240,13 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
                 </span>
                 <button onClick={() => setAiResult(null)} className="text-white/50 hover:text-white transition-colors p-1"><X size={18} /></button>
               </div>
-              <p className="text-lg leading-relaxed font-light">{aiResult}</p>
+              <p className="text-sm md:text-base leading-relaxed font-normal whitespace-pre-wrap">{aiResult}</p>
             </div>
           )}
         </div>
       </section>
 
-      {/* List and Search */}
+      {/* Filtering and Query Tools */}
       <div className="space-y-6">
         <div className="relative group">
           <Search className="absolute left-6 top-5 text-slate-400 group-focus-within:text-blue-900 transition-colors" size={24} />
@@ -133,67 +254,166 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar por título, fecha o contenido del acta..."
-            className="w-full pl-16 pr-6 py-5 bg-white border border-slate-200 rounded-[2rem] shadow-sm focus:ring-4 focus:ring-blue-900/5 focus:border-blue-900 outline-none transition-all text-lg"
+            placeholder="Buscar por título, fecha o contenido de sesión..."
+            className="w-full pl-16 pr-6 py-5 bg-white border border-slate-200 rounded-[2rem] shadow-sm focus:ring-4 focus:ring-blue-900/5 focus:border-blue-900 outline-none transition-all text-base font-semibold"
           />
         </div>
 
-        <div className="grid gap-6">
+        {/* Categories and Date Filters */}
+        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex flex-wrap gap-2">
+            {(['Todas', 'Ordinaria', 'Extraordinaria', 'Reunión de Comisión'] as const).map(cat => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-5 py-2.5 rounded-full text-xs font-black transition-all cursor-pointer ${
+                  selectedCategory === cat
+                    ? 'bg-blue-900 text-white shadow-md shadow-blue-900/10'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800'
+                }`}
+              >
+                {cat === 'Todas' ? 'Todas las Actas' : cat}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center space-x-3 shrink-0">
+            <span className="text-xs font-black text-slate-400 uppercase tracking-wider">Año de Sesión:</span>
+            <select
+              value={selectedYear}
+              onChange={e => setSelectedYear(e.target.value)}
+              className="bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-black text-slate-700 outline-none focus:ring-2 focus:ring-blue-900/10 transition-all cursor-pointer"
+            >
+              <option value="Todos">Todos los años</option>
+              {years.map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Actas List Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {loadingActas ? (
-            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[2rem] border-2 border-dashed border-slate-100">
+            <div className="col-span-full flex flex-col items-center justify-center py-20 bg-white rounded-[2rem] border-2 border-dashed border-slate-100">
               <Loader2 className="animate-spin text-blue-900 mb-4" size={48} />
               <p className="text-slate-400 font-bold">Sincronizando con Google Drive...</p>
             </div>
           ) : (
             <>
-              {filteredActas.map(acta => (
-                <div key={acta.id} className="bg-white border border-slate-100 rounded-[2rem] p-8 shadow-sm hover:shadow-xl transition-all group overflow-hidden relative">
-                  <div className="absolute top-0 left-0 w-2 h-full bg-blue-900 transform -translate-x-full group-hover:translate-x-0 transition-transform" />
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-                    <div className="flex items-center space-x-6">
-                      <div className="bg-blue-50 text-blue-900 p-4 rounded-2xl group-hover:bg-blue-900 group-hover:text-white transition-colors shadow-inner">
-                        <FileText size={32} />
+              {filteredActas.map(acta => {
+                // Get brief extract of content
+                const cleanExcerpt = acta.contenido
+                  .replace(/^[A-ZÁÉÍÓÚÑ\s0-9]+:$/gm, '') // strip headers
+                  .replace(/\s+/g, ' ') // normalize spaces
+                  .trim();
+                const excerpt = cleanExcerpt.length > 130 ? cleanExcerpt.substring(0, 130) + '...' : cleanExcerpt;
+
+                return (
+                  <div key={acta.id} className="bg-white border border-slate-200/70 rounded-[2.5rem] p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group overflow-hidden relative text-left">
+                    <div className="flex flex-col sm:flex-row items-start gap-6">
+                      {/* Simulated official document sheet visual */}
+                      <div className="w-20 h-28 bg-blue-900 rounded-2xl relative shadow-md shrink-0 flex flex-col justify-between p-2.5 overflow-hidden group-hover:scale-105 transition-transform duration-300 border border-blue-950 select-none">
+                        {/* Top gold bar */}
+                        <div className="absolute top-0 left-0 w-full h-1.5 bg-yellow-500" />
+                        <div className="text-[7px] text-yellow-400 font-black tracking-widest text-center mt-1 uppercase">
+                          LEONES
+                        </div>
+                        {/* Seal background logo */}
+                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white/5 text-4xl font-black select-none pointer-events-none">
+                          L
+                        </div>
+                        <div className="text-center z-10">
+                          <span className="block text-[8px] font-black text-white leading-none">ACTA</span>
+                          <span className="block text-[6px] text-blue-200 font-bold mt-0.5">OFICIAL</span>
+                        </div>
+                        <div className="flex justify-between items-center z-10">
+                          <div className="w-5 h-5 rounded-full border border-dashed border-yellow-500/40 flex items-center justify-center">
+                            <span className="text-[5px] text-yellow-500 font-black">L</span>
+                          </div>
+                          <span className="text-[6px] text-slate-300 font-extrabold">{acta.fecha.split('-')[0]}</span>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-extrabold text-2xl text-slate-800 group-hover:text-blue-900 transition-colors leading-tight">{acta.titulo}</h3>
-                        <p className="text-sm text-slate-400 mt-1 font-medium">Publicado por <span className="text-blue-900/60 font-bold uppercase">{acta.autor}</span> • {acta.fecha}</p>
+
+                      <div className="space-y-2.5 flex-grow text-left">
+                        {/* Badges row */}
+                        <div className="flex flex-wrap gap-1.5">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                            acta.categoria === 'Extraordinaria'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-100'
+                              : acta.categoria === 'Reunión de Comisión'
+                              ? 'bg-purple-50 text-purple-700 border border-purple-100'
+                              : 'bg-blue-50 text-blue-700 border border-blue-100'
+                          }`}>
+                            {acta.categoria || 'Ordinaria'}
+                          </span>
+                          <span className="px-2.5 py-0.5 rounded-full bg-slate-50 text-slate-500 border border-slate-100 text-[9px] font-bold">
+                            {acta.fecha}
+                          </span>
+                        </div>
+
+                        <h3 className="font-extrabold text-lg text-slate-800 group-hover:text-blue-900 transition-colors leading-snug">
+                          {acta.titulo}
+                        </h3>
+
+                        <p className="text-xs text-slate-500 leading-relaxed font-serif text-justify">
+                          {excerpt}
+                        </p>
+
+                        <div className="flex items-center space-x-2 pt-1 border-t border-slate-100/50 mt-2">
+                          <span className="text-[10px] text-slate-400 font-medium">Redactor:</span>
+                          <span className="text-[10px] font-extrabold text-slate-650 uppercase tracking-tighter bg-slate-100 px-2 py-0.5 rounded">
+                            {acta.autor}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-3">
-                      {acta.pdfUrl.startsWith('http') ? (
+
+                    {/* Action buttons row */}
+                    <div className="grid grid-cols-2 gap-2 mt-6 pt-4 border-t border-slate-150">
+                      {acta.pdfUrl && acta.pdfUrl.startsWith('http') ? (
                         <a
                           href={acta.pdfUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex-grow md:flex-none px-6 py-3 text-blue-900 font-bold hover:bg-blue-50 rounded-xl transition-colors flex items-center justify-center space-x-2 border border-transparent hover:border-blue-100"
+                          className="px-4 py-2.5 text-blue-900 hover:bg-blue-50 border border-slate-200 rounded-xl transition-all font-black text-xs flex items-center justify-center space-x-1.5 cursor-pointer hover:shadow-sm"
                         >
-                          <Eye size={20} />
+                          <Eye size={14} />
                           <span>Ver en Drive</span>
                         </a>
                       ) : (
                         <button
                           onClick={() => setSelectedActa(acta)}
-                          className="flex-grow md:flex-none px-6 py-3 text-blue-900 font-bold hover:bg-blue-50 rounded-xl transition-colors flex items-center justify-center space-x-2 border border-transparent hover:border-blue-100"
+                          className="px-4 py-2.5 text-blue-900 hover:bg-blue-50 border border-slate-200/80 rounded-xl transition-all font-black text-xs flex items-center justify-center space-x-1.5 cursor-pointer hover:shadow-sm"
                         >
-                          <Eye size={20} />
-                          <span>Leer ahora</span>
+                          <Eye size={14} />
+                          <span>Leer Digital</span>
                         </button>
                       )}
+                      
+                      <button
+                        onClick={() => generateActaPDF(acta, 'open')}
+                        className="px-4 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl transition-all font-black text-xs flex items-center justify-center space-x-1.5 shadow-sm active:scale-95 cursor-pointer hover:shadow-md"
+                      >
+                        <FileText size={14} />
+                        <span>Ver PDF</span>
+                      </button>
 
                       <button
-                        onClick={() => downloadPDF(acta)}
-                        className="p-3 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all border border-transparent hover:border-green-100"
-                        title="Descargar PDF"
+                        onClick={() => generateActaPDF(acta, 'download')}
+                        className="col-span-2 py-2 text-slate-500 hover:text-slate-750 hover:bg-slate-50 rounded-xl transition-all font-bold text-xs flex items-center justify-center space-x-1 border border-dashed border-slate-200 mt-1 cursor-pointer"
                       >
-                        <Download size={22} />
+                        <Download size={13} />
+                        <span>Descargar Documento PDF</span>
                       </button>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               {filteredActas.length === 0 && (
-                <div className="text-center py-20 text-slate-400 italic bg-white rounded-[2rem] border-2 border-dashed border-slate-200">
-                  No se encontraron actas con esos criterios.
+                <div className="col-span-full text-center py-20 text-slate-400 italic bg-white rounded-[2rem] border-2 border-dashed border-slate-200">
+                  No se encontraron actas con esos criterios de búsqueda.
                 </div>
               )}
             </>
@@ -203,18 +423,19 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
 
       {/* Reader Modal */}
       {selectedActa && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-blue-900/20 backdrop-blur-md">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-blue-900/20 backdrop-blur-md animate-in fade-in duration-200">
           <div className="bg-white rounded-[3rem] max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 shadow-2xl border border-white/20">
-            <div className="p-10 border-b border-slate-100 flex justify-between items-center bg-blue-900 text-white relative">
+            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-blue-900 text-white relative">
               <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500" />
-              <div>
-                <h3 className="text-3xl font-black">{selectedActa.titulo}</h3>
-                <p className="text-sm text-blue-200 mt-1 uppercase tracking-widest font-bold">{selectedActa.fecha} • SECRETARÍA</p>
+              <div className="text-left">
+                <h3 className="text-2xl font-black">{selectedActa.titulo}</h3>
+                <p className="text-xs text-blue-200 mt-1 uppercase tracking-widest font-bold">{selectedActa.fecha} • SECRETARÍA</p>
               </div>
-              <button onClick={() => setSelectedActa(null)} className="p-3 hover:bg-white/10 rounded-2xl transition-colors">
-                <X size={28} />
+              <button onClick={() => setSelectedActa(null)} className="p-3 hover:bg-white/10 rounded-2xl transition-colors cursor-pointer">
+                <X size={24} />
               </button>
             </div>
+            
             <div className="p-6 md:p-10 overflow-y-auto bg-slate-150/50 flex-grow shadow-inner">
               <FormattedActa
                 titulo={selectedActa.titulo}
@@ -224,20 +445,21 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
                 contenido={selectedActa.contenido}
               />
             </div>
-            <div className="p-8 border-t border-slate-100 bg-white flex flex-col sm:flex-row justify-between items-center gap-4">
+
+            <div className="p-8 border-t border-slate-100 bg-white flex flex-col sm:flex-row justify-between items-center gap-4 text-left">
               <p className="text-xs text-slate-400 uppercase font-black tracking-tighter italic">Propiedad Privada • Club de Leones Quetzaltenango</p>
               <div className="flex space-x-4 w-full sm:w-auto">
                 <button
                   onClick={() => setSelectedActa(null)}
-                  className="flex-grow sm:flex-none px-8 py-3 text-slate-500 font-bold hover:text-slate-800 transition-colors"
+                  className="flex-grow sm:flex-none px-8 py-3 text-slate-500 font-bold hover:text-slate-850 transition-colors cursor-pointer"
                 >
                   Cerrar
                 </button>
                 <button
-                  onClick={() => downloadPDF(selectedActa)}
-                  className="flex-grow sm:flex-none bg-blue-900 text-white px-8 py-3 rounded-2xl font-black shadow-xl shadow-blue-900/20 active:scale-95 transition-all"
+                  onClick={() => generateActaPDF(selectedActa, 'open')}
+                  className="flex-grow sm:flex-none bg-blue-900 text-white px-8 py-3 rounded-2xl font-black shadow-xl shadow-blue-900/20 active:scale-95 transition-all cursor-pointer"
                 >
-                  Descargar PDF
+                  Ver PDF Completo
                 </button>
               </div>
             </div>

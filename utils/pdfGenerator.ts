@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { Acta } from '../types';
 
-export const generateActaPDF = (acta: Acta) => {
+export const generateActaPDF = (acta: Acta, action: 'download' | 'open' = 'download') => {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -208,6 +208,35 @@ export const generateActaPDF = (acta: Acta) => {
     doc.setFontSize(6.5);
     doc.setTextColor(217, 119, 6);
     doc.text('SELLO OFICIAL - CLUB DE LEONES QX', pageWidth / 2, y + 4.8, { align: 'center' });
+  }
+
+  // Document Footer (all pages)
+  const pageCount = doc.internal.pages.length - 1;
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.text(
+      'Documento de carácter privado y confidencial - Club de Leones de Quetzaltenango © 2026', 
+      margin, 
+      pageHeight - 10
+    );
+    doc.text(
+      `Pág. ${i} de ${pageCount}`, 
+      pageWidth - margin - 15, 
+      pageHeight - 10
+    );
+  }
+
+  // Handle PDF Output
+  if (action === 'open') {
+    const blob = doc.output('blob');
+    const blobUrl = URL.createObjectURL(blob);
+    window.open(blobUrl, '_blank');
+  } else {
+    const cleanTitle = acta.titulo.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    doc.save(`acta-${cleanTitle}.pdf`);
   }
 };
 
