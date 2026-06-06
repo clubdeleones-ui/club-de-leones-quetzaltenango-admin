@@ -346,8 +346,8 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                       {socio.nombre}
                     </h3>
                     
-                    {/* Badge de Puesto */}
-                    <div className="flex justify-center">
+                    {/* Badge de Puesto + Código */}
+                    <div className="flex flex-col items-center gap-1.5">
                       <span className={`text-xs font-semibold uppercase tracking-wider px-3.5 py-1 rounded-full border ${
                         socio.rol === 'SUPER_ADMIN' || socio.rol === 'TESORERO' || socio.rol === 'SECRETARIO'
                           ? 'bg-amber-50 text-amber-800 border-amber-200/70'
@@ -357,6 +357,16 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                       }`}>
                         {socio.puesto || 'Socio Regular'}
                       </span>
+                      {(socio.puestosAdicionales || []).map((pa, pi) => (
+                        <span key={pi} className="text-[11px] font-bold text-amber-800 bg-amber-50 px-3 py-0.5 rounded-full border border-amber-200">
+                          + {pa}
+                        </span>
+                      ))}
+                      {socio.codigoSocio && (
+                        <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
+                          # {socio.codigoSocio}
+                        </span>
+                      )}
                     </div>
                     
                     {/* Caja de Datos Premium */}

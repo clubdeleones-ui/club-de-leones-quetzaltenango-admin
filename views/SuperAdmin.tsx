@@ -48,7 +48,8 @@ import {
   Phone,
   Mail,
   Briefcase,
-  AlertCircle
+  AlertCircle,
+  Hash
 } from 'lucide-react';
 import { generateActaPDF, generateActaCode } from '../utils/pdfGenerator';
 import { FormattedActa } from '../components/FormattedActa';
@@ -56,6 +57,19 @@ import { compressImageFile } from '../utils/imageCompressor';
 
 
 const PUESTOS_PREDEFINIDOS = [
+  'Presidente del Club',
+  'Primer Vicepresidente del Club',
+  'Segundo Vicepresidente del Club',
+  'Tercer Vicepresidente del Club',
+  'Secretario del Club',
+  'Tesorero del Club',
+  'Domador del Club',
+  'Asesor de Servicios del Club',
+  'Asesor de Mercadotecnia',
+  'Presidente del Comité de Aumento de Socios del Club',
+  'Presidente del Comité Zona Joven del Club',
+  'Presidente del Comité del Paz Póster',
+  'Presidente del Comité de Medio Ambiente',
   'Presidente',
   'Vicepresidente',
   'Secretario',
@@ -142,9 +156,9 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   
   // Dynamic States with localStorage persistence
   const [socios, setSocios] = useState<Socio[]>(() => {
-    const local = localStorage.getItem('club_leones_socios_v3');
+    const local = localStorage.getItem('club_leones_socios_v4');
     if (local) return JSON.parse(local);
-    localStorage.setItem('club_leones_socios_v3', JSON.stringify(MOCK_SOCIOS));
+    localStorage.setItem('club_leones_socios_v4', JSON.stringify(MOCK_SOCIOS));
     return MOCK_SOCIOS;
   });
 
@@ -177,7 +191,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
         const fetchedSocios = await firebaseService.getSocios();
         if (fetchedSocios && fetchedSocios.length > 0) {
           setSocios(fetchedSocios);
-          localStorage.setItem('club_leones_socios_v3', JSON.stringify(fetchedSocios));
+          localStorage.setItem('club_leones_socios_v4', JSON.stringify(fetchedSocios));
         }
       } catch (err) {
         console.error("Error fetching socios from Firestore:", err);
@@ -221,7 +235,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('club_leones_socios_v3', JSON.stringify(socios));
+    localStorage.setItem('club_leones_socios_v4', JSON.stringify(socios));
   }, [socios]);
 
   useEffect(() => {
@@ -932,7 +946,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       
       const newList = socios.map(s => s.id === socio.id ? updatedSocio : s);
       setSocios(newList);
-      localStorage.setItem('club_leones_socios_v3', JSON.stringify(newList));
+      localStorage.setItem('club_leones_socios_v4', JSON.stringify(newList));
       
       setQrSocio(updatedSocio);
     } catch (err) {
@@ -958,7 +972,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       
       const newList = socios.map(s => s.id === socioId ? updatedSocio : s);
       setSocios(newList);
-      localStorage.setItem('club_leones_socios_v3', JSON.stringify(newList));
+      localStorage.setItem('club_leones_socios_v4', JSON.stringify(newList));
       
       setQrSocio(updatedSocio);
       alert("Código QR regenerado con éxito. El anterior ha sido invalidado.");
@@ -1002,6 +1016,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
   };
 
   const handleCreateSocioClick = () => {
+    const year = new Date().getFullYear();
+    const seq = String(socios.length + 1).padStart(3, '0');
     const blankSocio: Socio = {
       id: `socio-${Date.now()}`,
       nombre: '',
@@ -1009,18 +1025,25 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       telefono: '',
       rol: UserRole.SOCIO,
       puesto: 'Socio Regular',
+      puestosAdicionales: [],
+      codigoSocio: `CLQ-${year}-${seq}`,
       estadoCuotas: 'Al día',
       montoPendiente: 0,
       foto: 'https://picsum.photos/seed/member-' + Math.floor(Math.random() * 1000) + '/200/200',
       fechaIngreso: new Date().toISOString().split('T')[0],
       estatus: 'Active',
-      club: 'QUETZALTENANGO'
+      club: 'QUETZALTENANGO',
+      profesion: '',
+      dpi: '',
+      fechaNacimiento: '',
+      direccion: ''
     };
     setEditingSocio(blankSocio);
     setEditSocioForm({ ...blankSocio });
     setSocioSaveError(null);
     setSocioSaveSuccess(false);
   };
+
 
   const handleDeleteSocio = async (socio: Socio) => {
     if (socio.id === user.id) {
@@ -1035,7 +1058,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       
       const newSociosList = socios.filter(s => s.id !== socio.id);
       setSocios(newSociosList);
-      localStorage.setItem('club_leones_socios_v3', JSON.stringify(newSociosList));
+      localStorage.setItem('club_leones_socios_v4', JSON.stringify(newSociosList));
       alert("Socio eliminado con éxito.");
     } catch (err: any) {
       console.error("Error deleting socio:", err);
@@ -1086,7 +1109,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
         newSociosList = socios.map(s => s.id === updated.id ? updated : s);
       }
       setSocios(newSociosList);
-      localStorage.setItem('club_leones_socios_v3', JSON.stringify(newSociosList));
+      localStorage.setItem('club_leones_socios_v4', JSON.stringify(newSociosList));
 
       // If editing self, notify parent to refresh auth state
       if (updated.id === user.id && onUpdateUser) {
@@ -1420,6 +1443,11 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                           <span className="ml-2 bg-slate-200 text-slate-700 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">Inactivo</span>
                                         )}
                                       </p>
+                                      {socio.codigoSocio && (
+                                        <p className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded mt-1 w-fit border border-blue-100">
+                                          # {socio.codigoSocio}
+                                        </p>
+                                      )}
                                       <p className="text-xs text-slate-400 mt-1 font-semibold">Ingresó: {socio.fechaIngreso}</p>
                                     </div>
                                   </div>
@@ -1441,6 +1469,11 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                     <span className="text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-0.5 rounded-lg border border-slate-200/50 block w-fit">
                                       {socio.puesto || 'Socio Regular'}
                                     </span>
+                                    {(socio.puestosAdicionales || []).map((pa, pi) => (
+                                      <span key={pi} className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200 block w-fit">
+                                        + {pa}
+                                      </span>
+                                    ))}
                                     <div className="flex items-center space-x-1.5">
                                       {isInactive ? (
                                         <span className="bg-slate-100 text-slate-600 border border-slate-250 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
@@ -1552,7 +1585,17 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                     <span className="bg-slate-200 text-slate-700 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Inactivo</span>
                                   )}
                                 </h4>
+                                {socio.codigoSocio && (
+                                  <span className="inline-block text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded mt-0.5 border border-blue-100">
+                                    # {socio.codigoSocio}
+                                  </span>
+                                )}
                                 <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">{socio.puesto || 'Socio Regular'}</p>
+                                {(socio.puestosAdicionales || []).map((pa, pi) => (
+                                  <span key={pi} className="inline-block text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200 mt-0.5 mr-1">
+                                    + {pa}
+                                  </span>
+                                ))}
                               </div>
                             </div>
 
@@ -3515,9 +3558,10 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
             )}
 
             <form onSubmit={handleSaveSocioSubmit} className="space-y-6">
-              {/* Photo & Estatus Row */}
-              <div className="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-slate-100">
-                <div className="relative group flex-shrink-0">
+              {/* ── Photo, Código & Estatus ── */}
+              <div className="flex flex-col sm:flex-row items-start gap-5 pb-6 border-b border-slate-100">
+                {/* Photo */}
+                <div className="relative group flex-shrink-0 mx-auto sm:mx-0">
                   <img 
                     src={editSocioForm.foto || `https://picsum.photos/seed/${editingSocio.id}/150/150`} 
                     alt="Avatar de socio" 
@@ -3539,8 +3583,25 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   </label>
                 </div>
 
-                <div className="flex-grow space-y-4 w-full">
-                  {/* Estatus Institucional select */}
+                <div className="flex-grow space-y-3 w-full">
+                  {/* Código de Socio */}
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-bold text-blue-800 uppercase tracking-wider mb-2">
+                      <Hash size={12} />
+                      <span>Código de Socio</span>
+                    </label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text"
+                        placeholder="CLQ-2026-001"
+                        value={editSocioForm.codigoSocio || ''}
+                        onChange={e => setEditSocioForm(prev => ({ ...prev, codigoSocio: e.target.value }))}
+                        className="flex-1 px-4 py-2.5 border-2 border-blue-200 bg-blue-50 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-mono font-bold text-blue-900 text-sm tracking-widest"
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">Identificador único. Se muestra en la ficha del socio.</p>
+                  </div>
+                  {/* Estatus */}
                   <div>
                     <label className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
                       <span>Estatus Institucional *</span>
@@ -3557,117 +3618,243 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 </div>
               </div>
 
-              {/* Name & Contact */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nombre Completo *</label>
-                  <input 
-                    type="text"
-                    required
-                    placeholder="Ej. Carlos Roberto Méndez"
-                    value={editSocioForm.nombre || ''}
-                    onChange={e => setEditSocioForm(prev => ({ ...prev, nombre: e.target.value }))}
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Correo Electrónico *</label>
-                  <input 
-                    type="email"
-                    required
-                    placeholder="Ej. carlosmendez@gmail.com"
-                    value={editSocioForm.correo || ''}
-                    onChange={e => setEditSocioForm(prev => ({ ...prev, correo: e.target.value }))}
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
-                  />
+              {/* ── Sección: Datos Personales ── */}
+              <div>
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <span className="h-px flex-1 bg-slate-100"></span>
+                  <span>Datos Personales</span>
+                  <span className="h-px flex-1 bg-slate-100"></span>
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nombre Completo *</label>
+                    <input 
+                      type="text"
+                      required
+                      placeholder="Ej. Carlos Roberto Méndez"
+                      value={editSocioForm.nombre || ''}
+                      onChange={e => setEditSocioForm(prev => ({ ...prev, nombre: e.target.value }))}
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Correo Electrónico *</label>
+                    <input 
+                      type="email"
+                      required
+                      placeholder="Ej. carlosmendez@gmail.com"
+                      value={editSocioForm.correo || ''}
+                      onChange={e => setEditSocioForm(prev => ({ ...prev, correo: e.target.value }))}
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Teléfono</label>
+                    <input 
+                      type="text"
+                      placeholder="Ej. +502 5555-5555"
+                      value={editSocioForm.telefono || ''}
+                      onChange={e => setEditSocioForm(prev => ({ ...prev, telefono: e.target.value }))}
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">DPI / Identificación</label>
+                    <input 
+                      type="text"
+                      placeholder="Ej. 2352 12345 0101"
+                      value={editSocioForm.dpi || ''}
+                      onChange={e => setEditSocioForm(prev => ({ ...prev, dpi: e.target.value }))}
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Fecha de Nacimiento</label>
+                    <input 
+                      type="date"
+                      value={editSocioForm.fechaNacimiento || ''}
+                      onChange={e => setEditSocioForm(prev => ({ ...prev, fechaNacimiento: e.target.value }))}
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Profesión / Ocupación</label>
+                    <input 
+                      type="text"
+                      placeholder="Ej. Ingeniero Civil"
+                      value={editSocioForm.profesion || ''}
+                      onChange={e => setEditSocioForm(prev => ({ ...prev, profesion: e.target.value }))}
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Dirección de Residencia</label>
+                    <input 
+                      type="text"
+                      placeholder="Ej. 12 Av. 10-55, Zona 1, Quetzaltenango"
+                      value={editSocioForm.direccion || ''}
+                      onChange={e => setEditSocioForm(prev => ({ ...prev, direccion: e.target.value }))}
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Teléfono</label>
-                  <input 
-                    type="text"
-                    placeholder="Ej. +502 5555-5555"
-                    value={editSocioForm.telefono || ''}
-                    onChange={e => setEditSocioForm(prev => ({ ...prev, telefono: e.target.value }))}
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
-                  />
-                </div>
-                <div>
-                  <label className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                    <span>Club de Leones</span>
-                  </label>
-                  <input 
-                    type="text"
-                    value={editSocioForm.club || 'QUETZALTENANGO'}
-                    onChange={e => setEditSocioForm(prev => ({ ...prev, club: e.target.value }))}
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
-                  />
+              {/* ── Sección: Cargo Institucional ── */}
+              <div>
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <span className="h-px flex-1 bg-slate-100"></span>
+                  <span>Cargo Institucional</span>
+                  <span className="h-px flex-1 bg-slate-100"></span>
+                </h3>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                        <span>Puesto Principal *</span>
+                      </label>
+                      <select 
+                        value={editSocioForm.puesto || 'Socio Regular'}
+                        onChange={e => setEditSocioForm(prev => ({ ...prev, puesto: e.target.value }))}
+                        className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold bg-white"
+                      >
+                        {PUESTOS_PREDEFINIDOS.map(p => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                        <span>Rol del Sistema (Permisos) *</span>
+                      </label>
+                      <select 
+                        value={editSocioForm.rol || UserRole.SOCIO}
+                        onChange={e => setEditSocioForm(prev => ({ ...prev, rol: e.target.value as UserRole }))}
+                        className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold bg-white"
+                      >
+                        {ROLES_LIST.map(r => (
+                          <option key={r.value} value={r.value}>{r.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Club de Leones</label>
+                      <input 
+                        type="text"
+                        value={editSocioForm.club || 'QUETZALTENANGO'}
+                        onChange={e => setEditSocioForm(prev => ({ ...prev, club: e.target.value }))}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Fecha de Ingreso</label>
+                      <input 
+                        type="date"
+                        value={editSocioForm.fechaIngreso || ''}
+                        onChange={e => setEditSocioForm(prev => ({ ...prev, fechaIngreso: e.target.value }))}
+                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Puestos Adicionales */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                    <label className="flex items-center gap-2 text-xs font-bold text-amber-800 uppercase tracking-wider mb-3">
+                      <Briefcase size={12} />
+                      <span>Funciones / Cargos Adicionales</span>
+                      <span className="ml-auto text-[10px] font-normal text-amber-600">Ejemplo: doble función</span>
+                    </label>
+                    <div className="space-y-2 mb-3">
+                      {(editSocioForm.puestosAdicionales || []).map((pa, i) => (
+                        <div key={i} className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 border border-amber-200">
+                          <span className="flex-1 text-sm font-semibold text-slate-700">{pa}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = (editSocioForm.puestosAdicionales || []).filter((_, idx) => idx !== i);
+                              setEditSocioForm(prev => ({ ...prev, puestosAdicionales: updated }));
+                            }}
+                            className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Eliminar cargo"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                      {(editSocioForm.puestosAdicionales || []).length === 0 && (
+                        <p className="text-xs text-amber-600 italic">Sin cargos adicionales asignados.</p>
+                      )}
+                    </div>
+                    {/* Agregar nuevo puesto adicional */}
+                    <div className="flex gap-2">
+                      <select
+                        id="nuevo-puesto-adicional"
+                        className="flex-1 px-3 py-2 border border-amber-300 rounded-xl text-sm font-semibold bg-white focus:ring-2 focus:ring-amber-500 outline-none"
+                        defaultValue=""
+                      >
+                        <option value="" disabled>Seleccionar cargo adicional...</option>
+                        {PUESTOS_PREDEFINIDOS.map(p => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const sel = document.getElementById('nuevo-puesto-adicional') as HTMLSelectElement;
+                          const val = sel?.value;
+                          if (!val) return;
+                          const current = editSocioForm.puestosAdicionales || [];
+                          if (!current.includes(val)) {
+                            setEditSocioForm(prev => ({ ...prev, puestosAdicionales: [...current, val] }));
+                          }
+                          sel.value = '';
+                        }}
+                        className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-sm transition-colors flex items-center gap-1.5"
+                      >
+                        <Plus size={14} />
+                        Agregar
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Puesto & Rol */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                    <span>Puesto en Junta Directiva *</span>
-                  </label>
-                  <select 
-                    value={editSocioForm.puesto || 'Socio Regular'}
-                    onChange={e => setEditSocioForm(prev => ({ ...prev, puesto: e.target.value }))}
-                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold bg-white"
-                  >
-                    {PUESTOS_PREDEFINIDOS.map(p => (
-                      <option key={p} value={p}>{p}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                    <span>Rol del Sistema (Permisos) *</span>
-                  </label>
-                  <select 
-                    value={editSocioForm.rol || UserRole.SOCIO}
-                    onChange={e => setEditSocioForm(prev => ({ ...prev, rol: e.target.value as UserRole }))}
-                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold bg-white"
-                  >
-                    {ROLES_LIST.map(r => (
-                      <option key={r.value} value={r.value}>{r.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Financiero: Cuotas y Saldo */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                <div>
-                  <label className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                    <span>Estado de Solvencia de Cuota *</span>
-                  </label>
-                  <select 
-                    value={editSocioForm.estadoCuotas || 'Al día'}
-                    onChange={e => setEditSocioForm(prev => ({ ...prev, estadoCuotas: e.target.value as any }))}
-                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold bg-white"
-                  >
-                    <option value="Al día">Al día</option>
-                    <option value="Pendiente">Pendiente</option>
-                    <option value="En mora">En mora</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                    <span>Monto Pendiente (Q) *</span>
-                  </label>
-                  <input 
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    required
-                    value={editSocioForm.montoPendiente === undefined ? 0 : editSocioForm.montoPendiente}
-                    onChange={e => setEditSocioForm(prev => ({ ...prev, montoPendiente: parseFloat(e.target.value) || 0 }))}
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
-                  />
+              {/* ── Sección: Estado Financiero ── */}
+              <div>
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <span className="h-px flex-1 bg-slate-100"></span>
+                  <span>Estado Financiero</span>
+                  <span className="h-px flex-1 bg-slate-100"></span>
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                  <div>
+                    <label className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                      <span>Estado de Solvencia de Cuota *</span>
+                    </label>
+                    <select 
+                      value={editSocioForm.estadoCuotas || 'Al día'}
+                      onChange={e => setEditSocioForm(prev => ({ ...prev, estadoCuotas: e.target.value as any }))}
+                      className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold bg-white"
+                    >
+                      <option value="Al día">Al día</option>
+                      <option value="Pendiente">Pendiente</option>
+                      <option value="En mora">En mora</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                      <span>Monto Pendiente (Q) *</span>
+                    </label>
+                    <input 
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      required
+                      value={editSocioForm.montoPendiente === undefined ? 0 : editSocioForm.montoPendiente}
+                      onChange={e => setEditSocioForm(prev => ({ ...prev, montoPendiente: parseFloat(e.target.value) || 0 }))}
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
+                    />
+                  </div>
                 </div>
               </div>
 

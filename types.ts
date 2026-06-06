@@ -16,6 +16,8 @@ export interface Socio {
   correo: string;
   rol: UserRole;
   puesto?: string;
+  puestosAdicionales?: string[];   // Cargos o comisiones adicionales
+  codigoSocio?: string;            // Código único de identificación del socio
   estadoCuotas: 'Al día' | 'Pendiente' | 'En mora';
   montoPendiente: number;
   foto: string;
@@ -25,6 +27,12 @@ export interface Socio {
   fechaFin?: string;
   club?: string;
   qrToken?: string;
+  dpi?: string;                    // DPI o identificación oficial
+  fechaNacimiento?: string;        // Fecha de nacimiento
+  direccion?: string;              // Dirección de residencia
+  profesion?: string;              // Profesión u ocupación
+  editadoPor?: string;
+  fechaEdicion?: string;
 }
 
 export interface Acta {
