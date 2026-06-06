@@ -110,46 +110,26 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   });
 
   const getTabStyles = (tabId: string, active: boolean) => {
-    if (!active) return 'text-slate-650 hover:bg-slate-100/70 hover:text-slate-850';
+    if (!active) return 'text-slate-600 hover:bg-slate-50 hover:text-blue-900 hover:shadow-sm';
     
     switch (tabId) {
-      case 'resumen':
-        return 'bg-gradient-to-r from-blue-900 to-indigo-950 text-white border-l-4 border-yellow-500 shadow-lg shadow-blue-900/25 scale-102';
-      case 'socios':
-        return 'bg-gradient-to-r from-blue-900 to-blue-950 text-white border-l-4 border-amber-500 shadow-lg shadow-blue-900/25 scale-102';
-      case 'calendario':
-        return 'bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 text-white border-l-4 border-yellow-300 shadow-lg shadow-amber-500/25 scale-102';
-      case 'cuotas':
-        return 'bg-gradient-to-r from-blue-900 to-blue-950 text-white border-l-4 border-yellow-500 shadow-lg shadow-blue-900/25 scale-102';
       case 'actas':
-        return 'bg-gradient-to-r from-yellow-500 via-amber-400 to-orange-500 text-blue-950 border-l-4 border-blue-950 shadow-lg shadow-yellow-500/25 scale-102';
+      case 'calendario':
       case 'donaciones':
-        return 'bg-gradient-to-r from-amber-500 to-orange-600 text-white border-l-4 border-yellow-400 shadow-lg shadow-amber-500/25 scale-102';
-      case 'beneficios':
-        return 'bg-gradient-to-r from-blue-900 to-blue-950 text-white border-l-4 border-amber-500 shadow-lg shadow-blue-900/25 scale-102';
+        return 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-orange-500/20 scale-102';
       default:
-        return 'bg-blue-900 text-white shadow-lg shadow-blue-900/10';
+        return 'bg-gradient-to-r from-blue-900 to-indigo-900 text-white shadow-md shadow-blue-900/20 scale-102';
     }
   };
 
   const getMobileTabStyles = (tabId: string) => {
     switch (tabId) {
-      case 'resumen':
-        return 'bg-gradient-to-r from-blue-900 to-indigo-950 text-white shadow-md shadow-blue-900/15';
-      case 'socios':
-        return 'bg-gradient-to-r from-blue-900 to-blue-950 text-white shadow-md shadow-blue-900/15';
-      case 'calendario':
-        return 'bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 text-white shadow-md shadow-amber-500/15';
-      case 'cuotas':
-        return 'bg-gradient-to-r from-blue-900 to-blue-950 text-white shadow-md shadow-blue-900/15';
       case 'actas':
-        return 'bg-gradient-to-r from-yellow-500 via-amber-400 to-orange-500 text-blue-950 shadow-md shadow-yellow-500/15';
+      case 'calendario':
       case 'donaciones':
-        return 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md shadow-amber-500/15';
-      case 'beneficios':
-        return 'bg-gradient-to-r from-blue-900 to-blue-950 text-white shadow-md shadow-blue-900/15';
+        return 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-orange-500/20';
       default:
-        return 'bg-blue-900 text-white shadow-md shadow-blue-900/10';
+        return 'bg-gradient-to-r from-blue-900 to-indigo-900 text-white shadow-md shadow-blue-900/20';
     }
   };
 
@@ -977,9 +957,12 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Navigation Sidebar */}
-        <aside className="hidden lg:block w-72 flex-shrink-0">
-          <nav className="bg-white border border-slate-200/80 rounded-[2rem] p-6 shadow-sm space-y-2 sticky top-28">
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest px-4 mb-4">Navegación Módulos</div>
+        <aside className="hidden lg:block w-[19rem] flex-shrink-0">
+          <nav className="bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-[2.5rem] p-7 shadow-sm space-y-3 sticky top-28">
+            <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-4 mb-6 flex items-center">
+              <span className="w-2 h-2 rounded-full bg-yellow-500 mr-2"></span>
+              Navegación Módulos
+            </div>
             {[
               { id: 'resumen', label: 'Resumen General', icon: TrendingUp },
               { id: 'socios', label: 'Gestión de Socios', icon: Users },
@@ -995,19 +978,19 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as TabType)}
-                  className={`w-full flex items-center space-x-4 px-5 py-4.5 rounded-2xl font-black transition-all ${
+                  className={`w-full flex items-center space-x-4 px-5 py-4 rounded-2xl font-bold transition-all duration-300 ${
                     getTabStyles(tab.id, active)
                   }`}
                 >
                   <Icon 
-                    size={20} 
+                    size={22} 
                     className={`transition-colors ${
                       active 
-                        ? (tab.id === 'actas' || tab.id === 'donaciones' || tab.id === 'calendario' ? 'text-blue-955' : 'text-yellow-400') 
-                        : 'text-slate-450'
+                        ? 'text-white' 
+                        : 'text-slate-400 group-hover:text-blue-600'
                     }`} 
                   />
-                  <span>{tab.label}</span>
+                  <span className="text-sm">{tab.label}</span>
                 </button>
               );
             })}
@@ -1017,7 +1000,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
         {/* Content Panel */}
         <main className="flex-1 min-w-0">
           {/* Mobile Navigation (Horizontal Scrollable Tabs) */}
-          <div className="lg:hidden w-full overflow-x-auto pb-4 mb-4 flex space-x-2 scrollbar-none" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          <div className="lg:hidden w-full overflow-x-auto pb-6 mb-2 flex space-x-3 scrollbar-none pl-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             {[
               { id: 'resumen', label: 'Resumen General', icon: TrendingUp },
               { id: 'socios', label: 'Gestión de Socios', icon: Users },
@@ -1033,18 +1016,16 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as TabType)}
-                  className={`flex items-center space-x-2 px-5 py-3 rounded-full font-black text-xs transition-all whitespace-nowrap border shadow-sm ${
+                  className={`flex items-center space-x-2.5 px-6 py-3.5 rounded-[1.5rem] font-bold text-sm transition-all duration-300 whitespace-nowrap border shadow-sm flex-shrink-0 ${
                     active 
                       ? getMobileTabStyles(tab.id)
-                      : 'bg-white text-slate-650 border border-slate-200 hover:bg-slate-100/70 hover:text-slate-850'
+                      : 'bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50 hover:text-blue-900'
                   }`}
                 >
                   <Icon 
-                    size={14} 
+                    size={16} 
                     className={`transition-colors flex-shrink-0 ${
-                      active 
-                        ? (tab.id === 'actas' || tab.id === 'donaciones' || tab.id === 'calendario' ? 'text-blue-955' : 'text-yellow-400') 
-                        : 'text-slate-450'
+                      active ? 'text-white' : 'text-slate-400'
                     }`} 
                   />
                   <span>{tab.label}</span>
@@ -2011,31 +1992,44 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   </div>
 
                   {/* Step Indicator */}
-                  <div className="grid grid-cols-5 gap-3 text-center text-[10px] sm:text-xs font-black uppercase tracking-wider flex-shrink-0 my-4">
+                  <div className="flex justify-between items-center relative my-8 px-2 sm:px-8">
+                    <div className="absolute left-2 sm:left-8 right-2 sm:right-8 top-1/2 -translate-y-1/2 h-1 bg-slate-100 rounded-full z-0"></div>
+                    <div 
+                      className="absolute left-2 sm:left-8 top-1/2 -translate-y-1/2 h-1 bg-amber-500 rounded-full z-0 transition-all duration-500"
+                      style={{ width: `${(['datos', 'protocolo', 'solicitudes', 'libre', 'vista_previa'].indexOf(actaWizardStep)) * 25}%` }}
+                    ></div>
+                    
                     {[
-                      { id: 'datos', label: '1. Datos' },
-                      { id: 'protocolo', label: '2. Protocolo' },
-                      { id: 'solicitudes', label: '3. Solicitudes' },
-                      { id: 'libre', label: '4. Puntos de Agenda' },
-                      { id: 'vista_previa', label: '5. Vista Previa' }
+                      { id: 'datos', label: 'Datos', icon: FileText },
+                      { id: 'protocolo', label: 'Protocolo', icon: Building },
+                      { id: 'solicitudes', label: 'Solicitudes', icon: Mail },
+                      { id: 'libre', label: 'Agenda', icon: Briefcase },
+                      { id: 'vista_previa', label: 'Previa', icon: CheckCircle }
                     ].map((s, idx) => {
                       const active = actaWizardStep === s.id;
-                      const past = idx < ['datos', 'protocolo', 'solicitudes', 'libre', 'vista_previa'].indexOf(actaWizardStep);
+                      const past = idx <= ['datos', 'protocolo', 'solicitudes', 'libre', 'vista_previa'].indexOf(actaWizardStep);
+                      const Icon = s.icon;
                       return (
                         <button 
                           key={s.id}
                           type="button"
                           onClick={() => setActaWizardStep(s.id as any)}
-                          className={`py-4.5 rounded-2xl border transition-all cursor-pointer font-black focus:outline-none ${
-                            active 
-                              ? 'bg-gradient-to-r from-yellow-500 via-yellow-450 to-amber-500 text-blue-950 border-yellow-500 shadow-lg shadow-yellow-500/10 scale-105' 
-                              : past
-                                ? 'bg-amber-50/70 text-amber-800 border-amber-250/60 hover:bg-amber-100/40'
-                                : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
-                          }`}
+                          className={`relative z-10 flex flex-col items-center gap-2 focus:outline-none group`}
                         >
-                          <span className="hidden md:inline">{s.label}</span>
-                          <span className="md:hidden">{idx + 1}</span>
+                          <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm ${
+                            active 
+                              ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-orange-500/30 scale-110 ring-4 ring-orange-50' 
+                              : past
+                                ? 'bg-amber-100 text-amber-600'
+                                : 'bg-white text-slate-300 border-2 border-slate-100 group-hover:border-amber-200 group-hover:text-amber-400'
+                          }`}>
+                            <Icon size={active ? 20 : 18} />
+                          </div>
+                          <span className={`text-[10px] sm:text-xs font-bold transition-colors ${
+                            active ? 'text-orange-600' : past ? 'text-amber-600' : 'text-slate-400'
+                          }`}>
+                            <span className="hidden md:inline">{idx + 1}. </span>{s.label}
+                          </span>
                         </button>
                       );
                     })}
@@ -2044,8 +2038,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   {/* Form Step Contents */}
                   <div className="py-2">
                     {actaWizardStep === 'datos' && (
-                      <div className="space-y-4 animate-in fade-in duration-350">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 max-w-3xl mx-auto">
+                        <div className="bg-slate-50/50 rounded-3xl p-6 md:p-8 space-y-6 border border-slate-100/60 shadow-sm">
                           <div>
                             <label className="block text-sm font-bold text-slate-700 mb-2">Título de la Sesión</label>
                             <input 
@@ -2053,70 +2047,72 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                               value={actaWizardData.titulo}
                               onChange={e => setActaWizardData(prev => ({ ...prev, titulo: e.target.value }))}
                               placeholder="Ej. Sesión Ordinaria de Junta Directiva No. 05-2026"
-                              className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold"
+                              className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold text-slate-800"
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2">Categoría</label>
+                            <label className="block text-sm font-bold text-slate-700 mb-2">Categoría de Sesión</label>
                             <select
                               value={actaWizardData.categoria}
                               onChange={e => setActaWizardData(prev => ({ ...prev, categoria: e.target.value as any }))}
-                              className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-bold text-slate-700 bg-white"
+                              className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-bold text-slate-700"
                             >
                               <option value="Ordinaria">Ordinaria</option>
                               <option value="Extraordinaria">Extraordinaria</option>
                               <option value="Reunión de Comisión">Reunión de Comisión</option>
                             </select>
                           </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-bold text-slate-700 mb-2">Lugar Preestablecido (con Ciudad al inicio)</label>
-                          <input 
-                            type="text"
-                            value={actaWizardData.lugar}
-                            onChange={e => setActaWizardData(prev => ({ ...prev, lugar: e.target.value }))}
-                            placeholder="Quetzaltenango..."
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold"
-                          />
-                        </div>
-
-                        <div>
-                          <div className="flex justify-between items-center mb-2">
-                            <label className="block text-sm font-bold text-slate-700">Fecha y Hora Automática (Numérica y Escrita)</label>
-                            <button 
-                              type="button"
-                              onClick={() => setActaWizardData(prev => ({ ...prev, fechaHoraText: getWrittenDateTimeSpanish(new Date()) }))}
-                              className="text-[10px] font-black text-blue-900 uppercase tracking-wider hover:underline flex items-center space-x-1"
-                            >
-                              <span>Refrescar hora</span>
-                            </button>
+                          <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-2">Lugar Preestablecido (con Ciudad al inicio)</label>
+                            <input 
+                              type="text"
+                              value={actaWizardData.lugar}
+                              onChange={e => setActaWizardData(prev => ({ ...prev, lugar: e.target.value }))}
+                              placeholder="Ej. Quetzaltenango..."
+                              className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold text-slate-800"
+                            />
                           </div>
-                          <input 
-                            type="text"
-                            disabled
-                            value={actaWizardData.fechaHoraText}
-                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 font-semibold text-xs outline-none cursor-not-allowed"
-                          />
+                          <div>
+                            <div className="flex justify-between items-center mb-2">
+                              <label className="block text-sm font-bold text-slate-700">Fecha y Hora Automática (Numérica y Escrita)</label>
+                              <button 
+                                type="button"
+                                onClick={() => setActaWizardData(prev => ({ ...prev, fechaHoraText: getWrittenDateTimeSpanish(new Date()) }))}
+                                className="text-[10px] font-black text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg uppercase tracking-wider hover:bg-amber-100 flex items-center space-x-1 transition-colors"
+                              >
+                                <Clock size={12} />
+                                <span>Refrescar hora</span>
+                              </button>
+                            </div>
+                            <input 
+                              type="text"
+                              disabled
+                              value={actaWizardData.fechaHoraText}
+                              className="w-full px-5 py-3.5 bg-slate-100/50 border border-slate-200 rounded-2xl text-slate-500 font-semibold text-sm outline-none cursor-not-allowed"
+                            />
+                          </div>
                         </div>
                       </div>
                     )}
 
                     {actaWizardStep === 'protocolo' && (
-                      <div className="space-y-6 animate-in fade-in duration-355">
+                      <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 max-w-3xl mx-auto">
                         {/* Invocación */}
-                        <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100 space-y-4">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                            <h5 className="text-base font-extrabold text-blue-900">1. Invocación Leonística</h5>
+                        <div className="bg-slate-50/50 p-6 md:p-8 rounded-3xl border border-slate-100/60 shadow-sm space-y-6">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <h5 className="text-lg font-extrabold text-blue-900 flex items-center">
+                              <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xs mr-3">1</span>
+                              Invocación Leonística
+                            </h5>
                             
-                            <div className="flex bg-white p-1 rounded-xl border border-slate-200 w-fit">
+                            <div className="flex bg-white p-1.5 rounded-2xl border border-slate-200/60 w-fit shadow-sm">
                               <button
                                 type="button"
                                 onClick={() => setActaWizardData(prev => ({ ...prev, invocacionResponsableType: 'socio' }))}
-                                className={`px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                                className={`px-4 py-1.5 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all ${
                                   actaWizardData.invocacionResponsableType === 'socio' 
-                                    ? 'bg-blue-900 text-white shadow-sm' 
-                                    : 'text-slate-500 hover:text-slate-750'
+                                    ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' 
+                                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
                                 }`}
                               >
                                 Socio Activo
@@ -2124,10 +2120,10 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                               <button
                                 type="button"
                                 onClick={() => setActaWizardData(prev => ({ ...prev, invocacionResponsableType: 'invitado' }))}
-                                className={`px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                                className={`px-4 py-1.5 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all ${
                                   actaWizardData.invocacionResponsableType === 'invitado' 
-                                    ? 'bg-blue-900 text-white shadow-sm' 
-                                    : 'text-slate-500 hover:text-slate-750'
+                                    ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' 
+                                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
                                 }`}
                               >
                                 Invitado
@@ -2136,12 +2132,12 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                           </div>
 
                           {actaWizardData.invocacionResponsableType === 'socio' ? (
-                            <div>
-                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Seleccionar Socio</label>
+                            <div className="animate-in fade-in duration-300">
+                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Seleccionar Socio Responsable</label>
                               <select 
                                 value={actaWizardData.invocacionSocioId}
                                 onChange={e => setActaWizardData(prev => ({ ...prev, invocacionSocioId: e.target.value }))}
-                                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-bold text-slate-700 bg-white"
+                                className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none text-sm font-bold text-slate-700 bg-white shadow-sm"
                               >
                                 {socios.filter(s => s.estatus !== 'Inactive').map(s => (
                                   <option key={s.id} value={s.id}>{s.nombre} ({s.puesto || 'Socio Regular'})</option>
@@ -2149,32 +2145,35 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                               </select>
                             </div>
                           ) : (
-                            <div>
-                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nombre del Invitado</label>
+                            <div className="animate-in fade-in duration-300">
+                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Nombre Completo del Invitado</label>
                               <input 
                                 type="text"
                                 value={actaWizardData.invocacionInvitadoName}
                                 onChange={e => setActaWizardData(prev => ({ ...prev, invocacionInvitadoName: e.target.value }))}
                                 placeholder="Ej. Ing. Juan Gómez (Gobernador de Distrito)"
-                                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold text-slate-800"
+                                className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none text-sm font-semibold text-slate-800 shadow-sm"
                               />
                             </div>
                           )}
                         </div>
 
                         {/* Saludo a la Bandera */}
-                        <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100 space-y-4">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                            <h5 className="text-base font-extrabold text-blue-900">2. Saludo a la Bandera</h5>
+                        <div className="bg-slate-50/50 p-6 md:p-8 rounded-3xl border border-slate-100/60 shadow-sm space-y-6">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <h5 className="text-lg font-extrabold text-blue-900 flex items-center">
+                              <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xs mr-3">2</span>
+                              Saludo a la Bandera
+                            </h5>
                             
-                            <div className="flex bg-white p-1 rounded-xl border border-slate-200 w-fit">
+                            <div className="flex bg-white p-1.5 rounded-2xl border border-slate-200/60 w-fit shadow-sm">
                               <button
                                 type="button"
                                 onClick={() => setActaWizardData(prev => ({ ...prev, saludoResponsableType: 'socio' }))}
-                                className={`px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                                className={`px-4 py-1.5 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all ${
                                   actaWizardData.saludoResponsableType === 'socio' 
-                                    ? 'bg-blue-900 text-white shadow-sm' 
-                                    : 'text-slate-500 hover:text-slate-750'
+                                    ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' 
+                                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
                                 }`}
                               >
                                 Socio Activo
@@ -2182,10 +2181,10 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                               <button
                                 type="button"
                                 onClick={() => setActaWizardData(prev => ({ ...prev, saludoResponsableType: 'invitado' }))}
-                                className={`px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                                className={`px-4 py-1.5 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all ${
                                   actaWizardData.saludoResponsableType === 'invitado' 
-                                    ? 'bg-blue-900 text-white shadow-sm' 
-                                    : 'text-slate-500 hover:text-slate-750'
+                                    ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' 
+                                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
                                 }`}
                               >
                                 Invitado
@@ -2194,12 +2193,12 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                           </div>
 
                           {actaWizardData.saludoResponsableType === 'socio' ? (
-                            <div>
-                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Seleccionar Socio</label>
+                            <div className="animate-in fade-in duration-300">
+                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Seleccionar Socio Responsable</label>
                               <select 
                                 value={actaWizardData.saludoSocioId}
                                 onChange={e => setActaWizardData(prev => ({ ...prev, saludoSocioId: e.target.value }))}
-                                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-bold text-slate-700 bg-white"
+                                className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none text-sm font-bold text-slate-700 bg-white shadow-sm"
                               >
                                 {socios.filter(s => s.estatus !== 'Inactive').map(s => (
                                   <option key={s.id} value={s.id}>{s.nombre} ({s.puesto || 'Socio Regular'})</option>
@@ -2207,14 +2206,14 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                               </select>
                             </div>
                           ) : (
-                            <div>
-                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nombre del Invitado</label>
+                            <div className="animate-in fade-in duration-300">
+                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Nombre Completo del Invitado</label>
                               <input 
                                 type="text"
                                 value={actaWizardData.saludoInvitadoName}
                                 onChange={e => setActaWizardData(prev => ({ ...prev, saludoInvitadoName: e.target.value }))}
                                 placeholder="Ej. Sra. Ana Martínez"
-                                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold text-slate-800"
+                                className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none text-sm font-semibold text-slate-800 shadow-sm"
                               />
                             </div>
                           )}
@@ -2223,35 +2222,36 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     )}
 
                     {actaWizardStep === 'solicitudes' && (
-                      <div className="space-y-4 animate-in fade-in duration-350">
-                        <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center">
-                          <FileText size={14} className="mr-1 text-slate-400" />
+                      <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 max-w-3xl mx-auto">
+                        <div className="text-sm font-black text-slate-800 uppercase tracking-widest mb-2 flex items-center bg-amber-50 w-fit px-4 py-2 rounded-xl">
+                          <FileText size={18} className="mr-2 text-amber-500" />
                           Lectura y Resolución de Solicitudes Pendientes
                         </div>
 
-                        <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-1">
+                        <div className="space-y-5 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
                           {solicitudes.filter(s => s.estado === 'Pendiente').length === 0 ? (
-                            <div className="text-center py-12 bg-slate-50 rounded-3xl border border-slate-100 text-slate-400 italic text-sm">
+                            <div className="text-center py-16 bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-200 text-slate-400 italic text-sm font-medium">
                               No hay solicitudes con estado "Pendiente" registradas en el sistema para evaluar en esta sesión.
                             </div>
                           ) : (
                             solicitudes.filter(s => s.estado === 'Pendiente').map(sol => {
                               const res = actaWizardData.solicitudesResoluciones[sol.id] || { decision: 'Pendiente', razon: '' };
                               return (
-                                <div key={sol.id} className="bg-slate-50 p-5 rounded-3xl border border-slate-200/60 shadow-sm space-y-4">
-                                  <div className="flex justify-between items-start gap-4">
-                                    <div>
-                                      <h6 className="font-extrabold text-slate-800 text-sm">{sol.nombre}</h6>
-                                      <p className="text-[10px] text-slate-400 mt-1 font-semibold">
-                                        Tipo: <span className="text-blue-900 font-bold uppercase">{sol.tipo}</span> • Creado: {sol.fechaCreacion ? new Date(sol.fechaCreacion).toLocaleDateString() : 'N/A'}
-                                      </p>
+                                <div key={sol.id} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 space-y-5">
+                                  <div className="flex flex-col md:flex-row md:justify-between items-start gap-5">
+                                    <div className="flex-1">
+                                      <h6 className="font-extrabold text-slate-800 text-base">{sol.nombre}</h6>
+                                      <div className="flex items-center space-x-2 mt-2">
+                                        <span className="text-[10px] font-black bg-blue-50 text-blue-900 px-2.5 py-1 rounded-full uppercase tracking-wider">{sol.tipo}</span>
+                                        <span className="text-[10px] font-semibold text-slate-400">Creado: {sol.fechaCreacion ? new Date(sol.fechaCreacion).toLocaleDateString() : 'N/A'}</span>
+                                      </div>
                                       {sol.descripcion && (
-                                        <p className="text-xs text-slate-500 mt-2 font-medium bg-white p-2.5 rounded-xl border border-slate-100">{sol.descripcion}</p>
+                                        <p className="text-sm text-slate-600 mt-4 font-medium bg-slate-50 p-4 rounded-2xl border border-slate-100 leading-relaxed text-justify">{sol.descripcion}</p>
                                       )}
                                     </div>
 
                                     {/* Buttons group for decision */}
-                                    <div className="flex bg-white p-1 rounded-xl border border-slate-200 flex-shrink-0">
+                                    <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-200/60 flex-shrink-0 self-start">
                                       <button
                                         type="button"
                                         onClick={() => {
@@ -2263,10 +2263,10 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                             }
                                           }));
                                         }}
-                                        className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                                        className={`px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all ${
                                           res.decision === 'Aprobada' 
-                                            ? 'bg-green-500 text-white shadow-sm' 
-                                            : 'text-slate-500 hover:text-green-600'
+                                            ? 'bg-green-500 text-white shadow-md shadow-green-500/20' 
+                                            : 'text-slate-500 hover:text-green-600 hover:bg-white'
                                         }`}
                                       >
                                         Aprobar
@@ -2282,10 +2282,10 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                             }
                                           }));
                                         }}
-                                        className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                                        className={`px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all ${
                                           res.decision === 'Rechazada' 
-                                            ? 'bg-red-500 text-white shadow-sm' 
-                                            : 'text-slate-500 hover:text-red-600'
+                                            ? 'bg-red-500 text-white shadow-md shadow-red-500/20' 
+                                            : 'text-slate-500 hover:text-red-600 hover:bg-white'
                                         }`}
                                       >
                                         Rechazar
@@ -2301,10 +2301,10 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                             }
                                           }));
                                         }}
-                                        className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                                        className={`px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all ${
                                           res.decision === 'Pendiente' 
-                                            ? 'bg-slate-200 text-slate-700 shadow-sm' 
-                                            : 'text-slate-500'
+                                            ? 'bg-slate-200 text-slate-700 shadow-md' 
+                                            : 'text-slate-500 hover:bg-white'
                                         }`}
                                       >
                                         Pendiente
@@ -2314,10 +2314,10 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
                                   {/* Resolution reason */}
                                   {res.decision !== 'Pendiente' && (
-                                    <div className="animate-in slide-in-from-top-1 duration-200">
-                                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Justificación de la resolución</label>
+                                    <div className="animate-in slide-in-from-top-2 duration-300 pt-2 border-t border-slate-100 mt-2">
+                                      <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Justificación de la resolución (Opcional)</label>
                                       <textarea
-                                        rows={2}
+                                        rows={3}
                                         value={res.razon}
                                         onChange={e => {
                                           setActaWizardData(prev => ({
@@ -2328,8 +2328,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                             }
                                           }));
                                         }}
-                                        placeholder="Escriba aquí los motivos técnicos o sociales de la aprobación/rechazo..."
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-xs font-semibold"
+                                        placeholder="Escriba aquí los motivos técnicos o sociales..."
+                                        className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold resize-none shadow-sm"
                                       />
                                     </div>
                                   )}
@@ -2342,39 +2342,44 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     )}
 
                     {actaWizardStep === 'libre' && (
-                      <div className="space-y-6 animate-in fade-in duration-350">
-                        <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100 space-y-4 text-left">
-                          <h3 className="text-sm font-black text-blue-900 uppercase tracking-wider">Agregar Punto de Agenda</h3>
-                          <div className="grid grid-cols-1 gap-4">
+                      <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300 max-w-3xl mx-auto">
+                        <div className="bg-slate-50/50 p-6 md:p-8 rounded-3xl border border-slate-100/60 space-y-6 shadow-sm">
+                          <h3 className="text-base font-black text-blue-900 uppercase tracking-widest flex items-center">
+                            <span className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mr-3"><Plus size={16}/></span>
+                            Agregar Punto de Agenda
+                          </h3>
+                          <div className="grid grid-cols-1 gap-6">
                             <div>
-                              <label className="block text-xs font-bold text-slate-550 uppercase tracking-wide mb-1.5">Tema</label>
+                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tema del Punto</label>
                               <input 
                                 type="text"
                                 value={newAgendaPoint.tema}
                                 onChange={e => setNewAgendaPoint(prev => ({ ...prev, tema: e.target.value }))}
                                 placeholder="Ej. Aprobación del presupuesto para la jornada oftalmológica"
-                                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold"
+                                className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold shadow-sm"
                               />
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            
+                            {/* Formato vertical en vez de columnas para mayor espacio */}
+                            <div className="space-y-6">
                               <div>
-                                <label className="block text-xs font-bold text-slate-550 uppercase tracking-wide mb-1.5">Debate / Discusión</label>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Debate / Discusión (Opcional)</label>
                                 <textarea 
                                   rows={4}
                                   value={newAgendaPoint.debate}
                                   onChange={e => setNewAgendaPoint(prev => ({ ...prev, debate: e.target.value }))}
-                                  placeholder="Describa los puntos clave discutidos por los socios..."
-                                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold resize-none text-justify"
+                                  placeholder="Describa los puntos clave discutidos..."
+                                  className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold resize-none text-justify shadow-sm"
                                 />
                               </div>
                               <div>
-                                <label className="block text-xs font-bold text-slate-550 uppercase tracking-wide mb-1.5">Acuerdo / Resolución</label>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Acuerdo / Resolución (Opcional)</label>
                                 <textarea 
                                   rows={4}
                                   value={newAgendaPoint.acuerdo}
                                   onChange={e => setNewAgendaPoint(prev => ({ ...prev, acuerdo: e.target.value }))}
                                   placeholder="Describa el acuerdo final tomado..."
-                                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold resize-none text-justify"
+                                  className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold resize-none text-justify shadow-sm"
                                 />
                               </div>
                             </div>
@@ -2382,48 +2387,55 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                           <button
                             type="button"
                             onClick={handleAddAgendaPoint}
-                            className="bg-blue-900 hover:bg-blue-800 text-white font-black px-5 py-2.5 rounded-xl text-sm transition-all shadow-md flex items-center justify-center space-x-1.5 active:scale-95"
+                            className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-white font-black px-8 py-3.5 rounded-2xl text-sm transition-all shadow-md shadow-amber-500/20 flex items-center justify-center space-x-2 active:scale-95"
                           >
-                            <Plus size={16} />
-                            <span>Agregar Punto a la Agenda</span>
+                            <Plus size={18} />
+                            <span>Agregar a la Agenda</span>
                           </button>
                         </div>
 
                         {/* List of current agenda points */}
-                        <div className="space-y-4 text-left">
-                          <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Puntos en esta Acta ({(actaWizardData.puntosAgenda || []).length})</h4>
+                        <div className="space-y-5">
+                          <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">Puntos en esta Acta ({(actaWizardData.puntosAgenda || []).length})</h4>
                           {(actaWizardData.puntosAgenda || []).length === 0 ? (
-                            <div className="text-center py-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 text-xs font-semibold italic">
+                            <div className="text-center py-12 bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-200 text-slate-400 text-sm font-medium italic">
                               No se han agregado puntos de agenda aún. Utiliza el formulario superior para añadir temas.
                             </div>
                           ) : (
-                            <div className="space-y-4">
+                            <div className="space-y-5">
                               {(actaWizardData.puntosAgenda || []).map((p, idx) => (
-                                <div key={idx} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm relative group flex flex-col justify-between hover:shadow-md transition-shadow">
-                                  <div className="space-y-3">
-                                    <div className="flex justify-between items-start">
-                                      <span className="bg-blue-50 text-blue-900 text-[10px] font-black px-2.5 py-0.5 rounded-md uppercase tracking-wider">
-                                        Punto {idx + 1}
-                                      </span>
+                                <div key={idx} className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-sm relative group flex flex-col justify-between hover:shadow-md transition-all duration-300 animate-in slide-in-from-bottom-2">
+                                  <div className="space-y-4">
+                                    <div className="flex justify-between items-start gap-4">
+                                      <div className="flex items-center space-x-3">
+                                        <span className="bg-amber-100 text-amber-700 w-8 h-8 rounded-full flex items-center justify-center text-xs font-black">
+                                          {idx + 1}
+                                        </span>
+                                        <h5 className="font-extrabold text-slate-800 text-base leading-tight">{p.tema || 'Punto sin tema'}</h5>
+                                      </div>
                                       <button
                                         type="button"
                                         onClick={() => handleRemoveAgendaPoint(idx)}
-                                        className="text-slate-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-slate-50 transition-colors"
+                                        className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all bg-slate-50/50"
                                         title="Eliminar punto"
                                       >
-                                        <Trash2 size={16} />
+                                        <Trash2 size={18} />
                                       </button>
                                     </div>
-                                    <h5 className="font-extrabold text-slate-800 text-sm">{p.tema}</h5>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-medium pt-2 border-t border-slate-100">
-                                      <div>
-                                        <span className="text-slate-400 font-bold block mb-1">Debate / Discusión:</span>
-                                        <p className="text-slate-650 bg-slate-50 p-2.5 rounded-lg border border-slate-100 leading-relaxed whitespace-pre-wrap text-justify">{p.debate || 'Sin debate registrado.'}</p>
-                                      </div>
-                                      <div>
-                                        <span className="text-slate-400 font-bold block mb-1">Acuerdo / Resolución:</span>
-                                        <p className="text-slate-700 bg-amber-50/50 p-2.5 rounded-lg border border-amber-100/50 leading-relaxed whitespace-pre-wrap text-justify">{p.acuerdo || 'Sin acuerdo registrado.'}</p>
-                                      </div>
+                                    
+                                    <div className="pl-11 space-y-4 pt-2">
+                                      {p.debate && (
+                                        <div>
+                                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1.5">Debate / Discusión</span>
+                                          <p className="text-sm text-slate-600 bg-slate-50 p-4 rounded-2xl border border-slate-100 leading-relaxed whitespace-pre-wrap text-justify">{p.debate}</p>
+                                        </div>
+                                      )}
+                                      {p.acuerdo && (
+                                        <div>
+                                          <span className="text-[10px] font-black text-amber-500 uppercase tracking-wider block mb-1.5">Acuerdo / Resolución</span>
+                                          <p className="text-sm text-amber-900 bg-amber-50/50 p-4 rounded-2xl border border-amber-100/50 leading-relaxed whitespace-pre-wrap text-justify">{p.acuerdo}</p>
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 </div>
