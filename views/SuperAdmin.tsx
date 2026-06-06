@@ -302,6 +302,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
 
   const [newAgendaPoint, setNewAgendaPoint] = useState({ tema: '', debate: '', acuerdo: '' });
   const [asistenciaSearch, setAsistenciaSearch] = useState('');
+  const [selectedAgendaPointTab, setSelectedAgendaPointTab] = useState<'new' | number>('new');
 
   const [showAddActividad, setShowAddActividad] = useState(false);
   const [newActividad, setNewActividad] = useState({ titulo: '', descripcion: '', fecha: '', lugar: '', publica: true });
@@ -339,10 +340,17 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const handleInsertMemberMention = (memberName: string) => {
     const textarea = debateRef.current;
     if (!textarea) {
-      setNewAgendaPoint(prev => ({
-        ...prev,
-        debate: prev.debate ? `${prev.debate}\n${memberName}: ` : `${memberName}: `
-      }));
+      if (selectedAgendaPointTab === 'new') {
+        setNewAgendaPoint(prev => ({
+          ...prev,
+          debate: prev.debate ? `${prev.debate}\n${memberName}: ` : `${memberName}: `
+        }));
+      } else {
+        const currentDebate = (actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.debate || '';
+        handleUpdateAgendaPoint(selectedAgendaPointTab as number, 'debate', 
+          currentDebate ? `${currentDebate}\n${memberName}: ` : `${memberName}: `
+        );
+      }
       return;
     }
 
@@ -355,10 +363,14 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     const insertion = before.endsWith('\n') || start === 0 ? `${memberName}: ` : `\n${memberName}: `;
     const newValue = before + insertion + after;
 
-    setNewAgendaPoint(prev => ({
-      ...prev,
-      debate: newValue
-    }));
+    if (selectedAgendaPointTab === 'new') {
+      setNewAgendaPoint(prev => ({
+        ...prev,
+        debate: newValue
+      }));
+    } else {
+      handleUpdateAgendaPoint(selectedAgendaPointTab as number, 'debate', newValue);
+    }
 
     setTimeout(() => {
       textarea.focus();
@@ -645,6 +657,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       puntosAgenda: [],
       asistencia: []
     });
+    setSelectedAgendaPointTab('new');
     setActaWizardStep('datos');
     setShowAddActa(true);
   };
@@ -672,18 +685,29 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     }
 
     setActaWizardData(wData);
+    setSelectedAgendaPointTab('new');
     setEditingActaId(acta.id);
     setActaWizardStep('datos');
     setShowAddActa(true);
   };
 
+  const handleUpdateAgendaPoint = (index: number, field: 'tema' | 'debate' | 'acuerdo', value: string) => {
+    setActaWizardData(prev => {
+      const updated = [...(prev.puntosAgenda || [])];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, puntosAgenda: updated };
+    });
+  };
+
   const handleAddAgendaPoint = () => {
     const temaFinal = newAgendaPoint.tema.trim() || `Punto de Agenda #${(actaWizardData.puntosAgenda || []).length + 1}`;
+    const newPoint = { ...newAgendaPoint, tema: temaFinal };
     setActaWizardData(prev => ({
       ...prev,
-      puntosAgenda: [...(prev.puntosAgenda || []), { ...newAgendaPoint, tema: temaFinal }]
+      puntosAgenda: [...(prev.puntosAgenda || []), newPoint]
     }));
     setNewAgendaPoint({ tema: '', debate: '', acuerdo: '' });
+    setSelectedAgendaPointTab((actaWizardData.puntosAgenda || []).length);
   };
 
   const handleRemoveAgendaPoint = (index: number) => {
@@ -691,6 +715,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       ...prev,
       puntosAgenda: (prev.puntosAgenda || []).filter((_, i) => i !== index)
     }));
+    setSelectedAgendaPointTab('new');
   };
 
   const handleSaveStructuredActa = async (e: React.FormEvent) => {
@@ -2628,136 +2653,229 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     {actaWizardStep === 'libre' && (
                       <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300 max-w-3xl mx-auto">
                         <div className="bg-slate-50/50 p-6 md:p-8 rounded-3xl border border-slate-100/60 space-y-6 shadow-sm">
-                          <h3 className="text-base font-black text-blue-900 uppercase tracking-widest flex items-center">
-                            <span className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mr-3"><Plus size={16}/></span>
-                            Agregar Punto de Agenda
-                          </h3>
-                          <div className="grid grid-cols-1 gap-6">
-                            <div>
-                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tema del Punto</label>
-                              <input 
-                                type="text"
-                                value={newAgendaPoint.tema}
-                                onChange={e => setNewAgendaPoint(prev => ({ ...prev, tema: e.target.value }))}
-                                placeholder="Ej. Aprobación del presupuesto para la jornada oftalmológica"
-                                className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold shadow-sm"
-                              />
-                            </div>
-                            
-                            {/* Formato vertical en vez de columnas para mayor espacio */}
-                            <div className="space-y-6">
-                              <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Debate / Discusión (Opcional)</label>
-                                <textarea 
-                                  ref={debateRef}
-                                  rows={4}
-                                  value={newAgendaPoint.debate}
-                                  onChange={e => setNewAgendaPoint(prev => ({ ...prev, debate: e.target.value }))}
-                                  placeholder="Describa los puntos clave discutidos..."
-                                  className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold resize-none text-justify shadow-sm"
-                                />
-                                
-                                {/* Mention present quorum members */}
-                                <div className="mt-3 text-left">
-                                  <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Etiquetar participantes presentes (insertar al cursor):</span>
-                                  {presentSocios.length === 0 ? (
-                                    <div className="text-[10px] font-bold text-slate-400 bg-slate-100/50 p-3 rounded-xl border border-dashed border-slate-200 italic">
-                                      No hay socios marcados en el quórum aún. Registra asistencia en el paso anterior para poder etiquetar.
-                                    </div>
-                                  ) : (
-                                    <div className="flex flex-wrap gap-2 max-h-[96px] overflow-y-auto p-1.5 bg-slate-50 rounded-2xl border border-slate-200/50 shadow-inner">
-                                      {presentSocios.map(member => (
-                                        <button
-                                          key={member.id}
-                                          type="button"
-                                          onClick={() => handleInsertMemberMention(member.nombre)}
-                                          className="flex items-center space-x-1.5 px-3 py-1.5 bg-white hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded-xl text-xs font-bold text-slate-650 hover:text-amber-800 transition-all select-none cursor-pointer active:scale-95 shadow-sm"
-                                        >
-                                          <img 
-                                            src={member.foto || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=60'} 
-                                            alt={member.nombre} 
-                                            className="w-5 h-5 rounded-full object-cover border border-slate-100 shadow-sm"
-                                            onError={(e) => {
-                                              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=60';
-                                            }}
-                                          />
-                                          <span>
-                                            {member.nombre.split(' ')[0]} {member.nombre.split(' ')[1] ? member.nombre.split(' ')[1][0] + '.' : ''}
-                                          </span>
-                                        </button>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                              <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Acuerdo / Resolución (Opcional)</label>
-                                <textarea 
-                                  rows={4}
-                                  value={newAgendaPoint.acuerdo}
-                                  onChange={e => setNewAgendaPoint(prev => ({ ...prev, acuerdo: e.target.value }))}
-                                  placeholder="Describa el acuerdo final tomado..."
-                                  className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold resize-none text-justify shadow-sm"
-                                />
-                              </div>
-                            </div>
+                          
+                          {/* Premium Header */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200/60 gap-4">
+                            <h3 className="text-xl font-extrabold text-blue-900 tracking-tight flex items-center">
+                              <span className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mr-3">
+                                <Briefcase size={16}/>
+                              </span>
+                              Gestión de Puntos de Agenda
+                            </h3>
+                            <span className="bg-slate-200 text-slate-700 text-[10px] font-black px-2.5 py-1 rounded-full uppercase self-start sm:self-auto shadow-sm">
+                              {(actaWizardData.puntosAgenda || []).length} Puntos Guardados
+                            </span>
                           </div>
-                          <button
-                            type="button"
-                            onClick={handleAddAgendaPoint}
-                            className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-white font-black px-8 py-3.5 rounded-2xl text-sm transition-all shadow-md shadow-amber-500/20 flex items-center justify-center space-x-2 active:scale-95"
-                          >
-                            <Plus size={18} />
-                            <span>Agregar a la Agenda</span>
-                          </button>
-                        </div>
 
-                        {/* List of current agenda points */}
-                        <div className="space-y-5">
-                          <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">Puntos en esta Acta ({(actaWizardData.puntosAgenda || []).length})</h4>
-                          {(actaWizardData.puntosAgenda || []).length === 0 ? (
-                            <div className="text-center py-12 bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-200 text-slate-400 text-sm font-medium italic">
-                              No se han agregado puntos de agenda aún. Utiliza el formulario superior para añadir temas.
-                            </div>
-                          ) : (
-                            <div className="space-y-5">
-                              {(actaWizardData.puntosAgenda || []).map((p, idx) => (
-                                <div key={idx} className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-sm relative group flex flex-col justify-between hover:shadow-md transition-all duration-300 animate-in slide-in-from-bottom-2">
-                                  <div className="space-y-4">
-                                    <div className="flex justify-between items-start gap-4">
-                                      <div className="flex items-center space-x-3">
-                                        <span className="bg-amber-100 text-amber-700 w-8 h-8 rounded-full flex items-center justify-center text-xs font-black">
-                                          {idx + 1}
-                                        </span>
-                                        <h5 className="font-extrabold text-slate-800 text-base leading-tight">{p.tema || 'Punto sin tema'}</h5>
+                          {/* Tabs Navigation */}
+                          <div className="flex flex-wrap gap-2 border-b border-slate-100 pb-4">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedAgendaPointTab('new')}
+                              className={`flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-95 border ${
+                                selectedAgendaPointTab === 'new'
+                                  ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/20'
+                                  : 'bg-white border-dashed border-amber-300 text-amber-600 hover:bg-amber-50/50'
+                              }`}
+                            >
+                              <Plus size={14} />
+                              <span>+ Nuevo Punto</span>
+                            </button>
+
+                            {(actaWizardData.puntosAgenda || []).map((point, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => setSelectedAgendaPointTab(idx)}
+                                className={`flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-95 border ${
+                                  selectedAgendaPointTab === idx
+                                    ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/20'
+                                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                                }`}
+                              >
+                                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black transition-colors ${
+                                  selectedAgendaPointTab === idx ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-650'
+                                }`}>
+                                  {idx + 1}
+                                </span>
+                                <span className="max-w-[120px] truncate">
+                                  {point.tema || `Punto ${idx + 1}`}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Tab Contents */}
+                          {selectedAgendaPointTab === 'new' ? (
+                            /* Create Point Tab */
+                            <div className="space-y-6 animate-in fade-in duration-300 text-left">
+                              <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tema del Punto</label>
+                                <input 
+                                  type="text"
+                                  value={newAgendaPoint.tema}
+                                  onChange={e => setNewAgendaPoint(prev => ({ ...prev, tema: e.target.value }))}
+                                  placeholder="Ej. Aprobación del presupuesto para la jornada oftalmológica"
+                                  className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold shadow-sm"
+                                />
+                              </div>
+                              
+                              <div className="space-y-6">
+                                <div>
+                                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Debate / Discusión (Opcional)</label>
+                                  <textarea 
+                                    ref={debateRef}
+                                    rows={4}
+                                    value={newAgendaPoint.debate}
+                                    onChange={e => setNewAgendaPoint(prev => ({ ...prev, debate: e.target.value }))}
+                                    placeholder="Describa los puntos clave discutidos..."
+                                    className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold resize-none text-justify shadow-sm"
+                                  />
+                                  
+                                  {/* Mention present quorum members */}
+                                  <div className="mt-3 text-left">
+                                    <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Etiquetar participantes presentes (insertar al cursor):</span>
+                                    {presentSocios.length === 0 ? (
+                                      <div className="text-[10px] font-bold text-slate-400 bg-slate-100/50 p-3 rounded-xl border border-dashed border-slate-200 italic">
+                                        No hay socios marcados en el quórum aún. Registra asistencia en el paso anterior para poder etiquetar.
                                       </div>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleRemoveAgendaPoint(idx)}
-                                        className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all bg-slate-50/50"
-                                        title="Eliminar punto"
-                                      >
-                                        <Trash2 size={18} />
-                                      </button>
-                                    </div>
-                                    
-                                    <div className="pl-11 space-y-4 pt-2">
-                                      {p.debate && (
-                                        <div>
-                                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1.5">Debate / Discusión</span>
-                                          <p className="text-sm text-slate-600 bg-slate-50 p-4 rounded-2xl border border-slate-100 leading-relaxed whitespace-pre-wrap text-justify">{p.debate}</p>
-                                        </div>
-                                      )}
-                                      {p.acuerdo && (
-                                        <div>
-                                          <span className="text-[10px] font-black text-amber-500 uppercase tracking-wider block mb-1.5">Acuerdo / Resolución</span>
-                                          <p className="text-sm text-amber-900 bg-amber-50/50 p-4 rounded-2xl border border-amber-100/50 leading-relaxed whitespace-pre-wrap text-justify">{p.acuerdo}</p>
-                                        </div>
-                                      )}
-                                    </div>
+                                    ) : (
+                                      <div className="flex flex-wrap gap-2 max-h-[96px] overflow-y-auto p-1.5 bg-slate-50 rounded-2xl border border-slate-200/50 shadow-inner">
+                                        {presentSocios.map(member => (
+                                          <button
+                                            key={member.id}
+                                            type="button"
+                                            onClick={() => handleInsertMemberMention(member.nombre)}
+                                            className="flex items-center space-x-1.5 px-3 py-1.5 bg-white hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded-xl text-xs font-bold text-slate-650 hover:text-amber-800 transition-all select-none cursor-pointer active:scale-95 shadow-sm"
+                                          >
+                                            <img 
+                                              src={member.foto || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=60'} 
+                                              alt={member.nombre} 
+                                              className="w-5 h-5 rounded-full object-cover border border-slate-100 shadow-sm"
+                                              onError={(e) => {
+                                                (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=60';
+                                              }}
+                                            />
+                                            <span>
+                                              {member.nombre.split(' ')[0]} {member.nombre.split(' ')[1] ? member.nombre.split(' ')[1][0] + '.' : ''}
+                                            </span>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
-                              ))}
+                                <div>
+                                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Acuerdo / Resolución (Opcional)</label>
+                                  <textarea 
+                                    rows={4}
+                                    value={newAgendaPoint.acuerdo}
+                                    onChange={e => setNewAgendaPoint(prev => ({ ...prev, acuerdo: e.target.value }))}
+                                    placeholder="Describa el acuerdo final tomado..."
+                                    className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold resize-none text-justify shadow-sm"
+                                  />
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={handleAddAgendaPoint}
+                                className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-white font-black px-8 py-3.5 rounded-2xl text-sm transition-all shadow-md shadow-amber-500/20 flex items-center justify-center space-x-2 active:scale-95"
+                              >
+                                <Plus size={18} />
+                                <span>Agregar a la Agenda</span>
+                              </button>
+                            </div>
+                          ) : (
+                            /* Edit Existing Point Tab */
+                            <div className="space-y-6 animate-in fade-in duration-300 text-left">
+                              <div className="flex justify-between items-center bg-amber-50/50 p-4 rounded-2xl border border-amber-100/50 gap-4">
+                                <div>
+                                  <h4 className="text-sm font-black text-amber-800 uppercase tracking-wider">
+                                    Editando Punto {selectedAgendaPointTab as number + 1}
+                                  </h4>
+                                  <p className="text-[11px] text-slate-550 font-semibold mt-0.5">
+                                    Los cambios realizados aquí se guardan de forma instantánea.
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveAgendaPoint(selectedAgendaPointTab as number)}
+                                  className="text-red-500 hover:bg-red-50 hover:text-red-650 px-4 py-2.5 rounded-xl transition-all text-xs font-black flex items-center space-x-1.5 active:scale-95 shadow-sm border border-red-200 bg-white"
+                                  title="Eliminar este punto"
+                                >
+                                  <Trash2 size={14} />
+                                  <span>Eliminar Punto</span>
+                                </button>
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tema del Punto</label>
+                                <input 
+                                  type="text"
+                                  value={(actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.tema || ''}
+                                  onChange={e => handleUpdateAgendaPoint(selectedAgendaPointTab as number, 'tema', e.target.value)}
+                                  placeholder="Ej. Tema del punto..."
+                                  className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold shadow-sm"
+                                />
+                              </div>
+
+                              <div className="space-y-6">
+                                <div>
+                                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Debate / Discusión</label>
+                                  <textarea 
+                                    ref={debateRef}
+                                    rows={4}
+                                    value={(actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.debate || ''}
+                                    onChange={e => handleUpdateAgendaPoint(selectedAgendaPointTab as number, 'debate', e.target.value)}
+                                    placeholder="Describa los puntos clave discutidos..."
+                                    className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold resize-none text-justify shadow-sm"
+                                  />
+                                  
+                                  {/* Mention present quorum members */}
+                                  <div className="mt-3 text-left">
+                                    <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Etiquetar participantes presentes (insertar al cursor):</span>
+                                    {presentSocios.length === 0 ? (
+                                      <div className="text-[10px] font-bold text-slate-400 bg-slate-100/50 p-3 rounded-xl border border-dashed border-slate-200 italic">
+                                        No hay socios marcados en el quórum aún. Registra asistencia en el paso anterior para poder etiquetar.
+                                      </div>
+                                    ) : (
+                                      <div className="flex flex-wrap gap-2 max-h-[96px] overflow-y-auto p-1.5 bg-slate-50 rounded-2xl border border-slate-200/50 shadow-inner">
+                                        {presentSocios.map(member => (
+                                          <button
+                                            key={member.id}
+                                            type="button"
+                                            onClick={() => handleInsertMemberMention(member.nombre)}
+                                            className="flex items-center space-x-1.5 px-3 py-1.5 bg-white hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded-xl text-xs font-bold text-slate-650 hover:text-amber-800 transition-all select-none cursor-pointer active:scale-95 shadow-sm"
+                                          >
+                                            <img 
+                                              src={member.foto || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=60'} 
+                                              alt={member.nombre} 
+                                              className="w-5 h-5 rounded-full object-cover border border-slate-100 shadow-sm"
+                                              onError={(e) => {
+                                                (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=60';
+                                              }}
+                                            />
+                                            <span>
+                                              {member.nombre.split(' ')[0]} {member.nombre.split(' ')[1] ? member.nombre.split(' ')[1][0] + '.' : ''}
+                                            </span>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Acuerdo / Resolución</label>
+                                  <textarea 
+                                    rows={4}
+                                    value={(actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.acuerdo || ''}
+                                    onChange={e => handleUpdateAgendaPoint(selectedAgendaPointTab as number, 'acuerdo', e.target.value)}
+                                    placeholder="Describa el acuerdo final tomado..."
+                                    className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold resize-none text-justify shadow-sm"
+                                  />
+                                </div>
+                              </div>
                             </div>
                           )}
                         </div>
