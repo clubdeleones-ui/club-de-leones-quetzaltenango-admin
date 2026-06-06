@@ -1,5 +1,6 @@
 import React from 'react';
 import { Calendar, User, Award, FileText } from 'lucide-react';
+import { generateActaCode } from '../utils/pdfGenerator';
 
 interface FormattedActaProps {
   titulo: string;
@@ -7,6 +8,10 @@ interface FormattedActaProps {
   categoria?: string;
   autor: string;
   contenido: string;
+  presidentName?: string;
+  secretaryName?: string;
+  codigoRegistro?: string;
+  numeroActa?: string;
 }
 
 export const FormattedActa: React.FC<FormattedActaProps> = ({
@@ -15,7 +20,20 @@ export const FormattedActa: React.FC<FormattedActaProps> = ({
   categoria = 'Ordinaria',
   autor,
   contenido,
+  presidentName = 'Edwin Ernesto Pacheco López',
+  secretaryName = 'Flor Rodríguez Cifuentes',
+  codigoRegistro,
+  numeroActa,
 }) => {
+  // Generate unique registry code
+  const code = codigoRegistro || generateActaCode(
+    categoria,
+    fecha,
+    numeroActa || '1',
+    presidentName,
+    titulo
+  );
+
   // Parse the text into styled blocks
   const parseContent = (text: string) => {
     const lines = text.split('\n');
@@ -108,45 +126,29 @@ export const FormattedActa: React.FC<FormattedActaProps> = ({
       </div>
 
       {/* Official Header */}
-      <div className="text-center mt-4 mb-8">
-        <h3 className="font-sans font-black text-xl md:text-2xl text-blue-900 uppercase tracking-tight">
-          Club de Leones de Quetzaltenango
-        </h3>
-        <p className="font-sans text-xs text-yellow-650 font-extrabold uppercase tracking-widest mt-1.5">
-          Distrito D-4 Guatemala • Nosotros Servimos
-        </p>
-        <div className="w-24 h-0.5 bg-slate-200 mx-auto mt-4" />
+      <div className="flex items-center space-x-3 mb-6 mt-4 pb-4 border-b border-slate-100 flex-wrap">
+        <div className="w-12 h-12 rounded-full bg-blue-900 border-2 border-yellow-500 flex items-center justify-center shrink-0 shadow-md">
+          <span className="text-yellow-500 text-2xl font-black select-none leading-none">L</span>
+        </div>
+        <div className="text-left">
+          <h3 className="font-sans font-black text-lg sm:text-xl md:text-2xl text-blue-900 uppercase tracking-tight leading-none">
+            Club de Leones de Quetzaltenango
+          </h3>
+          <p className="font-sans text-[10px] text-yellow-650 font-extrabold uppercase tracking-widest mt-1">
+            Nosotros Servimos
+          </p>
+        </div>
       </div>
 
       {/* Metadata Grid Card */}
-      <div className="bg-slate-50 border border-slate-200/60 rounded-[2rem] sm:rounded-3xl p-4 sm:p-5 md:p-6 mb-6 sm:mb-8 font-sans grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="bg-slate-50 border border-slate-200/60 rounded-[2rem] sm:rounded-2xl p-4 sm:p-5 md:p-6 mb-6 sm:mb-8 font-sans grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="flex items-center space-x-3 text-slate-700">
           <div className="bg-blue-50 text-blue-900 p-2.5 rounded-xl shrink-0">
             <FileText size={18} />
           </div>
           <div>
-            <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">Título de Acta</span>
-            <span className="text-sm font-extrabold text-slate-800 leading-tight">{titulo}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-3 text-slate-700">
-          <div className="bg-blue-50 text-blue-900 p-2.5 rounded-xl shrink-0">
-            <Calendar size={18} />
-          </div>
-          <div>
-            <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">Fecha de Sesión</span>
-            <span className="text-sm font-extrabold text-slate-800 leading-tight">{fecha}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-3 text-slate-700">
-          <div className="bg-blue-50 text-blue-900 p-2.5 rounded-xl shrink-0">
-            <Award size={18} />
-          </div>
-          <div>
-            <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">Categoría</span>
-            <span className="text-sm font-extrabold text-slate-800 leading-tight">{categoria}</span>
+            <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">Código de Registro</span>
+            <span className="text-sm font-extrabold text-slate-800 leading-tight break-all">{code}</span>
           </div>
         </div>
 
@@ -155,8 +157,18 @@ export const FormattedActa: React.FC<FormattedActaProps> = ({
             <User size={18} />
           </div>
           <div>
-            <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">Redactor / Autor</span>
-            <span className="text-sm font-extrabold text-slate-800 leading-tight">{autor}</span>
+            <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">Secretario / Redactor</span>
+            <span className="text-sm font-extrabold text-slate-800 leading-tight">{secretaryName}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-3 text-slate-700">
+          <div className="bg-blue-50 text-blue-900 p-2.5 rounded-xl shrink-0">
+            <Award size={18} />
+          </div>
+          <div>
+            <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">Presidente en Turno</span>
+            <span className="text-sm font-extrabold text-slate-800 leading-tight">{presidentName}</span>
           </div>
         </div>
       </div>
@@ -169,16 +181,16 @@ export const FormattedActa: React.FC<FormattedActaProps> = ({
       {/* Signatures Block */}
       <div className="mt-12 pt-8 grid grid-cols-1 sm:grid-cols-2 gap-8 font-sans">
         <div className="flex flex-col items-center text-center">
-          <div className="w-48 h-px bg-slate-350 mb-3" />
+          <div className="w-48 h-px bg-slate-300 mb-3" />
           <span className="text-xs font-black text-slate-500 uppercase tracking-wider">Firma del Secretario</span>
-          <span className="text-[11px] font-bold text-slate-400 mt-1 uppercase italic">{autor}</span>
+          <span className="text-[11px] font-bold text-slate-400 mt-1 uppercase italic">{secretaryName}</span>
           <span className="text-[9px] text-slate-400">Secretario de Actas</span>
         </div>
 
         <div className="flex flex-col items-center text-center">
-          <div className="w-48 h-px bg-slate-350 mb-3" />
+          <div className="w-48 h-px bg-slate-300 mb-3" />
           <span className="text-xs font-black text-slate-500 uppercase tracking-wider">Firma del Presidente</span>
-          <span className="text-[11px] font-bold text-slate-400 mt-1 uppercase italic">Junta Directiva</span>
+          <span className="text-[11px] font-bold text-slate-400 mt-1 uppercase italic">{presidentName}</span>
           <span className="text-[9px] text-slate-400">Presidente del Club</span>
         </div>
       </div>

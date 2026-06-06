@@ -1,6 +1,33 @@
 import { jsPDF } from 'jspdf';
 import { Acta } from '../types';
 
+export const generateActaCode = (
+  categoria: string,
+  fecha: string,
+  numeroActa: string,
+  presidentName: string,
+  titulo: string
+): string => {
+  const catCode = categoria === 'Extraordinaria' 
+    ? 'EXT' 
+    : categoria === 'Reunión de Comisión' 
+    ? 'COM' 
+    : 'ORD';
+
+  const dateCode = fecha ? fecha.replace(/[^0-9]/g, '') : new Date().toISOString().split('T')[0].replace(/-/g, '');
+  const numCode = 'N' + (numeroActa || '0').replace(/^No\.\s*|No\s*|N\s*/i, '').trim();
+  const presCode = presidentName ? presidentName.split(' ')[0].toUpperCase() : 'PRES';
+
+  const titleClean = (titulo || '')
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Z0-9]+/g, '')
+    .substring(0, 10);
+
+  return `${catCode}-${dateCode}-${numCode}-${presCode}-${titleClean || 'ACTA'}`;
+};
+
 export const generateActaPDF = (acta: Acta, action: 'download' | 'open' = 'download') => {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -20,65 +47,99 @@ export const generateActaPDF = (acta: Acta, action: 'download' | 'open' = 'downl
   doc.setFillColor(234, 179, 8); // Yellow-500
   doc.rect(0, 15, pageWidth, 2, 'F');
 
-  // Title Branding
+  // Dynamic Names Lookup
+  let presidentName = 'Edwin Ernesto Pacheco López';
+  let secretaryName = 'Flor Rodríguez Cifuentes';
+  try {
+    const local = localStorage.getItem('club_leones_socios');
+    if (local) {
+      const sociosList = JSON.parse(local);
+      const president = sociosList.find((s: any) => s.puesto?.toLowerCase().includes('presidente del club') || s.puesto?.toLowerCase() === 'presidente') || sociosList.find((s: any) => s.puesto?.toLowerCase().includes('presidente'));
+      const secretary = sociosList.find((s: any) => s.puesto?.toLowerCase().includes('secretario del club') || s.puesto?.toLowerCase() === 'secretario') || sociosList.find((s: any) => s.puesto?.toLowerCase().includes('secretario'));
+      if (president) presidentName = president.nombre;
+      if (secretary) secretaryName = secretary.nombre;
+    }
+  } catch (e) {}
+
+  // Generate unique registry code
+  const code = acta.codigoRegistro || generateActaCode(
+    acta.categoria || 'Ordinaria',
+    acta.fecha,
+    acta.numeroActa || '1',
+    presidentName,
+    acta.titulo
+  );
+
+  // Draw Logo on the left (X coord: margin, Y coord: 22)
+  const logoX = margin;
+  const logoY = 22;
+  const logoRadius = 7; // 14mm diameter
+  
+  // Blue filled circle
+  doc.setFillColor(27, 54, 93); // Blue-900
+  doc.circle(logoX + logoRadius, logoY + logoRadius, logoRadius, 'F');
+  
+  // Gold circle outline
+  doc.setDrawColor(234, 179, 8); // Yellow-500
+  doc.setLineWidth(0.5);
+  doc.circle(logoX + logoRadius, logoY + logoRadius, logoRadius - 0.5, 'S');
+  
+  // Gold 'L' in the center
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
+  doc.setFontSize(14);
+  doc.setTextColor(234, 179, 8); // Yellow-500
+  doc.text('L', logoX + logoRadius, logoY + logoRadius + 4.5, { align: 'center' });
+
+  // Title Branding on the right of the logo (X coord: logoX + 18)
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
   doc.setTextColor(27, 54, 93);
-  doc.text('CLUB DE LEONES DE QUETZALTENANGO', margin, 30);
+  doc.text('CLUB DE LEONES DE QUETZALTENANGO', logoX + 18, logoY + 5.5);
 
-  // Subtitle
+  // Subtitle (Nosotros Servimos - removing D-4 references)
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.setTextColor(100, 116, 139); // Slate-500
-  doc.text('REGISTRO OFICIAL DE ACTAS DE SESIÓN', margin, 37);
+  doc.setFontSize(9);
+  doc.setTextColor(217, 119, 6); // Amber-600
+  doc.text('NOSOTROS SERVIMOS', logoX + 18, logoY + 11.5);
 
-  // Metadata block in box
-  const metaY = 44;
+  // Metadata block in box (More compact to eliminate redundancy)
+  const metaY = 42;
   doc.setFillColor(248, 250, 252); // Slate-50 (light grey)
   doc.setDrawColor(226, 232, 240); // Slate-200
   doc.setLineWidth(0.3);
-  doc.roundedRect(margin, metaY, contentWidth, 26, 3, 3, 'FD'); // background box
+  doc.roundedRect(margin, metaY, contentWidth, 20, 2.5, 2.5, 'FD'); // background box
 
-  // Meta details 2x2 grid
+  // Meta details
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.setTextColor(71, 85, 105); // Slate-600
 
   const col1X = margin + 4;
   const col2X = margin + (contentWidth / 2) + 4;
 
-  // Row 1: Título & Fecha
-  doc.text('TÍTULO DEL ACTA:', col1X, metaY + 8);
+  // Row 1: Código de Registro
+  doc.text('CÓDIGO DE REGISTRO:', col1X, metaY + 6.5);
   doc.setFont('helvetica', 'normal');
-  let displayTitle = acta.titulo;
-  if (doc.getTextWidth(displayTitle) > (contentWidth / 2) - 40) {
-    displayTitle = doc.splitTextToSize(displayTitle, (contentWidth / 2) - 40)[0] + '...';
-  }
-  doc.text(displayTitle, col1X + 32, metaY + 8);
+  doc.setTextColor(27, 54, 93); // Navy Blue for code
+  doc.setFontSize(9);
+  doc.text(code, col1X + 38, metaY + 6.5);
+
+  // Row 2: Secretario & Presidente
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(71, 85, 105);
+  doc.text('SECRETARIO:', col1X, metaY + 14.5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(secretaryName, col1X + 38, metaY + 14.5);
 
   doc.setFont('helvetica', 'bold');
-  doc.text('FECHA DE SESIÓN:', col2X, metaY + 8);
+  doc.text('PRESIDENTE EN TURNO:', col2X, metaY + 14.5);
   doc.setFont('helvetica', 'normal');
-  doc.text(acta.fecha, col2X + 32, metaY + 8);
-
-  // Row 2: Categoría & Redactor
-  doc.setFont('helvetica', 'bold');
-  doc.text('CATEGORÍA:', col1X, metaY + 18);
-  doc.setFont('helvetica', 'normal');
-  doc.text(acta.categoria || 'Reunión Ordinaria', col1X + 32, metaY + 18);
-
-  doc.setFont('helvetica', 'bold');
-  doc.text('REDACTOR:', col2X, metaY + 18);
-  doc.setFont('helvetica', 'normal');
-  let displayAuthor = acta.autor;
-  if (doc.getTextWidth(displayAuthor) > (contentWidth / 2) - 30) {
-    displayAuthor = doc.splitTextToSize(displayAuthor, (contentWidth / 2) - 30)[0] + '...';
-  }
-  doc.text(displayAuthor, col2X + 32, metaY + 18);
+  doc.text(presidentName, col2X + 38, metaY + 14.5);
 
   // Content Body
   const rawLines = acta.contenido.split('\n');
-  let y = 80;
+  let y = 72;
   const pageHeight = doc.internal.pageSize.getHeight();
   const bottomMargin = 22;
 
@@ -167,7 +228,7 @@ export const generateActaPDF = (acta: Acta, action: 'download' | 'open' = 'downl
     }
   });
 
-  // Signatures section
+  // Signatures section (Secretary and President pulled dynamically)
   if (y + 45 > pageHeight - bottomMargin) {
     doc.addPage();
     doc.setFillColor(27, 54, 93);
@@ -182,22 +243,22 @@ export const generateActaPDF = (acta: Acta, action: 'download' | 'open' = 'downl
   doc.setFontSize(10);
   doc.setTextColor(71, 85, 105);
   
-  // Left signature
+  // Left signature (Secretary)
   doc.line(margin, y + 15, margin + 60, y + 15);
-  doc.text('Firma del Secretario / Redactor', margin, y + 20);
+  doc.text('Firma del Secretario', margin, y + 20);
   doc.setFont('helvetica', 'normal');
-  doc.text(acta.autor, margin, y + 25);
+  doc.text(secretaryName, margin, y + 25);
 
-  // Right signature
+  // Right signature (President)
   doc.line(pageWidth - margin - 60, y + 15, pageWidth - margin, y + 15);
-  doc.text('Firma del Presidente del Club', pageWidth - margin - 60, y + 20);
+  doc.text('Firma del Presidente', pageWidth - margin - 60, y + 20);
   doc.setFont('helvetica', 'normal');
-  doc.text('Presidente de Junta Directiva', pageWidth - margin - 60, y + 25);
+  doc.text(presidentName, pageWidth - margin - 60, y + 25);
 
   // Decorative stamp
   y += 35;
   if (y + 10 < pageHeight - bottomMargin) {
-    doc.setDrawColor(217, 119, 6); // Amber-600
+    doc.setDrawColor(217, 119, 6); // Amber-650
     doc.setLineWidth(0.2);
     const stampW = 60;
     const stampH = 7;

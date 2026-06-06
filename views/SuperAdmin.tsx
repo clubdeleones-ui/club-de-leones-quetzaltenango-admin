@@ -50,7 +50,7 @@ import {
   Briefcase,
   AlertCircle
 } from 'lucide-react';
-import { generateActaPDF } from '../utils/pdfGenerator';
+import { generateActaPDF, generateActaCode } from '../utils/pdfGenerator';
 import { FormattedActa } from '../components/FormattedActa';
 import { compressImageFile } from '../utils/imageCompressor';
 
@@ -298,7 +298,8 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     saludoInvitadoName: '',
     solicitudesResoluciones: {} as Record<string, { decision: 'Aprobada' | 'Rechazada' | 'Pendiente', razon: string }>,
     puntosAgenda: [] as { tema: string; debate: string; acuerdo: string }[],
-    asistencia: [] as string[]
+    asistencia: [] as string[],
+    numeroActa: ''
   });
 
   const [newAgendaPoint, setNewAgendaPoint] = useState({ tema: '', debate: '', acuerdo: '' });
@@ -320,6 +321,16 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; title: string } | null>(null);
 
   const canEditPropuestas = user.rol === UserRole.SUPER_ADMIN || user.rol === UserRole.PRESIDENTE_AFILIACION || user.rol === UserRole.SECRETARIO;
+
+  const presidentName = useMemo(() => {
+    const p = socios.find((s: any) => s.puesto?.toLowerCase().includes('presidente del club') || s.puesto?.toLowerCase() === 'presidente') || socios.find((s: any) => s.puesto?.toLowerCase().includes('presidente'));
+    return p ? p.nombre : 'Edwin Ernesto Pacheco López';
+  }, [socios]);
+
+  const secretaryName = useMemo(() => {
+    const s = socios.find((s: any) => s.puesto?.toLowerCase().includes('secretario del club') || s.puesto?.toLowerCase() === 'secretario') || socios.find((s: any) => s.puesto?.toLowerCase().includes('secretario'));
+    return s ? s.nombre : 'Flor Rodríguez Cifuentes';
+  }, [socios]);
 
   // Attendance and Quorum helpers
   const debateRef = useRef<HTMLTextAreaElement>(null);
@@ -657,7 +668,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       saludoInvitadoName: '',
       solicitudesResoluciones: initialResoluciones,
       puntosAgenda: [],
-      asistencia: []
+      asistencia: [],
+      numeroActa: (actas.length + 1).toString()
     });
     setSelectedAgendaPointTab('new');
     setActaWizardStep('datos');
@@ -679,11 +691,15 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       saludoInvitadoName: '',
       solicitudesResoluciones: {},
       puntosAgenda: [],
-      asistencia: []
+      asistencia: [],
+      numeroActa: acta.numeroActa || '1'
     };
 
     if (!wData.asistencia) {
       wData.asistencia = [];
+    }
+    if (!wData.numeroActa) {
+      wData.numeroActa = acta.numeroActa || '1';
     }
 
     setActaWizardData(wData);
@@ -724,6 +740,23 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     e.preventDefault();
     const finalTitulo = actaWizardData.titulo.trim() || `Acta de Sesión - ${new Date().toLocaleDateString('es-GT')}`;
 
+    const president = socios.find((s: any) => s.puesto?.toLowerCase().includes('presidente del club') || s.puesto?.toLowerCase() === 'presidente') || socios.find((s: any) => s.puesto?.toLowerCase().includes('presidente'));
+    const presidentName = president ? president.nombre : 'Edwin Ernesto Pacheco López';
+
+    const fechaActa = editingActaId 
+      ? actas.find(a => a.id === editingActaId)?.fecha || new Date().toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0];
+
+    const numActa = actaWizardData.numeroActa || '1';
+
+    const code = generateActaCode(
+      actaWizardData.categoria,
+      fechaActa,
+      numActa,
+      presidentName,
+      finalTitulo
+    );
+
     const compiledText = compileActaText({
       ...actaWizardData,
       titulo: finalTitulo
@@ -739,7 +772,14 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
             titulo: finalTitulo,
             categoria: actaWizardData.categoria,
             contenido: compiledText,
-            wizardData: actaWizardData
+            codigoRegistro: code,
+            numeroActa: numActa,
+            wizardData: {
+              ...actaWizardData,
+              titulo: finalTitulo,
+              codigoRegistro: code,
+              numeroActa: numActa
+            }
           } as any;
         }
         return a;
@@ -749,13 +789,20 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       const created: Acta = {
         id: `acta-${Date.now()}`,
         titulo: finalTitulo,
-        fecha: new Date().toISOString().split('T')[0],
+        fecha: fechaActa,
         contenido: compiledText,
         autor: user.nombre,
         pdfUrl: '#',
         categoria: actaWizardData.categoria,
         estado: 'Publicada',
-        wizardData: actaWizardData
+        codigoRegistro: code,
+        numeroActa: numActa,
+        wizardData: {
+          ...actaWizardData,
+          titulo: finalTitulo,
+          codigoRegistro: code,
+          numeroActa: numActa
+        }
       } as any;
 
       newActas = [created, ...actas];
@@ -2234,6 +2281,16 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                             </select>
                           </div>
                           <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-2">Número de Acta</label>
+                            <input 
+                              type="text"
+                              value={actaWizardData.numeroActa}
+                              onChange={e => setActaWizardData(prev => ({ ...prev, numeroActa: e.target.value }))}
+                              placeholder="Ej. 5"
+                              className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold text-slate-800"
+                            />
+                          </div>
+                          <div>
                             <label className="block text-sm font-bold text-slate-700 mb-2">Lugar Preestablecido (con Ciudad al inicio)</label>
                             <input 
                               type="text"
@@ -2939,6 +2996,10 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                               categoria={actaWizardData.categoria}
                               autor={user.nombre}
                               contenido={compileActaText(actaWizardData)}
+                              presidentName={presidentName}
+                              secretaryName={secretaryName}
+                              numeroActa={actaWizardData.numeroActa || '1'}
+                              codigoRegistro={actaWizardData.codigoRegistro}
                             />
                           </div>
                         ) : (

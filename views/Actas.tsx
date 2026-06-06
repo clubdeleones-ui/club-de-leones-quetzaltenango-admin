@@ -4,7 +4,7 @@ import { Search, FileText, Download, Eye, Sparkles, MessageCircle, X, Loader2, C
 import { googleService } from '../services/googleService';
 import { geminiService } from '../services/geminiService';
 import { Acta } from '../types';
-import { generateActaPDF } from '../utils/pdfGenerator';
+import { generateActaPDF, generateActaCode } from '../utils/pdfGenerator';
 import { FormattedActa } from '../components/FormattedActa';
 
 interface ActasProps {
@@ -25,6 +25,22 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
       return MOCK_ACTAS;
     }
   });
+
+  const { presidentName, secretaryName } = useMemo(() => {
+    let pName = 'Edwin Ernesto Pacheco López';
+    let sName = 'Flor Rodríguez Cifuentes';
+    try {
+      const local = localStorage.getItem('club_leones_socios');
+      if (local) {
+        const sociosList = JSON.parse(local);
+        const president = sociosList.find((s: any) => s.puesto?.toLowerCase().includes('presidente del club') || s.puesto?.toLowerCase() === 'presidente') || sociosList.find((s: any) => s.puesto?.toLowerCase().includes('presidente'));
+        const secretary = sociosList.find((s: any) => s.puesto?.toLowerCase().includes('secretario del club') || s.puesto?.toLowerCase() === 'secretario') || sociosList.find((s: any) => s.puesto?.toLowerCase().includes('secretario'));
+        if (president) pName = president.nombre;
+        if (secretary) sName = secretary.nombre;
+      }
+    } catch (e) {}
+    return { presidentName: pName, secretaryName: sName };
+  }, []);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'Todas' | 'Ordinaria' | 'Extraordinaria' | 'Reunión de Comisión'>('Todas');
@@ -310,6 +326,14 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
                   .trim();
                 const excerpt = cleanExcerpt.length > 130 ? cleanExcerpt.substring(0, 130) + '...' : cleanExcerpt;
 
+                const code = acta.codigoRegistro || generateActaCode(
+                  acta.categoria || 'Ordinaria',
+                  acta.fecha,
+                  acta.numeroActa || '1',
+                  presidentName,
+                  acta.titulo
+                );
+
                 return (
                   <div key={acta.id} className="bg-white border border-slate-200/70 rounded-[2.5rem] p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group overflow-hidden relative text-left">
                     <div className="flex flex-col sm:flex-row items-start gap-6">
@@ -362,9 +386,9 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
                         </p>
 
                         <div className="flex items-center space-x-2 pt-1 border-t border-slate-100/50 mt-2">
-                          <span className="text-[10px] text-slate-400 font-medium">Redactor:</span>
-                          <span className="text-[10px] font-extrabold text-slate-650 uppercase tracking-tighter bg-slate-100 px-2 py-0.5 rounded">
-                            {acta.autor}
+                          <span className="text-[10px] text-slate-400 font-medium">Código:</span>
+                          <span className="text-[10px] font-black text-blue-900 bg-blue-50 px-2 py-0.5 rounded break-all tracking-tight font-mono">
+                            {code}
                           </span>
                         </div>
                       </div>
@@ -447,6 +471,10 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
                 categoria={selectedActa.categoria || 'Ordinaria'}
                 autor={selectedActa.autor}
                 contenido={selectedActa.contenido}
+                presidentName={presidentName}
+                secretaryName={secretaryName}
+                numeroActa={selectedActa.numeroActa || '1'}
+                codigoRegistro={selectedActa.codigoRegistro}
               />
             </div>
 

@@ -36,6 +36,8 @@ export interface Acta {
   pdfUrl: string;
   categoria?: string;
   estado?: 'Borrador' | 'Publicada';
+  codigoRegistro?: string;
+  numeroActa?: string;
 }
 
 export interface Donacion {
