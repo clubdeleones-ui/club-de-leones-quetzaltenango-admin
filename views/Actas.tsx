@@ -423,20 +423,24 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
 
       {/* Reader Modal */}
       {selectedActa && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6 bg-blue-900/20 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-white rounded-[2rem] sm:rounded-[3rem] max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 shadow-2xl border border-white/20">
-            <div className="p-6 sm:p-8 border-b border-slate-100 flex justify-between items-center bg-blue-900 text-white relative">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4 bg-blue-900/20 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] max-w-5xl w-full h-[93vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 shadow-2xl border border-white/20">
+            <div className="py-4 px-6 sm:py-5 sm:px-8 border-b border-slate-100 flex justify-between items-center bg-blue-900 text-white relative">
               <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500" />
-              <div className="text-left">
-                <h3 className="text-2xl font-black">{selectedActa.titulo}</h3>
-                <p className="text-xs text-blue-200 mt-1 uppercase tracking-widest font-bold">{selectedActa.fecha} • SECRETARÍA</p>
+              <div className="text-left pr-12 sm:pr-16">
+                <h3 className="text-lg sm:text-xl md:text-2xl font-black truncate max-w-[280px] sm:max-w-lg md:max-w-2xl">{selectedActa.titulo}</h3>
+                <p className="text-[10px] sm:text-xs text-blue-200 mt-0.5 uppercase tracking-widest font-bold">{selectedActa.fecha} • SECRETARÍA</p>
               </div>
-              <button onClick={() => setSelectedActa(null)} className="p-3 hover:bg-white/10 rounded-2xl transition-colors cursor-pointer">
-                <X size={24} />
+              <button 
+                onClick={() => setSelectedActa(null)} 
+                className="absolute top-3.5 right-4 sm:top-4.5 sm:right-6 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors cursor-pointer flex items-center justify-center"
+                title="Cerrar"
+              >
+                <X size={18} />
               </button>
             </div>
             
-            <div className="p-3 sm:p-6 md:p-10 overflow-y-auto bg-slate-150/50 flex-grow shadow-inner">
+            <div className="p-3 sm:p-5 md:p-8 overflow-y-auto bg-slate-150/50 flex-grow shadow-inner">
               <FormattedActa
                 titulo={selectedActa.titulo}
                 fecha={selectedActa.fecha}
@@ -446,18 +450,18 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
               />
             </div>
 
-            <div className="p-8 border-t border-slate-100 bg-white flex flex-col sm:flex-row justify-between items-center gap-4 text-left">
-              <p className="text-xs text-slate-400 uppercase font-black tracking-tighter italic">Propiedad Privada • Club de Leones Quetzaltenango</p>
-              <div className="flex space-x-4 w-full sm:w-auto">
+            <div className="py-4 px-6 sm:py-5 sm:px-8 border-t border-slate-100 bg-white flex flex-col sm:flex-row justify-between items-center gap-4 text-left">
+              <p className="text-[10px] sm:text-xs text-slate-400 uppercase font-black tracking-tighter italic">Propiedad Privada • Club de Leones Quetzaltenango</p>
+              <div className="flex space-x-3 w-full sm:w-auto">
                 <button
                   onClick={() => setSelectedActa(null)}
-                  className="flex-grow sm:flex-none px-8 py-3 text-slate-500 font-bold hover:text-slate-850 transition-colors cursor-pointer"
+                  className="flex-grow sm:flex-none px-6 py-2.5 text-slate-500 font-bold hover:text-slate-850 text-xs transition-colors cursor-pointer"
                 >
                   Cerrar
                 </button>
                 <button
                   onClick={() => generateActaPDF(selectedActa, 'open')}
-                  className="flex-grow sm:flex-none bg-blue-900 text-white px-8 py-3 rounded-2xl font-black shadow-xl shadow-blue-900/20 active:scale-95 transition-all cursor-pointer"
+                  className="flex-grow sm:flex-none bg-blue-900 text-white px-6 py-2.5 rounded-xl font-black text-xs shadow-xl shadow-blue-900/10 active:scale-95 transition-all cursor-pointer"
                 >
                   Ver PDF Completo
                 </button>

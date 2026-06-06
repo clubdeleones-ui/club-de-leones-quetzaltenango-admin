@@ -97,7 +97,7 @@ export const FormattedActa: React.FC<FormattedActaProps> = ({
   };
 
   return (
-    <div className="w-full bg-white border border-slate-200 rounded-[2rem] sm:rounded-[2.5rem] p-4 sm:p-8 md:p-12 shadow-xl relative overflow-hidden max-w-3xl mx-auto text-left group select-all">
+    <div className="w-full bg-white border border-slate-200 rounded-[2rem] sm:rounded-[2.5rem] p-4 sm:p-8 md:p-12 shadow-xl relative overflow-hidden max-w-4xl mx-auto text-left group select-all">
       {/* Decorative top bars */}
       <div className="absolute top-0 left-0 w-full h-3 bg-blue-900" />
       <div className="absolute top-3 left-0 w-full h-1 bg-yellow-500" />
