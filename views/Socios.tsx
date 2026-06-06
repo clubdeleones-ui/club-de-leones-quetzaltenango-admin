@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { MOCK_SOCIOS, MOCK_PROPUESTAS } from '../constants';
 import { Socio, PropuestaSocio, UserRole } from '../types';
 import { firebaseService } from '../services/firebaseService';
+import { compressImageFile } from '../utils/imageCompressor';
 import { 
   Mail, 
   Calendar, 
@@ -20,7 +21,8 @@ import {
   X,
   Trash2,
   Pencil,
-  ChevronDown
+  ChevronDown,
+  Image as ImageIcon
 } from 'lucide-react';
 
 interface SociosProps {
@@ -53,6 +55,28 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
 
   const [editingPropuesta, setEditingPropuesta] = useState<PropuestaSocio | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; title: string } | null>(null);
+  const [isCompressingPhoto, setIsCompressingPhoto] = useState(false);
+  const [isSavingPropuesta, setIsSavingPropuesta] = useState(false);
+
+  const handleProposalImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && editingPropuesta) {
+      setIsCompressingPhoto(true);
+      try {
+        const compressedBase64 = await compressImageFile(file, 800, 800, 0.7);
+        setEditingPropuesta({ ...editingPropuesta, fotoCandidato: compressedBase64 });
+      } catch (error) {
+        console.error("Error compressing image, falling back to original:", error);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setEditingPropuesta({ ...editingPropuesta, fotoCandidato: reader.result as string });
+        };
+        reader.readAsDataURL(file);
+      } finally {
+        setIsCompressingPhoto(false);
+      }
+    }
+  };
 
   // Fetch from Firebase on component mount
   useEffect(() => {
@@ -656,15 +680,26 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                   return;
                 }
 
-                const updatedPropuesta = {
-                  ...editingPropuesta,
-                  nombreEsposa: editingPropuesta.estadoCivil === 'Casado' ? editingPropuesta.nombreEsposa : ''
-                };
-
-                // Update local state
-                setPropuestas(propuestas.map(p => p.id === updatedPropuesta.id ? updatedPropuesta : p));
-
+                setIsSavingPropuesta(true);
                 try {
+                  let finalPhotoUrl = editingPropuesta.fotoCandidato || '';
+                  if (finalPhotoUrl && finalPhotoUrl.startsWith('data:')) {
+                    try {
+                      finalPhotoUrl = await firebaseService.uploadCandidatePhoto(finalPhotoUrl, editingPropuesta.id);
+                    } catch (uploadErr) {
+                      console.error("Error uploading candidate photo, using original base64:", uploadErr);
+                    }
+                  }
+
+                  const updatedPropuesta = {
+                    ...editingPropuesta,
+                    fotoCandidato: finalPhotoUrl,
+                    nombreEsposa: editingPropuesta.estadoCivil === 'Casado' ? editingPropuesta.nombreEsposa : ''
+                  };
+
+                  // Update local state
+                  setPropuestas(propuestas.map(p => p.id === updatedPropuesta.id ? updatedPropuesta : p));
+
                   // Save to Firebase
                   await firebaseService.updateProposal(updatedPropuesta.id, updatedPropuesta);
                   
@@ -680,15 +715,22 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                 } catch (err: any) {
                   console.error("Error updating proposal in Firestore:", err);
                   
+                  const updatedPropuestaFallback = {
+                    ...editingPropuesta,
+                    nombreEsposa: editingPropuesta.estadoCivil === 'Casado' ? editingPropuesta.nombreEsposa : ''
+                  };
+
                   // fallback localStorage update
                   const localPropuestas = localStorage.getItem('club_leones_propuestas');
                   const propuestasActuales: PropuestaSocio[] = localPropuestas ? JSON.parse(localPropuestas) : [];
                   localStorage.setItem('club_leones_propuestas', JSON.stringify(
-                    propuestasActuales.map(p => p.id === updatedPropuesta.id ? { ...updatedPropuesta, synced: false } : p)
+                    propuestasActuales.map(p => p.id === updatedPropuestaFallback.id ? { ...updatedPropuestaFallback, synced: false } : p)
                   ));
                   
                   alert(`Se guardó localmente pero no se pudo sincronizar: ${err?.message || err}`);
                   setEditingPropuesta(null);
+                } finally {
+                  setIsSavingPropuesta(false);
                 }
               }} className="space-y-6">
                 
@@ -702,6 +744,40 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                     onChange={e => setEditingPropuesta({ ...editingPropuesta, proponente: e.target.value })}
                     className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all font-semibold"
                   />
+                </div>
+
+                {/* Fotografía del Candidato */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Fotografía del Candidato</label>
+                  <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6 bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center sm:text-left">
+                    <div className="w-20 h-20 rounded-full bg-slate-200 flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-350 shadow-inner">
+                      {editingPropuesta.fotoCandidato ? (
+                        <img src={editingPropuesta.fotoCandidato} alt="Previsualización" className="w-full h-full object-cover" />
+                      ) : (
+                        <ImageIcon className="text-slate-400" size={24} />
+                      )}
+                    </div>
+                    <div className="flex flex-col items-center sm:items-start flex-1 w-full">
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleProposalImageChange}
+                        id="edit-foto-upload"
+                        className="hidden" 
+                      />
+                      <label 
+                        htmlFor="edit-foto-upload"
+                        className="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-extrabold px-4 py-2.5 rounded-xl cursor-pointer text-xs transition-colors inline-block active:scale-95 shadow-sm"
+                      >
+                        Subir Nueva Fotografía
+                      </label>
+                      {isCompressingPhoto ? (
+                        <p className="text-[11px] text-blue-900 mt-2 font-bold animate-pulse">Comprimiendo imagen...</p>
+                      ) : (
+                        <p className="text-[11px] text-slate-500 mt-2 font-medium">Formatos recomendados: JPG, PNG. Tamaño máximo 2MB.</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Nombre y Profesión */}
@@ -810,9 +886,10 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-black rounded-xl shadow-lg shadow-blue-900/10 transition-all text-sm"
+                    disabled={isSavingPropuesta || isCompressingPhoto}
+                    className="px-5 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-black rounded-xl shadow-lg shadow-blue-900/10 transition-all text-sm disabled:opacity-50"
                   >
-                    Guardar Cambios
+                    {isSavingPropuesta ? 'Guardando...' : 'Guardar Cambios'}
                   </button>
                 </div>
 

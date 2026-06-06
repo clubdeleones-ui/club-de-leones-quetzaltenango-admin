@@ -132,6 +132,27 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     }
   };
 
+  const getMobileTabStyles = (tabId: string) => {
+    switch (tabId) {
+      case 'resumen':
+        return 'bg-gradient-to-r from-blue-900 to-indigo-950 text-white shadow-md shadow-blue-900/15';
+      case 'socios':
+        return 'bg-gradient-to-r from-blue-900 to-blue-950 text-white shadow-md shadow-blue-900/15';
+      case 'calendario':
+        return 'bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 text-white shadow-md shadow-amber-500/15';
+      case 'cuotas':
+        return 'bg-gradient-to-r from-blue-900 to-blue-950 text-white shadow-md shadow-blue-900/15';
+      case 'actas':
+        return 'bg-gradient-to-r from-yellow-500 via-amber-400 to-orange-500 text-blue-950 shadow-md shadow-yellow-500/15';
+      case 'donaciones':
+        return 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md shadow-amber-500/15';
+      case 'beneficios':
+        return 'bg-gradient-to-r from-blue-900 to-blue-950 text-white shadow-md shadow-blue-900/15';
+      default:
+        return 'bg-blue-900 text-white shadow-md shadow-blue-900/10';
+    }
+  };
+
   useEffect(() => {
     if (!allowedTabs.includes(activeTab)) {
       setActiveTab(allowedTabs[0] as TabType);
@@ -956,7 +977,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Navigation Sidebar */}
-        <aside className="w-full lg:w-72 flex-shrink-0">
+        <aside className="hidden lg:block w-72 flex-shrink-0">
           <nav className="bg-white border border-slate-200/80 rounded-[2rem] p-6 shadow-sm space-y-2 sticky top-28">
             <div className="text-xs font-bold text-slate-400 uppercase tracking-widest px-4 mb-4">Navegación Módulos</div>
             {[
@@ -982,7 +1003,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     size={20} 
                     className={`transition-colors ${
                       active 
-                        ? (tab.id === 'actas' || tab.id === 'donaciones' || tab.id === 'calendario' ? 'text-blue-950' : 'text-yellow-400') 
+                        ? (tab.id === 'actas' || tab.id === 'donaciones' || tab.id === 'calendario' ? 'text-blue-955' : 'text-yellow-400') 
                         : 'text-slate-450'
                     }`} 
                   />
@@ -995,6 +1016,42 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
         {/* Content Panel */}
         <main className="flex-1 min-w-0">
+          {/* Mobile Navigation (Horizontal Scrollable Tabs) */}
+          <div className="lg:hidden w-full overflow-x-auto pb-4 mb-4 flex space-x-2 scrollbar-none" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {[
+              { id: 'resumen', label: 'Resumen General', icon: TrendingUp },
+              { id: 'socios', label: 'Gestión de Socios', icon: Users },
+              { id: 'calendario', label: 'Programas / Calendario', icon: Calendar },
+              { id: 'cuotas', label: 'Control de Cuotas', icon: CreditCard },
+              { id: 'actas', label: 'Libro de Actas', icon: FileText },
+              { id: 'donaciones', label: 'Donaciones Recibidas', icon: Gift },
+              { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
+            ].filter(tab => allowedTabs.includes(tab.id)).map(tab => {
+              const Icon = tab.icon;
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as TabType)}
+                  className={`flex items-center space-x-2 px-5 py-3 rounded-full font-black text-xs transition-all whitespace-nowrap border shadow-sm ${
+                    active 
+                      ? getMobileTabStyles(tab.id)
+                      : 'bg-white text-slate-650 border border-slate-200 hover:bg-slate-100/70 hover:text-slate-850'
+                  }`}
+                >
+                  <Icon 
+                    size={14} 
+                    className={`transition-colors flex-shrink-0 ${
+                      active 
+                        ? (tab.id === 'actas' || tab.id === 'donaciones' || tab.id === 'calendario' ? 'text-blue-955' : 'text-yellow-400') 
+                        : 'text-slate-450'
+                    }`} 
+                  />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
           {/* TAB: GESTIÓN DE SOCIOS */}
           {activeTab === 'socios' && (
             <div className="space-y-10 animate-in fade-in duration-500">
@@ -1111,102 +1168,214 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     <p className="text-xs text-slate-500 max-w-sm mx-auto">Prueba cambiando los filtros o el texto del buscador.</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse text-left">
-                      <thead>
-                        <tr className="bg-slate-50 border-b border-slate-250 text-slate-400 font-bold text-xs uppercase tracking-wider">
-                          <th className="py-6.5 px-6">Miembro</th>
-                          <th className="py-6.5 px-6">Contacto</th>
-                          <th className="py-6.5 px-6">Puesto y Rol</th>
-                          <th className="py-6.5 px-6">Estado Financiero</th>
-                          <th className="py-6.5 px-6 text-right">Acciones</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {filteredSociosAdmin.map(socio => {
-                          const isInactive = socio.estatus === 'Inactive';
-                          const isDirectiva = !isInactive && (
-                            socio.rol === UserRole.SUPER_ADMIN ||
-                            socio.rol === UserRole.SECRETARIO ||
-                            socio.rol === UserRole.TESORERO ||
-                            socio.rol === UserRole.ASESOR_SERVICIOS ||
-                            socio.rol === UserRole.PRESIDENTE_AFILIACION
-                          );
-                          
-                          const rowBorderColor = isInactive 
-                            ? 'border-l-4 border-l-slate-400' 
-                            : isDirectiva 
-                            ? 'border-l-4 border-l-amber-500' 
-                            : 'border-l-4 border-l-blue-900';
+                  <>
+                    {/* Desktop View: Table */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full border-collapse text-left">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-250 text-slate-400 font-bold text-xs uppercase tracking-wider">
+                            <th className="py-6.5 px-6">Miembro</th>
+                            <th className="py-6.5 px-6">Contacto</th>
+                            <th className="py-6.5 px-6">Puesto y Rol</th>
+                            <th className="py-6.5 px-6">Estado Financiero</th>
+                            <th className="py-6.5 px-6 text-right">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {filteredSociosAdmin.map(socio => {
+                            const isInactive = socio.estatus === 'Inactive';
+                            const isDirectiva = !isInactive && (
+                              socio.rol === UserRole.SUPER_ADMIN ||
+                              socio.rol === UserRole.SECRETARIO ||
+                              socio.rol === UserRole.TESORERO ||
+                              socio.rol === UserRole.ASESOR_SERVICIOS ||
+                              socio.rol === UserRole.PRESIDENTE_AFILIACION
+                            );
+                            
+                            const rowBorderColor = isInactive 
+                              ? 'border-l-4 border-l-slate-400' 
+                              : isDirectiva 
+                              ? 'border-l-4 border-l-amber-500' 
+                              : 'border-l-4 border-l-blue-900';
 
-                          return (
-                            <tr 
-                              key={socio.id} 
-                              className={`hover:bg-slate-50/50 transition-colors ${rowBorderColor} ${
-                                isInactive ? 'opacity-65 bg-slate-50/20' : ''
-                              }`}
-                            >
-                              <td className="py-6.5 px-6">
-                                <div className="flex items-center space-x-3.5">
-                                  <img 
-                                    src={socio.foto || `https://picsum.photos/seed/${socio.id}/100/100`} 
-                                    alt={socio.nombre} 
-                                    className={`w-11 h-11 rounded-full object-cover border-2 shadow-sm cursor-zoom-in ${
-                                      isInactive ? 'border-slate-300' : isDirectiva ? 'border-amber-400' : 'border-blue-900'
-                                    }`}
-                                    onClick={() => setSelectedPhoto({ url: socio.foto, title: socio.nombre })}
-                                  />
-                                  <div className="min-w-0">
-                                    <p className="font-extrabold text-slate-800 text-sm leading-tight flex items-center">
-                                      {socio.nombre || <span className="text-slate-400 italic">Sin nombre</span>}
-                                      {isInactive && (
-                                        <span className="ml-2 bg-slate-200 text-slate-700 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">Inactivo</span>
+                            return (
+                              <tr 
+                                key={socio.id} 
+                                className={`hover:bg-slate-50/50 transition-colors ${rowBorderColor} ${
+                                  isInactive ? 'opacity-65 bg-slate-50/20' : ''
+                                }`}
+                              >
+                                <td className="py-6.5 px-6">
+                                  <div className="flex items-center space-x-3.5">
+                                    <img 
+                                      src={socio.foto || `https://picsum.photos/seed/${socio.id}/100/100`} 
+                                      alt={socio.nombre} 
+                                      className={`w-11 h-11 rounded-full object-cover border-2 shadow-sm cursor-zoom-in ${
+                                        isInactive ? 'border-slate-300' : isDirectiva ? 'border-amber-400' : 'border-blue-900'
+                                      }`}
+                                      onClick={() => setSelectedPhoto({ url: socio.foto, title: socio.nombre })}
+                                    />
+                                    <div className="min-w-0">
+                                      <p className="font-extrabold text-slate-800 text-sm leading-tight flex items-center">
+                                        {socio.nombre || <span className="text-slate-400 italic">Sin nombre</span>}
+                                        {isInactive && (
+                                          <span className="ml-2 bg-slate-200 text-slate-700 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">Inactivo</span>
+                                        )}
+                                      </p>
+                                      <p className="text-xs text-slate-400 mt-1 font-semibold">Ingresó: {socio.fechaIngreso}</p>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="py-6.5 px-6">
+                                  <div className="text-xs space-y-1 font-semibold">
+                                    <div className="flex items-center text-slate-700">
+                                      <Mail size={12} className="mr-1.5 text-slate-400" />
+                                      <span className="truncate max-w-[180px]">{socio.correo}</span>
+                                    </div>
+                                    <div className="flex items-center text-slate-600">
+                                      <Phone size={12} className="mr-1.5 text-slate-400" />
+                                      <span>{socio.telefono || 'Sin teléfono'}</span>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="py-6.5 px-6">
+                                  <div className="space-y-1.5">
+                                    <span className="text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-0.5 rounded-lg border border-slate-200/50 block w-fit">
+                                      {socio.puesto || 'Socio Regular'}
+                                    </span>
+                                    <div className="flex items-center space-x-1.5">
+                                      {isInactive ? (
+                                        <span className="bg-slate-100 text-slate-600 border border-slate-250 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                          Inactivo
+                                        </span>
+                                      ) : isDirectiva ? (
+                                        <span className="bg-amber-100 text-amber-800 border border-amber-250 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                          Directiva
+                                        </span>
+                                      ) : (
+                                        <span className="bg-blue-50 text-blue-900 border border-blue-250 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                          Socio Activo
+                                        </span>
                                       )}
-                                    </p>
-                                    <p className="text-xs text-slate-400 mt-1 font-semibold">Ingresó: {socio.fechaIngreso}</p>
+                                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                                        ({socio.rol})
+                                      </span>
+                                    </div>
                                   </div>
-                                </div>
-                              </td>
-                              <td className="py-6.5 px-6">
-                                <div className="text-xs space-y-1 font-semibold">
-                                  <div className="flex items-center text-slate-700">
-                                    <Mail size={12} className="mr-1.5 text-slate-400" />
-                                    <span className="truncate max-w-[180px]">{socio.correo}</span>
+                                </td>
+                                <td className="py-6.5 px-6">
+                                  <div className="space-y-1">
+                                    <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                                      socio.estadoCuotas === 'Al día' ? 'bg-green-50 text-green-700 border border-green-100' :
+                                      socio.estadoCuotas === 'Pendiente' ? 'bg-yellow-50 text-yellow-700 border border-yellow-100' :
+                                      'bg-red-50 text-red-700 border border-red-100'
+                                    }`}>
+                                      ● {socio.estadoCuotas}
+                                    </span>
+                                    {socio.montoPendiente > 0 && (
+                                      <p className="text-xs font-bold text-slate-700 mt-1">Q {socio.montoPendiente.toFixed(2)}</p>
+                                    )}
                                   </div>
-                                  <div className="flex items-center text-slate-600">
-                                    <Phone size={12} className="mr-1.5 text-slate-400" />
+                                </td>
+                                <td className="py-6.5 px-6 text-right">
+                                  <div className="flex items-center justify-end space-x-2">
+                                    <button
+                                      onClick={() => handleQrClick(socio)}
+                                      className="bg-white hover:bg-yellow-50 text-amber-600 hover:text-amber-700 border border-slate-200/60 p-2 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm disabled:opacity-50"
+                                      title="Generar código QR de acceso"
+                                      disabled={isGeneratingQr}
+                                    >
+                                      <QrCode size={13} className="mr-1" />
+                                      <span>QR</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleEditSocioClick(socio)}
+                                      className="bg-white hover:bg-blue-50 text-slate-605 hover:text-blue-900 border border-slate-200/60 p-2 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm"
+                                      title="Editar Ficha"
+                                    >
+                                      <Pencil size={13} className="mr-1" />
+                                      <span>Editar</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteSocio(socio)}
+                                      className="bg-white hover:bg-red-50 text-slate-605 hover:text-red-600 border border-slate-200/60 p-2 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm"
+                                      title="Eliminar Socio"
+                                    >
+                                      <Trash2 size={13} className="mr-1" />
+                                      <span>Eliminar</span>
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile View: Cards */}
+                    <div className="block md:hidden divide-y divide-slate-100">
+                      {filteredSociosAdmin.map(socio => {
+                        const isInactive = socio.estatus === 'Inactive';
+                        const isDirectiva = !isInactive && (
+                          socio.rol === UserRole.SUPER_ADMIN ||
+                          socio.rol === UserRole.SECRETARIO ||
+                          socio.rol === UserRole.TESORERO ||
+                          socio.rol === UserRole.ASESOR_SERVICIOS ||
+                          socio.rol === UserRole.PRESIDENTE_AFILIACION
+                        );
+                        
+                        const rowBorderColor = isInactive 
+                          ? 'border-l-4 border-l-slate-400' 
+                          : isDirectiva 
+                          ? 'border-l-4 border-l-amber-500' 
+                          : 'border-l-4 border-l-blue-900';
+
+                        return (
+                          <div 
+                            key={socio.id} 
+                            className={`p-6 space-y-4 hover:bg-slate-50/30 transition-colors ${rowBorderColor} ${
+                              isInactive ? 'opacity-65 bg-slate-50/10' : ''
+                            }`}
+                          >
+                            <div className="flex items-center space-x-4">
+                              <img 
+                                src={socio.foto || `https://picsum.photos/seed/${socio.id}/100/100`} 
+                                alt={socio.nombre} 
+                                className={`w-14 h-14 rounded-full object-cover border-2 shadow-sm cursor-zoom-in ${
+                                  isInactive ? 'border-slate-300' : isDirectiva ? 'border-amber-400' : 'border-blue-900'
+                                }`}
+                                onClick={() => setSelectedPhoto({ url: socio.foto, title: socio.nombre })}
+                              />
+                              <div className="min-w-0 flex-grow">
+                                <h4 className="font-extrabold text-slate-800 text-base leading-snug flex flex-wrap items-center gap-1.5">
+                                  <span>{socio.nombre || <span className="text-slate-400 italic">Sin nombre</span>}</span>
+                                  {isInactive && (
+                                    <span className="bg-slate-200 text-slate-700 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Inactivo</span>
+                                  )}
+                                </h4>
+                                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">{socio.puesto || 'Socio Regular'}</p>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 text-xs font-semibold pt-1">
+                              <div>
+                                <span className="text-slate-400 text-[10px] uppercase tracking-wider block mb-0.5">Contacto</span>
+                                <div className="space-y-1 text-slate-700">
+                                  <div className="flex items-center truncate">
+                                    <Mail size={12} className="mr-1.5 text-slate-400 flex-shrink-0" />
+                                    <span className="truncate">{socio.correo}</span>
+                                  </div>
+                                  <div className="flex items-center">
+                                    <Phone size={12} className="mr-1.5 text-slate-400 flex-shrink-0" />
                                     <span>{socio.telefono || 'Sin teléfono'}</span>
                                   </div>
                                 </div>
-                              </td>
-                              <td className="py-6.5 px-6">
-                                <div className="space-y-1.5">
-                                  <span className="text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-0.5 rounded-lg border border-slate-200/50 block w-fit">
-                                    {socio.puesto || 'Socio Regular'}
-                                  </span>
-                                  <div className="flex items-center space-x-1.5">
-                                    {isInactive ? (
-                                      <span className="bg-slate-100 text-slate-600 border border-slate-250 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
-                                        Inactivo
-                                      </span>
-                                    ) : isDirectiva ? (
-                                      <span className="bg-amber-100 text-amber-800 border border-amber-250 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
-                                        Directiva
-                                      </span>
-                                    ) : (
-                                      <span className="bg-blue-50 text-blue-900 border border-blue-250 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
-                                        Socio Activo
-                                      </span>
-                                    )}
-                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                                      ({socio.rol})
-                                    </span>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="py-6.5 px-6">
+                              </div>
+                              <div>
+                                <span className="text-slate-400 text-[10px] uppercase tracking-wider block mb-0.5">Estatus Financiero</span>
                                 <div className="space-y-1">
-                                  <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                                  <span className={`inline-block text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
                                     socio.estadoCuotas === 'Al día' ? 'bg-green-50 text-green-700 border border-green-100' :
                                     socio.estadoCuotas === 'Pendiente' ? 'bg-yellow-50 text-yellow-700 border border-yellow-100' :
                                     'bg-red-50 text-red-700 border border-red-100'
@@ -1214,45 +1383,44 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                     ● {socio.estadoCuotas}
                                   </span>
                                   {socio.montoPendiente > 0 && (
-                                    <p className="text-xs font-bold text-slate-700 mt-1">Q {socio.montoPendiente.toFixed(2)}</p>
+                                    <p className="font-extrabold text-slate-800 text-xs">Q {socio.montoPendiente.toFixed(2)}</p>
                                   )}
                                 </div>
-                              </td>
-                              <td className="py-6.5 px-6 text-right">
-                                <div className="flex items-center justify-end space-x-2">
-                                  <button
-                                    onClick={() => handleQrClick(socio)}
-                                    className="bg-white hover:bg-yellow-50 text-amber-600 hover:text-amber-700 border border-slate-200/60 p-2 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm disabled:opacity-50"
-                                    title="Generar código QR de acceso"
-                                    disabled={isGeneratingQr}
-                                  >
-                                    <QrCode size={13} className="mr-1" />
-                                    <span>QR</span>
-                                  </button>
-                                  <button
-                                    onClick={() => handleEditSocioClick(socio)}
-                                    className="bg-white hover:bg-blue-50 text-slate-605 hover:text-blue-900 border border-slate-200/60 p-2 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm"
-                                    title="Editar Ficha"
-                                  >
-                                    <Pencil size={13} className="mr-1" />
-                                    <span>Editar</span>
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteSocio(socio)}
-                                    className="bg-white hover:bg-red-50 text-slate-605 hover:text-red-600 border border-slate-200/60 p-2 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm"
-                                    title="Eliminar Socio"
-                                  >
-                                    <Trash2 size={13} className="mr-1" />
-                                    <span>Eliminar</span>
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pt-3 border-t border-slate-100 gap-2">
+                              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Ingreso: {socio.fechaIngreso} ({socio.rol})</span>
+                              <div className="flex space-x-2 w-full sm:w-auto justify-end">
+                                <button
+                                  onClick={() => handleQrClick(socio)}
+                                  className="bg-white hover:bg-yellow-50 text-amber-600 hover:text-amber-700 border border-slate-200/60 px-3 py-1.5 rounded-xl font-black text-xs transition-all flex items-center shadow-sm disabled:opacity-50"
+                                  disabled={isGeneratingQr}
+                                >
+                                  <QrCode size={13} className="mr-1" />
+                                  <span>QR</span>
+                                </button>
+                                <button
+                                  onClick={() => handleEditSocioClick(socio)}
+                                  className="bg-white hover:bg-blue-50 text-slate-650 hover:text-blue-900 border border-slate-200/60 px-3 py-1.5 rounded-xl font-black text-xs transition-all flex items-center shadow-sm"
+                                >
+                                  <Pencil size={13} className="mr-1" />
+                                  <span>Editar</span>
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteSocio(socio)}
+                                  className="bg-white hover:bg-red-50 text-slate-650 hover:text-red-650 border border-slate-200/60 px-3 py-1.5 rounded-xl font-black text-xs transition-all flex items-center shadow-sm"
+                                >
+                                  <Trash2 size={13} className="mr-1" />
+                                  <span>Eliminar</span>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -1572,45 +1740,88 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
               {/* Activities List */}
               <div className="bg-white rounded-[2.5rem] border border-slate-200/80 shadow-sm overflow-hidden">
-                <table className="w-full border-collapse text-left">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold text-xs uppercase tracking-wider">
-                      <th className="py-7 px-6">Actividad</th>
-                      <th className="py-7 px-6">Fecha</th>
-                      <th className="py-7 px-6">Lugar</th>
-                      <th className="py-7 px-6">Alcance</th>
-                      <th className="py-7 px-6 text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {actividades.map(act => (
-                      <tr key={act.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="py-7 px-6">
-                          <p className="font-extrabold text-slate-800 text-base">{act.titulo}</p>
-                          <p className="text-xs text-slate-500 mt-1 max-w-sm truncate">{act.descripcion}</p>
-                        </td>
-                        <td className="py-7 px-6 text-sm text-slate-600 font-medium">{act.fecha}</td>
-                        <td className="py-7 px-6 text-sm text-slate-600 font-medium">{act.lugar}</td>
-                        <td className="py-7 px-6">
-                          <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase ${
+                {/* Desktop View: Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full border-collapse text-left">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold text-xs uppercase tracking-wider">
+                        <th className="py-7 px-6">Actividad</th>
+                        <th className="py-7 px-6">Fecha</th>
+                        <th className="py-7 px-6">Lugar</th>
+                        <th className="py-7 px-6">Alcance</th>
+                        <th className="py-7 px-6 text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {actividades.map(act => (
+                        <tr key={act.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="py-7 px-6">
+                            <p className="font-extrabold text-slate-800 text-base">{act.titulo}</p>
+                            <p className="text-xs text-slate-500 mt-1 max-w-sm truncate">{act.descripcion}</p>
+                          </td>
+                          <td className="py-7 px-6 text-sm text-slate-600 font-medium">{act.fecha}</td>
+                          <td className="py-7 px-6 text-sm text-slate-600 font-medium">{act.lugar}</td>
+                          <td className="py-7 px-6">
+                            <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase ${
+                              act.publica ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'
+                            }`}>
+                              {act.publica ? 'Público' : 'Solo Socios'}
+                            </span>
+                          </td>
+                          <td className="py-7 px-6 text-right">
+                            <button 
+                              onClick={() => handleDeleteActividad(act.id)}
+                              className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                              title="Eliminar actividad"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile View: Cards */}
+                <div className="block md:hidden divide-y divide-slate-100">
+                  {actividades.map(act => (
+                    <div key={act.id} className="p-6 space-y-4 hover:bg-slate-50/30 transition-colors">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-extrabold text-slate-800 text-base">{act.titulo}</h4>
+                          <span className={`inline-block text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase mt-1.5 ${
                             act.publica ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'
                           }`}>
                             {act.publica ? 'Público' : 'Solo Socios'}
                           </span>
-                        </td>
-                        <td className="py-7 px-6 text-right">
-                          <button 
-                            onClick={() => handleDeleteActividad(act.id)}
-                            className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                            title="Eliminar actividad"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </div>
+                        <button 
+                          onClick={() => handleDeleteActividad(act.id)}
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                          title="Eliminar actividad"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+
+                      {act.descripcion && (
+                        <p className="text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100/50 leading-relaxed text-justify">{act.descripcion}</p>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-4 text-xs font-semibold pt-1">
+                        <div>
+                          <span className="text-slate-400 text-[10px] uppercase tracking-wider block mb-0.5">Fecha y Hora</span>
+                          <span className="text-slate-700">{act.fecha}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 text-[10px] uppercase tracking-wider block mb-0.5">Lugar</span>
+                          <span className="text-slate-750 truncate block">{act.lugar}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -1634,74 +1845,145 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
               {/* Members Cuotas Table */}
               <div className="bg-white rounded-[2.5rem] border border-slate-200/80 shadow-sm overflow-hidden">
-                <table className="w-full border-collapse text-left">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold text-xs uppercase tracking-wider">
-                      <th className="py-7 px-6">Socio</th>
-                      <th className="py-7 px-6">Puesto</th>
-                      <th className="py-7 px-6">Estado</th>
-                      <th className="py-7 px-6">Monto Pendiente</th>
-                      <th className="py-7 px-6 text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredSocios.map(s => (
-                      <tr key={s.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="py-7 px-6 flex items-center space-x-4">
-                          <img 
-                            src={s.foto} 
-                            alt={s.nombre} 
-                            className="w-10 h-10 rounded-full border border-slate-100 object-cover cursor-zoom-in" 
-                            onClick={() => setSelectedPhoto({ url: s.foto, title: s.nombre })}
-                          />
-                          <div>
-                            <p className="font-extrabold text-slate-800">{s.nombre}</p>
-                            <p className="text-xs text-slate-400">{s.correo}</p>
-                          </div>
-                        </td>
-                        <td className="py-7 px-6 text-sm text-slate-500 font-bold uppercase">{s.puesto || 'Socio Activo'}</td>
-                        <td className="py-7 px-6">
-                          <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase ${
-                            s.estadoCuotas === 'Al día' 
-                              ? 'bg-green-50 text-green-700' 
-                              : s.estadoCuotas === 'Pendiente' 
-                                ? 'bg-yellow-50 text-yellow-700' 
-                                : 'bg-red-50 text-red-700'
-                          }`}>
-                            {s.estadoCuotas}
-                          </span>
-                        </td>
-                        <td className="py-7 px-6 font-extrabold text-slate-800 text-base">Q {s.montoPendiente.toFixed(2)}</td>
-                        <td className="py-7 px-6 text-right flex items-center justify-end space-x-2">
-                          {s.montoPendiente > 0 ? (
-                            <>
-                              <button
-                                onClick={() => handleRegistrarPago(s.id)}
-                                className="bg-green-50 text-green-700 hover:bg-green-100 px-4 py-2 rounded-xl font-bold text-xs transition-colors flex items-center space-x-1"
-                                title="Marcar como pagado"
-                              >
-                                <Check size={14} />
-                                <span>Pagar</span>
-                              </button>
-                              <button
-                                onClick={() => handleEnviarRecordatorio(s)}
-                                className="bg-slate-100 text-slate-700 hover:bg-slate-200 p-2 rounded-xl font-bold text-xs transition-colors"
-                                title="Enviar recordatorio por correo"
-                              >
-                                <Send size={14} />
-                              </button>
-                            </>
-                          ) : (
-                            <span className="text-green-600 font-bold text-xs flex items-center px-4 py-2 bg-green-50/50 rounded-xl">
-                              <CheckCircle size={14} className="mr-1" />
-                              Solvente
-                            </span>
-                          )}
-                        </td>
+                {/* Desktop View: Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full border-collapse text-left">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold text-xs uppercase tracking-wider">
+                        <th className="py-7 px-6">Socio</th>
+                        <th className="py-7 px-6">Puesto</th>
+                        <th className="py-7 px-6">Estado</th>
+                        <th className="py-7 px-6">Monto Pendiente</th>
+                        <th className="py-7 px-6 text-right">Acciones</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredSocios.map(s => (
+                        <tr key={s.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="py-7 px-6 flex items-center space-x-4">
+                            <img 
+                              src={s.foto} 
+                              alt={s.nombre} 
+                              className="w-10 h-10 rounded-full border border-slate-100 object-cover cursor-zoom-in" 
+                              onClick={() => setSelectedPhoto({ url: s.foto, title: s.nombre })}
+                            />
+                            <div>
+                              <p className="font-extrabold text-slate-800">{s.nombre}</p>
+                              <p className="text-xs text-slate-400">{s.correo}</p>
+                            </div>
+                          </td>
+                          <td className="py-7 px-6 text-sm text-slate-500 font-bold uppercase">{s.puesto || 'Socio Activo'}</td>
+                          <td className="py-7 px-6">
+                            <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase ${
+                              s.estadoCuotas === 'Al día' 
+                                ? 'bg-green-50 text-green-700' 
+                                : s.estadoCuotas === 'Pendiente' 
+                                  ? 'bg-yellow-50 text-yellow-700' 
+                                  : 'bg-red-50 text-red-700'
+                            }`}>
+                              {s.estadoCuotas}
+                            </span>
+                          </td>
+                          <td className="py-7 px-6 font-extrabold text-slate-800 text-base">Q {s.montoPendiente.toFixed(2)}</td>
+                          <td className="py-7 px-6 text-right flex items-center justify-end space-x-2">
+                            {s.montoPendiente > 0 ? (
+                              <>
+                                <button
+                                  onClick={() => handleRegistrarPago(s.id)}
+                                  className="bg-green-50 text-green-700 hover:bg-green-100 px-4 py-2 rounded-xl font-bold text-xs transition-colors flex items-center space-x-1"
+                                  title="Marcar como pagado"
+                                >
+                                  <Check size={14} />
+                                  <span>Pagar</span>
+                                </button>
+                                <button
+                                  onClick={() => handleEnviarRecordatorio(s)}
+                                  className="bg-slate-100 text-slate-700 hover:bg-slate-200 p-2 rounded-xl font-bold text-xs transition-colors"
+                                  title="Enviar recordatorio por correo"
+                                >
+                                  <Send size={14} />
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-green-600 font-bold text-xs flex items-center px-4 py-2 bg-green-50/50 rounded-xl">
+                                <CheckCircle size={14} className="mr-1" />
+                                Solvente
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile View: Cards */}
+                <div className="block md:hidden divide-y divide-slate-100">
+                  {filteredSocios.map(s => (
+                    <div key={s.id} className="p-6 space-y-4 hover:bg-slate-50/30 transition-colors">
+                      <div className="flex items-center space-x-4">
+                        <img 
+                          src={s.foto} 
+                          alt={s.nombre} 
+                          className="w-12 h-12 rounded-full border border-slate-100 object-cover cursor-zoom-in" 
+                          onClick={() => setSelectedPhoto({ url: s.foto, title: s.nombre })}
+                        />
+                        <div className="min-w-0 flex-grow">
+                          <h4 className="font-extrabold text-slate-800 text-base leading-tight truncate">{s.nombre}</h4>
+                          <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">{s.puesto || 'Socio Regular'}</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 text-xs font-semibold pt-1">
+                        <div>
+                          <span className="text-slate-400 text-[10px] uppercase tracking-wider block mb-0.5">Correo</span>
+                          <span className="text-slate-705 truncate block">{s.correo}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 text-[10px] uppercase tracking-wider block mb-0.5">Estado / Monto</span>
+                          <div className="space-y-1">
+                            <span className={`inline-block text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                              s.estadoCuotas === 'Al día' 
+                                ? 'bg-green-50 text-green-700' 
+                                : s.estadoCuotas === 'Pendiente' 
+                                  ? 'bg-yellow-50 text-yellow-700' 
+                                  : 'bg-red-50 text-red-700'
+                            }`}>
+                              {s.estadoCuotas}
+                            </span>
+                            <p className="font-black text-slate-850 text-sm">Q {s.montoPendiente.toFixed(2)}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end items-center pt-3 border-t border-slate-100">
+                        {s.montoPendiente > 0 ? (
+                          <div className="flex space-x-2 w-full justify-end">
+                            <button
+                              onClick={() => handleRegistrarPago(s.id)}
+                              className="bg-green-50 hover:bg-green-100 text-green-700 px-4 py-2 rounded-xl font-bold text-xs transition-colors flex items-center justify-center space-x-1"
+                            >
+                              <Check size={14} />
+                              <span>Pagar</span>
+                            </button>
+                            <button
+                              onClick={() => handleEnviarRecordatorio(s)}
+                              className="bg-slate-100 hover:bg-slate-200 text-slate-700 p-2.5 rounded-xl font-bold text-xs transition-colors flex items-center justify-center"
+                              title="Enviar recordatorio por correo"
+                            >
+                              <Send size={14} />
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-green-600 font-bold text-xs flex items-center px-4 py-2 bg-green-50/50 rounded-xl">
+                            <CheckCircle size={14} className="mr-1" />
+                            Solvente
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -2265,43 +2547,45 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   {/* List of Actas */}
                   <div className="grid gap-4">
                     {filteredActas.map(acta => (
-                      <div key={acta.id} className="bg-white p-8 md:p-9 rounded-3xl border border-slate-200/80 shadow-sm flex items-center justify-between gap-6 hover:shadow-md transition-shadow">
+                      <div key={acta.id} className="bg-white p-6 md:p-9 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6 hover:shadow-md transition-shadow">
                         <div className="flex items-center space-x-4 min-w-0">
                           <div className="bg-yellow-50 text-yellow-605 p-3.5 rounded-2xl flex-shrink-0">
                             <FileText size={24} />
                           </div>
-                          <div className="min-w-0">
-                            <h4 className="font-extrabold text-slate-800 text-lg truncate">{acta.titulo}</h4>
-                            <p className="text-xs text-slate-400 mt-1">
+                          <div className="min-w-0 flex-grow">
+                            <h4 className="font-extrabold text-slate-800 text-base md:text-lg truncate">{acta.titulo}</h4>
+                            <p className="text-xs text-slate-450 mt-1">
                               Redactada por <span className="font-bold text-blue-900/60 uppercase">{acta.autor}</span> • {acta.fecha}
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-4">
-                          <span className="text-xs font-black bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full uppercase">
+                        <div className="flex items-center justify-between md:justify-end space-x-3 w-full md:w-auto pt-4 md:pt-0 border-t border-slate-100 md:border-t-0">
+                          <span className="text-[10px] font-black bg-slate-100 text-slate-650 px-3 py-1 rounded-full uppercase">
                             {acta.categoria || 'Ordinaria'}
                           </span>
-                          <button
-                            onClick={() => handleEditActaClick(acta)}
-                            className="p-2.5 text-slate-400 hover:text-blue-900 hover:bg-blue-50 rounded-xl transition-all"
-                            title="Editar acta"
-                          >
-                            <Edit size={18} />
-                          </button>
-                          <button
-                            onClick={() => generateActaPDF(acta)}
-                            className="p-2.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all"
-                            title="Descargar PDF"
-                          >
-                            <Download size={18} />
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteActa(acta.id)}
-                            className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                            title="Eliminar acta"
-                          >
-                            <Trash2 size={18} />
-                          </button>
+                          <div className="flex items-center space-x-1">
+                            <button
+                              onClick={() => handleEditActaClick(acta)}
+                              className="p-2 text-slate-400 hover:text-blue-900 hover:bg-blue-50 rounded-xl transition-all"
+                              title="Editar acta"
+                            >
+                              <Edit size={16} />
+                            </button>
+                            <button
+                              onClick={() => generateActaPDF(acta)}
+                              className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all"
+                              title="Descargar PDF"
+                            >
+                              <Download size={16} />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteActa(acta.id)}
+                              className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                              title="Eliminar acta"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -2412,34 +2696,69 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
               {/* Table of Donations */}
               <div className="bg-white rounded-[2.5rem] border border-slate-200/80 shadow-sm overflow-hidden">
-                <table className="w-full border-collapse text-left">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold text-xs uppercase tracking-wider">
-                      <th className="py-7 px-6">Donante</th>
-                      <th className="py-7 px-6">Fecha</th>
-                      <th className="py-7 px-6">Proyecto</th>
-                      <th className="py-7 px-6">Tipo</th>
-                      <th className="py-7 px-6 text-right">Monto</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredDonaciones.map(don => (
-                      <tr key={don.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="py-7 px-6 font-extrabold text-slate-800 text-base">{don.donante}</td>
-                        <td className="py-7 px-6 text-sm text-slate-500 font-medium">{don.fecha}</td>
-                        <td className="py-7 px-6 text-sm text-slate-600 font-bold">{don.proyecto}</td>
-                        <td className="py-7 px-6">
-                          <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase ${
-                            don.tipo === 'Empresarial' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-600'
+                {/* Desktop View: Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full border-collapse text-left">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold text-xs uppercase tracking-wider">
+                        <th className="py-7 px-6">Donante</th>
+                        <th className="py-7 px-6">Fecha</th>
+                        <th className="py-7 px-6">Proyecto</th>
+                        <th className="py-7 px-6">Tipo</th>
+                        <th className="py-7 px-6 text-right">Monto</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredDonaciones.map(don => (
+                        <tr key={don.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="py-7 px-6 font-extrabold text-slate-800 text-base">{don.donante}</td>
+                          <td className="py-7 px-6 text-sm text-slate-500 font-medium">{don.fecha}</td>
+                          <td className="py-7 px-6 text-sm text-slate-600 font-bold">{don.proyecto}</td>
+                          <td className="py-7 px-6">
+                            <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase ${
+                              don.tipo === 'Empresarial' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              {don.tipo}
+                            </span>
+                          </td>
+                          <td className="py-7 px-6 text-right font-black text-blue-900 text-lg">Q {don.monto.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile View: Cards */}
+                <div className="block md:hidden divide-y divide-slate-100">
+                  {filteredDonaciones.map(don => (
+                    <div key={don.id} className="p-6 space-y-4 hover:bg-slate-50/30 transition-colors">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-extrabold text-slate-800 text-base leading-snug">{don.donante}</h4>
+                          <span className={`inline-block text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase mt-1.5 ${
+                            don.tipo === 'Empresarial' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-605'
                           }`}>
                             {don.tipo}
                           </span>
-                        </td>
-                        <td className="py-7 px-6 text-right font-black text-blue-900 text-lg">Q {don.monto.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </div>
+                        <span className="font-black text-blue-900 text-base">
+                          Q {don.monto.toLocaleString('es-GT', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 text-xs font-semibold pt-1">
+                        <div>
+                          <span className="text-slate-400 text-[10px] uppercase tracking-wider block mb-0.5">Fecha</span>
+                          <span className="text-slate-700">{don.fecha}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 text-[10px] uppercase tracking-wider block mb-0.5">Proyecto / Causa</span>
+                          <span className="text-slate-700 font-bold block truncate">{don.proyecto}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}
