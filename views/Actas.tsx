@@ -4,8 +4,8 @@ import { MOCK_ACTAS } from '../constants';
 import { Search, FileText, Download, Eye, Sparkles, MessageCircle, X, Loader2 } from 'lucide-react';
 import { googleService, GOOGLE_CONFIG } from '../services/googleService';
 import { geminiService } from '../services/geminiService';
-import { Acta } from '../types';
 import { generateActaPDF } from '../utils/pdfGenerator';
+import { FormattedActa } from '../components/FormattedActa';
 
 interface ActasProps {
   accessToken?: string;
@@ -215,10 +215,14 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
                 <X size={28} />
               </button>
             </div>
-            <div className="p-12 overflow-y-auto bg-slate-50 text-slate-800 leading-[1.8] font-serif text-xl tracking-tight">
-              {selectedActa.contenido.split('\n').map((para, i) => (
-                <p key={i} className="mb-6 last:mb-0">{para}</p>
-              ))}
+            <div className="p-6 md:p-10 overflow-y-auto bg-slate-150/50 flex-grow shadow-inner">
+              <FormattedActa
+                titulo={selectedActa.titulo}
+                fecha={selectedActa.fecha}
+                categoria={selectedActa.categoria || 'Ordinaria'}
+                autor={selectedActa.autor}
+                contenido={selectedActa.contenido}
+              />
             </div>
             <div className="p-8 border-t border-slate-100 bg-white flex flex-col sm:flex-row justify-between items-center gap-4">
               <p className="text-xs text-slate-400 uppercase font-black tracking-tighter italic">Propiedad Privada • Club de Leones Quetzaltenango</p>

@@ -32,58 +32,58 @@ export const generateActaPDF = (acta: Acta) => {
   doc.setTextColor(100, 116, 139); // Slate-500
   doc.text('REGISTRO OFICIAL DE ACTAS DE SESIÓN', margin, 37);
 
-  // Divider line
+  // Metadata block in box
+  const metaY = 44;
+  doc.setFillColor(248, 250, 252); // Slate-50 (light grey)
   doc.setDrawColor(226, 232, 240); // Slate-200
-  doc.setLineWidth(0.5);
-  doc.line(margin, 42, pageWidth - margin, 42);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(margin, metaY, contentWidth, 26, 3, 3, 'FD'); // background box
 
-  // Metadata block
+  // Meta details 2x2 grid
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setTextColor(71, 85, 105); // Slate-600
-  
-  doc.text('Título:', margin, 50);
+
+  const col1X = margin + 4;
+  const col2X = margin + (contentWidth / 2) + 4;
+
+  // Row 1: Título & Fecha
+  doc.text('TÍTULO DEL ACTA:', col1X, metaY + 8);
   doc.setFont('helvetica', 'normal');
-  doc.text(acta.titulo, margin + 25, 50);
+  let displayTitle = acta.titulo;
+  if (doc.getTextWidth(displayTitle) > (contentWidth / 2) - 40) {
+    displayTitle = doc.splitTextToSize(displayTitle, (contentWidth / 2) - 40)[0] + '...';
+  }
+  doc.text(displayTitle, col1X + 32, metaY + 8);
 
   doc.setFont('helvetica', 'bold');
-  doc.text('Fecha:', margin, 56);
+  doc.text('FECHA DE SESIÓN:', col2X, metaY + 8);
   doc.setFont('helvetica', 'normal');
-  doc.text(acta.fecha, margin + 25, 56);
+  doc.text(acta.fecha, col2X + 32, metaY + 8);
+
+  // Row 2: Categoría & Redactor
+  doc.setFont('helvetica', 'bold');
+  doc.text('CATEGORÍA:', col1X, metaY + 18);
+  doc.setFont('helvetica', 'normal');
+  doc.text(acta.categoria || 'Reunión Ordinaria', col1X + 32, metaY + 18);
 
   doc.setFont('helvetica', 'bold');
-  doc.text('Categoría:', margin, 62);
+  doc.text('REDACTOR:', col2X, metaY + 18);
   doc.setFont('helvetica', 'normal');
-  doc.text(acta.categoria || 'Reunión Ordinaria', margin + 25, 62);
-
-  doc.setFont('helvetica', 'bold');
-  doc.text('Redactor:', margin, 68);
-  doc.setFont('helvetica', 'normal');
-  doc.text(acta.autor, margin + 25, 68);
-
-  // Divider line
-  doc.line(margin, 74, pageWidth - margin, 74);
-
-  // Content Title
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.setTextColor(27, 54, 93);
-  doc.text('CONTENIDO Y ACUERDOS DE LA REUNIÓN', margin, 83);
+  let displayAuthor = acta.autor;
+  if (doc.getTextWidth(displayAuthor) > (contentWidth / 2) - 30) {
+    displayAuthor = doc.splitTextToSize(displayAuthor, (contentWidth / 2) - 30)[0] + '...';
+  }
+  doc.text(displayAuthor, col2X + 32, metaY + 18);
 
   // Content Body
-  doc.setFont('times', 'normal');
-  doc.setFontSize(11);
-  doc.setTextColor(30, 41, 59); // Slate-800
-
-  // Multi-line wrap
-  const splitText = doc.splitTextToSize(acta.contenido, contentWidth);
-  
-  let y = 92;
+  const rawLines = acta.contenido.split('\n');
+  let y = 80;
   const pageHeight = doc.internal.pageSize.getHeight();
-  const bottomMargin = 20;
+  const bottomMargin = 22;
 
-  for (let i = 0; i < splitText.length; i++) {
-    if (y > pageHeight - bottomMargin) {
+  const checkPageOverflow = (neededHeight: number) => {
+    if (y + neededHeight > pageHeight - bottomMargin) {
       doc.addPage();
       
       // Page Header for extra pages
@@ -96,18 +96,79 @@ export const generateActaPDF = (acta: Acta) => {
       doc.setFontSize(8);
       doc.setTextColor(148, 163, 184); // Slate-400
       doc.text(`Acta: ${acta.titulo} - Página ${doc.internal.pages.length - 1}`, margin, 18);
-
-      doc.setFont('times', 'normal');
-      doc.setFontSize(11);
-      doc.setTextColor(30, 41, 59);
+      
       y = 26; // Reset Y coordinate
     }
-    doc.text(splitText[i], margin, y);
-    y += 6.5; // Line spacing
-  }
+  };
+
+  rawLines.forEach((line) => {
+    const trimmedLine = line.trim();
+    if (trimmedLine === '') {
+      y += 4; // Spacing for empty lines
+      return;
+    }
+
+    // Check if it is a major header
+    const isHeader = /^[A-ZÁÉÍÓÚÑ\s0-9]+:$/.test(trimmedLine) && trimmedLine.length > 3;
+
+    if (isHeader) {
+      checkPageOverflow(15);
+      y += 4; // Top spacing before header
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(27, 54, 93); // Navy Blue
+      doc.text(trimmedLine, margin, y);
+      y += 6.5;
+    } else {
+      // Regular line (could be list item or normal paragraph)
+      const isListItem = trimmedLine.startsWith('-') || /^\d+\./.test(trimmedLine);
+      const currentIndent = isListItem ? 6 : 0;
+      
+      doc.setFont('times', 'normal');
+      doc.setFontSize(10.5);
+      doc.setTextColor(51, 65, 85); // Slate-700
+      
+      const wrapWidth = contentWidth - currentIndent;
+      
+      let displayLine = trimmedLine;
+      let symbolPrefix = '';
+      if (isListItem) {
+        if (trimmedLine.startsWith('-')) {
+          displayLine = trimmedLine.replace(/^-\s*/, '');
+          symbolPrefix = '• ';
+        } else {
+          const prefixMatch = trimmedLine.match(/^\d+\./);
+          if (prefixMatch) {
+            symbolPrefix = prefixMatch[0] + ' ';
+            displayLine = trimmedLine.replace(/^\d+\.\s*/, '');
+          }
+        }
+      }
+
+      const splitLines = doc.splitTextToSize(displayLine, wrapWidth);
+      
+      splitLines.forEach((subLine: string, subIdx: number) => {
+        checkPageOverflow(6.5);
+        if (isListItem && subIdx === 0) {
+          // Draw the bullet point/number prefix in bold gold
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(217, 119, 6); // Amber-600
+          doc.text(symbolPrefix, margin, y);
+          
+          doc.setFont('times', 'normal');
+          doc.setTextColor(51, 65, 85); // Slate-700
+          doc.text(subLine, margin + currentIndent, y);
+        } else {
+          doc.text(subLine, margin + currentIndent, y);
+        }
+        y += 5.8; // Line height
+      });
+      y += 1.5; // Small spacing after paragraph/item
+    }
+  });
 
   // Signatures section
-  if (y + 40 > pageHeight - bottomMargin) {
+  if (y + 45 > pageHeight - bottomMargin) {
     doc.addPage();
     doc.setFillColor(27, 54, 93);
     doc.rect(0, 0, pageWidth, 12, 'F');
@@ -133,28 +194,21 @@ export const generateActaPDF = (acta: Acta) => {
   doc.setFont('helvetica', 'normal');
   doc.text('Presidente de Junta Directiva', pageWidth - margin - 60, y + 25);
 
-  // Document Footer (all pages)
-  const pageCount = doc.internal.pages.length - 1;
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(148, 163, 184);
-    doc.text(
-      'Documento de carácter privado y confidencial - Club de Leones de Quetzaltenango © 2026', 
-      margin, 
-      pageHeight - 10
-    );
-    doc.text(
-      `Pág. ${i} de ${pageCount}`, 
-      pageWidth - margin - 15, 
-      pageHeight - 10
-    );
+  // Decorative stamp
+  y += 35;
+  if (y + 10 < pageHeight - bottomMargin) {
+    doc.setDrawColor(217, 119, 6); // Amber-600
+    doc.setLineWidth(0.2);
+    const stampW = 60;
+    const stampH = 7;
+    const stampX = (pageWidth - stampW) / 2;
+    doc.roundedRect(stampX, y, stampW, stampH, 1.5, 1.5, 'S');
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6.5);
+    doc.setTextColor(217, 119, 6);
+    doc.text('SELLO OFICIAL - CLUB DE LEONES QX', pageWidth / 2, y + 4.8, { align: 'center' });
   }
-
-  // Save the PDF
-  const cleanTitle = acta.titulo.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  doc.save(`acta-${cleanTitle}.pdf`);
 };
 
 export const generateDiplomaDonacionPDF = (donanteNombre: string, montoTotal: number) => {

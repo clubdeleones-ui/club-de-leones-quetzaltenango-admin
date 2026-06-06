@@ -51,6 +51,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { generateActaPDF } from '../utils/pdfGenerator';
+import { FormattedActa } from '../components/FormattedActa';
 import { compressImageFile } from '../utils/imageCompressor';
 
 
@@ -303,6 +304,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const [newAgendaPoint, setNewAgendaPoint] = useState({ tema: '', debate: '', acuerdo: '' });
   const [asistenciaSearch, setAsistenciaSearch] = useState('');
   const [selectedAgendaPointTab, setSelectedAgendaPointTab] = useState<'new' | number>('new');
+  const [actaPreviewMode, setActaPreviewMode] = useState<'documento' | 'texto'>('documento');
 
   const [showAddActividad, setShowAddActividad] = useState(false);
   const [newActividad, setNewActividad] = useState({ titulo: '', descripcion: '', fecha: '', lugar: '', publica: true });
@@ -2883,19 +2885,75 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     )}
 
                     {actaWizardStep === 'vista_previa' && (
-                      <div className="space-y-4 animate-in fade-in duration-350">
-                        <div>
-                          <div className="flex justify-between items-center mb-2">
-                            <label className="block text-sm font-bold text-slate-700">Previsualización Narrativa del Acta</label>
-                            <span className="text-[10px] font-black bg-yellow-50 text-yellow-750 px-2 py-0.5 rounded-md uppercase">Generado automáticamente</span>
+                      <div className="space-y-6 animate-in fade-in duration-350">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200/50">
+                          <div>
+                            <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">Modo de Previsualización</h4>
+                            <p className="text-xs text-slate-500 font-medium">Visualice el acta en formato oficial impreso o en texto limpio.</p>
                           </div>
-                          <textarea 
-                            readOnly
-                            rows={10}
-                            value={compileActaText(actaWizardData)}
-                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-semibold text-xs font-serif outline-none resize-none text-justify select-all"
-                          />
+                          <div className="flex items-center space-x-2">
+                            <div className="bg-slate-200/60 p-1 rounded-xl flex space-x-1">
+                              <button
+                                type="button"
+                                onClick={() => setActaPreviewMode('documento')}
+                                className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${
+                                  actaPreviewMode === 'documento'
+                                    ? 'bg-blue-900 text-white shadow-sm'
+                                    : 'text-slate-600 hover:bg-slate-350/50'
+                                }`}
+                              >
+                                Vista Oficial
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setActaPreviewMode('texto')}
+                                className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${
+                                  actaPreviewMode === 'texto'
+                                    ? 'bg-blue-900 text-white shadow-sm'
+                                    : 'text-slate-600 hover:bg-slate-350/50'
+                                }`}
+                              >
+                                Texto Plano
+                              </button>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const rawText = compileActaText(actaWizardData);
+                                navigator.clipboard.writeText(rawText);
+                                alert('¡Texto del acta copiado al portapapeles!');
+                              }}
+                              className="p-2.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-blue-900 rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer"
+                              title="Copiar texto plano"
+                            >
+                              <FileText size={18} />
+                            </button>
+                          </div>
                         </div>
+
+                        {actaPreviewMode === 'documento' ? (
+                          <div className="max-h-[60vh] overflow-y-auto bg-slate-100/60 p-4 md:p-6 rounded-[2rem] border border-slate-200/50 shadow-inner">
+                            <FormattedActa
+                              titulo={actaWizardData.titulo.trim() || `Acta de Sesión - ${new Date().toLocaleDateString('es-GT')}`}
+                              fecha={actaWizardData.fechaHoraText.split(',')[0] || new Date().toLocaleDateString('es-GT')}
+                              categoria={actaWizardData.categoria}
+                              autor={user.nombre}
+                              contenido={compileActaText(actaWizardData)}
+                            />
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center px-1">
+                              <span className="text-[10px] font-black bg-yellow-50 text-yellow-750 px-2.5 py-1 rounded-lg uppercase tracking-wider border border-yellow-100 shadow-sm">Generado automáticamente</span>
+                            </div>
+                            <textarea 
+                              readOnly
+                              rows={15}
+                              value={compileActaText(actaWizardData)}
+                              className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 font-semibold text-xs font-serif outline-none resize-none text-justify select-all shadow-inner leading-relaxed"
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
