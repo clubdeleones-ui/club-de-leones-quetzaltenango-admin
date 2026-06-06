@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   MOCK_SOCIOS, 
   MOCK_ACTIVIDADES, 
@@ -319,9 +319,48 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const canEditPropuestas = user.rol === UserRole.SUPER_ADMIN || user.rol === UserRole.PRESIDENTE_AFILIACION || user.rol === UserRole.SECRETARIO;
 
   // Attendance and Quorum helpers
+  const debateRef = useRef<HTMLTextAreaElement>(null);
+
   const sortedAllSocios = useMemo(() => {
     return [...socios].sort((a, b) => a.nombre.localeCompare(b.nombre));
   }, [socios]);
+
+  const selectableSocios = useMemo(() => {
+    return presentSocios.length > 0 
+      ? presentSocios 
+      : sortedAllSocios.filter(s => s.estatus !== 'Inactive');
+  }, [presentSocios, sortedAllSocios]);
+
+  const handleInsertMemberMention = (memberName: string) => {
+    const textarea = debateRef.current;
+    if (!textarea) {
+      setNewAgendaPoint(prev => ({
+        ...prev,
+        debate: prev.debate ? `${prev.debate}\n${memberName}: ` : `${memberName}: `
+      }));
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const before = text.substring(0, start);
+    const after = text.substring(end, text.length);
+    
+    const insertion = before.endsWith('\n') || start === 0 ? `${memberName}: ` : `\n${memberName}: `;
+    const newValue = before + insertion + after;
+
+    setNewAgendaPoint(prev => ({
+      ...prev,
+      debate: newValue
+    }));
+
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = start + insertion.length;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  };
 
   const absentSocios = useMemo(() => {
     const presentIds = new Set(actaWizardData.asistencia || []);
@@ -369,6 +408,30 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
       }
     }
   };
+
+  // Auto-adjust protocol selection based on attendance list
+  useEffect(() => {
+    if (presentSocios.length > 0) {
+      setActaWizardData(prev => {
+        const updates: Partial<typeof prev> = {};
+        const presentIds = new Set(presentSocios.map(s => s.id));
+        if (prev.invocacionSocioId && !presentIds.has(prev.invocacionSocioId)) {
+          updates.invocacionSocioId = presentSocios[0].id;
+        } else if (!prev.invocacionSocioId) {
+          updates.invocacionSocioId = presentSocios[0].id;
+        }
+        if (prev.saludoSocioId && !presentIds.has(prev.saludoSocioId)) {
+          updates.saludoSocioId = presentSocios[0].id;
+        } else if (!prev.saludoSocioId) {
+          updates.saludoSocioId = presentSocios[0].id;
+        }
+        if (Object.keys(updates).length > 0) {
+          return { ...prev, ...updates };
+        }
+        return prev;
+      });
+    }
+  }, [presentSocios]);
 
   // Global KPIs calculation
   const totalDonaciones = useMemo(() => donaciones.reduce((sum, d) => sum + d.monto, 0), [donaciones]);
@@ -2360,7 +2423,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                 onChange={e => setActaWizardData(prev => ({ ...prev, invocacionSocioId: e.target.value }))}
                                 className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none text-sm font-bold text-slate-700 bg-white shadow-sm"
                               >
-                                {socios.filter(s => s.estatus !== 'Inactive').map(s => (
+                                {selectableSocios.map(s => (
                                   <option key={s.id} value={s.id}>{s.nombre} ({s.puesto || 'Socio Regular'})</option>
                                 ))}
                               </select>
@@ -2421,7 +2484,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                 onChange={e => setActaWizardData(prev => ({ ...prev, saludoSocioId: e.target.value }))}
                                 className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none text-sm font-bold text-slate-700 bg-white shadow-sm"
                               >
-                                {socios.filter(s => s.estatus !== 'Inactive').map(s => (
+                                {selectableSocios.map(s => (
                                   <option key={s.id} value={s.id}>{s.nombre} ({s.puesto || 'Socio Regular'})</option>
                                 ))}
                               </select>
@@ -2586,12 +2649,46 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                               <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Debate / Discusión (Opcional)</label>
                                 <textarea 
+                                  ref={debateRef}
                                   rows={4}
                                   value={newAgendaPoint.debate}
                                   onChange={e => setNewAgendaPoint(prev => ({ ...prev, debate: e.target.value }))}
                                   placeholder="Describa los puntos clave discutidos..."
                                   className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold resize-none text-justify shadow-sm"
                                 />
+                                
+                                {/* Mention present quorum members */}
+                                <div className="mt-3 text-left">
+                                  <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Etiquetar participantes presentes (insertar al cursor):</span>
+                                  {presentSocios.length === 0 ? (
+                                    <div className="text-[10px] font-bold text-slate-400 bg-slate-100/50 p-3 rounded-xl border border-dashed border-slate-200 italic">
+                                      No hay socios marcados en el quórum aún. Registra asistencia en el paso anterior para poder etiquetar.
+                                    </div>
+                                  ) : (
+                                    <div className="flex flex-wrap gap-2 max-h-[96px] overflow-y-auto p-1.5 bg-slate-50 rounded-2xl border border-slate-200/50 shadow-inner">
+                                      {presentSocios.map(member => (
+                                        <button
+                                          key={member.id}
+                                          type="button"
+                                          onClick={() => handleInsertMemberMention(member.nombre)}
+                                          className="flex items-center space-x-1.5 px-3 py-1.5 bg-white hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded-xl text-xs font-bold text-slate-650 hover:text-amber-800 transition-all select-none cursor-pointer active:scale-95 shadow-sm"
+                                        >
+                                          <img 
+                                            src={member.foto || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=60'} 
+                                            alt={member.nombre} 
+                                            className="w-5 h-5 rounded-full object-cover border border-slate-100 shadow-sm"
+                                            onError={(e) => {
+                                              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=60';
+                                            }}
+                                          />
+                                          <span>
+                                            {member.nombre.split(' ')[0]} {member.nombre.split(' ')[1] ? member.nombre.split(' ')[1][0] + '.' : ''}
+                                          </span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                               <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Acuerdo / Resolución (Opcional)</label>
