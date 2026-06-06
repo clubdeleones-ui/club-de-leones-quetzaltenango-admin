@@ -325,6 +325,11 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     return [...socios].sort((a, b) => a.nombre.localeCompare(b.nombre));
   }, [socios]);
 
+  const presentSocios = useMemo(() => {
+    const presentIds = new Set(actaWizardData.asistencia || []);
+    return sortedAllSocios.filter(s => presentIds.has(s.id));
+  }, [sortedAllSocios, actaWizardData.asistencia]);
+
   const selectableSocios = useMemo(() => {
     return presentSocios.length > 0 
       ? presentSocios 
@@ -375,11 +380,6 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
       (s.puesto && s.puesto.toLowerCase().includes(q))
     );
   }, [absentSocios, asistenciaSearch]);
-
-  const presentSocios = useMemo(() => {
-    const presentIds = new Set(actaWizardData.asistencia || []);
-    return sortedAllSocios.filter(s => presentIds.has(s.id));
-  }, [sortedAllSocios, actaWizardData.asistencia]);
 
   const handleMarkPresent = (id: string) => {
     setActaWizardData(prev => {
