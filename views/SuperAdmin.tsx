@@ -109,6 +109,29 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     return 'resumen';
   });
 
+  const getTabStyles = (tabId: string, active: boolean) => {
+    if (!active) return 'text-slate-650 hover:bg-slate-100/70 hover:text-slate-850';
+    
+    switch (tabId) {
+      case 'resumen':
+        return 'bg-gradient-to-r from-blue-900 to-indigo-950 text-white border-l-4 border-yellow-500 shadow-lg shadow-blue-900/25 scale-102';
+      case 'socios':
+        return 'bg-gradient-to-r from-blue-900 to-blue-950 text-white border-l-4 border-amber-500 shadow-lg shadow-blue-900/25 scale-102';
+      case 'calendario':
+        return 'bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 text-white border-l-4 border-yellow-300 shadow-lg shadow-amber-500/25 scale-102';
+      case 'cuotas':
+        return 'bg-gradient-to-r from-blue-900 to-blue-950 text-white border-l-4 border-yellow-500 shadow-lg shadow-blue-900/25 scale-102';
+      case 'actas':
+        return 'bg-gradient-to-r from-yellow-500 via-amber-400 to-orange-500 text-blue-950 border-l-4 border-blue-950 shadow-lg shadow-yellow-500/25 scale-102';
+      case 'donaciones':
+        return 'bg-gradient-to-r from-amber-500 to-orange-600 text-white border-l-4 border-yellow-400 shadow-lg shadow-amber-500/25 scale-102';
+      case 'beneficios':
+        return 'bg-gradient-to-r from-blue-900 to-blue-950 text-white border-l-4 border-amber-500 shadow-lg shadow-blue-900/25 scale-102';
+      default:
+        return 'bg-blue-900 text-white shadow-lg shadow-blue-900/10';
+    }
+  };
+
   useEffect(() => {
     if (!allowedTabs.includes(activeTab)) {
       setActiveTab(allowedTabs[0] as TabType);
@@ -255,6 +278,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   
   // Modals / Form States
   const [showAddActa, setShowAddActa] = useState(false);
+  const [editingActaId, setEditingActaId] = useState<string | null>(null);
   const [newActa, setNewActa] = useState({ titulo: '', autor: '', contenido: '', categoria: 'Ordinaria' });
 
   // Wizard state for structured minutes
@@ -467,6 +491,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       initialResoluciones[s.id] = { decision: 'Pendiente', razon: '' };
     });
 
+    setEditingActaId(null);
     setActaWizardData({
       titulo: '',
       categoria: 'Ordinaria',
@@ -485,14 +510,34 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     setShowAddActa(true);
   };
 
+  const handleEditActaClick = (acta: Acta) => {
+    const defaultLugar = 'Quetzaltenango, Sede Social denominada "La Cueva", ubicada en la Calle Rodolfo Robles, 24-53 de la zona 1.';
+    const wData = (acta as any).wizardData || {
+      titulo: acta.titulo,
+      categoria: acta.categoria || 'Ordinaria',
+      lugar: defaultLugar,
+      fechaHoraText: getWrittenDateTimeSpanish(new Date(acta.fecha)),
+      invocacionResponsableType: 'socio',
+      invocacionSocioId: socios[0]?.id || '',
+      invocacionInvitadoName: '',
+      saludoResponsableType: 'socio',
+      saludoSocioId: socios[0]?.id || '',
+      saludoInvitadoName: '',
+      solicitudesResoluciones: {},
+      puntosAgenda: []
+    };
+
+    setActaWizardData(wData);
+    setEditingActaId(acta.id);
+    setActaWizardStep('datos');
+    setShowAddActa(true);
+  };
+
   const handleAddAgendaPoint = () => {
-    if (!newAgendaPoint.tema.trim()) {
-      alert("Por favor ingrese el tema del punto de agenda.");
-      return;
-    }
+    const temaFinal = newAgendaPoint.tema.trim() || `Punto de Agenda #${(actaWizardData.puntosAgenda || []).length + 1}`;
     setActaWizardData(prev => ({
       ...prev,
-      puntosAgenda: [...(prev.puntosAgenda || []), { ...newAgendaPoint }]
+      puntosAgenda: [...(prev.puntosAgenda || []), { ...newAgendaPoint, tema: temaFinal }]
     }));
     setNewAgendaPoint({ tema: '', debate: '', acuerdo: '' });
   };
@@ -506,25 +551,46 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
   const handleSaveStructuredActa = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!actaWizardData.titulo.trim()) {
-      alert("Por favor complete el título de la sesión.");
-      return;
+    const finalTitulo = actaWizardData.titulo.trim() || `Acta de Sesión - ${new Date().toLocaleDateString('es-GT')}`;
+
+    const compiledText = compileActaText({
+      ...actaWizardData,
+      titulo: finalTitulo
+    });
+    
+    let newActas: Acta[];
+
+    if (editingActaId) {
+      newActas = actas.map(a => {
+        if (a.id === editingActaId) {
+          return {
+            ...a,
+            titulo: finalTitulo,
+            categoria: actaWizardData.categoria,
+            contenido: compiledText,
+            wizardData: actaWizardData
+          } as any;
+        }
+        return a;
+      });
+      alert("¡Acta de sesión actualizada con éxito!");
+    } else {
+      const created: Acta = {
+        id: `acta-${Date.now()}`,
+        titulo: finalTitulo,
+        fecha: new Date().toISOString().split('T')[0],
+        contenido: compiledText,
+        autor: user.nombre,
+        pdfUrl: '#',
+        categoria: actaWizardData.categoria,
+        estado: 'Publicada',
+        wizardData: actaWizardData
+      } as any;
+
+      newActas = [created, ...actas];
+      alert("¡Acta de sesión guardada y solicitudes actualizadas con éxito!");
     }
 
-    const compiledText = compileActaText(actaWizardData);
-    
-    const created: Acta = {
-      id: `acta-${Date.now()}`,
-      titulo: actaWizardData.titulo,
-      fecha: new Date().toISOString().split('T')[0],
-      contenido: compiledText,
-      autor: user.nombre,
-      pdfUrl: '#',
-      categoria: actaWizardData.categoria,
-      estado: 'Publicada'
-    };
-
-    const newActas = [created, ...actas];
     setActas(newActas);
     localStorage.setItem('club_leones_actas', JSON.stringify(newActas));
 
@@ -557,8 +623,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     setSolicitudes(updatedSolicitudes);
     localStorage.setItem('club_leones_solicitudes', JSON.stringify(updatedSolicitudes));
 
+    setEditingActaId(null);
     setShowAddActa(false);
-    alert("¡Acta de sesión guardada y solicitudes actualizadas con éxito!");
   };
 
   const handleAddActividad = (e: React.FormEvent) => {
@@ -908,13 +974,18 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as TabType)}
-                  className={`w-full flex items-center space-x-4 px-5 py-4 rounded-2xl font-bold transition-all ${
-                    active 
-                      ? 'bg-blue-900 text-white shadow-lg shadow-blue-900/10' 
-                      : 'text-slate-600 hover:bg-slate-50'
+                  className={`w-full flex items-center space-x-4 px-5 py-4.5 rounded-2xl font-black transition-all ${
+                    getTabStyles(tab.id, active)
                   }`}
                 >
-                  <Icon size={20} className={active ? 'text-yellow-400' : 'text-slate-400'} />
+                  <Icon 
+                    size={20} 
+                    className={`transition-colors ${
+                      active 
+                        ? (tab.id === 'actas' || tab.id === 'donaciones' || tab.id === 'calendario' ? 'text-blue-950' : 'text-yellow-400') 
+                        : 'text-slate-450'
+                    }`} 
+                  />
                   <span>{tab.label}</span>
                 </button>
               );
@@ -926,10 +997,10 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
         <main className="flex-1 min-w-0">
           {/* TAB: GESTIÓN DE SOCIOS */}
           {activeTab === 'socios' && (
-            <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="space-y-10 animate-in fade-in duration-500">
               
               {/* Legend visual card */}
-              <div className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-semibold">
+              <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-semibold">
                 <div className="flex items-center space-x-3 p-3 bg-amber-50/60 rounded-2xl border border-amber-100">
                   <div className="w-4 h-4 rounded-full bg-amber-500 border border-amber-600 flex-shrink-0" />
                   <div>
@@ -954,7 +1025,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               </div>
 
               {/* Filters card */}
-              <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-4">
+              <div className="bg-white rounded-3xl border border-slate-200/80 p-8 shadow-sm space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="text-xs font-bold text-slate-450 uppercase tracking-widest flex items-center">
                     <Filter size={14} className="mr-1.5 text-slate-400" />
@@ -1044,11 +1115,11 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     <table className="w-full border-collapse text-left">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-250 text-slate-400 font-bold text-xs uppercase tracking-wider">
-                          <th className="p-5">Miembro</th>
-                          <th className="p-5">Contacto</th>
-                          <th className="p-5">Puesto y Rol</th>
-                          <th className="p-5">Estado Financiero</th>
-                          <th className="p-5 text-right">Acciones</th>
+                          <th className="py-6.5 px-6">Miembro</th>
+                          <th className="py-6.5 px-6">Contacto</th>
+                          <th className="py-6.5 px-6">Puesto y Rol</th>
+                          <th className="py-6.5 px-6">Estado Financiero</th>
+                          <th className="py-6.5 px-6 text-right">Acciones</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
@@ -1075,7 +1146,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                 isInactive ? 'opacity-65 bg-slate-50/20' : ''
                               }`}
                             >
-                              <td className="p-5">
+                              <td className="py-6.5 px-6">
                                 <div className="flex items-center space-x-3.5">
                                   <img 
                                     src={socio.foto || `https://picsum.photos/seed/${socio.id}/100/100`} 
@@ -1096,7 +1167,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                   </div>
                                 </div>
                               </td>
-                              <td className="p-5">
+                              <td className="py-6.5 px-6">
                                 <div className="text-xs space-y-1 font-semibold">
                                   <div className="flex items-center text-slate-700">
                                     <Mail size={12} className="mr-1.5 text-slate-400" />
@@ -1108,7 +1179,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                   </div>
                                 </div>
                               </td>
-                              <td className="p-5">
+                              <td className="py-6.5 px-6">
                                 <div className="space-y-1.5">
                                   <span className="text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-0.5 rounded-lg border border-slate-200/50 block w-fit">
                                     {socio.puesto || 'Socio Regular'}
@@ -1133,7 +1204,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                   </div>
                                 </div>
                               </td>
-                              <td className="p-5">
+                              <td className="py-6.5 px-6">
                                 <div className="space-y-1">
                                   <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
                                     socio.estadoCuotas === 'Al día' ? 'bg-green-50 text-green-700 border border-green-100' :
@@ -1147,7 +1218,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                   )}
                                 </div>
                               </td>
-                              <td className="p-5 text-right">
+                              <td className="py-6.5 px-6 text-right">
                                 <div className="flex items-center justify-end space-x-2">
                                   <button
                                     onClick={() => handleQrClick(socio)}
@@ -1402,7 +1473,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
           {/* TAB: PROGRAMAS / CALENDARIO */}
           {activeTab === 'calendario' && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <h3 className="text-3xl font-black text-slate-800 tracking-tight">Gestión de Programas y Calendario</h3>
                 <button 
@@ -1417,7 +1488,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               {/* Form Modal */}
               {showAddActividad && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-md">
-                  <form onSubmit={handleAddActividad} className="bg-white rounded-[2.5rem] p-8 max-w-lg w-full space-y-6 shadow-2xl border border-slate-100">
+                  <form onSubmit={handleAddActividad} className="bg-white rounded-[2.5rem] p-10 md:p-12 max-w-lg w-full space-y-8 shadow-2xl border border-slate-100">
                     <div className="flex justify-between items-center">
                       <h4 className="text-2xl font-black text-slate-800">Nueva Actividad</h4>
                       <button type="button" onClick={() => setShowAddActividad(false)} className="p-2 hover:bg-slate-50 rounded-xl transition-colors"><X size={20} /></button>
@@ -1504,30 +1575,30 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 <table className="w-full border-collapse text-left">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold text-xs uppercase tracking-wider">
-                      <th className="p-6">Actividad</th>
-                      <th className="p-6">Fecha</th>
-                      <th className="p-6">Lugar</th>
-                      <th className="p-6">Alcance</th>
-                      <th className="p-6 text-right">Acciones</th>
+                      <th className="py-7 px-6">Actividad</th>
+                      <th className="py-7 px-6">Fecha</th>
+                      <th className="py-7 px-6">Lugar</th>
+                      <th className="py-7 px-6">Alcance</th>
+                      <th className="py-7 px-6 text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {actividades.map(act => (
                       <tr key={act.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="p-6">
+                        <td className="py-7 px-6">
                           <p className="font-extrabold text-slate-800 text-base">{act.titulo}</p>
                           <p className="text-xs text-slate-500 mt-1 max-w-sm truncate">{act.descripcion}</p>
                         </td>
-                        <td className="p-6 text-sm text-slate-600 font-medium">{act.fecha}</td>
-                        <td className="p-6 text-sm text-slate-600 font-medium">{act.lugar}</td>
-                        <td className="p-6">
+                        <td className="py-7 px-6 text-sm text-slate-600 font-medium">{act.fecha}</td>
+                        <td className="py-7 px-6 text-sm text-slate-600 font-medium">{act.lugar}</td>
+                        <td className="py-7 px-6">
                           <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase ${
                             act.publica ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'
                           }`}>
                             {act.publica ? 'Público' : 'Solo Socios'}
                           </span>
                         </td>
-                        <td className="p-6 text-right">
+                        <td className="py-7 px-6 text-right">
                           <button 
                             onClick={() => handleDeleteActividad(act.id)}
                             className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
@@ -1546,7 +1617,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
           {/* TAB: CONTROL DE CUOTAS */}
           {activeTab === 'cuotas' && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <h3 className="text-3xl font-black text-slate-800 tracking-tight">Cobros y Control de Cuotas</h3>
                 <div className="relative w-full sm:w-80">
@@ -1566,17 +1637,17 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 <table className="w-full border-collapse text-left">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold text-xs uppercase tracking-wider">
-                      <th className="p-6">Socio</th>
-                      <th className="p-6">Puesto</th>
-                      <th className="p-6">Estado</th>
-                      <th className="p-6">Monto Pendiente</th>
-                      <th className="p-6 text-right">Acciones</th>
+                      <th className="py-7 px-6">Socio</th>
+                      <th className="py-7 px-6">Puesto</th>
+                      <th className="py-7 px-6">Estado</th>
+                      <th className="py-7 px-6">Monto Pendiente</th>
+                      <th className="py-7 px-6 text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredSocios.map(s => (
                       <tr key={s.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="p-6 flex items-center space-x-4">
+                        <td className="py-7 px-6 flex items-center space-x-4">
                           <img 
                             src={s.foto} 
                             alt={s.nombre} 
@@ -1588,8 +1659,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                             <p className="text-xs text-slate-400">{s.correo}</p>
                           </div>
                         </td>
-                        <td className="p-6 text-sm text-slate-500 font-bold uppercase">{s.puesto || 'Socio Activo'}</td>
-                        <td className="p-6">
+                        <td className="py-7 px-6 text-sm text-slate-500 font-bold uppercase">{s.puesto || 'Socio Activo'}</td>
+                        <td className="py-7 px-6">
                           <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase ${
                             s.estadoCuotas === 'Al día' 
                               ? 'bg-green-50 text-green-700' 
@@ -1600,8 +1671,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                             {s.estadoCuotas}
                           </span>
                         </td>
-                        <td className="p-6 font-extrabold text-slate-800 text-base">Q {s.montoPendiente.toFixed(2)}</td>
-                        <td className="p-6 text-right flex items-center justify-end space-x-2">
+                        <td className="py-7 px-6 font-extrabold text-slate-800 text-base">Q {s.montoPendiente.toFixed(2)}</td>
+                        <td className="py-7 px-6 text-right flex items-center justify-end space-x-2">
                           {s.montoPendiente > 0 ? (
                             <>
                               <button
@@ -1639,7 +1710,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           {activeTab === 'actas' && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               {showAddActa ? (
-                <div className="bg-white rounded-[2.5rem] p-8 border border-slate-200/80 shadow-sm space-y-6 animate-in fade-in duration-300">
+                <div className="bg-white rounded-[2.5rem] p-10 md:p-14 border border-slate-200/80 shadow-sm space-y-10 animate-in fade-in duration-300">
                   
                   {/* Header */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-slate-100 gap-4">
@@ -1658,7 +1729,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   </div>
 
                   {/* Step Indicator */}
-                  <div className="grid grid-cols-5 gap-2 text-center text-[10px] sm:text-xs font-black uppercase tracking-wider flex-shrink-0">
+                  <div className="grid grid-cols-5 gap-3 text-center text-[10px] sm:text-xs font-black uppercase tracking-wider flex-shrink-0 my-4">
                     {[
                       { id: 'datos', label: '1. Datos' },
                       { id: 'protocolo', label: '2. Protocolo' },
@@ -1672,19 +1743,13 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                         <button 
                           key={s.id}
                           type="button"
-                          onClick={() => {
-                            if (s.id !== 'datos' && !actaWizardData.titulo.trim()) {
-                              alert("Por favor complete el título de la sesión en el Paso 1 antes de navegar.");
-                              return;
-                            }
-                            setActaWizardStep(s.id as any);
-                          }}
-                          className={`py-3 rounded-xl border transition-all cursor-pointer font-bold focus:outline-none ${
+                          onClick={() => setActaWizardStep(s.id as any)}
+                          className={`py-4.5 rounded-2xl border transition-all cursor-pointer font-black focus:outline-none ${
                             active 
-                              ? 'bg-blue-900 text-white border-blue-900 shadow-md scale-102' 
+                              ? 'bg-gradient-to-r from-yellow-500 via-yellow-450 to-amber-500 text-blue-950 border-yellow-500 shadow-lg shadow-yellow-500/10 scale-105' 
                               : past
-                                ? 'bg-blue-50 text-blue-900 border-blue-100 hover:bg-blue-100/50'
-                                : 'bg-slate-50 text-slate-450 border-slate-100 hover:bg-slate-100'
+                                ? 'bg-amber-50/70 text-amber-800 border-amber-250/60 hover:bg-amber-100/40'
+                                : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
                           }`}
                         >
                           <span className="hidden md:inline">{s.label}</span>
@@ -1700,10 +1765,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                       <div className="space-y-4 animate-in fade-in duration-350">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2">Título de la Sesión *</label>
+                            <label className="block text-sm font-bold text-slate-700 mb-2">Título de la Sesión</label>
                             <input 
                               type="text"
-                              required
                               value={actaWizardData.titulo}
                               onChange={e => setActaWizardData(prev => ({ ...prev, titulo: e.target.value }))}
                               placeholder="Ej. Sesión Ordinaria de Junta Directiva No. 05-2026"
@@ -1711,7 +1775,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2">Categoría *</label>
+                            <label className="block text-sm font-bold text-slate-700 mb-2">Categoría</label>
                             <select
                               value={actaWizardData.categoria}
                               onChange={e => setActaWizardData(prev => ({ ...prev, categoria: e.target.value as any }))}
@@ -1725,10 +1789,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                         </div>
 
                         <div>
-                          <label className="block text-sm font-bold text-slate-700 mb-2">Lugar Preestablecido (con Ciudad al inicio) *</label>
+                          <label className="block text-sm font-bold text-slate-700 mb-2">Lugar Preestablecido (con Ciudad al inicio)</label>
                           <input 
                             type="text"
-                            required
                             value={actaWizardData.lugar}
                             onChange={e => setActaWizardData(prev => ({ ...prev, lugar: e.target.value }))}
                             placeholder="Quetzaltenango..."
@@ -1738,7 +1801,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
                         <div>
                           <div className="flex justify-between items-center mb-2">
-                            <label className="block text-sm font-bold text-slate-700">Fecha y Hora Automática (Numérica y Escrita) *</label>
+                            <label className="block text-sm font-bold text-slate-700">Fecha y Hora Automática (Numérica y Escrita)</label>
                             <button 
                               type="button"
                               onClick={() => setActaWizardData(prev => ({ ...prev, fechaHoraText: getWrittenDateTimeSpanish(new Date()) }))}
@@ -1970,10 +2033,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                   {/* Resolution reason */}
                                   {res.decision !== 'Pendiente' && (
                                     <div className="animate-in slide-in-from-top-1 duration-200">
-                                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Justificación de la resolución *</label>
+                                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">Justificación de la resolución</label>
                                       <textarea
                                         rows={2}
-                                        required
                                         value={res.razon}
                                         onChange={e => {
                                           setActaWizardData(prev => ({
@@ -2003,7 +2065,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                           <h3 className="text-sm font-black text-blue-900 uppercase tracking-wider">Agregar Punto de Agenda</h3>
                           <div className="grid grid-cols-1 gap-4">
                             <div>
-                              <label className="block text-xs font-bold text-slate-550 uppercase tracking-wide mb-1.5">Tema *</label>
+                              <label className="block text-xs font-bold text-slate-550 uppercase tracking-wide mb-1.5">Tema</label>
                               <input 
                                 type="text"
                                 value={newAgendaPoint.tema}
@@ -2139,11 +2201,6 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                         <button
                           type="button"
                           onClick={() => {
-                            if (actaWizardStep === 'datos' && !actaWizardData.titulo.trim()) {
-                              alert("Por favor complete el título de la sesión.");
-                              return;
-                            }
-                            
                             const steps: typeof actaWizardStep[] = ['datos', 'protocolo', 'solicitudes', 'libre', 'vista_previa'];
                             const idx = steps.indexOf(actaWizardStep);
                             if (idx < steps.length - 1) setActaWizardStep(steps[idx + 1]);
@@ -2208,9 +2265,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   {/* List of Actas */}
                   <div className="grid gap-4">
                     {filteredActas.map(acta => (
-                      <div key={acta.id} className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center justify-between gap-6 hover:shadow-md transition-shadow">
+                      <div key={acta.id} className="bg-white p-8 md:p-9 rounded-3xl border border-slate-200/80 shadow-sm flex items-center justify-between gap-6 hover:shadow-md transition-shadow">
                         <div className="flex items-center space-x-4 min-w-0">
-                          <div className="bg-yellow-50 text-yellow-600 p-3.5 rounded-2xl flex-shrink-0">
+                          <div className="bg-yellow-50 text-yellow-605 p-3.5 rounded-2xl flex-shrink-0">
                             <FileText size={24} />
                           </div>
                           <div className="min-w-0">
@@ -2224,6 +2281,13 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                           <span className="text-xs font-black bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full uppercase">
                             {acta.categoria || 'Ordinaria'}
                           </span>
+                          <button
+                            onClick={() => handleEditActaClick(acta)}
+                            className="p-2.5 text-slate-400 hover:text-blue-900 hover:bg-blue-50 rounded-xl transition-all"
+                            title="Editar acta"
+                          >
+                            <Edit size={18} />
+                          </button>
                           <button
                             onClick={() => generateActaPDF(acta)}
                             className="p-2.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all"
@@ -2252,7 +2316,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
           {/* TAB: DONACIONES RECIBIDAS */}
           {activeTab === 'donaciones' && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <h3 className="text-3xl font-black text-slate-800 tracking-tight">Registro de Donaciones</h3>
                 <button 
@@ -2267,7 +2331,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               {/* Add Donacion Modal */}
               {showAddDonacion && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-md">
-                  <form onSubmit={handleAddDonacion} className="bg-white rounded-[2.5rem] p-8 max-w-lg w-full space-y-6 shadow-2xl border border-slate-100">
+                  <form onSubmit={handleAddDonacion} className="bg-white rounded-[2.5rem] p-10 md:p-12 max-w-lg w-full space-y-8 shadow-2xl border border-slate-100">
                     <div className="flex justify-between items-center">
                       <h4 className="text-2xl font-black text-slate-800">Registrar Donación Entrante</h4>
                       <button type="button" onClick={() => setShowAddDonacion(false)} className="p-2 hover:bg-slate-50 rounded-xl transition-colors"><X size={20} /></button>
@@ -2351,27 +2415,27 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 <table className="w-full border-collapse text-left">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold text-xs uppercase tracking-wider">
-                      <th className="p-6">Donante</th>
-                      <th className="p-6">Fecha</th>
-                      <th className="p-6">Proyecto</th>
-                      <th className="p-6">Tipo</th>
-                      <th className="p-6 text-right">Monto</th>
+                      <th className="py-7 px-6">Donante</th>
+                      <th className="py-7 px-6">Fecha</th>
+                      <th className="py-7 px-6">Proyecto</th>
+                      <th className="py-7 px-6">Tipo</th>
+                      <th className="py-7 px-6 text-right">Monto</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredDonaciones.map(don => (
                       <tr key={don.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="p-6 font-extrabold text-slate-800 text-base">{don.donante}</td>
-                        <td className="p-6 text-sm text-slate-500 font-medium">{don.fecha}</td>
-                        <td className="p-6 text-sm text-slate-600 font-bold">{don.proyecto}</td>
-                        <td className="p-6">
+                        <td className="py-7 px-6 font-extrabold text-slate-800 text-base">{don.donante}</td>
+                        <td className="py-7 px-6 text-sm text-slate-500 font-medium">{don.fecha}</td>
+                        <td className="py-7 px-6 text-sm text-slate-600 font-bold">{don.proyecto}</td>
+                        <td className="py-7 px-6">
                           <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase ${
                             don.tipo === 'Empresarial' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-600'
                           }`}>
                             {don.tipo}
                           </span>
                         </td>
-                        <td className="p-6 text-right font-black text-blue-900 text-lg">Q {don.monto.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</td>
+                        <td className="py-7 px-6 text-right font-black text-blue-900 text-lg">Q {don.monto.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -2382,7 +2446,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
           {/* TAB: BENEFICIOS DE SOCIOS */}
           {activeTab === 'beneficios' && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <h3 className="text-3xl font-black text-slate-800 tracking-tight">Beneficios y Convenios del Socio</h3>
                 <button 
@@ -2397,7 +2461,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               {/* Add Beneficio Modal */}
               {showAddBeneficio && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-md">
-                  <form onSubmit={handleAddBeneficio} className="bg-white rounded-[2.5rem] p-8 max-w-lg w-full space-y-6 shadow-2xl border border-slate-100">
+                  <form onSubmit={handleAddBeneficio} className="bg-white rounded-[2.5rem] p-10 md:p-12 max-w-lg w-full space-y-8 shadow-2xl border border-slate-100">
                     <div className="flex justify-between items-center">
                       <h4 className="text-2xl font-black text-slate-800">Añadir Beneficio/Convenio</h4>
                       <button type="button" onClick={() => setShowAddBeneficio(false)} className="p-2 hover:bg-slate-50 rounded-xl transition-colors"><X size={20} /></button>
@@ -2486,7 +2550,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               {/* Beneficios List */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {beneficios.map(ben => (
-                  <div key={ben.id} className="bg-white p-6 rounded-[2rem] border border-slate-200/80 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow group">
+                  <div key={ben.id} className="bg-white p-8 md:p-9 rounded-[2.5rem] border border-slate-200/80 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow group">
                     <div className="space-y-4">
                       <div className="flex justify-between items-start">
                         <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase ${
