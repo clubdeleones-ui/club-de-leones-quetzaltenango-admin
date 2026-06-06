@@ -97,7 +97,7 @@ export const FormattedActa: React.FC<FormattedActaProps> = ({
   };
 
   return (
-    <div className="w-full bg-white border border-slate-200 rounded-[2.5rem] p-6 md:p-12 shadow-xl relative overflow-hidden max-w-3xl mx-auto text-left group select-all">
+    <div className="w-full bg-white border border-slate-200 rounded-[2rem] sm:rounded-[2.5rem] p-4 sm:p-8 md:p-12 shadow-xl relative overflow-hidden max-w-3xl mx-auto text-left group select-all">
       {/* Decorative top bars */}
       <div className="absolute top-0 left-0 w-full h-3 bg-blue-900" />
       <div className="absolute top-3 left-0 w-full h-1 bg-yellow-500" />
@@ -119,7 +119,7 @@ export const FormattedActa: React.FC<FormattedActaProps> = ({
       </div>
 
       {/* Metadata Grid Card */}
-      <div className="bg-slate-50 border border-slate-200/60 rounded-3xl p-5 md:p-6 mb-8 font-sans grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="bg-slate-50 border border-slate-200/60 rounded-[2rem] sm:rounded-3xl p-4 sm:p-5 md:p-6 mb-6 sm:mb-8 font-sans grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="flex items-center space-x-3 text-slate-700">
           <div className="bg-blue-50 text-blue-900 p-2.5 rounded-xl shrink-0">
             <FileText size={18} />

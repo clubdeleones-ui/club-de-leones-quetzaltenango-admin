@@ -175,7 +175,7 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
       </section>
 
       {/* Smart AI Search Box */}
-      <section className="bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-950 rounded-[2.5rem] p-10 text-white shadow-2xl relative overflow-hidden group">
+      <section className="bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-950 rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 text-white shadow-2xl relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/10 blur-3xl -mr-32 -mt-32 rounded-full group-hover:bg-yellow-500/20 transition-colors" />
         <div className="relative z-10">
           <div className="flex items-center space-x-3 mb-6">
@@ -188,7 +188,7 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
             Pregúntale a nuestra IA sobre resoluciones, debates, acuerdos o temas tratados en actas anteriores.
           </p>
           
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-3">
             <input
               type="text"
               value={aiQuery}
@@ -199,7 +199,7 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
             <button
               onClick={handleAiSearch}
               disabled={loadingAi}
-              className="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-black px-8 py-4 rounded-2xl transition-all disabled:opacity-50 shadow-lg shadow-yellow-500/20 flex items-center space-x-2 cursor-pointer active:scale-95 shrink-0"
+              className="bg-yellow-500 hover:bg-yellow-400 text-blue-900 font-black px-8 py-4 rounded-2xl transition-all disabled:opacity-50 shadow-lg shadow-yellow-500/20 flex items-center justify-center space-x-2 cursor-pointer active:scale-95 shrink-0 w-full sm:w-auto"
             >
               {loadingAi ? 'Buscando...' : (
                 <>
@@ -260,14 +260,14 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
         </div>
 
         {/* Categories and Date Filters */}
-        <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex flex-wrap gap-2">
+        <div className="bg-white border border-slate-200/80 rounded-3xl p-4 sm:p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex flex-nowrap overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none w-[calc(100%+2rem)] sm:w-auto gap-2">
             {(['Todas', 'Ordinaria', 'Extraordinaria', 'Reunión de Comisión'] as const).map(cat => (
               <button
                 key={cat}
                 type="button"
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-5 py-2.5 rounded-full text-xs font-black transition-all cursor-pointer ${
+                className={`px-5 py-2.5 rounded-full text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
                   selectedCategory === cat
                     ? 'bg-blue-900 text-white shadow-md shadow-blue-900/10'
                     : 'bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800'
@@ -423,9 +423,9 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
 
       {/* Reader Modal */}
       {selectedActa && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-blue-900/20 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-white rounded-[3rem] max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 shadow-2xl border border-white/20">
-            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-blue-900 text-white relative">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6 bg-blue-900/20 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2rem] sm:rounded-[3rem] max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 shadow-2xl border border-white/20">
+            <div className="p-6 sm:p-8 border-b border-slate-100 flex justify-between items-center bg-blue-900 text-white relative">
               <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500" />
               <div className="text-left">
                 <h3 className="text-2xl font-black">{selectedActa.titulo}</h3>
@@ -436,7 +436,7 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
               </button>
             </div>
             
-            <div className="p-6 md:p-10 overflow-y-auto bg-slate-150/50 flex-grow shadow-inner">
+            <div className="p-3 sm:p-6 md:p-10 overflow-y-auto bg-slate-150/50 flex-grow shadow-inner">
               <FormattedActa
                 titulo={selectedActa.titulo}
                 fecha={selectedActa.fecha}

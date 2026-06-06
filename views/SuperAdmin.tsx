@@ -2670,11 +2670,11 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                           </div>
 
                           {/* Tabs Navigation */}
-                          <div className="flex flex-wrap gap-2 border-b border-slate-100 pb-4">
+                          <div className="flex flex-nowrap overflow-x-auto pb-4 -mx-6 px-6 sm:-mx-8 sm:px-8 border-b border-slate-100 scrollbar-none w-[calc(100%+3rem)] sm:w-auto gap-2">
                             <button
                               type="button"
                               onClick={() => setSelectedAgendaPointTab('new')}
-                              className={`flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-95 border ${
+                              className={`flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-95 border whitespace-nowrap shrink-0 ${
                                 selectedAgendaPointTab === 'new'
                                   ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/20'
                                   : 'bg-white border-dashed border-amber-300 text-amber-600 hover:bg-amber-50/50'
@@ -2689,14 +2689,14 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                 key={idx}
                                 type="button"
                                 onClick={() => setSelectedAgendaPointTab(idx)}
-                                className={`flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-95 border ${
+                                className={`flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-95 border whitespace-nowrap shrink-0 ${
                                   selectedAgendaPointTab === idx
                                     ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/20'
                                     : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                                 }`}
                               >
                                 <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black transition-colors ${
-                                  selectedAgendaPointTab === idx ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-650'
+                                  selectedAgendaPointTab === idx ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-655'
                                 }`}>
                                   {idx + 1}
                                 </span>
@@ -2887,11 +2887,11 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     {actaWizardStep === 'vista_previa' && (
                       <div className="space-y-6 animate-in fade-in duration-350">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200/50">
-                          <div>
+                          <div className="text-left">
                             <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">Modo de Previsualización</h4>
                             <p className="text-xs text-slate-500 font-medium">Visualice el acta en formato oficial impreso o en texto limpio.</p>
                           </div>
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto space-x-2">
                             <div className="bg-slate-200/60 p-1 rounded-xl flex space-x-1">
                               <button
                                 type="button"
@@ -2932,7 +2932,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                         </div>
 
                         {actaPreviewMode === 'documento' ? (
-                          <div className="max-h-[60vh] overflow-y-auto bg-slate-100/60 p-4 md:p-6 rounded-[2rem] border border-slate-200/50 shadow-inner">
+                          <div className="max-h-[50vh] sm:max-h-[60vh] overflow-y-auto bg-slate-100/60 p-2 sm:p-4 md:p-6 rounded-[2rem] border border-slate-200/50 shadow-inner">
                             <FormattedActa
                               titulo={actaWizardData.titulo.trim() || `Acta de Sesión - ${new Date().toLocaleDateString('es-GT')}`}
                               fecha={actaWizardData.fechaHoraText.split(',')[0] || new Date().toLocaleDateString('es-GT')}
