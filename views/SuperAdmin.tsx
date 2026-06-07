@@ -52,7 +52,7 @@ import {
   Hash,
   ChevronDown
 } from 'lucide-react';
-import { generateActaPDF, generateActaCode } from '../utils/pdfGenerator';
+import { generateActaPDF, generateActaCode, generateReciboPagoPDF } from '../utils/pdfGenerator';
 import { FormattedActa } from '../components/FormattedActa';
 import { compressImageFile } from '../utils/imageCompressor';
 
@@ -268,6 +268,23 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const [statusFilter, setStatusFilter] = useState('Todos');
   const [financialFilter, setFinancialFilter] = useState('Todos');
   const [isLoadingSocios, setIsLoadingSocios] = useState(false);
+
+  // Cuotas Redesign States
+  const [cuotasFilterStatus, setCuotasFilterStatus] = useState<'Todos' | 'Al día' | 'Pendiente' | 'En mora'>('Todos');
+  const [selectedSocioForCuotas, setSelectedSocioForCuotas] = useState<string | null>(null);
+  const [showRegistrarPagoModal, setShowRegistrarPagoModal] = useState(false);
+  const [registrarPagoData, setRegistrarPagoData] = useState({
+    socioId: '',
+    tipoPeriodo: 'Mensual' as 'Mensual' | 'Semestral' | 'Anual',
+    mes: 'Enero',
+    año: new Date().getFullYear(),
+    semestre: '1er Semestre (Ene-Jun)',
+    monto: 100,
+    metodo: 'Transferencia' as 'Transferencia' | 'Depósito' | 'Efectivo',
+    bancoReferencia: '',
+    numeroReferencia: '',
+    fechaPago: new Date().toISOString().substring(0, 10)
+  });
 
   // Socio Form / QR states
   const [editingSocio, setEditingSocio] = useState<Socio | null>(null);
@@ -911,23 +928,80 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     setShowAddBeneficio(false);
   };
 
-  const handleRegistrarPago = async (socioId: string) => {
+  const handleRegistrarPago = (socioId: string) => {
     const socio = socios.find(s => s.id === socioId);
     if (!socio) return;
-    
-    const updatedSocio = {
-      ...socio,
-      estadoCuotas: 'Al día' as const,
-      montoPendiente: 0
+    setRegistrarPagoData(prev => ({
+      ...prev,
+      socioId,
+      monto: socio.montoPendiente > 0 ? socio.montoPendiente : 100
+    }));
+    setShowRegistrarPagoModal(true);
+  };
+
+  const handleGuardarNuevoPago = async () => {
+    const { socioId, tipoPeriodo, mes, año, semestre, monto, metodo, bancoReferencia, numeroReferencia, fechaPago } = registrarPagoData;
+    if (!socioId) return;
+
+    const socio = socios.find(s => s.id === socioId);
+    if (!socio) return;
+
+    let periodo = '';
+    if (tipoPeriodo === 'Mensual') {
+      periodo = `${mes} ${año}`;
+    } else if (tipoPeriodo === 'Semestral') {
+      periodo = `${semestre} ${año}`;
+    } else {
+      periodo = `Año ${año}`;
+    }
+
+    const nuevoPago = {
+      id: `pago-${Date.now()}`,
+      fechaPago,
+      monto: Number(monto),
+      periodo,
+      tipoPeriodo,
+      metodo,
+      bancoReferencia: metodo !== 'Efectivo' ? bancoReferencia : undefined,
+      numeroReferencia: metodo !== 'Efectivo' ? numeroReferencia : undefined
     };
 
-    setSocios(socios.map(s => s.id === socioId ? updatedSocio : s));
+    const nuevoMontoPendiente = Math.max(0, socio.montoPendiente - Number(monto));
+    const nuevoEstadoCuotas = nuevoMontoPendiente === 0 
+      ? 'Al día' as const
+      : (nuevoMontoPendiente > 200 ? 'En mora' as const : 'Pendiente' as const);
+
+    const updatedSocio: Socio = {
+      ...socio,
+      estadoCuotas: nuevoEstadoCuotas,
+      montoPendiente: nuevoMontoPendiente,
+      fechaUltimoPago: fechaPago,
+      historialPagos: [nuevoPago, ...(socio.historialPagos || [])]
+    };
+
+    const newSocios = socios.map(s => s.id === socioId ? updatedSocio : s);
+    setSocios(newSocios);
+    localStorage.setItem('club_leones_socios_v4', JSON.stringify(newSocios));
 
     try {
       await firebaseService.saveSocio(updatedSocio);
     } catch (err) {
       console.error("Error saving socio payment to Firebase:", err);
     }
+
+    setShowRegistrarPagoModal(false);
+    setRegistrarPagoData({
+      socioId: '',
+      tipoPeriodo: 'Mensual',
+      mes: 'Enero',
+      año: new Date().getFullYear(),
+      semestre: '1er Semestre (Ene-Jun)',
+      monto: 100,
+      metodo: 'Transferencia',
+      bancoReferencia: '',
+      numeroReferencia: '',
+      fechaPago: new Date().toISOString().substring(0, 10)
+    });
   };
 
   const handleEnviarRecordatorio = (socio: Socio) => {
@@ -1144,6 +1218,21 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     s.nombre.toLowerCase().includes(socioSearch.toLowerCase()) ||
     s.correo.toLowerCase().includes(socioSearch.toLowerCase())
   );
+
+  const filteredSociosCuotas = useMemo(() => {
+    return socios.filter(s => {
+      if (s.rol === UserRole.DONANTE || s.rol === UserRole.GUEST) return false;
+
+      const matchesSearch = 
+        s.nombre.toLowerCase().includes(socioSearch.toLowerCase()) ||
+        s.correo.toLowerCase().includes(socioSearch.toLowerCase()) ||
+        (s.codigoSocio && s.codigoSocio.toLowerCase().includes(socioSearch.toLowerCase()));
+      
+      const matchesStatus = cuotasFilterStatus === 'Todos' || s.estadoCuotas === cuotasFilterStatus;
+      
+      return matchesSearch && matchesStatus;
+    });
+  }, [socios, socioSearch, cuotasFilterStatus]);
 
   const filteredSociosAdmin = useMemo(() => {
     return socios.filter(s => {
@@ -2085,161 +2174,590 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           {/* TAB: CONTROL DE CUOTAS */}
           {activeTab === 'cuotas' && (
             <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <h3 className="text-3xl font-black text-slate-800 tracking-tight">Cobros y Control de Cuotas</h3>
-                <div className="relative w-full sm:w-80">
-                  <Search className="absolute left-4 top-3 text-slate-400" size={18} />
+              
+              {/* Header */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                  <h3 className="text-3xl font-black text-slate-800 tracking-tight">Cobros y Control de Cuotas</h3>
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Gestión Financiera de Aportaciones de Socios</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    setRegistrarPagoData(prev => ({
+                      ...prev,
+                      socioId: '',
+                      monto: 100
+                    }));
+                    setShowRegistrarPagoModal(true);
+                  }}
+                  className="bg-green-600 hover:bg-green-700 text-white font-black px-6 py-3 rounded-xl flex items-center justify-center space-x-2 shadow-lg shadow-green-600/10 active:scale-95 transition-all w-full md:w-auto"
+                >
+                  <Plus size={18} />
+                  <span>Registrar Pago</span>
+                </button>
+              </div>
+
+              {/* KPI Widgets */}
+              {(() => {
+                const totalRecaudado = socios.reduce((sum, s) => {
+                  const pagosSocio = s.historialPagos?.reduce((pSum, p) => pSum + p.monto, 0) || 0;
+                  return sum + pagosSocio;
+                }, 0);
+                const totalPendiente = socios.reduce((sum, s) => sum + (s.montoPendiente || 0), 0);
+                const sociosAlDia = socios.filter(s => s.rol !== UserRole.DONANTE && s.rol !== UserRole.GUEST && s.estadoCuotas === 'Al día').length;
+                const sociosTotal = socios.filter(s => s.rol !== UserRole.DONANTE && s.rol !== UserRole.GUEST).length;
+                const porcentajeSolvencia = sociosTotal > 0 ? Math.round((sociosAlDia / sociosTotal) * 100) : 100;
+                const sociosEnMora = socios.filter(s => s.rol !== UserRole.DONANTE && s.rol !== UserRole.GUEST && s.estadoCuotas === 'En mora').length;
+
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
+                      <div className="p-3 bg-green-50 text-green-600 rounded-2xl">
+                        <TrendingUp size={24} />
+                      </div>
+                      <div>
+                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block">Total Recaudado</span>
+                        <span className="text-xl font-black text-slate-800">Q {totalRecaudado.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
+                      <div className="p-3 bg-red-50 text-red-600 rounded-2xl">
+                        <DollarSign size={24} />
+                      </div>
+                      <div>
+                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block">Monto por Cobrar</span>
+                        <span className="text-xl font-black text-slate-800">Q {totalPendiente.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
+                      <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+                        <CheckCircle size={24} />
+                      </div>
+                      <div>
+                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block">Solvencia General</span>
+                        <span className="text-xl font-black text-slate-800">{porcentajeSolvencia}% ({sociosAlDia}/{sociosTotal})</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
+                      <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl">
+                        <Clock size={24} />
+                      </div>
+                      <div>
+                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block">Socios en Mora</span>
+                        <span className="text-xl font-black text-slate-800">{sociosEnMora} Socios</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Controls: Search & Filter */}
+              <div className="bg-slate-50 p-4 rounded-3xl border border-slate-100 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                <div className="relative w-full sm:flex-grow">
+                  <Search className="absolute left-4 top-3.5 text-slate-400" size={18} />
                   <input
                     type="text"
                     value={socioSearch}
                     onChange={e => setSocioSearch(e.target.value)}
-                    placeholder="Buscar socio..."
-                    className="w-full pl-11 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm"
+                    placeholder="Buscar socio por nombre, correo o código..."
+                    className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm shadow-sm"
                   />
+                </div>
+                <div className="flex items-center space-x-3 w-full sm:w-auto flex-shrink-0">
+                  <Filter size={18} className="text-slate-400 flex-shrink-0 hidden xs:block" />
+                  <select 
+                    value={cuotasFilterStatus} 
+                    onChange={e => setCuotasFilterStatus(e.target.value as any)}
+                    className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-900 w-full sm:w-56 shadow-sm"
+                  >
+                    <option value="Todos">Todos los Estados</option>
+                    <option value="Al día">Al día</option>
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="En mora">En mora</option>
+                  </select>
                 </div>
               </div>
 
-              {/* Members Cuotas Table */}
+              {/* Members Cuotas List / Table */}
               <div className="bg-white rounded-[2.5rem] border border-slate-200/80 shadow-sm overflow-hidden">
+                
                 {/* Desktop View: Table */}
-                <div className="hidden md:block overflow-x-auto">
+                <div className="hidden lg:block overflow-x-auto">
                   <table className="w-full border-collapse text-left">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold text-xs uppercase tracking-wider">
-                        <th className="py-7 px-6">Socio</th>
-                        <th className="py-7 px-6">Puesto</th>
-                        <th className="py-7 px-6">Estado</th>
-                        <th className="py-7 px-6">Monto Pendiente</th>
-                        <th className="py-7 px-6 text-right">Acciones</th>
+                        <th className="py-6 px-6">Socio</th>
+                        <th className="py-6 px-6">Estado</th>
+                        <th className="py-6 px-6">Historial Visual (2026)</th>
+                        <th className="py-6 px-6">Monto Pendiente</th>
+                        <th className="py-6 px-6 text-right">Acciones</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {filteredSocios.map(s => (
-                        <tr key={s.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="py-7 px-6 flex items-center space-x-4">
-                            <img 
-                              src={s.foto} 
-                              alt={s.nombre} 
-                              className="w-10 h-10 rounded-full border border-slate-100 object-cover cursor-zoom-in" 
-                              onClick={() => setSelectedPhoto({ url: s.foto, title: s.nombre })}
-                            />
-                            <div>
-                              <p className="font-extrabold text-slate-800">{s.nombre}</p>
-                              <p className="text-xs text-slate-400">{s.correo}</p>
-                            </div>
-                          </td>
-                          <td className="py-7 px-6 text-sm text-slate-500 font-bold uppercase">{s.puesto || 'Socio Activo'}</td>
-                          <td className="py-7 px-6">
-                            <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase ${
-                              s.estadoCuotas === 'Al día' 
-                                ? 'bg-green-50 text-green-700' 
-                                : s.estadoCuotas === 'Pendiente' 
-                                  ? 'bg-yellow-50 text-yellow-700' 
-                                  : 'bg-red-50 text-red-700'
-                            }`}>
-                              {s.estadoCuotas}
-                            </span>
-                          </td>
-                          <td className="py-7 px-6 font-extrabold text-slate-800 text-base">Q {s.montoPendiente.toFixed(2)}</td>
-                          <td className="py-7 px-6 text-right flex items-center justify-end space-x-2">
-                            {s.montoPendiente > 0 ? (
-                              <>
-                                <button
-                                  onClick={() => handleRegistrarPago(s.id)}
-                                  className="bg-green-50 text-green-700 hover:bg-green-100 px-4 py-2 rounded-xl font-bold text-xs transition-colors flex items-center space-x-1"
-                                  title="Marcar como pagado"
-                                >
-                                  <Check size={14} />
-                                  <span>Pagar</span>
-                                </button>
-                                <button
-                                  onClick={() => handleEnviarRecordatorio(s)}
-                                  className="bg-slate-100 text-slate-700 hover:bg-slate-200 p-2 rounded-xl font-bold text-xs transition-colors"
-                                  title="Enviar recordatorio por correo"
-                                >
-                                  <Send size={14} />
-                                </button>
-                              </>
-                            ) : (
-                              <span className="text-green-600 font-bold text-xs flex items-center px-4 py-2 bg-green-50/50 rounded-xl">
-                                <CheckCircle size={14} className="mr-1" />
-                                Solvente
-                              </span>
+                      {filteredSociosCuotas.map(s => {
+                        const isExpanded = selectedSocioForCuotas === s.id;
+                        
+                        // Determine payment types for visual rendering
+                        const hasSemestral = s.historialPagos?.some(p => p.tipoPeriodo === 'Semestral');
+                        const hasAnual = s.historialPagos?.some(p => p.tipoPeriodo === 'Anual');
+
+                        return (
+                          <React.Fragment key={s.id}>
+                            <tr className={`hover:bg-slate-50/30 transition-colors cursor-pointer ${isExpanded ? 'bg-blue-50/20' : ''}`} onClick={() => setSelectedSocioForCuotas(isExpanded ? null : s.id)}>
+                              <td className="py-5 px-6 flex items-center space-x-4">
+                                <img 
+                                  src={s.foto} 
+                                  alt={s.nombre} 
+                                  className="w-10 h-10 rounded-full border border-slate-100 object-cover cursor-zoom-in" 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedPhoto({ url: s.foto, title: s.nombre });
+                                  }}
+                                />
+                                <div>
+                                  <p className="font-extrabold text-slate-800">{s.nombre}</p>
+                                  <p className="text-xs text-slate-450 mt-0.5">{s.codigoSocio || 'Sin código'} • {s.correo}</p>
+                                </div>
+                              </td>
+                              <td className="py-5 px-6">
+                                <span className={`text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${
+                                  s.estadoCuotas === 'Al día' 
+                                    ? 'bg-green-50 text-green-700 border border-green-200/50' 
+                                    : s.estadoCuotas === 'Pendiente' 
+                                      ? 'bg-yellow-50 text-yellow-700 border border-yellow-200/50' 
+                                      : 'bg-red-50 text-red-700 border border-red-200/50'
+                                }`}>
+                                  {s.estadoCuotas}
+                                </span>
+                              </td>
+                              <td className="py-5 px-6" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center gap-1">
+                                  {hasAnual ? (
+                                    // Render Annual badge
+                                    (() => {
+                                      const paid = s.historialPagos?.some(p => p.tipoPeriodo === 'Anual' && p.periodo.includes('2026'));
+                                      return (
+                                        <div 
+                                          title={paid ? "Anual 2026 Pagado" : "Anual 2026 Pendiente"} 
+                                          className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider ${
+                                            paid ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-slate-100 text-slate-400 border border-slate-200'
+                                          }`}
+                                        >
+                                          Anual 2026
+                                        </div>
+                                      );
+                                    })()
+                                  ) : hasSemestral ? (
+                                    // Render Semestral badges
+                                    ['1er Semestre', '2do Semestre'].map((sem, idx) => {
+                                      const paid = s.historialPagos?.some(p => p.tipoPeriodo === 'Semestral' && p.periodo.includes(sem));
+                                      return (
+                                        <div 
+                                          key={idx}
+                                          title={`${sem} 2026: ${paid ? 'Pagado' : 'Pendiente'}`}
+                                          className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                                            paid ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-slate-100 text-slate-400 border border-slate-200'
+                                          }`}
+                                        >
+                                          {idx === 0 ? 'Semestre 1' : 'Semestre 2'}
+                                        </div>
+                                      );
+                                    })
+                                  ) : (
+                                    // Render Monthly badges (12 months)
+                                    ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'].map((month, idx) => {
+                                      const fullMonthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+                                      const paid = s.historialPagos?.some(p => p.tipoPeriodo === 'Mensual' && p.periodo.includes(fullMonthNames[idx]));
+                                      
+                                      // If month has passed (0-indexed current month is e.g. June=5) and unpaid
+                                      const currentMonthIdx = new Date().getMonth();
+                                      const isPastUnpaid = idx <= currentMonthIdx && !paid;
+                                      
+                                      return (
+                                        <div 
+                                          key={idx}
+                                          title={`${fullMonthNames[idx]} 2026: ${paid ? 'Pagado' : isPastUnpaid ? 'Atrasado' : 'Próximo'}`}
+                                          className={`w-6 h-6 rounded-md flex items-center justify-center text-[9px] font-black uppercase border ${
+                                            paid 
+                                              ? 'bg-green-500 text-white border-green-600' 
+                                              : isPastUnpaid 
+                                                ? 'bg-red-500 text-white border-red-600 animate-pulse'
+                                                : 'bg-slate-100 text-slate-400 border-slate-200'
+                                          }`}
+                                        >
+                                          {month.substring(0, 1)}
+                                        </div>
+                                      );
+                                    })
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-5 px-6 font-extrabold text-slate-800 text-base">Q {s.montoPendiente.toFixed(2)}</td>
+                              <td className="py-5 px-6 text-right" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center justify-end space-x-2">
+                                  <button
+                                    onClick={() => handleRegistrarPago(s.id)}
+                                    className="bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 px-3.5 py-2 rounded-xl font-bold text-xs transition-colors flex items-center space-x-1 shadow-sm"
+                                    title="Registrar aportación"
+                                  >
+                                    <Check size={14} />
+                                    <span>Cobrar</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleEnviarRecordatorio(s)}
+                                    className="bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 p-2 rounded-xl font-bold text-xs transition-colors shadow-sm"
+                                    title="Enviar aviso por correo"
+                                  >
+                                    <Send size={14} />
+                                  </button>
+                                  <div className="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition-colors">
+                                    <ChevronDown className={`transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} size={16} onClick={() => setSelectedSocioForCuotas(isExpanded ? null : s.id)} />
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                            
+                            {/* Expanded Detail Panel */}
+                            {isExpanded && (
+                              <tr>
+                                <td colSpan={5} className="bg-slate-50/50 p-6 border-b border-slate-100">
+                                  <div className="space-y-6 max-w-5xl mx-auto">
+                                    
+                                    {/* Warnings Section */}
+                                    {s.estadoCuotas === 'En mora' ? (
+                                      <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-red-800 flex items-start space-x-3 text-sm">
+                                        <AlertTriangle className="text-red-500 mt-0.5 flex-shrink-0" size={18} />
+                                        <div>
+                                          <span className="font-extrabold block">Alerta de Atraso Crítico (En Mora)</span>
+                                          <p className="mt-1 leading-relaxed">
+                                            El socio presenta un atraso mayor a 60 días con un saldo pendiente acumulado de <strong className="font-black">Q {s.montoPendiente.toFixed(2)}</strong>. 
+                                            Su último pago registrado fue el <strong className="font-bold">{s.fechaUltimoPago || 'No registrado'}</strong>. 
+                                            Se recomienda suspender temporalmente sus beneficios corporativos y enviar una notificación formal de cobro.
+                                          </p>
+                                        </div>
+                                      </div>
+                                    ) : s.estadoCuotas === 'Pendiente' ? (
+                                      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-amber-800 flex items-start space-x-3 text-sm">
+                                        <AlertCircle className="text-amber-500 mt-0.5 flex-shrink-0" size={18} />
+                                        <div>
+                                          <span className="font-extrabold block">Aviso de Cuota Pendiente</span>
+                                          <p className="mt-1 leading-relaxed">
+                                            El socio tiene un pago pendiente por valor de <strong className="font-black">Q {s.montoPendiente.toFixed(2)}</strong>. 
+                                            Su cuenta se encuentra activa pero requiere ponerse al día a la brevedad.
+                                          </p>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-green-800 flex items-start space-x-3 text-sm">
+                                        <CheckCircle className="text-green-500 mt-0.5 flex-shrink-0" size={18} />
+                                        <div>
+                                          <span className="font-extrabold block">Cuenta Solvente</span>
+                                          <p className="mt-1 leading-relaxed">
+                                            El socio se encuentra al día con sus cuotas obligatorias. ¡Gracias por su puntualidad! 
+                                            Último pago registrado el <strong className="font-bold">{s.fechaUltimoPago || 'N/A'}</strong>.
+                                          </p>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Payments History Table */}
+                                    <div className="space-y-3">
+                                      <h5 className="font-extrabold text-slate-800 text-sm flex items-center space-x-2">
+                                        <CreditCard size={16} className="text-blue-900" />
+                                        <span>Historial Detallado de Transacciones</span>
+                                      </h5>
+                                      
+                                      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                                        <table className="w-full text-left border-collapse text-xs">
+                                          <thead>
+                                            <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 font-bold uppercase tracking-wider">
+                                              <th className="p-4">Fecha Pago</th>
+                                              <th className="p-4">Período Aportación</th>
+                                              <th className="p-4">Tipo</th>
+                                              <th className="p-4">Monto</th>
+                                              <th className="p-4">Método</th>
+                                              <th className="p-4">Referencia / Banco</th>
+                                              <th className="p-4 text-right">Comprobante</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody className="divide-y divide-slate-100 text-slate-650">
+                                            {s.historialPagos && s.historialPagos.length > 0 ? (
+                                              s.historialPagos.map(pago => (
+                                                <tr key={pago.id} className="hover:bg-slate-50/40">
+                                                  <td className="p-4 font-semibold">{pago.fechaPago}</td>
+                                                  <td className="p-4 font-bold text-slate-800">{pago.periodo}</td>
+                                                  <td className="p-4">{pago.tipoPeriodo}</td>
+                                                  <td className="p-4 font-extrabold text-slate-800">Q {pago.monto.toFixed(2)}</td>
+                                                  <td className="p-4">
+                                                    <span className={`px-2 py-0.5 rounded-md font-bold text-[9px] uppercase ${
+                                                      pago.metodo === 'Transferencia' ? 'bg-blue-50 text-blue-700' : pago.metodo === 'Depósito' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'
+                                                    }`}>
+                                                      {pago.metodo}
+                                                    </span>
+                                                  </td>
+                                                  <td className="p-4">
+                                                    {pago.metodo !== 'Efectivo' ? (
+                                                      <span>{pago.numeroReferencia || 'S/N'} • <span className="font-bold">{pago.bancoReferencia || 'N/A'}</span></span>
+                                                    ) : (
+                                                      <span className="text-slate-400 italic">Efectivo</span>
+                                                    )}
+                                                  </td>
+                                                  <td className="p-4 text-right">
+                                                    <button
+                                                      onClick={() => generateReciboPagoPDF(s, pago)}
+                                                      className="text-blue-900 hover:text-blue-800 font-black flex items-center space-x-1 ml-auto border border-blue-200/50 hover:bg-blue-50/50 px-2.5 py-1.5 rounded-lg shadow-sm transition-all"
+                                                      title="Descargar PDF"
+                                                    >
+                                                      <Download size={12} />
+                                                      <span>Recibo PDF</span>
+                                                    </button>
+                                                  </td>
+                                                </tr>
+                                              ))
+                                            ) : (
+                                              <tr>
+                                                <td colSpan={7} className="p-8 text-center text-slate-400 italic bg-slate-50/20">
+                                                  No se han registrado transacciones de aportaciones para este socio.
+                                                </td>
+                                              </tr>
+                                            )}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
                             )}
+                          </React.Fragment>
+                        );
+                      })}
+                      {filteredSociosCuotas.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="text-center py-12 text-slate-400 italic">
+                            No se encontraron socios con esos criterios.
                           </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
 
                 {/* Mobile View: Cards */}
-                <div className="block md:hidden divide-y divide-slate-100">
-                  {filteredSocios.map(s => (
-                    <div key={s.id} className="p-6 space-y-4 hover:bg-slate-50/30 transition-colors">
-                      <div className="flex items-center space-x-4">
-                        <img 
-                          src={s.foto} 
-                          alt={s.nombre} 
-                          className="w-12 h-12 rounded-full border border-slate-100 object-cover cursor-zoom-in" 
-                          onClick={() => setSelectedPhoto({ url: s.foto, title: s.nombre })}
-                        />
-                        <div className="min-w-0 flex-grow">
-                          <h4 className="font-extrabold text-slate-800 text-base leading-tight truncate">{s.nombre}</h4>
-                          <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">{s.puesto || 'Socio Regular'}</p>
-                        </div>
-                      </div>
+                <div className="block lg:hidden divide-y divide-slate-100">
+                  {filteredSociosCuotas.map(s => {
+                    const isExpanded = selectedSocioForCuotas === s.id;
+                    const hasSemestral = s.historialPagos?.some(p => p.tipoPeriodo === 'Semestral');
+                    const hasAnual = s.historialPagos?.some(p => p.tipoPeriodo === 'Anual');
 
-                      <div className="grid grid-cols-2 gap-4 text-xs font-semibold pt-1">
-                        <div>
-                          <span className="text-slate-400 text-[10px] uppercase tracking-wider block mb-0.5">Correo</span>
-                          <span className="text-slate-705 truncate block">{s.correo}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 text-[10px] uppercase tracking-wider block mb-0.5">Estado / Monto</span>
-                          <div className="space-y-1">
-                            <span className={`inline-block text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                    return (
+                      <div key={s.id} className="hover:bg-slate-50/20 transition-colors">
+                        {/* Main row card */}
+                        <div className="p-6 space-y-4 cursor-pointer" onClick={() => setSelectedSocioForCuotas(isExpanded ? null : s.id)}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3 min-w-0">
+                              <img 
+                                src={s.foto} 
+                                alt={s.nombre} 
+                                className="w-11 h-11 rounded-full border border-slate-100 object-cover cursor-zoom-in flex-shrink-0" 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedPhoto({ url: s.foto, title: s.nombre });
+                                }}
+                              />
+                              <div className="min-w-0">
+                                <h4 className="font-extrabold text-slate-800 text-sm leading-tight break-words">{s.nombre}</h4>
+                                <p className="text-[10px] text-slate-450 font-bold uppercase tracking-wider mt-0.5">{s.codigoSocio || 'Sin código'}</p>
+                              </div>
+                            </div>
+                            <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider border flex-shrink-0 ${
                               s.estadoCuotas === 'Al día' 
-                                ? 'bg-green-50 text-green-700' 
+                                ? 'bg-green-50 text-green-700 border-green-200' 
                                 : s.estadoCuotas === 'Pendiente' 
-                                  ? 'bg-yellow-50 text-yellow-700' 
-                                  : 'bg-red-50 text-red-700'
+                                  ? 'bg-yellow-50 text-yellow-700 border-yellow-200' 
+                                  : 'bg-red-50 text-red-700 border-red-200'
                             }`}>
                               {s.estadoCuotas}
                             </span>
-                            <p className="font-black text-slate-850 text-sm">Q {s.montoPendiente.toFixed(2)}</p>
+                          </div>
+
+                          {/* Visual mini history */}
+                          <div className="space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                            <span className="text-slate-400 text-[9px] uppercase tracking-wider font-bold block">Historial aportaciones 2026:</span>
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {hasAnual ? (
+                                (() => {
+                                  const paid = s.historialPagos?.some(p => p.tipoPeriodo === 'Anual' && p.periodo.includes('2026'));
+                                  return (
+                                    <div className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
+                                      paid ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-slate-150 text-slate-400 border border-slate-200'
+                                    }`}>
+                                      Anual 2026
+                                    </div>
+                                  );
+                                })()
+                              ) : hasSemestral ? (
+                                ['1er Semestre', '2do Semestre'].map((sem, idx) => {
+                                  const paid = s.historialPagos?.some(p => p.tipoPeriodo === 'Semestral' && p.periodo.includes(sem));
+                                  return (
+                                    <div 
+                                      key={idx}
+                                      className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
+                                        paid ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-slate-100 text-slate-400 border border-slate-200'
+                                      }`}
+                                    >
+                                      Semestre {idx + 1}
+                                    </div>
+                                  );
+                                })
+                              ) : (
+                                ['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'].map((month, idx) => {
+                                  const fullMonthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+                                  const paid = s.historialPagos?.some(p => p.tipoPeriodo === 'Mensual' && p.periodo.includes(fullMonthNames[idx]));
+                                  const currentMonthIdx = new Date().getMonth();
+                                  const isPastUnpaid = idx <= currentMonthIdx && !paid;
+
+                                  return (
+                                    <div 
+                                      key={idx}
+                                      className={`w-5 h-5 rounded flex items-center justify-center text-[8px] font-black uppercase border ${
+                                        paid 
+                                          ? 'bg-green-500 text-white border-green-600' 
+                                          : isPastUnpaid 
+                                            ? 'bg-red-500 text-white border-red-600'
+                                            : 'bg-slate-100 text-slate-400 border-slate-200'
+                                      }`}
+                                    >
+                                      {month}
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                            <div>
+                              <span className="text-slate-400 text-[9px] uppercase tracking-wider font-bold block">Pendiente</span>
+                              <span className="font-extrabold text-slate-800 text-sm">Q {s.montoPendiente.toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRegistrarPago(s.id);
+                                }}
+                                className="bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 px-3 py-2 rounded-xl font-bold text-xs transition-colors flex items-center space-x-1"
+                              >
+                                <Check size={12} />
+                                <span>Cobrar</span>
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEnviarRecordatorio(s);
+                                }}
+                                className="bg-slate-50 text-slate-600 border border-slate-200 p-2.5 rounded-xl transition-colors"
+                              >
+                                <Send size={12} />
+                              </button>
+                              <div className="p-2 text-slate-400">
+                                <ChevronDown className={`transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} size={16} />
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="flex justify-end items-center pt-3 border-t border-slate-100">
-                        {s.montoPendiente > 0 ? (
-                          <div className="flex space-x-2 w-full justify-end">
-                            <button
-                              onClick={() => handleRegistrarPago(s.id)}
-                              className="bg-green-50 hover:bg-green-100 text-green-700 px-4 py-2 rounded-xl font-bold text-xs transition-colors flex items-center justify-center space-x-1"
-                            >
-                              <Check size={14} />
-                              <span>Pagar</span>
-                            </button>
-                            <button
-                              onClick={() => handleEnviarRecordatorio(s)}
-                              className="bg-slate-100 hover:bg-slate-200 text-slate-700 p-2.5 rounded-xl font-bold text-xs transition-colors flex items-center justify-center"
-                              title="Enviar recordatorio por correo"
-                            >
-                              <Send size={14} />
-                            </button>
+                        {/* Mobile Expanded detail panel */}
+                        {isExpanded && (
+                          <div className="bg-slate-50 p-4 border-t border-slate-100 space-y-4 text-xs">
+                            
+                            {/* Alert Warnings */}
+                            {s.estadoCuotas === 'En mora' ? (
+                              <div className="bg-red-50 border border-red-200 rounded-xl p-3.5 text-red-800 flex items-start space-x-2">
+                                <AlertTriangle className="text-red-500 mt-0.5 flex-shrink-0" size={16} />
+                                <div>
+                                  <span className="font-bold block text-[11px]">Atraso Crítico (En Mora)</span>
+                                  <p className="mt-1 leading-relaxed text-[10px]">
+                                    Atraso mayor a 60 días. Saldo pendiente acumulado: <strong>Q {s.montoPendiente.toFixed(2)}</strong>.
+                                    Último pago registrado el <strong>{s.fechaUltimoPago || 'No registrado'}</strong>.
+                                  </p>
+                                </div>
+                              </div>
+                            ) : s.estadoCuotas === 'Pendiente' ? (
+                              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-amber-800 flex items-start space-x-2">
+                                <AlertCircle className="text-amber-500 mt-0.5 flex-shrink-0" size={16} />
+                                <div>
+                                  <span className="font-bold block text-[11px]">Cuota Pendiente</span>
+                                  <p className="mt-1 leading-relaxed text-[10px]">
+                                    Saldo pendiente: <strong>Q {s.montoPendiente.toFixed(2)}</strong>.
+                                  </p>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="bg-green-50 border border-green-200 rounded-xl p-3.5 text-green-800 flex items-start space-x-2">
+                                <CheckCircle className="text-green-500 mt-0.5 flex-shrink-0" size={16} />
+                                <div>
+                                  <span className="font-bold block text-[11px]">Cuenta Solvente</span>
+                                  <p className="mt-1 leading-relaxed text-[10px]">
+                                    Al día. Último pago: <strong>{s.fechaUltimoPago || 'N/A'}</strong>.
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Detailed Payment History List */}
+                            <div className="space-y-3">
+                              <h5 className="font-extrabold text-slate-800 text-xs flex items-center space-x-2">
+                                <CreditCard size={14} className="text-blue-900" />
+                                <span>Historial de Pagos</span>
+                              </h5>
+
+                              {s.historialPagos && s.historialPagos.length > 0 ? (
+                                <div className="space-y-2">
+                                  {s.historialPagos.map(pago => (
+                                    <div key={pago.id} className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between gap-2">
+                                      <div className="space-y-0.5">
+                                        <p className="font-bold text-slate-800 text-[11px]">{pago.periodo} ({pago.tipoPeriodo})</p>
+                                        <p className="text-[10px] text-slate-450">Fecha: {pago.fechaPago} • {pago.metodo}</p>
+                                        {pago.metodo !== 'Efectivo' && (
+                                          <p className="text-[9px] text-slate-500 font-medium">Ref: {pago.numeroReferencia} ({pago.bancoReferencia})</p>
+                                        )}
+                                      </div>
+                                      <div className="text-right flex flex-col items-end gap-1.5">
+                                        <span className="font-extrabold text-slate-800 text-xs">Q {pago.monto.toFixed(2)}</span>
+                                        <button
+                                          onClick={() => generateReciboPagoPDF(s, pago)}
+                                          className="text-blue-900 font-bold border border-blue-100 hover:bg-blue-50 px-2 py-1 rounded-md text-[9px] flex items-center space-x-1"
+                                        >
+                                          <Download size={10} />
+                                          <span>Recibo</span>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-center text-slate-400 italic py-4 bg-white rounded-xl border border-slate-200">
+                                  No hay transacciones registradas.
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        ) : (
-                          <span className="text-green-600 font-bold text-xs flex items-center px-4 py-2 bg-green-50/50 rounded-xl">
-                            <CheckCircle size={14} className="mr-1" />
-                            Solvente
-                          </span>
                         )}
                       </div>
+                    );
+                  })}
+                  {filteredSociosCuotas.length === 0 && (
+                    <div className="text-center py-12 text-slate-450 italic">
+                      No se encontraron socios con esos criterios.
                     </div>
-                  ))}
+                  )}
                 </div>
+
               </div>
             </div>
           )}
@@ -3999,6 +4517,203 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               >
                 <QrCode size={14} />
                 <span>Regenerar / Invalidar Anterior</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- PAYMENT REGISTRATION MODAL --- */}
+      {showRegistrarPagoModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full max-w-lg p-6 sm:p-10 space-y-6 relative animate-in zoom-in-95 duration-300">
+            <button 
+              type="button"
+              onClick={() => setShowRegistrarPagoModal(false)}
+              className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="space-y-1">
+              <h2 className="text-2xl font-black text-blue-900">Registrar Pago de Cuota</h2>
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+                Control y Registro de Aportaciones
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Socio Selection */}
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Socio Beneficiario</label>
+                <select
+                  value={registrarPagoData.socioId}
+                  onChange={e => {
+                    const sId = e.target.value;
+                    const socio = socios.find(s => s.id === sId);
+                    setRegistrarPagoData(prev => ({
+                      ...prev,
+                      socioId: sId,
+                      monto: socio && socio.montoPendiente > 0 ? socio.montoPendiente : prev.monto
+                    }));
+                  }}
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all"
+                >
+                  <option value="">Seleccione un socio...</option>
+                  {socios.filter(s => s.rol !== UserRole.DONANTE && s.rol !== UserRole.GUEST).map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.nombre} ({s.codigoSocio || 'Sin código'}) - Pendiente: Q{s.montoPendiente}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Period Type selector tabs */}
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Frecuencia / Tipo Periodo</label>
+                <div className="grid grid-cols-3 gap-2 bg-slate-50 p-1 rounded-xl border border-slate-100">
+                  {(['Mensual', 'Semestral', 'Anual'] as const).map(tipo => (
+                    <button
+                      key={tipo}
+                      type="button"
+                      onClick={() => setRegistrarPagoData(prev => ({
+                        ...prev,
+                        tipoPeriodo: tipo,
+                        monto: tipo === 'Mensual' ? 100 : tipo === 'Semestral' ? 600 : 1200
+                      }))}
+                      className={`py-2 rounded-lg font-black text-xs transition-all ${
+                        registrarPagoData.tipoPeriodo === tipo 
+                          ? 'bg-blue-900 text-white shadow-sm' 
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      {tipo}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Period Inputs depending on selector */}
+              <div className="grid grid-cols-2 gap-4">
+                {registrarPagoData.tipoPeriodo === 'Mensual' && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Mes</label>
+                    <select
+                      value={registrarPagoData.mes}
+                      onChange={e => setRegistrarPagoData(prev => ({ ...prev, mes: e.target.value }))}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all"
+                    >
+                      {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map(m => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {registrarPagoData.tipoPeriodo === 'Semestral' && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Semestre</label>
+                    <select
+                      value={registrarPagoData.semestre}
+                      onChange={e => setRegistrarPagoData(prev => ({ ...prev, semestre: e.target.value }))}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all"
+                    >
+                      <option value="1er Semestre (Ene-Jun)">1er Semestre (Ene-Jun)</option>
+                      <option value="2do Semestre (Jul-Dic)">2do Semestre (Jul-Dic)</option>
+                    </select>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Año</label>
+                  <input
+                    type="number"
+                    value={registrarPagoData.año}
+                    onChange={e => setRegistrarPagoData(prev => ({ ...prev, año: parseInt(e.target.value) || 2026 }))}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Amount and Payment Date */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Monto (Q)</label>
+                  <input
+                    type="number"
+                    value={registrarPagoData.monto}
+                    onChange={e => setRegistrarPagoData(prev => ({ ...prev, monto: parseFloat(e.target.value) || 0 }))}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Fecha de Pago</label>
+                  <input
+                    type="date"
+                    value={registrarPagoData.fechaPago}
+                    onChange={e => setRegistrarPagoData(prev => ({ ...prev, fechaPago: e.target.value }))}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Payment Method */}
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Método de Pago</label>
+                <select
+                  value={registrarPagoData.metodo}
+                  onChange={e => setRegistrarPagoData(prev => ({ ...prev, metodo: e.target.value as any }))}
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all"
+                >
+                  <option value="Transferencia">Transferencia Bancaria</option>
+                  <option value="Depósito">Depósito Bancario</option>
+                  <option value="Efectivo">Efectivo</option>
+                </select>
+              </div>
+
+              {/* Reference Info (only if not Cash) */}
+              {registrarPagoData.metodo !== 'Efectivo' && (
+                <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Banco</label>
+                    <input
+                      type="text"
+                      placeholder="Ej. Banco Industrial"
+                      value={registrarPagoData.bancoReferencia}
+                      onChange={e => setRegistrarPagoData(prev => ({ ...prev, bancoReferencia: e.target.value }))}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">No. Referencia / Boleta</label>
+                    <input
+                      type="text"
+                      placeholder="Ej. 12345678"
+                      value={registrarPagoData.numeroReferencia}
+                      onChange={e => setRegistrarPagoData(prev => ({ ...prev, numeroReferencia: e.target.value }))}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex space-x-3 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowRegistrarPagoModal(false)}
+                className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl transition-colors text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={!registrarPagoData.socioId}
+                onClick={handleGuardarNuevoPago}
+                className="w-1/2 bg-green-600 hover:bg-green-700 text-white font-black py-3.5 rounded-2xl transition-all shadow-md hover:shadow-lg disabled:opacity-50 text-sm"
+              >
+                Guardar Pago
               </button>
             </div>
           </div>

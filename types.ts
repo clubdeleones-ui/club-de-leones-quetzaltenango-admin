@@ -10,6 +10,17 @@ export enum UserRole {
   GUEST = 'GUEST'
 }
 
+export interface PagoCuota {
+  id: string;
+  fechaPago: string; // "YYYY-MM-DD"
+  monto: number;
+  periodo: string; // e.g., "Enero 2026", "1er Semestre 2026", "Año 2026"
+  tipoPeriodo: 'Mensual' | 'Semestral' | 'Anual';
+  metodo: 'Transferencia' | 'Depósito' | 'Efectivo';
+  bancoReferencia?: string;
+  numeroReferencia?: string;
+}
+
 export interface Socio {
   id: string;
   nombre: string;
@@ -33,6 +44,8 @@ export interface Socio {
   profesion?: string;              // Profesión u ocupación
   editadoPor?: string;
   fechaEdicion?: string;
+  historialPagos?: PagoCuota[];
+  fechaUltimoPago?: string;
 }
 
 export interface Acta {
