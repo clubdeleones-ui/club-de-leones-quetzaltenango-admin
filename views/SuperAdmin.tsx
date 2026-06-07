@@ -3103,8 +3103,15 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   </div>
 
                   {/* Footer / Navigation */}
-                  <div className="pt-4 border-t border-slate-100 flex justify-between gap-4 flex-shrink-0">
-                    <div>
+                  <div className="pt-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:justify-between gap-3 sm:gap-4 flex-shrink-0 w-full">
+                    <div className="flex flex-row w-full sm:w-auto gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setShowAddActa(false)}
+                        className="flex-1 sm:flex-initial text-center bg-white hover:bg-slate-50 border border-slate-200 text-slate-500 font-extrabold px-4 sm:px-6 py-2.5 rounded-xl transition-all text-xs sm:text-sm"
+                      >
+                        Cancelar
+                      </button>
                       {actaWizardStep !== 'datos' && (
                         <button
                           type="button"
@@ -3113,22 +3120,14 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                             const idx = steps.indexOf(actaWizardStep);
                             if (idx > 0) setActaWizardStep(steps[idx - 1]);
                           }}
-                          className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold px-6 py-2.5 rounded-xl transition-all text-sm"
+                          className="flex-1 sm:flex-initial text-center bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold px-4 sm:px-6 py-2.5 rounded-xl transition-all text-xs sm:text-sm"
                         >
                           Atrás
                         </button>
                       )}
                     </div>
 
-                    <div className="flex space-x-3">
-                      <button
-                        type="button"
-                        onClick={() => setShowAddActa(false)}
-                        className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-500 font-extrabold px-6 py-2.5 rounded-xl transition-all text-sm"
-                      >
-                        Cancelar
-                      </button>
-                      
+                    <div className="w-full sm:w-auto">
                       {actaWizardStep !== 'vista_previa' ? (
                         <button
                           type="button"
@@ -3137,7 +3136,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                             const idx = steps.indexOf(actaWizardStep);
                             if (idx < steps.length - 1) setActaWizardStep(steps[idx + 1]);
                           }}
-                          className="bg-blue-900 hover:bg-blue-800 text-white font-black px-6 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg text-sm"
+                          className="w-full sm:w-auto text-center bg-blue-900 hover:bg-blue-800 text-white font-black px-4 sm:px-6 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg text-xs sm:text-sm"
                         >
                           Siguiente
                         </button>
@@ -3145,7 +3144,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                         <button
                           type="button"
                           onClick={handleSaveStructuredActa}
-                          className="bg-emerald-500 hover:bg-emerald-600 text-white font-black px-6 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg text-sm"
+                          className="w-full sm:w-auto text-center bg-emerald-500 hover:bg-emerald-600 text-white font-black px-4 sm:px-6 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg text-xs sm:text-sm"
                         >
                           Publicar Acta
                         </button>
@@ -3197,19 +3196,19 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   {/* List of Actas */}
                   <div className="grid gap-4">
                     {filteredActas.map(acta => (
-                      <div key={acta.id} className="bg-white p-4 sm:p-6 md:p-9 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 hover:shadow-md transition-shadow">
-                        <div className="flex items-center space-x-4 min-w-0">
+                      <div key={acta.id} className="bg-white p-4 sm:p-6 md:p-9 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 hover:shadow-md transition-shadow w-full">
+                        <div className="flex items-center space-x-4 min-w-0 w-full md:w-auto">
                           <div className="bg-yellow-50 text-yellow-605 p-3.5 rounded-2xl flex-shrink-0">
                             <FileText size={24} />
                           </div>
-                          <div className="min-w-0 flex-grow">
+                          <div className="min-w-0 flex-grow w-full">
                             <h4 className="font-extrabold text-slate-800 text-base md:text-lg truncate">{acta.titulo}</h4>
                             <p className="text-xs text-slate-450 mt-1">
                               Redactada por <span className="font-bold text-blue-900/60 uppercase">{acta.autor}</span> • {acta.fecha}
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between md:justify-end space-x-3 w-full md:w-auto pt-4 md:pt-0 border-t border-slate-100 md:border-t-0">
+                        <div className="flex flex-row items-center justify-between md:justify-end gap-3 w-full md:w-auto pt-4 md:pt-0 border-t border-slate-100 md:border-t-0 flex-wrap">
                           <span className="text-[10px] font-black bg-slate-100 text-slate-650 px-3 py-1 rounded-full uppercase">
                             {acta.categoria || 'Ordinaria'}
                           </span>
