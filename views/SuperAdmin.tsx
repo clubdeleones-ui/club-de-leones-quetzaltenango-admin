@@ -3159,7 +3159,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     <h3 className="text-3xl font-black text-slate-800 tracking-tight">Biblioteca y Redacción de Actas</h3>
                     <button 
                       onClick={handleOpenRedactarActa}
-                      className="bg-blue-900 hover:bg-blue-800 text-white font-black px-6 py-3 rounded-xl flex items-center space-x-2 shadow-lg shadow-blue-900/10"
+                      className="w-full md:w-auto justify-center bg-blue-900 hover:bg-blue-800 text-white font-black px-6 py-3 rounded-xl flex items-center space-x-2 shadow-lg shadow-blue-900/10 active:scale-95 transition-all"
                     >
                       <Plus size={18} />
                       <span>Redactar Acta</span>
@@ -3202,8 +3202,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                             <FileText size={24} />
                           </div>
                           <div className="min-w-0 flex-grow w-full">
-                            <h4 className="font-extrabold text-slate-800 text-base md:text-lg truncate">{acta.titulo}</h4>
-                            <p className="text-xs text-slate-450 mt-1">
+                            <h4 className="font-extrabold text-slate-800 text-base md:text-lg break-words leading-tight">{acta.titulo}</h4>
+                            <p className="text-xs text-slate-450 mt-1.5">
                               Redactada por <span className="font-bold text-blue-900/60 uppercase">{acta.autor}</span> • {acta.fecha}
                             </p>
                           </div>
@@ -3212,24 +3212,24 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                           <span className="text-[10px] font-black bg-slate-100 text-slate-650 px-3 py-1 rounded-full uppercase">
                             {acta.categoria || 'Ordinaria'}
                           </span>
-                          <div className="flex items-center space-x-1">
+                          <div className="flex items-center space-x-2">
                             <button
                               onClick={() => handleEditActaClick(acta)}
-                              className="p-2 text-slate-400 hover:text-blue-900 hover:bg-blue-50 rounded-xl transition-all"
+                              className="p-2.5 text-slate-500 hover:text-blue-900 hover:bg-blue-50 rounded-xl transition-all border border-slate-150 bg-slate-50/50 active:scale-95"
                               title="Editar acta"
                             >
                               <Edit size={16} />
                             </button>
                             <button
                               onClick={() => generateActaPDF(acta)}
-                              className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all"
+                              className="p-2.5 text-slate-500 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all border border-slate-150 bg-slate-50/50 active:scale-95"
                               title="Descargar PDF"
                             >
                               <Download size={16} />
                             </button>
                             <button 
                               onClick={() => handleDeleteActa(acta.id)}
-                              className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                              className="p-2.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all border border-slate-150 bg-slate-50/50 active:scale-95"
                               title="Eliminar acta"
                             >
                               <Trash2 size={16} />
