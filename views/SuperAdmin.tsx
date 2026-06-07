@@ -285,6 +285,44 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
 
   // Search & Filter States
   const [socioSearch, setSocioSearch] = useState('');
+
+  // Actividades Search & Sort
+  const [actividadSearch, setActividadSearch] = useState('');
+  const [actividadSort, setActividadSort] = useState<'recientes' | 'antiguas' | 'az' | 'za'>('recientes');
+  const [actividadFilter, setActividadFilter] = useState<'Todas' | 'Publicas' | 'Privadas'>('Todas');
+
+  const filteredAndSortedActividades = useMemo(() => {
+    let result = [...actividades];
+    
+    // Filter by type
+    if (actividadFilter === 'Publicas') result = result.filter(a => a.publica);
+    if (actividadFilter === 'Privadas') result = result.filter(a => !a.publica);
+    
+    // Filter by search term
+    if (actividadSearch.trim()) {
+      const q = actividadSearch.toLowerCase();
+      result = result.filter(a => 
+        a.titulo.toLowerCase().includes(q) || 
+        a.descripcion.toLowerCase().includes(q) ||
+        a.lugar.toLowerCase().includes(q)
+      );
+    }
+    
+    // Sort
+    result.sort((a, b) => {
+      const dateA = new Date(a.fecha.replace(' ', 'T')).getTime();
+      const dateB = new Date(b.fecha.replace(' ', 'T')).getTime();
+      switch (actividadSort) {
+        case 'recientes': return dateB - dateA;
+        case 'antiguas': return dateA - dateB;
+        case 'az': return a.titulo.localeCompare(b.titulo);
+        case 'za': return b.titulo.localeCompare(a.titulo);
+        default: return dateB - dateA;
+      }
+    });
+    
+    return result;
+  }, [actividades, actividadFilter, actividadSearch, actividadSort]);
   const [roleFilter, setRoleFilter] = useState('Todos');
   const [statusFilter, setStatusFilter] = useState('Todos');
   const [financialFilter, setFinancialFilter] = useState('Todos');
@@ -2320,142 +2358,118 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 </div>
               )}
 
-              {/* Activities List */}
-              <div className="bg-white rounded-[2.5rem] border border-slate-200/80 shadow-sm overflow-hidden">
-                {/* Desktop View: Table */}
-                <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full border-collapse text-left">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold text-xs uppercase tracking-wider">
-                        <th className="py-7 px-6">Actividad / Afiche</th>
-                        <th className="py-7 px-6">Fecha y Hora</th>
-                        <th className="py-7 px-6">Lugar</th>
-                        <th className="py-7 px-6">Configuración</th>
-                        <th className="py-7 px-6 text-right">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {actividades.map(act => (
-                        <tr key={act.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="py-5 px-6">
-                            <div className="flex items-center space-x-4">
-                              <img 
-                                src={act.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800'} 
-                                className="w-14 h-14 rounded-xl object-cover border border-slate-100 shadow-sm"
-                                alt={act.titulo}
-                              />
-                              <div>
-                                <p className="font-extrabold text-slate-800 text-base">{act.titulo}</p>
-                                <p className="text-xs text-slate-500 mt-1 max-w-sm truncate">{act.descripcion}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-5 px-6 text-sm text-slate-650 font-bold">{act.fecha}</td>
-                          <td className="py-5 px-6 text-sm text-slate-600 font-medium">{act.lugar}</td>
-                          <td className="py-5 px-6 space-y-1.5">
-                            <div className="flex flex-wrap gap-1.5">
-                              <span className={`text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase ${
-                                act.publica ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-slate-100 text-slate-500'
-                              }`}>
-                                {act.publica ? 'Público' : 'Solo Socios'}
-                              </span>
-                              {act.conBotonDonacion && (
-                                <span className="text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase bg-rose-50 text-rose-700 border border-rose-200 flex items-center space-x-0.5">
-                                  <span>Donaciones Habilitadas</span>
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-5 px-6 text-right">
-                            <div className="flex items-center justify-end space-x-1.5">
-                              <button 
-                                onClick={() => {
-                                  setEditingActividad(act);
-                                  setShowEditActividad(true);
-                                }}
-                                className="p-2.5 text-slate-400 hover:text-blue-900 hover:bg-blue-50 rounded-xl transition-all"
-                                title="Editar actividad"
-                              >
-                                <Edit size={16} />
-                              </button>
-                              <button 
-                                onClick={() => handleDeleteActividad(act.id)}
-                                className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                                title="Eliminar actividad"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              {/* Activities Filters & List */}
+              <div className="space-y-6">
+                {/* Filters */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+                  <div className="relative w-full md:w-1/3">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input 
+                      type="text" 
+                      placeholder="Buscar actividad..."
+                      value={actividadSearch}
+                      onChange={e => setActividadSearch(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:bg-white transition-all text-sm outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-col sm:flex-row w-full md:w-auto gap-3">
+                    <div className="flex items-center space-x-2 w-full sm:w-auto">
+                      <Filter size={16} className="text-slate-400 hidden sm:block" />
+                      <select 
+                        value={actividadFilter}
+                        onChange={e => setActividadFilter(e.target.value as any)}
+                        className="w-full sm:w-auto bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-900 appearance-none cursor-pointer"
+                      >
+                        <option value="Todas">Todas las Actividades</option>
+                        <option value="Publicas">Solo Públicas</option>
+                        <option value="Privadas">Solo Privadas</option>
+                      </select>
+                    </div>
+                    <select 
+                      value={actividadSort}
+                      onChange={e => setActividadSort(e.target.value as any)}
+                      className="w-full sm:w-auto bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-900 appearance-none cursor-pointer"
+                    >
+                      <option value="recientes">Más recientes</option>
+                      <option value="antiguas">Más antiguas</option>
+                      <option value="az">Alfabético (A-Z)</option>
+                      <option value="za">Alfabético (Z-A)</option>
+                    </select>
+                  </div>
                 </div>
 
-                {/* Mobile View: Cards */}
-                <div className="block md:hidden divide-y divide-slate-100">
-                  {actividades.map(act => (
-                    <div key={act.id} className="p-6 space-y-4 hover:bg-slate-50/30 transition-colors">
-                      <div className="flex items-start space-x-4">
-                        <img 
-                          src={act.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800'} 
-                          className="w-16 h-16 rounded-xl object-cover border border-slate-100 shadow-sm"
-                          alt={act.titulo}
-                        />
-                        <div className="flex-1">
-                          <h4 className="font-extrabold text-slate-800 text-base">{act.titulo}</h4>
-                          <div className="flex flex-wrap gap-1 mt-1.5">
-                            <span className={`inline-block text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${
-                              act.publica ? 'bg-green-50 text-green-700' : 'bg-slate-150 text-slate-500'
+                {/* Cards Grid */}
+                {filteredAndSortedActividades.length === 0 ? (
+                  <div className="bg-white p-10 rounded-2xl border border-slate-200/80 shadow-sm text-center">
+                    <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                    <p className="text-slate-500 font-medium">No se encontraron actividades que coincidan con la búsqueda.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {filteredAndSortedActividades.map(act => (
+                      <div key={act.id} className="bg-white rounded-[2rem] overflow-hidden border border-slate-200/80 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col group">
+                        <div className="relative h-48 overflow-hidden bg-slate-100 shrink-0">
+                          <img 
+                            src={act.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800'} 
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            alt={act.titulo}
+                          />
+                          <div className="absolute top-4 left-4 flex flex-col gap-2">
+                            <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase shadow-sm backdrop-blur-md ${
+                              act.publica ? 'bg-green-500/90 text-white' : 'bg-slate-800/90 text-white'
                             }`}>
                               {act.publica ? 'Público' : 'Solo Socios'}
                             </span>
                             {act.conBotonDonacion && (
-                              <span className="inline-block text-[9px] font-black px-2 py-0.5 rounded-full uppercase bg-rose-50 text-rose-700">
-                                Donar
+                              <span className="text-[10px] font-black px-3 py-1 rounded-full uppercase bg-rose-500/90 text-white shadow-sm backdrop-blur-md flex items-center space-x-1">
+                                <Gift size={10} />
+                                <span>Donaciones</span>
                               </span>
                             )}
                           </div>
                         </div>
-                        <div className="flex space-x-1">
-                          <button 
-                            onClick={() => {
-                              setEditingActividad(act);
-                              setShowEditActividad(true);
-                            }}
-                            className="p-2 text-slate-400 hover:text-blue-900 hover:bg-slate-100 rounded-xl transition-all"
-                            title="Editar actividad"
-                          >
-                            <Edit size={14} />
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteActividad(act.id)}
-                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                            title="Eliminar actividad"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                        <div className="p-6 flex-1 flex flex-col">
+                          <h4 className="font-extrabold text-slate-800 text-lg leading-tight mb-3 line-clamp-2">{act.titulo}</h4>
+                          
+                          <div className="space-y-2 mb-4">
+                            <div className="flex items-start space-x-2 text-slate-500">
+                              <Calendar size={14} className="mt-0.5 shrink-0 text-blue-900/60" />
+                              <span className="text-xs font-semibold">{act.fecha}</span>
+                            </div>
+                            <div className="flex items-start space-x-2 text-slate-500">
+                              <Building size={14} className="mt-0.5 shrink-0 text-blue-900/60" />
+                              <span className="text-xs font-medium line-clamp-2">{act.lugar}</span>
+                            </div>
+                          </div>
+                          
+                          <p className="text-sm text-slate-600 line-clamp-3 mb-6 flex-1 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                            {act.descripcion || "Sin descripción proporcionada."}
+                          </p>
+
+                          <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-100 mt-auto">
+                            <button 
+                              onClick={() => {
+                                setEditingActividad(act);
+                                setShowEditActividad(true);
+                              }}
+                              className="flex items-center justify-center space-x-2 bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-900 py-2.5 rounded-xl transition-colors text-sm font-bold"
+                            >
+                              <Edit size={16} />
+                              <span>Editar</span>
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteActividad(act.id)}
+                              className="flex items-center justify-center space-x-2 bg-slate-50 hover:bg-red-50 text-slate-600 hover:text-red-600 py-2.5 rounded-xl transition-colors text-sm font-bold"
+                            >
+                              <Trash2 size={16} />
+                              <span>Eliminar</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
-
-                      {act.descripcion && (
-                        <p className="text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100/50 leading-relaxed text-justify">{act.descripcion}</p>
-                      )}
-
-                      <div className="grid grid-cols-2 gap-4 text-xs font-semibold pt-1">
-                        <div>
-                          <span className="text-slate-400 text-[10px] uppercase tracking-wider block mb-0.5">Fecha y Hora</span>
-                          <span className="text-slate-700">{act.fecha}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 text-[10px] uppercase tracking-wider block mb-0.5">Lugar</span>
-                          <span className="text-slate-750 truncate block">{act.lugar}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
