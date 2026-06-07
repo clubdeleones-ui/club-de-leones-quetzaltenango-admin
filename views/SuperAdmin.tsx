@@ -49,7 +49,8 @@ import {
   Mail,
   Briefcase,
   AlertCircle,
-  Hash
+  Hash,
+  ChevronDown
 } from 'lucide-react';
 import { generateActaPDF, generateActaCode } from '../utils/pdfGenerator';
 import { FormattedActa } from '../components/FormattedActa';
@@ -123,6 +124,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     if (user.rol === UserRole.ASESOR_SERVICIOS) return 'calendario';
     return 'resumen';
   });
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const getTabStyles = (tabId: string, active: boolean) => {
     if (!active) return 'text-slate-600 hover:bg-slate-50 hover:text-blue-900 hover:shadow-sm';
@@ -1199,7 +1201,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
         {/* Navigation Sidebar */}
         <aside className="hidden lg:block w-[19rem] flex-shrink-0">
           <nav className="bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-[2.5rem] p-7 shadow-sm space-y-3 sticky top-28">
-            <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-4 mb-6 flex items-center">
+            <div className="text-sm font-black text-slate-400 uppercase tracking-wider px-4 mb-6 flex items-center">
               <span className="w-2 h-2 rounded-full bg-yellow-500 mr-2"></span>
               Navegación Módulos
             </div>
@@ -1239,39 +1241,84 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
         {/* Content Panel */}
         <main className="flex-1 min-w-0">
-          {/* Mobile Navigation (Horizontal Scrollable Tabs) */}
-          <div className="lg:hidden w-full overflow-x-auto pb-6 mb-2 flex space-x-3 scrollbar-none pl-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-            {[
-              { id: 'resumen', label: 'Resumen General', icon: TrendingUp },
-              { id: 'socios', label: 'Gestión de Socios', icon: Users },
-              { id: 'calendario', label: 'Programas / Calendario', icon: Calendar },
-              { id: 'cuotas', label: 'Control de Cuotas', icon: CreditCard },
-              { id: 'actas', label: 'Libro de Actas', icon: FileText },
-              { id: 'donaciones', label: 'Donaciones Recibidas', icon: Gift },
-              { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
-            ].filter(tab => allowedTabs.includes(tab.id)).map(tab => {
-              const Icon = tab.icon;
-              const active = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as TabType)}
-                  className={`flex items-center space-x-2.5 px-6 py-3.5 rounded-[1.5rem] font-bold text-sm transition-all duration-300 whitespace-nowrap border shadow-sm flex-shrink-0 ${
-                    active 
-                      ? getMobileTabStyles(tab.id)
-                      : 'bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50 hover:text-blue-900'
-                  }`}
-                >
-                  <Icon 
-                    size={16} 
-                    className={`transition-colors flex-shrink-0 ${
-                      active ? 'text-white' : 'text-slate-400'
-                    }`} 
-                  />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
+          {/* Mobile Navigation Dropdown */}
+          <div className="lg:hidden w-full max-w-sm relative z-30 mb-8">
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className={`w-full flex items-center justify-between px-6 py-4 font-black rounded-2xl shadow-lg transition-all active:scale-[0.99] text-sm ${
+                getMobileTabStyles(activeTab)
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                {(() => {
+                  const currentTab = [
+                    { id: 'resumen', label: 'Resumen General', icon: TrendingUp },
+                    { id: 'socios', label: 'Gestión de Socios', icon: Users },
+                    { id: 'calendario', label: 'Programas / Calendario', icon: Calendar },
+                    { id: 'cuotas', label: 'Control de Cuotas', icon: CreditCard },
+                    { id: 'actas', label: 'Libro de Actas', icon: FileText },
+                    { id: 'donaciones', label: 'Donaciones Recibidas', icon: Gift },
+                    { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
+                  ].find(t => t.id === activeTab);
+                  if (currentTab) {
+                    const Icon = currentTab.icon;
+                    return <Icon size={18} className="text-white" />;
+                  }
+                  return null;
+                })()}
+                <span>
+                  {[
+                    { id: 'resumen', label: 'Resumen General' },
+                    { id: 'socios', label: 'Gestión de Socios' },
+                    { id: 'calendario', label: 'Programas / Calendario' },
+                    { id: 'cuotas', label: 'Control de Cuotas' },
+                    { id: 'actas', label: 'Libro de Actas' },
+                    { id: 'donaciones', label: 'Donaciones Recibidas' },
+                    { id: 'beneficios', label: 'Beneficios a Socios' },
+                  ].find(t => t.id === activeTab)?.label}
+                </span>
+              </div>
+              <ChevronDown size={18} className={`text-white transition-transform duration-300 ${isMobileMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isMobileMenuOpen && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200/80 py-2.5 z-40 animate-in fade-in slide-in-from-top-2 duration-300">
+                {[
+                  { id: 'resumen', label: 'Resumen General', icon: TrendingUp },
+                  { id: 'socios', label: 'Gestión de Socios', icon: Users },
+                  { id: 'calendario', label: 'Programas / Calendario', icon: Calendar },
+                  { id: 'cuotas', label: 'Control de Cuotas', icon: CreditCard },
+                  { id: 'actas', label: 'Libro de Actas', icon: FileText },
+                  { id: 'donaciones', label: 'Donaciones Recibidas', icon: Gift },
+                  { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
+                ].filter(tab => allowedTabs.includes(tab.id)).map(tab => {
+                  const Icon = tab.icon;
+                  const active = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveTab(tab.id as TabType);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-6 py-3.5 text-sm font-extrabold transition-all text-left ${
+                        active 
+                          ? 'bg-slate-50 text-blue-900 font-black' 
+                          : 'text-slate-600 hover:bg-slate-50 hover:text-blue-900'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <Icon size={18} className={active ? 'text-blue-900' : 'text-slate-400'} />
+                        <span>{tab.label}</span>
+                      </div>
+                      {active && <Check size={16} className="text-blue-900" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
           {/* TAB: GESTIÓN DE SOCIOS */}
           {activeTab === 'socios' && (
