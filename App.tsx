@@ -96,7 +96,7 @@ const App: React.FC = () => {
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Home />} />
-            <Route path="/actividades" element={<Calendario accessToken={auth.accessToken} />} />
+            <Route path="/actividades" element={<Calendario accessToken={auth.accessToken} isAuthenticated={auth.isAuthenticated} />} />
             <Route path="/galeria" element={<Galeria />} />
             <Route path="/socios" element={<Socios user={auth.user} />} />
             <Route path="/proponer-socio" element={<ProponerSocio />} />

@@ -231,6 +231,18 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
       } catch (err) {
         console.error("Error fetching solicitudes from Firestore:", err);
       }
+
+      // Sync and load activities
+      try {
+        await firebaseService.syncInitialActividades(MOCK_ACTIVIDADES);
+        const fetchedActividades = await firebaseService.getActividades();
+        if (fetchedActividades && fetchedActividades.length > 0) {
+          setActividades(fetchedActividades);
+          localStorage.setItem('club_leones_actividades', JSON.stringify(fetchedActividades));
+        }
+      } catch (err) {
+        console.error("Error syncing/fetching activities from Firestore:", err);
+      }
     };
 
     syncAndLoad();
@@ -248,7 +260,16 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     localStorage.setItem('club_leones_solicitudes', JSON.stringify(solicitudes));
   }, [solicitudes]);
 
-  const [actividades, setActividades] = useState<Actividad[]>(MOCK_ACTIVIDADES);
+  const [actividades, setActividades] = useState<Actividad[]>(() => {
+    const local = localStorage.getItem('club_leones_actividades');
+    if (local) return JSON.parse(local);
+    return MOCK_ACTIVIDADES;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('club_leones_actividades', JSON.stringify(actividades));
+  }, [actividades]);
+
   const [actas, setActas] = useState<Acta[]>(() => {
     const local = localStorage.getItem('club_leones_actas');
     if (local) return JSON.parse(local);
@@ -341,7 +362,18 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const [actaPreviewMode, setActaPreviewMode] = useState<'documento' | 'texto'>('documento');
 
   const [showAddActividad, setShowAddActividad] = useState(false);
-  const [newActividad, setNewActividad] = useState({ titulo: '', descripcion: '', fecha: '', lugar: '', publica: true });
+  const [showEditActividad, setShowEditActividad] = useState(false);
+  const [editingActividad, setEditingActividad] = useState<Actividad | null>(null);
+  const [newActividad, setNewActividad] = useState({ 
+    titulo: '', 
+    descripcion: '', 
+    fecha: '', 
+    lugar: '', 
+    publica: true,
+    conBotonDonacion: false,
+    donacionUrl: '',
+    imagen: ''
+  });
 
   const [showAddDonacion, setShowAddDonacion] = useState(false);
   const [newDonacion, setNewDonacion] = useState({ donante: '', monto: '', proyecto: '', tipo: 'Individual' as 'Individual' | 'Empresarial' });
@@ -878,7 +910,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     setShowAddActa(false);
   };
 
-  const handleAddActividad = (e: React.FormEvent) => {
+  const handleAddActividad = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newActividad.titulo || !newActividad.fecha || !newActividad.lugar) return;
     const created: Actividad = {
@@ -887,12 +919,37 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       descripcion: newActividad.descripcion,
       fecha: newActividad.fecha.replace('T', ' '),
       lugar: newActividad.lugar,
-      imagen: 'https://picsum.photos/seed/' + Math.random() + '/600/400',
-      publica: newActividad.publica
+      imagen: newActividad.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800',
+      publica: newActividad.publica,
+      conBotonDonacion: newActividad.conBotonDonacion,
+      donacionUrl: newActividad.conBotonDonacion ? (newActividad.donacionUrl || '#/donar') : ''
     };
-    setActividades([created, ...actividades]);
-    setNewActividad({ titulo: '', descripcion: '', fecha: '', lugar: '', publica: true });
-    setShowAddActividad(false);
+    try {
+      await firebaseService.saveActividad(created);
+      setActividades([created, ...actividades]);
+      setNewActividad({ titulo: '', descripcion: '', fecha: '', lugar: '', publica: true, conBotonDonacion: false, donacionUrl: '', imagen: '' });
+      setShowAddActividad(false);
+    } catch (err) {
+      console.error("Error saving new activity in Firestore:", err);
+    }
+  };
+
+  const handleSaveEditedActividad = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingActividad || !editingActividad.titulo || !editingActividad.fecha || !editingActividad.lugar) return;
+    const updated: Actividad = {
+      ...editingActividad,
+      fecha: editingActividad.fecha.replace('T', ' '),
+      donacionUrl: editingActividad.conBotonDonacion ? (editingActividad.donacionUrl || '#/donar') : ''
+    };
+    try {
+      await firebaseService.saveActividad(updated);
+      setActividades(actividades.map(a => a.id === updated.id ? updated : a));
+      setEditingActividad(null);
+      setShowEditActividad(false);
+    } catch (err) {
+      console.error("Error saving updated activity in Firestore:", err);
+    }
   };
 
   const handleAddDonacion = (e: React.FormEvent) => {
@@ -1205,8 +1262,14 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     }
   };
 
-  const handleDeleteActividad = (id: string) => {
-    setActividades(actividades.filter(a => a.id !== id));
+  const handleDeleteActividad = async (id: string) => {
+    if (!window.confirm("¿Está seguro de que desea eliminar esta actividad?")) return;
+    try {
+      await firebaseService.deleteActividad(id);
+      setActividades(actividades.filter(a => a.id !== id));
+    } catch (err) {
+      console.error("Error deleting activity from Firestore:", err);
+    }
   };
 
   const handleDeleteActa = (id: string) => {
@@ -1988,95 +2051,269 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           {activeTab === 'calendario' && (
             <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <h3 className="text-3xl font-black text-slate-800 tracking-tight">Gestión de Programas y Calendario</h3>
+                <div>
+                  <h3 className="text-3xl font-black text-slate-800 tracking-tight">Gestión de Actividades</h3>
+                  <p className="text-xs text-slate-550 font-bold uppercase tracking-wider mt-1">Crea, edita y publica los próximos eventos del club</p>
+                </div>
                 <button 
                   onClick={() => setShowAddActividad(true)}
-                  className="bg-blue-900 hover:bg-blue-800 text-white font-black px-6 py-3 rounded-xl flex items-center space-x-2 shadow-lg shadow-blue-900/10"
+                  className="bg-blue-900 hover:bg-blue-800 text-white font-black px-6 py-3.5 rounded-2xl flex items-center justify-center space-x-2 shadow-lg shadow-blue-900/10 active:scale-95 transition-all text-sm"
                 >
                   <Plus size={18} />
                   <span>Programar Actividad</span>
                 </button>
               </div>
 
-              {/* Form Modal */}
+              {/* Add Activity Form Modal */}
               {showAddActividad && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-md">
-                  <form onSubmit={handleAddActividad} className="bg-white rounded-[2.5rem] p-10 md:p-12 max-w-lg w-full space-y-8 shadow-2xl border border-slate-100">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md overflow-y-auto animate-in fade-in duration-300">
+                  <form onSubmit={handleAddActividad} className="bg-white rounded-[2.5rem] p-6 sm:p-10 max-w-lg w-full space-y-6 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-300 my-8">
                     <div className="flex justify-between items-center">
-                      <h4 className="text-2xl font-black text-slate-800">Nueva Actividad</h4>
-                      <button type="button" onClick={() => setShowAddActividad(false)} className="p-2 hover:bg-slate-50 rounded-xl transition-colors"><X size={20} /></button>
+                      <div>
+                        <h4 className="text-2xl font-black text-blue-900">Nueva Actividad</h4>
+                        <p className="text-[10px] text-slate-450 font-bold uppercase tracking-widest mt-0.5">Programación y Difusión</p>
+                      </div>
+                      <button type="button" onClick={() => setShowAddActividad(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-colors"><X size={20} /></button>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
                       <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2">Título del Evento</label>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Título de la Actividad</label>
                         <input 
                           type="text" 
                           required 
                           value={newActividad.titulo} 
                           onChange={e => setNewActividad({...newActividad, titulo: e.target.value})}
-                          placeholder="Ej. Colecta Anual del Juguete"
-                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all"
+                          placeholder="Ej. Jornada Médica Visual"
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2">Descripción</label>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Descripción Detallada</label>
                         <textarea 
-                          rows={3} 
+                          rows={4} 
+                          required
                           value={newActividad.descripcion} 
                           onChange={e => setNewActividad({...newActividad, descripcion: e.target.value})}
-                          placeholder="Breve detalle de la actividad..."
-                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all resize-none"
+                          placeholder="Describe el propósito del evento, quiénes pueden asistir y cómo participar..."
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all resize-none text-sm leading-relaxed"
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-bold text-slate-700 mb-2">Fecha y Hora</label>
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Fecha y Hora</label>
                           <input 
                             type="datetime-local" 
                             required 
                             value={newActividad.fecha} 
                             onChange={e => setNewActividad({...newActividad, fecha: e.target.value})}
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all"
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm"
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-bold text-slate-700 mb-2">Lugar</label>
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Ubicación / Lugar</label>
                           <input 
                             type="text" 
                             required 
                             value={newActividad.lugar} 
                             onChange={e => setNewActividad({...newActividad, lugar: e.target.value})}
-                            placeholder="Ej. Sede del Club"
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all"
+                            placeholder="Ej. Parque Central Xela"
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm"
                           />
                         </div>
                       </div>
-                      <div className="flex items-center space-x-3 pt-2">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Imagen / Afiche (URL)</label>
                         <input 
-                          type="checkbox" 
-                          id="publica" 
-                          checked={newActividad.publica} 
-                          onChange={e => setNewActividad({...newActividad, publica: e.target.checked})}
-                          className="w-5 h-5 rounded text-blue-900 border-slate-300 focus:ring-blue-900"
+                          type="text" 
+                          value={newActividad.imagen} 
+                          onChange={e => setNewActividad({...newActividad, imagen: e.target.value})}
+                          placeholder="https://images.unsplash.com/... (Dejar en blanco para predeterminado)"
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-mono"
                         />
-                        <label htmlFor="publica" className="text-sm font-bold text-slate-700 select-none">Hacer actividad pública en el sitio web</label>
                       </div>
+                      <div className="flex flex-col gap-3 pt-2">
+                        <div className="flex items-center space-x-3">
+                          <input 
+                            type="checkbox" 
+                            id="publica" 
+                            checked={newActividad.publica} 
+                            onChange={e => setNewActividad({...newActividad, publica: e.target.checked})}
+                            className="w-5 h-5 rounded text-blue-900 border-slate-350 focus:ring-blue-900"
+                          />
+                          <label htmlFor="publica" className="text-sm font-bold text-slate-700 select-none cursor-pointer">Hacer actividad pública en el sitio web</label>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <input 
+                            type="checkbox" 
+                            id="conBotonDonacion" 
+                            checked={newActividad.conBotonDonacion} 
+                            onChange={e => setNewActividad({...newActividad, conBotonDonacion: e.target.checked})}
+                            className="w-5 h-5 rounded text-blue-900 border-slate-350 focus:ring-blue-900"
+                          />
+                          <label htmlFor="conBotonDonacion" className="text-sm font-bold text-slate-700 select-none cursor-pointer">Habilitar Botón de Donaciones</label>
+                        </div>
+                      </div>
+
+                      {newActividad.conBotonDonacion && (
+                        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Enlace de Donación Personalizado (Opcional)</label>
+                          <input 
+                            type="text" 
+                            value={newActividad.donacionUrl} 
+                            onChange={e => setNewActividad({...newActividad, donacionUrl: e.target.value})}
+                            placeholder="Ej. #/donar o link de pago externo (dejar vacío para general)"
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-mono"
+                          />
+                        </div>
+                      )}
                     </div>
 
-                    <div className="flex space-x-4 pt-4">
+                    <div className="flex space-x-3 pt-4 border-t border-slate-100">
                       <button 
                         type="button" 
                         onClick={() => setShowAddActividad(false)}
-                        className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition-all"
+                        className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl transition-colors text-sm"
                       >
                         Cancelar
                       </button>
                       <button 
                         type="submit" 
-                        className="w-1/2 bg-blue-900 hover:bg-blue-800 text-white font-black py-3 rounded-xl transition-all shadow-lg shadow-blue-900/10"
+                        className="w-1/2 bg-blue-900 hover:bg-blue-800 text-white font-black py-3.5 rounded-2xl transition-all shadow-md hover:shadow-lg text-sm"
                       >
                         Agregar
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* Edit Activity Form Modal */}
+              {showEditActividad && editingActividad && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md overflow-y-auto animate-in fade-in duration-300">
+                  <form onSubmit={handleSaveEditedActividad} className="bg-white rounded-[2.5rem] p-6 sm:p-10 max-w-lg w-full space-y-6 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-300 my-8">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h4 className="text-2xl font-black text-blue-900">Editar Actividad</h4>
+                        <p className="text-[10px] text-slate-450 font-bold uppercase tracking-widest mt-0.5">Modificación de Contenido</p>
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setShowEditActividad(false);
+                          setEditingActividad(null);
+                        }} 
+                        className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-colors"
+                      >
+                        <X size={20} />
+                      </button>
+                    </div>
+
+                    <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Título de la Actividad</label>
+                        <input 
+                          type="text" 
+                          required 
+                          value={editingActividad.titulo} 
+                          onChange={e => setEditingActividad({...editingActividad, titulo: e.target.value})}
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Descripción Detallada</label>
+                        <textarea 
+                          rows={4} 
+                          required
+                          value={editingActividad.descripcion} 
+                          onChange={e => setEditingActividad({...editingActividad, descripcion: e.target.value})}
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all resize-none text-sm leading-relaxed"
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Fecha y Hora</label>
+                          <input 
+                            type="datetime-local" 
+                            required 
+                            value={editingActividad.fecha.includes(' ') ? editingActividad.fecha.replace(' ', 'T') : editingActividad.fecha} 
+                            onChange={e => setEditingActividad({...editingActividad, fecha: e.target.value})}
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Ubicación / Lugar</label>
+                          <input 
+                            type="text" 
+                            required 
+                            value={editingActividad.lugar} 
+                            onChange={e => setEditingActividad({...editingActividad, lugar: e.target.value})}
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Imagen / Afiche (URL)</label>
+                        <input 
+                          type="text" 
+                          value={editingActividad.imagen} 
+                          onChange={e => setEditingActividad({...editingActividad, imagen: e.target.value})}
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-mono"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-3 pt-2">
+                        <div className="flex items-center space-x-3">
+                          <input 
+                            type="checkbox" 
+                            id="edit-publica" 
+                            checked={editingActividad.publica} 
+                            onChange={e => setEditingActividad({...editingActividad, publica: e.target.checked})}
+                            className="w-5 h-5 rounded text-blue-900 border-slate-350 focus:ring-blue-900"
+                          />
+                          <label htmlFor="edit-publica" className="text-sm font-bold text-slate-700 select-none cursor-pointer">Hacer actividad pública en el sitio web</label>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <input 
+                            type="checkbox" 
+                            id="edit-conBotonDonacion" 
+                            checked={editingActividad.conBotonDonacion || false} 
+                            onChange={e => setEditingActividad({...editingActividad, conBotonDonacion: e.target.checked})}
+                            className="w-5 h-5 rounded text-blue-900 border-slate-350 focus:ring-blue-900"
+                          />
+                          <label htmlFor="edit-conBotonDonacion" className="text-sm font-bold text-slate-700 select-none cursor-pointer">Habilitar Botón de Donaciones</label>
+                        </div>
+                      </div>
+
+                      {(editingActividad.conBotonDonacion) && (
+                        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Enlace de Donación Personalizado (Opcional)</label>
+                          <input 
+                            type="text" 
+                            value={editingActividad.donacionUrl || ''} 
+                            onChange={e => setEditingActividad({...editingActividad, donacionUrl: e.target.value})}
+                            placeholder="Ej. #/donar o link de pago externo"
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-mono"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex space-x-3 pt-4 border-t border-slate-100">
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setShowEditActividad(false);
+                          setEditingActividad(null);
+                        }}
+                        className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl transition-colors text-sm"
+                      >
+                        Cancelar
+                      </button>
+                      <button 
+                        type="submit" 
+                        className="w-1/2 bg-blue-900 hover:bg-blue-800 text-white font-black py-3.5 rounded-2xl transition-all shadow-md hover:shadow-lg text-sm"
+                      >
+                        Guardar Cambios
                       </button>
                     </div>
                   </form>
@@ -2090,37 +2327,65 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   <table className="w-full border-collapse text-left">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold text-xs uppercase tracking-wider">
-                        <th className="py-7 px-6">Actividad</th>
-                        <th className="py-7 px-6">Fecha</th>
+                        <th className="py-7 px-6">Actividad / Afiche</th>
+                        <th className="py-7 px-6">Fecha y Hora</th>
                         <th className="py-7 px-6">Lugar</th>
-                        <th className="py-7 px-6">Alcance</th>
+                        <th className="py-7 px-6">Configuración</th>
                         <th className="py-7 px-6 text-right">Acciones</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {actividades.map(act => (
                         <tr key={act.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="py-7 px-6">
-                            <p className="font-extrabold text-slate-800 text-base">{act.titulo}</p>
-                            <p className="text-xs text-slate-500 mt-1 max-w-sm truncate">{act.descripcion}</p>
+                          <td className="py-5 px-6">
+                            <div className="flex items-center space-x-4">
+                              <img 
+                                src={act.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800'} 
+                                className="w-14 h-14 rounded-xl object-cover border border-slate-100 shadow-sm"
+                                alt={act.titulo}
+                              />
+                              <div>
+                                <p className="font-extrabold text-slate-800 text-base">{act.titulo}</p>
+                                <p className="text-xs text-slate-500 mt-1 max-w-sm truncate">{act.descripcion}</p>
+                              </div>
+                            </div>
                           </td>
-                          <td className="py-7 px-6 text-sm text-slate-600 font-medium">{act.fecha}</td>
-                          <td className="py-7 px-6 text-sm text-slate-600 font-medium">{act.lugar}</td>
-                          <td className="py-7 px-6">
-                            <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase ${
-                              act.publica ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'
-                            }`}>
-                              {act.publica ? 'Público' : 'Solo Socios'}
-                            </span>
+                          <td className="py-5 px-6 text-sm text-slate-650 font-bold">{act.fecha}</td>
+                          <td className="py-5 px-6 text-sm text-slate-600 font-medium">{act.lugar}</td>
+                          <td className="py-5 px-6 space-y-1.5">
+                            <div className="flex flex-wrap gap-1.5">
+                              <span className={`text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase ${
+                                act.publica ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-slate-100 text-slate-500'
+                              }`}>
+                                {act.publica ? 'Público' : 'Solo Socios'}
+                              </span>
+                              {act.conBotonDonacion && (
+                                <span className="text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase bg-rose-50 text-rose-700 border border-rose-200 flex items-center space-x-0.5">
+                                  <span>Donaciones Habilitadas</span>
+                                </span>
+                              )}
+                            </div>
                           </td>
-                          <td className="py-7 px-6 text-right">
-                            <button 
-                              onClick={() => handleDeleteActividad(act.id)}
-                              className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                              title="Eliminar actividad"
-                            >
-                              <Trash2 size={18} />
-                            </button>
+                          <td className="py-5 px-6 text-right">
+                            <div className="flex items-center justify-end space-x-1.5">
+                              <button 
+                                onClick={() => {
+                                  setEditingActividad(act);
+                                  setShowEditActividad(true);
+                                }}
+                                className="p-2.5 text-slate-400 hover:text-blue-900 hover:bg-blue-50 rounded-xl transition-all"
+                                title="Editar actividad"
+                              >
+                                <Edit size={16} />
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteActividad(act.id)}
+                                className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                                title="Eliminar actividad"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -2132,22 +2397,46 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 <div className="block md:hidden divide-y divide-slate-100">
                   {actividades.map(act => (
                     <div key={act.id} className="p-6 space-y-4 hover:bg-slate-50/30 transition-colors">
-                      <div className="flex justify-between items-start">
-                        <div>
+                      <div className="flex items-start space-x-4">
+                        <img 
+                          src={act.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800'} 
+                          className="w-16 h-16 rounded-xl object-cover border border-slate-100 shadow-sm"
+                          alt={act.titulo}
+                        />
+                        <div className="flex-1">
                           <h4 className="font-extrabold text-slate-800 text-base">{act.titulo}</h4>
-                          <span className={`inline-block text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase mt-1.5 ${
-                            act.publica ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'
-                          }`}>
-                            {act.publica ? 'Público' : 'Solo Socios'}
-                          </span>
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            <span className={`inline-block text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${
+                              act.publica ? 'bg-green-50 text-green-700' : 'bg-slate-150 text-slate-500'
+                            }`}>
+                              {act.publica ? 'Público' : 'Solo Socios'}
+                            </span>
+                            {act.conBotonDonacion && (
+                              <span className="inline-block text-[9px] font-black px-2 py-0.5 rounded-full uppercase bg-rose-50 text-rose-700">
+                                Donar
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <button 
-                          onClick={() => handleDeleteActividad(act.id)}
-                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                          title="Eliminar actividad"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        <div className="flex space-x-1">
+                          <button 
+                            onClick={() => {
+                              setEditingActividad(act);
+                              setShowEditActividad(true);
+                            }}
+                            className="p-2 text-slate-400 hover:text-blue-900 hover:bg-slate-100 rounded-xl transition-all"
+                            title="Editar actividad"
+                          >
+                            <Edit size={14} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteActividad(act.id)}
+                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                            title="Eliminar actividad"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
 
                       {act.descripcion && (

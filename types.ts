@@ -87,6 +87,8 @@ export interface Actividad {
   lugar: string;
   imagen: string;
   publica: boolean;
+  conBotonDonacion?: boolean;
+  donacionUrl?: string;
 }
 
 export interface GaleriaItem {

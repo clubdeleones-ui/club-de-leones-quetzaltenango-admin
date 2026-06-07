@@ -8,7 +8,7 @@ import {
   deleteDoc
 } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { Socio, PropuestaSocio, Solicitud } from "../types";
+import { Socio, PropuestaSocio, Solicitud, Actividad } from "../types";
 
 export const firebaseService = {
   // Upload candidate photo to Firebase Storage (Supports Base64 data_url format)
@@ -177,5 +177,67 @@ export const firebaseService = {
       console.error("Error deleting solicitud from Firestore:", error);
       throw error;
     }
+  },
+
+  // Fetch activities (actividades) from Firestore
+  getActividades: async (): Promise<Actividad[]> => {
+    try {
+      const colRef = collection(db, "actividades");
+      const snapshot = await getDocs(colRef);
+      const list: Actividad[] = [];
+      snapshot.forEach(doc => {
+        list.push(doc.data() as Actividad);
+      });
+      return list;
+    } catch (error) {
+      console.error("Error fetching actividades from Firestore:", error);
+      throw error;
+    }
+  },
+
+  // Save or update an activity in Firestore
+  saveActividad: async (actividad: Actividad): Promise<void> => {
+    try {
+      const docRef = doc(db, "actividades", actividad.id);
+      const cleanData = JSON.parse(JSON.stringify(actividad));
+      await setDoc(docRef, cleanData);
+    } catch (error) {
+      console.error("Error saving actividad in Firestore:", error);
+      throw error;
+    }
+  },
+
+  // Delete an activity from Firestore
+  deleteActividad: async (actividadId: string): Promise<void> => {
+    try {
+      const docRef = doc(db, "actividades", actividadId);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting actividad from Firestore:", error);
+      throw error;
+    }
+  },
+
+  // Sync initial activities to Firestore
+  syncInitialActividades: async (initialActividades: Actividad[]): Promise<void> => {
+    try {
+      const colRef = collection(db, "actividades");
+      const snapshot = await getDocs(colRef);
+      const existingIds = new Set(snapshot.docs.map(doc => doc.id));
+      
+      let syncedCount = 0;
+      for (const act of initialActividades) {
+        if (!existingIds.has(act.id)) {
+          await setDoc(doc(db, "actividades", act.id), act);
+          syncedCount++;
+        }
+      }
+      if (syncedCount > 0) {
+        console.log(`Sincronizadas ${syncedCount} actividades preestablecidas en Firestore.`);
+      }
+    } catch (error) {
+      console.error("Error syncing initial actividades to Firestore:", error);
+    }
   }
 };
+
