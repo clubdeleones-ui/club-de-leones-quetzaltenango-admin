@@ -491,6 +491,34 @@ export const ParqueoManager: React.FC = () => {
               </div>
             </div>
 
+            {/* Espacio Selector */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lugar de Parqueo</label>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEspaciosModal(true)}
+                className={`w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between group ${
+                  espacioSeleccionado 
+                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700' 
+                    : 'border-slate-200 bg-slate-50 text-slate-500 hover:border-blue-400 hover:bg-blue-50'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <div className={`p-2 rounded-lg ${espacioSeleccionado ? 'bg-emerald-500 text-white shadow-md' : 'bg-white shadow-sm text-slate-400 group-hover:text-blue-500'}`}>
+                    <Car size={18} />
+                  </div>
+                  <span className="font-bold text-sm">
+                    {espacioSeleccionado ? `Espacio asignado: #${espacioSeleccionado}` : 'Seleccionar espacio (Opcional)'}
+                  </span>
+                </div>
+                <span className={`text-[10px] font-black px-2.5 py-1.5 rounded-lg uppercase tracking-wider ${espacioSeleccionado ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-200 text-slate-600 group-hover:bg-blue-100 group-hover:text-blue-700'}`}>
+                  {espacioSeleccionado ? '✓ Asignado' : 'Abrir Mapa'}
+                </span>
+              </button>
+            </div>
+
             {/* Submit Button */}
             <div className="pt-6 mt-2 border-t border-slate-100">
               <button
