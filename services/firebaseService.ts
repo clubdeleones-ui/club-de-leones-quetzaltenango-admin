@@ -12,7 +12,7 @@ import {
   limit
 } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { Socio, PropuestaSocio, Solicitud, Actividad } from "../types";
+import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad } from "../types";
 
 export const firebaseService = {
   // Upload candidate photo to Firebase Storage (Supports Base64 data_url format)
@@ -286,6 +286,48 @@ export const firebaseService = {
       }
     } catch (error) {
       console.error("Error syncing initial actividades to Firestore:", error);
+    }
+  },
+
+  // PARQUEO (ESTACIONAMIENTO) METHODS
+  
+  // Fetch all vehicles
+  getVehiculosParqueo: async (): Promise<VehiculoParqueo[]> => {
+    try {
+      const colRef = collection(db, "parqueo");
+      const snapshot = await getDocs(colRef);
+      const list: VehiculoParqueo[] = [];
+      snapshot.forEach(doc => {
+        list.push(doc.data() as VehiculoParqueo);
+      });
+      // Sort descending by horaEntrada
+      return list.sort((a, b) => new Date(b.horaEntrada).getTime() - new Date(a.horaEntrada).getTime());
+    } catch (error) {
+      console.error("Error fetching vehiculos from Firestore:", error);
+      throw error;
+    }
+  },
+
+  // Save or update a vehicle ticket
+  saveVehiculoParqueo: async (vehiculo: VehiculoParqueo): Promise<void> => {
+    try {
+      const docRef = doc(db, "parqueo", vehiculo.id);
+      const cleanData = JSON.parse(JSON.stringify(vehiculo));
+      await setDoc(docRef, cleanData);
+    } catch (error) {
+      console.error("Error saving vehiculo in Firestore:", error);
+      throw error;
+    }
+  },
+
+  // Delete a vehicle ticket (permanently from history)
+  deleteVehiculoParqueo: async (vehiculoId: string): Promise<void> => {
+    try {
+      const docRef = doc(db, "parqueo", vehiculoId);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting vehiculo from Firestore:", error);
+      throw error;
     }
   },
 

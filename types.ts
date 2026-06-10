@@ -150,3 +150,15 @@ export interface Solicitud {
   tiempoUso?: string;
 }
 
+export interface VehiculoParqueo {
+  id: string;
+  tipoPlaca: string;
+  numeroPlaca: string;
+  isExtranjera: boolean;
+  color: string;
+  colorLabel: string;
+  horaEntrada: string;
+  horaSalida?: string;
+  estado: 'Activo' | 'Completado';
+  costo?: number;
+}

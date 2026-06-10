@@ -19,18 +19,11 @@ import {
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
-interface VehiculoParqueo {
-  id: string;
-  tipoPlaca: string; // P, C, M, O, CD, Extranjera
-  numeroPlaca: string;
-  isExtranjera: boolean;
-  color: string; // Hex color
-  colorLabel: string; // Name in Spanish
-  horaEntrada: string; // ISO string
-  horaSalida?: string; // ISO string
-  estado: 'Activo' | 'Completado';
-  costo?: number;
-}
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { db } from '../services/firebase';
+import { firebaseService } from '../services/firebaseService';
+import { VehiculoParqueo } from '../types';
+
 
 const PALETA_COLORES = [
   { hex: '#FFFFFF', name: 'Blanco', border: 'border-slate-300' },
@@ -56,11 +49,26 @@ const TIPOS_PLACA = [
 ];
 
 export const ParqueoManager: React.FC = () => {
-  // Persistence with localStorage
-  const [vehiculos, setVehiculos] = useState<VehiculoParqueo[]>(() => {
-    const saved = localStorage.getItem('club_leones_parqueo');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // Persistence with Firestore real-time
+  const [vehiculos, setVehiculos] = useState<VehiculoParqueo[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const q = query(collection(db, 'parqueo'), orderBy('horaEntrada', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list: VehiculoParqueo[] = [];
+      snapshot.forEach(doc => {
+        list.push(doc.data() as VehiculoParqueo);
+      });
+      setVehiculos(list);
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Error fetching vehiculos in real-time:", error);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const [tipoPlaca, setTipoPlaca] = useState('P');
   const [numeroPlaca, setNumeroPlaca] = useState('');
@@ -75,9 +83,7 @@ export const ParqueoManager: React.FC = () => {
   // Real-time elapsed time trigger
   const [timeTrigger, setTimeTrigger] = useState(0);
 
-  useEffect(() => {
-    localStorage.setItem('club_leones_parqueo', JSON.stringify(vehiculos));
-  }, [vehiculos]);
+
 
   // Live timer tick
   useEffect(() => {
@@ -119,7 +125,10 @@ export const ParqueoManager: React.FC = () => {
       estado: 'Activo'
     };
 
-    setVehiculos(prev => [nuevoVehiculo, ...prev]);
+    firebaseService.saveVehiculoParqueo(nuevoVehiculo).catch(e => {
+      console.error(e);
+      alert("Error al registrar vehículo en la base de datos.");
+    });
     setTicketVehiculo(nuevoVehiculo);
     
     // Reset form
@@ -176,7 +185,10 @@ export const ParqueoManager: React.FC = () => {
   const confirmExit = () => {
     if (!showExitModal) return;
 
-    setVehiculos(prev => prev.map(v => v.id === showExitModal.id ? showExitModal : v));
+    firebaseService.saveVehiculoParqueo(showExitModal).catch(e => {
+      console.error(e);
+      alert("Error al guardar la salida.");
+    });
     setShowExitModal(null);
   };
 
@@ -242,7 +254,10 @@ export const ParqueoManager: React.FC = () => {
 
   const handleDeleteHistory = (id: string) => {
     if (confirm('¿Desea eliminar este registro del historial permanentemente?')) {
-      setVehiculos(prev => prev.filter(v => v.id !== id));
+      firebaseService.deleteVehiculoParqueo(id).catch(e => {
+        console.error(e);
+        alert("Error al eliminar el vehículo.");
+      });
     }
   };
 
