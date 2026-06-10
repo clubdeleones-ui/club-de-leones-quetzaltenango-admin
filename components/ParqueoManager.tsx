@@ -19,6 +19,7 @@ import {
   X
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
+import QRCode from 'qrcode';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
@@ -200,21 +201,24 @@ export const ParqueoManager: React.FC = () => {
     setShowExitModal(null);
   };
 
-  const handlePrintTicket = (vehiculo: VehiculoParqueo) => {
+  const handlePrintTicket = async (vehiculo: VehiculoParqueo) => {
     // Generate 80mm thermal receipt PDF using jsPDF
     const doc = new jsPDF({
       unit: 'mm',
       format: [80, 150] // Typical ticket size
     });
 
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${vehiculo.id}`;
+    try {
+      // Generate QR Code locally instantly (no network request = fast)
+      const qrDataUrl = await QRCode.toDataURL(vehiculo.id, {
+        width: 150,
+        margin: 1,
+        color: {
+          dark: '#000000',
+          light: '#ffffff'
+        }
+      });
 
-    // Load QR code image asynchronously then print
-    const img = new Image();
-    img.crossOrigin = 'Anonymous';
-    img.src = qrUrl;
-
-    img.onload = () => {
       doc.setFont('Helvetica', 'bold');
       doc.setFontSize(14);
       doc.text('CLUB DE LEONES', 40, 15, { align: 'center' });
@@ -239,7 +243,7 @@ export const ParqueoManager: React.FC = () => {
       doc.text(`Entrada: ${fechaEntrada.toLocaleTimeString()}`, 40, 50, { align: 'center' });
       
       // QR Code
-      doc.addImage(img, 'PNG', 20, 56, 40, 40);
+      doc.addImage(qrDataUrl, 'PNG', 20, 56, 40, 40);
 
       doc.setFontSize(8);
       doc.text('Escanee para salida de parqueo', 40, 103, { align: 'center' });
@@ -292,7 +296,10 @@ export const ParqueoManager: React.FC = () => {
           }, 300);
         };
       }
-    };
+    } catch (error) {
+      console.error('Error generando QR o Ticket local:', error);
+      alert('Error al procesar el ticket de impresión.');
+    }
   };
 
   const handleDeleteHistory = (id: string) => {
