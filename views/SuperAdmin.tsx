@@ -50,11 +50,13 @@ import {
   Briefcase,
   AlertCircle,
   Hash,
-  ChevronDown
+  ChevronDown,
+  Car
 } from 'lucide-react';
 import { generateActaPDF, generateActaCode, generateReciboPagoPDF } from '../utils/pdfGenerator';
 import { FormattedActa } from '../components/FormattedActa';
 import { compressImageFile } from '../utils/imageCompressor';
+import { ParqueoManager } from '../components/ParqueoManager';
 
 
 const PUESTOS_PREDEFINIDOS = [
@@ -99,16 +101,16 @@ interface SuperAdminProps {
   onUpdateUser?: (user: Socio) => void;
 }
 
-type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios';
+type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo';
 
 const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   // Dynamic Tab Access based on Role
   const allowedTabs = useMemo(() => {
     switch (user.rol) {
       case UserRole.SUPER_ADMIN:
-        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios'];
+        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo'];
       case UserRole.TESORERO:
-        return ['resumen', 'socios', 'cuotas', 'donaciones'];
+        return ['resumen', 'socios', 'cuotas', 'donaciones', 'parqueo'];
       case UserRole.SECRETARIO:
         return ['resumen', 'socios', 'calendario', 'actas'];
       case UserRole.ASESOR_SERVICIOS:
@@ -1403,6 +1405,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               { id: 'actas', label: 'Libro de Actas', icon: FileText },
               { id: 'donaciones', label: 'Donaciones Recibidas', icon: Gift },
               { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
+              { id: 'parqueo', label: 'Gestión de Parqueo', icon: Car },
             ].filter(tab => allowedTabs.includes(tab.id)).map(tab => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
@@ -1450,6 +1453,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     { id: 'actas', label: 'Libro de Actas', icon: FileText },
                     { id: 'donaciones', label: 'Donaciones Recibidas', icon: Gift },
                     { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
+                    { id: 'parqueo', label: 'Gestión de Parqueo', icon: Car },
                   ].find(t => t.id === activeTab);
                   if (currentTab) {
                     const Icon = currentTab.icon;
@@ -1466,6 +1470,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     { id: 'actas', label: 'Libro de Actas' },
                     { id: 'donaciones', label: 'Donaciones Recibidas' },
                     { id: 'beneficios', label: 'Beneficios a Socios' },
+                    { id: 'parqueo', label: 'Gestión de Parqueo' },
                   ].find(t => t.id === activeTab)?.label}
                 </span>
               </div>
@@ -1482,6 +1487,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   { id: 'actas', label: 'Libro de Actas', icon: FileText },
                   { id: 'donaciones', label: 'Donaciones Recibidas', icon: Gift },
                   { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
+                  { id: 'parqueo', label: 'Gestión de Parqueo', icon: Car },
                 ].filter(tab => allowedTabs.includes(tab.id)).map(tab => {
                   const Icon = tab.icon;
                   const active = activeTab === tab.id;
@@ -4378,6 +4384,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 ))}
               </div>
             </div>
+          )}
+          {activeTab === 'parqueo' && (
+            <ParqueoManager />
           )}
         </main>
       </div>
