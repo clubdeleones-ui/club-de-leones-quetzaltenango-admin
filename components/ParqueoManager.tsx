@@ -279,65 +279,31 @@ export const ParqueoManager: React.FC = () => {
   return (
     <div className="space-y-10 animate-in fade-in duration-500">
       
-      {/* Header and KPI summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-gradient-to-br from-blue-900 to-indigo-950 text-white rounded-3xl p-6 shadow-lg border border-blue-800 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-black uppercase tracking-wider text-yellow-400">Estacionados</span>
-            <h3 className="text-3xl font-black mt-1">{vehiculosActivos.length}</h3>
-            <p className="text-[10px] text-slate-300 mt-2">Vehículos dentro del predio</p>
-          </div>
-          <div className="p-4 bg-white/10 rounded-2xl">
-            <Car size={32} className="text-yellow-400" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-black uppercase tracking-wider text-slate-400">Total Histórico</span>
-            <h3 className="text-3xl font-black text-slate-800 mt-1">{vehiculosHistorial.length}</h3>
-            <p className="text-[10px] text-slate-500 mt-2">Servicios prestados</p>
-          </div>
-          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-            <History size={32} className="text-slate-400" />
-          </div>
-        </div>
-
-        <button 
-          onClick={() => setShowCierreModal(true)}
-          className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-3xl p-6 shadow-lg shadow-emerald-500/20 border border-emerald-400 flex items-center justify-between transition-all hover:scale-[1.02] active:scale-95 text-left group"
-        >
-          <div>
-            <span className="text-xs font-black uppercase tracking-wider text-emerald-100">Control Financiero</span>
-            <h3 className="text-2xl font-black text-white mt-1 leading-tight group-hover:text-yellow-300 transition-colors">Realizar Cierre de Caja</h3>
-            <p className="text-[10px] text-emerald-100/80 mt-2 font-semibold">Generar reporte y finalizar turno</p>
-          </div>
-          <div className="p-4 bg-white/10 rounded-2xl border border-white/20 group-hover:bg-white/20 transition-all">
-            <DollarSign size={32} className="text-white" />
-          </div>
-        </button>
-      </div>
-
-      {/* Tab Navigation */}
-      <div className="flex bg-slate-200/50 p-1.5 rounded-[1.25rem] w-full max-w-2xl">
+      {/* Tab Navigation Segmented Control */}
+      <div className="flex bg-slate-100/80 backdrop-blur-md p-2 rounded-[1.5rem] w-full max-w-2xl mx-auto shadow-inner border border-slate-200/50 mb-8">
         <button 
           onClick={() => setActiveTab('ingreso')}
-          className={`flex-1 py-3 text-sm font-black transition-all rounded-xl ${activeTab === 'ingreso' ? 'bg-white shadow-sm text-blue-900 border border-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+          className={`flex-1 py-3.5 text-sm font-black transition-all duration-300 rounded-xl flex items-center justify-center space-x-2 ${activeTab === 'ingreso' ? 'bg-white shadow-md text-blue-900 transform scale-[1.02]' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'}`}
         >
-          Ingreso de Vehículo
+          <Plus size={16} className={activeTab === 'ingreso' ? 'text-blue-600' : 'text-slate-400'} />
+          <span>Ingreso de Vehículo</span>
         </button>
         <button 
           onClick={() => setActiveTab('salida')}
-          className={`flex-1 py-3 text-sm font-black transition-all rounded-xl flex items-center justify-center space-x-2 ${activeTab === 'salida' ? 'bg-white shadow-sm text-blue-900 border border-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+          className={`flex-1 py-3.5 text-sm font-black transition-all duration-300 rounded-xl flex items-center justify-center space-x-2 ${activeTab === 'salida' ? 'bg-white shadow-md text-blue-900 transform scale-[1.02]' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'}`}
         >
+          <LogOut size={16} className={activeTab === 'salida' ? 'text-red-500' : 'text-slate-400'} />
           <span>Dar Salida</span>
-          <span className="bg-yellow-500 text-blue-900 text-[10px] font-black px-2 py-0.5 rounded-full">{vehiculosActivos.length}</span>
+          {vehiculosActivos.length > 0 && (
+            <span className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-blue-950 text-[10px] font-black px-2.5 py-0.5 rounded-full shadow-sm">{vehiculosActivos.length}</span>
+          )}
         </button>
         <button 
           onClick={() => setActiveTab('historial')}
-          className={`flex-1 py-3 text-sm font-black transition-all rounded-xl ${activeTab === 'historial' ? 'bg-white shadow-sm text-blue-900 border border-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+          className={`flex-1 py-3.5 text-sm font-black transition-all duration-300 rounded-xl flex items-center justify-center space-x-2 ${activeTab === 'historial' ? 'bg-white shadow-md text-blue-900 transform scale-[1.02]' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'}`}
         >
-          Historial y Cierres
+          <History size={16} className={activeTab === 'historial' ? 'text-blue-600' : 'text-slate-400'} />
+          <span>Historial</span>
         </button>
       </div>
 
@@ -345,18 +311,18 @@ export const ParqueoManager: React.FC = () => {
         
         {/* Registration Form */}
         {activeTab === 'ingreso' && (
-        <div className="w-full max-w-2xl mx-auto bg-white border border-slate-200/80 rounded-[2.5rem] p-7 shadow-sm flex flex-col space-y-6 animate-in slide-in-from-bottom-4 duration-300">
-          <div className="flex items-center space-x-3 border-b border-slate-100 pb-4">
-            <div className="p-2.5 bg-yellow-500/10 rounded-xl text-yellow-600">
-              <Sparkles size={18} />
+        <div className="w-full max-w-2xl mx-auto bg-white border border-slate-200/80 rounded-[2.5rem] p-8 shadow-xl shadow-slate-200/40 flex flex-col space-y-8 animate-in slide-in-from-bottom-8 duration-500">
+          <div className="flex items-center space-x-4 border-b border-slate-100 pb-5">
+            <div className="p-3 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl text-white shadow-lg shadow-yellow-500/30">
+              <Sparkles size={24} />
             </div>
             <div>
-              <h3 className="font-black text-slate-850 text-base">Ingreso de Vehículo</h3>
-              <p className="text-[10px] text-slate-450 font-bold">Registrar nueva entrada al estacionamiento</p>
+              <h3 className="font-black text-slate-900 text-xl tracking-tight">Ingreso de Vehículo</h3>
+              <p className="text-xs text-slate-500 font-medium">Registrar nueva entrada al estacionamiento de forma rápida</p>
             </div>
           </div>
 
-          <form onSubmit={handleCreateTicket} className="space-y-5">
+          <form onSubmit={handleCreateTicket} className="space-y-7">
             {/* Foreign check */}
             <div className="flex items-center justify-between bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
               <span className="text-xs font-bold text-slate-600">¿Placa extranjera o especial?</span>
@@ -453,27 +419,36 @@ export const ParqueoManager: React.FC = () => {
             </div>
 
             {/* Submit Button */}
-            <button
-              type="submit"
-              className="w-full bg-blue-900 hover:bg-blue-800 text-white py-3.5 rounded-2xl font-black text-sm shadow-lg shadow-blue-900/10 transition-all active:scale-[0.98] flex items-center justify-center space-x-2"
-            >
-              <Plus size={18} />
-              <span>Registrar e Imprimir Ticket</span>
-            </button>
+            <div className="pt-4 border-t border-slate-100">
+              <button
+                type="submit"
+                className="w-full bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-800 hover:to-indigo-700 text-white py-4 rounded-[1.5rem] font-black text-sm shadow-xl shadow-blue-900/20 transition-all hover:shadow-2xl hover:-translate-y-1 active:scale-95 flex items-center justify-center space-x-3 overflow-hidden relative group"
+              >
+                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
+                <Plus size={20} className="relative z-10" />
+                <span className="relative z-10 tracking-wide">Registrar e Imprimir Ticket</span>
+              </button>
+            </div>
           </form>
         </div>
         )}
 
         {/* Active Vehicles List */}
         {activeTab === 'salida' && (
-        <div className="w-full bg-white border border-slate-200/80 rounded-[2.5rem] p-7 shadow-sm flex flex-col animate-in slide-in-from-bottom-4 duration-300">
-          <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-5">
-            <div>
-              <h3 className="font-black text-slate-850 text-base">Vehículos Activos</h3>
-              <p className="text-[10px] text-slate-450 font-bold">Vehículos en el predio y cronómetro en vivo</p>
+        <div className="w-full bg-white border border-slate-200/80 rounded-[2.5rem] p-8 shadow-xl shadow-slate-200/40 flex flex-col animate-in slide-in-from-bottom-8 duration-500">
+          <div className="flex justify-between items-center border-b border-slate-100 pb-5 mb-6">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+                <Car size={24} />
+              </div>
+              <div>
+                <h3 className="font-black text-slate-900 text-xl tracking-tight">Vehículos Activos</h3>
+                <p className="text-xs text-slate-500 font-medium">Cronómetro en vivo y gestión de salidas</p>
+              </div>
             </div>
-            <span className="bg-yellow-500 text-blue-900 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
-              En Curso: {vehiculosActivos.length}
+            <span className="bg-yellow-100 border border-yellow-200 text-yellow-800 text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest flex items-center space-x-1.5 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
+              <span>En Curso: {vehiculosActivos.length}</span>
             </span>
           </div>
 
@@ -492,62 +467,65 @@ export const ParqueoManager: React.FC = () => {
               {vehiculosActivos.map((v) => (
                 <div 
                   key={v.id} 
-                  className="bg-slate-55 border border-slate-200/80 rounded-2xl p-4.5 flex flex-col justify-between hover:shadow-md transition-all relative overflow-hidden"
+                  className="bg-white border border-slate-200/80 rounded-3xl p-5 flex flex-col justify-between hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group"
                 >
                   {/* Left accent color bar */}
                   <div 
-                    className="absolute left-0 top-0 bottom-0 w-2.5" 
+                    className="absolute left-0 top-0 bottom-0 w-3" 
                     style={{ backgroundColor: v.color }} 
                   />
 
-                  <div className="pl-3.5 space-y-3.5">
+                  <div className="pl-4 space-y-4">
                     {/* Header: Plate and actions */}
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className="flex items-center space-x-1.5">
-                          <span className="text-[10px] font-black uppercase text-slate-400 bg-slate-200/60 px-1.5 py-0.5 rounded">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-[10px] font-black uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
                             {v.tipoPlaca}
                           </span>
-                          <span className="text-sm font-black text-slate-800">
+                          <span className="text-lg font-black text-slate-800 tracking-tight">
                             {v.tipoPlaca === 'Extranjera' ? '' : v.tipoPlaca + '-'}{v.numeroPlaca}
                           </span>
                         </div>
-                        <p className="text-[10px] text-slate-450 font-bold mt-1">
-                          Color: <span className="font-black text-slate-650">{v.colorLabel}</span>
-                        </p>
+                        <div className="flex items-center space-x-2 mt-1.5">
+                          <span className="w-3 h-3 rounded-full border border-slate-300 shadow-sm" style={{ backgroundColor: v.color }}></span>
+                          <p className="text-[11px] text-slate-500 font-bold">
+                            {v.colorLabel}
+                          </p>
+                        </div>
                       </div>
                       
-                      <div className="flex space-x-1">
+                      <div className="flex space-x-1 opacity-60 group-hover:opacity-100 transition-opacity">
                         <button 
                           onClick={() => handlePrintTicket(v)}
                           title="Reimprimir Ticket"
-                          className="p-1.5 text-slate-400 hover:text-blue-900 hover:bg-blue-50 rounded-lg transition-all"
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
                         >
-                          <Printer size={15} />
+                          <Printer size={16} />
                         </button>
                         <button 
                           onClick={() => setTicketVehiculo(v)}
                           title="Mostrar QR"
-                          className="p-1.5 text-slate-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-all"
+                          className="p-2 text-slate-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-xl transition-all"
                         >
-                          <QrCode size={15} />
+                          <QrCode size={16} />
                         </button>
                       </div>
                     </div>
 
                     {/* Timer and Exit Button */}
-                    <div className="bg-white p-3 rounded-xl border border-slate-200/40 flex justify-between items-center">
-                      <div className="flex items-center space-x-2">
-                        <Clock size={14} className="text-slate-450 animate-pulse" />
-                        <span className="text-xs font-black text-slate-700 font-mono">
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 flex justify-between items-center group-hover:bg-slate-100/50 transition-colors">
+                      <div className="flex items-center space-x-2.5">
+                        <Clock size={16} className="text-blue-500 animate-pulse" />
+                        <span className="text-sm font-black text-slate-800 font-mono tracking-wider">
                           {getTiempoTranscurrido(v.horaEntrada)}
                         </span>
                       </div>
                       <button
                         onClick={() => handleProcessExit(v)}
-                        className="bg-red-50 hover:bg-red-100 text-red-650 px-3.5 py-1.5 rounded-lg text-xs font-black transition-all flex items-center space-x-1.5 active:scale-95 border border-red-200/40"
+                        className="bg-red-100 hover:bg-red-500 hover:text-white text-red-600 px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center space-x-2 active:scale-95 shadow-sm"
                       >
-                        <LogOut size={12} />
+                        <LogOut size={14} />
                         <span>Dar Salida</span>
                       </button>
                     </div>
@@ -667,6 +645,45 @@ export const ParqueoManager: React.FC = () => {
         )}
       </div>
       )}
+
+      {/* Bottom Action Footer: KPIs & Cierre */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 mt-8 border-t border-slate-200/50 animate-in slide-in-from-bottom-8 duration-700">
+        <div className="bg-gradient-to-br from-blue-950 to-slate-900 text-white rounded-[2rem] p-6 shadow-xl shadow-blue-900/10 border border-blue-800/50 flex items-center justify-between group hover:shadow-2xl hover:shadow-blue-900/20 transition-all">
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-blue-300">Estacionados</span>
+            <h3 className="text-4xl font-black mt-1 text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-300">{vehiculosActivos.length}</h3>
+            <p className="text-[10px] text-slate-400 mt-2 font-semibold">Vehículos dentro del predio</p>
+          </div>
+          <div className="p-4 bg-white/5 rounded-2xl border border-white/10 group-hover:scale-110 transition-transform">
+            <Car size={32} className="text-blue-400" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-[2rem] p-6 shadow-lg shadow-slate-200/50 border border-slate-200 flex items-center justify-between group hover:shadow-xl transition-all">
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Histórico</span>
+            <h3 className="text-4xl font-black text-slate-800 mt-1">{vehiculosHistorial.length}</h3>
+            <p className="text-[10px] text-slate-500 mt-2 font-semibold">Servicios prestados globalmente</p>
+          </div>
+          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 group-hover:scale-110 transition-transform">
+            <History size={32} className="text-slate-400" />
+          </div>
+        </div>
+
+        <button 
+          onClick={() => setShowCierreModal(true)}
+          className="bg-gradient-to-br from-emerald-500 to-teal-700 rounded-[2rem] p-6 shadow-xl shadow-emerald-600/20 border border-emerald-500/50 flex items-center justify-between transition-all hover:scale-[1.02] hover:shadow-2xl hover:shadow-emerald-600/30 active:scale-95 text-left group overflow-hidden relative"
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+          <div className="relative z-10">
+            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-200">Control Financiero</span>
+            <h3 className="text-2xl font-black text-white mt-1 leading-tight group-hover:text-yellow-300 transition-colors">Realizar Cierre<br/>de Caja</h3>
+          </div>
+          <div className="p-4 bg-black/10 rounded-2xl border border-white/10 group-hover:rotate-12 transition-transform relative z-10">
+            <DollarSign size={32} className="text-emerald-100" />
+          </div>
+        </button>
+      </div>
 
       {/* QR Ticket Popup Modal */}
       {ticketVehiculo && (
