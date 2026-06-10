@@ -314,7 +314,7 @@ export const ParqueoManager: React.FC = () => {
         
         {/* Registration Form */}
         {activeTab === 'ingreso' && (
-        <div className="w-full max-w-2xl mx-auto bg-white border border-slate-200/80 rounded-[2.5rem] p-8 shadow-xl shadow-slate-200/40 flex flex-col space-y-8 animate-in slide-in-from-bottom-8 duration-500">
+        <div className="w-full max-w-2xl mx-auto bg-white border border-slate-200/80 rounded-[2.5rem] p-6 sm:p-8 shadow-xl shadow-slate-200/40 flex flex-col space-y-8 animate-in slide-in-from-bottom-8 duration-500">
           <div className="flex items-center space-x-4 border-b border-slate-100 pb-5">
             <div className="p-3 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl text-white shadow-lg shadow-yellow-500/30">
               <Sparkles size={24} />
@@ -444,10 +444,10 @@ export const ParqueoManager: React.FC = () => {
             </div>
 
             {/* Submit Button */}
-            <div className="pt-4 border-t border-slate-100">
+            <div className="pt-6 mt-2 border-t border-slate-100">
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-800 hover:to-indigo-700 text-white py-4 rounded-[1.5rem] font-black text-sm shadow-xl shadow-blue-900/20 transition-all hover:shadow-2xl hover:-translate-y-1 active:scale-95 flex items-center justify-center space-x-3 overflow-hidden relative group"
+                className="w-full bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-800 hover:to-indigo-700 text-white py-4 sm:py-5 rounded-[1.5rem] font-black text-sm sm:text-base shadow-xl shadow-blue-900/30 transition-all hover:shadow-2xl hover:-translate-y-1 active:scale-95 flex items-center justify-center space-x-3 overflow-hidden relative group border border-blue-800/50"
               >
                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
                 <Plus size={20} className="relative z-10" />
