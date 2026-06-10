@@ -246,17 +246,52 @@ export const ParqueoManager: React.FC = () => {
       doc.text('--------------------------------------------', 40, 108, { align: 'center' });
       
       doc.setFontSize(7);
-      doc.text('Tarifa: Q10.00 primera hora', 40, 113, { align: 'center' });
-      doc.text('Q5.00 hora adicional o fracción', 40, 117, { align: 'center' });
+      doc.text('Tarifa: Q5.00 cada 30 minutos', 40, 113, { align: 'center' });
+      doc.text('o fracción de tiempo', 40, 117, { align: 'center' });
       doc.text('No nos hacemos responsables por objetos', 40, 122, { align: 'center' });
       doc.text('dejados dentro del vehículo.', 40, 125, { align: 'center' });
       
       doc.setFont('Helvetica', 'bold');
       doc.text('¡GRACIAS POR SU VISITA!', 40, 133, { align: 'center' });
 
-      // Trigger standard print dialog
-      doc.autoPrint();
-      window.open(doc.output('bloburl'), '_blank');
+      const pdfBlob = doc.output('blob');
+      const filename = `Ticket-${vehiculo.numeroPlaca}.pdf`;
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+
+      // Usar Web Share API para móviles (Permite WhatsApp, Impresión WiFi/Bluetooth nativa)
+      const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+      
+      // Intentar compartir nativamente en móviles
+      if (isMobile && navigator.share) {
+        const file = new File([pdfBlob], filename, { type: 'application/pdf' });
+        navigator.share({
+          title: 'Ticket de Parqueo',
+          text: `Ticket de estacionamiento para placa: ${vehiculo.numeroPlaca}`,
+          files: [file]
+        }).catch(err => {
+          console.log('Share cancelado o no soportado para archivos', err);
+          // Fallback a descarga
+          const a = document.createElement('a');
+          a.href = pdfUrl;
+          a.download = filename;
+          a.click();
+        });
+      } else {
+        // En computadora (Web): Usar Iframe invisible para impresión directa profesional
+        doc.autoPrint();
+        const iframeUrl = doc.output('bloburl');
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = iframeUrl.toString();
+        document.body.appendChild(iframe);
+        
+        iframe.onload = () => {
+          setTimeout(() => {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+          }, 300);
+        };
+      }
     };
   };
 
