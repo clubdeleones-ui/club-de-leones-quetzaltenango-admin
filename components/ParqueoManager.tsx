@@ -15,9 +15,11 @@ import {
   Calendar, 
   DollarSign, 
   Tag,
-  Sparkles
+  Sparkles,
+  X
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -70,6 +72,8 @@ export const ParqueoManager: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
+  const [activeTab, setActiveTab] = useState<'ingreso' | 'salida' | 'historial'>('ingreso');
+  const [showCierreModal, setShowCierreModal] = useState(false);
   const [tipoPlaca, setTipoPlaca] = useState('P');
   const [numeroPlaca, setNumeroPlaca] = useState('');
   const [isExtranjera, setIsExtranjera] = useState(false);
@@ -176,7 +180,8 @@ export const ParqueoManager: React.FC = () => {
       ...vehiculo,
       horaSalida,
       estado: 'Completado' as const,
-      costo
+      costo,
+      metodoPago: 'Efectivo' as const
     };
     
     setShowExitModal(vehiculoSalida);
@@ -298,24 +303,49 @@ export const ParqueoManager: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 flex items-center justify-between">
+        <button 
+          onClick={() => setShowCierreModal(true)}
+          className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-3xl p-6 shadow-lg shadow-emerald-500/20 border border-emerald-400 flex items-center justify-between transition-all hover:scale-[1.02] active:scale-95 text-left group"
+        >
           <div>
-            <span className="text-xs font-black uppercase tracking-wider text-emerald-500">Ingresos Totales</span>
-            <h3 className="text-3xl font-black text-emerald-600 mt-1">
-              Q. {vehiculosHistorial.reduce((sum, v) => sum + (v.costo || 0), 0).toLocaleString('es-GT', { minimumFractionDigits: 2 })}
-            </h3>
-            <p className="text-[10px] text-slate-500 mt-2">Caja acumulada parqueo</p>
+            <span className="text-xs font-black uppercase tracking-wider text-emerald-100">Control Financiero</span>
+            <h3 className="text-2xl font-black text-white mt-1 leading-tight group-hover:text-yellow-300 transition-colors">Realizar Cierre de Caja</h3>
+            <p className="text-[10px] text-emerald-100/80 mt-2 font-semibold">Generar reporte y finalizar turno</p>
           </div>
-          <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-            <DollarSign size={32} className="text-emerald-500" />
+          <div className="p-4 bg-white/10 rounded-2xl border border-white/20 group-hover:bg-white/20 transition-all">
+            <DollarSign size={32} className="text-white" />
           </div>
-        </div>
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Tab Navigation */}
+      <div className="flex bg-slate-200/50 p-1.5 rounded-[1.25rem] w-full max-w-2xl">
+        <button 
+          onClick={() => setActiveTab('ingreso')}
+          className={`flex-1 py-3 text-sm font-black transition-all rounded-xl ${activeTab === 'ingreso' ? 'bg-white shadow-sm text-blue-900 border border-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+        >
+          Ingreso de Vehículo
+        </button>
+        <button 
+          onClick={() => setActiveTab('salida')}
+          className={`flex-1 py-3 text-sm font-black transition-all rounded-xl flex items-center justify-center space-x-2 ${activeTab === 'salida' ? 'bg-white shadow-sm text-blue-900 border border-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+        >
+          <span>Dar Salida</span>
+          <span className="bg-yellow-500 text-blue-900 text-[10px] font-black px-2 py-0.5 rounded-full">{vehiculosActivos.length}</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('historial')}
+          className={`flex-1 py-3 text-sm font-black transition-all rounded-xl ${activeTab === 'historial' ? 'bg-white shadow-sm text-blue-900 border border-slate-200/50' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`}
+        >
+          Historial y Cierres
+        </button>
+      </div>
+
+      <div className="w-full">
         
         {/* Registration Form */}
-        <div className="lg:col-span-1 bg-white border border-slate-200/80 rounded-[2.5rem] p-7 shadow-sm flex flex-col space-y-6">
+        {activeTab === 'ingreso' && (
+        <div className="w-full max-w-2xl mx-auto bg-white border border-slate-200/80 rounded-[2.5rem] p-7 shadow-sm flex flex-col space-y-6 animate-in slide-in-from-bottom-4 duration-300">
           <div className="flex items-center space-x-3 border-b border-slate-100 pb-4">
             <div className="p-2.5 bg-yellow-500/10 rounded-xl text-yellow-600">
               <Sparkles size={18} />
@@ -432,9 +462,11 @@ export const ParqueoManager: React.FC = () => {
             </button>
           </form>
         </div>
+        )}
 
         {/* Active Vehicles List */}
-        <div className="lg:col-span-2 bg-white border border-slate-200/80 rounded-[2.5rem] p-7 shadow-sm flex flex-col">
+        {activeTab === 'salida' && (
+        <div className="w-full bg-white border border-slate-200/80 rounded-[2.5rem] p-7 shadow-sm flex flex-col animate-in slide-in-from-bottom-4 duration-300">
           <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-5">
             <div>
               <h3 className="font-black text-slate-850 text-base">Vehículos Activos</h3>
@@ -525,10 +557,12 @@ export const ParqueoManager: React.FC = () => {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* History and Logs panel */}
-      <div className="bg-white border border-slate-200/80 rounded-[2.5rem] p-7 shadow-sm space-y-6">
+      {activeTab === 'historial' && (
+      <div className="bg-white border border-slate-200/80 rounded-[2.5rem] p-7 shadow-sm space-y-6 animate-in slide-in-from-bottom-4 duration-300">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-5">
           <div>
             <h3 className="font-black text-slate-850 text-base">Historial de Parqueo</h3>
@@ -632,6 +666,7 @@ export const ParqueoManager: React.FC = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* QR Ticket Popup Modal */}
       {ticketVehiculo && (
@@ -738,6 +773,25 @@ export const ParqueoManager: React.FC = () => {
                   Q. {(showExitModal.costo || 0).toLocaleString('es-GT', { minimumFractionDigits: 2 })}
                 </span>
               </div>
+
+              <div className="pt-2">
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Método de Pago</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['Efectivo', 'Tarjeta', 'Transferencia'].map((metodo) => (
+                    <button
+                      key={metodo}
+                      onClick={() => setShowExitModal({ ...showExitModal, metodoPago: metodo as any })}
+                      className={`py-2 rounded-xl text-[10px] font-black transition-all border ${
+                        showExitModal.metodoPago === metodo 
+                          ? 'bg-emerald-600 border-emerald-700 text-white shadow-sm' 
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      {metodo}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="flex gap-3">
@@ -757,6 +811,159 @@ export const ParqueoManager: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Cierre de Caja Modal */}
+      {showCierreModal && (() => {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay());
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        const stats = {
+          hoy: { total: 0, efectivo: 0, tarjeta: 0, transferencia: 0, count: 0 },
+          semana: { total: 0, efectivo: 0, tarjeta: 0, transferencia: 0, count: 0 },
+          mes: { total: 0, efectivo: 0, tarjeta: 0, transferencia: 0, count: 0 },
+        };
+
+        vehiculosHistorial.forEach(v => {
+          if (!v.horaSalida) return;
+          const date = new Date(v.horaSalida);
+          const costo = v.costo || 0;
+          const metodo = v.metodoPago || 'Efectivo';
+
+          if (date >= monthStart) {
+            stats.mes.total += costo;
+            stats.mes.count++;
+            if (metodo === 'Efectivo') stats.mes.efectivo += costo;
+            else if (metodo === 'Tarjeta') stats.mes.tarjeta += costo;
+            else stats.mes.transferencia += costo;
+          }
+          if (date >= weekStart) {
+            stats.semana.total += costo;
+            stats.semana.count++;
+            if (metodo === 'Efectivo') stats.semana.efectivo += costo;
+            else if (metodo === 'Tarjeta') stats.semana.tarjeta += costo;
+            else stats.semana.transferencia += costo;
+          }
+          if (date >= today) {
+            stats.hoy.total += costo;
+            stats.hoy.count++;
+            if (metodo === 'Efectivo') stats.hoy.efectivo += costo;
+            else if (metodo === 'Tarjeta') stats.hoy.tarjeta += costo;
+            else stats.hoy.transferencia += costo;
+          }
+        });
+
+        const chartData = [
+          { name: 'Efectivo', valor: stats.hoy.efectivo, color: '#10B981' },
+          { name: 'Tarjeta', valor: stats.hoy.tarjeta, color: '#3B82F6' },
+          { name: 'Transferencia', valor: stats.hoy.transferencia, color: '#F59E0B' },
+        ];
+
+        return (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <div className="bg-slate-50 rounded-[2.5rem] w-full max-w-4xl shadow-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-300">
+              {/* Header */}
+              <div className="bg-white px-8 py-6 border-b border-slate-200 flex justify-between items-center">
+                <div className="flex items-center space-x-4">
+                  <div className="p-3 bg-emerald-100 text-emerald-600 rounded-2xl">
+                    <DollarSign size={28} />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black text-slate-800 tracking-tight">Cierre de Caja</h2>
+                    <p className="text-sm text-slate-500 font-medium mt-1">Estadísticas y resumen de ingresos por método de pago</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowCierreModal(false)}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-8 space-y-8">
+                
+                {/* Hoy Summary */}
+                <div>
+                  <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Ingresos de Hoy</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-emerald-600 text-white rounded-3xl p-5 shadow-lg shadow-emerald-600/20">
+                      <p className="text-xs font-bold text-emerald-100 uppercase tracking-wider">Total Hoy</p>
+                      <p className="text-3xl font-black mt-1">Q{stats.hoy.total.toLocaleString('es-GT', {minimumFractionDigits:2})}</p>
+                      <p className="text-xs text-emerald-200 mt-2">{stats.hoy.count} tickets cobrados</p>
+                    </div>
+                    <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Efectivo</p>
+                      <p className="text-2xl font-black text-slate-800 mt-1">Q{stats.hoy.efectivo.toLocaleString('es-GT', {minimumFractionDigits:2})}</p>
+                    </div>
+                    <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tarjeta</p>
+                      <p className="text-2xl font-black text-slate-800 mt-1">Q{stats.hoy.tarjeta.toLocaleString('es-GT', {minimumFractionDigits:2})}</p>
+                    </div>
+                    <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Transferencia</p>
+                      <p className="text-2xl font-black text-slate-800 mt-1">Q{stats.hoy.transferencia.toLocaleString('es-GT', {minimumFractionDigits:2})}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  {/* Chart */}
+                  <div className="lg:col-span-2 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+                    <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-6">Distribución Hoy</h3>
+                    <div className="h-48 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 'bold' }} />
+                          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 'bold' }} tickFormatter={(val) => `Q${val}`} />
+                          <Tooltip 
+                            cursor={{ fill: '#f8fafc' }} 
+                            contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                            formatter={(value: number) => [`Q${value.toLocaleString('es-GT', {minimumFractionDigits:2})}`, 'Total']}
+                          />
+                          <Bar dataKey="valor" radius={[6, 6, 0, 0]} maxBarSize={50}>
+                            {chartData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Semana / Mes Totals */}
+                  <div className="space-y-4">
+                    <div className="bg-blue-900 text-white rounded-3xl p-6 shadow-lg shadow-blue-900/20">
+                      <p className="text-xs font-bold text-blue-200 uppercase tracking-wider">Acumulado Semana</p>
+                      <p className="text-3xl font-black mt-1">Q{stats.semana.total.toLocaleString('es-GT', {minimumFractionDigits:2})}</p>
+                      <p className="text-xs text-blue-300 mt-2">{stats.semana.count} tickets en total</p>
+                    </div>
+                    <div className="bg-indigo-950 text-white rounded-3xl p-6 shadow-lg shadow-indigo-950/20">
+                      <p className="text-xs font-bold text-indigo-200 uppercase tracking-wider">Acumulado Mes</p>
+                      <p className="text-3xl font-black mt-1">Q{stats.mes.total.toLocaleString('es-GT', {minimumFractionDigits:2})}</p>
+                      <p className="text-xs text-indigo-300 mt-2">{stats.mes.count} tickets en total</p>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Footer */}
+              <div className="bg-slate-100 px-8 py-5 border-t border-slate-200 flex justify-end">
+                <button 
+                  onClick={() => setShowCierreModal(false)}
+                  className="px-6 py-3 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded-xl transition-all shadow-sm active:scale-95"
+                >
+                  Cerrar Panel
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

@@ -161,4 +161,5 @@ export interface VehiculoParqueo {
   horaSalida?: string;
   estado: 'Activo' | 'Completado';
   costo?: number;
+  metodoPago?: 'Efectivo' | 'Tarjeta' | 'Transferencia';
 }
