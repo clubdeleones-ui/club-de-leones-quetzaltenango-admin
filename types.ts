@@ -162,4 +162,5 @@ export interface VehiculoParqueo {
   estado: 'Activo' | 'Completado';
   costo?: number;
   metodoPago?: 'Efectivo' | 'Tarjeta' | 'Transferencia';
+  numeroEspacio?: number;
 }

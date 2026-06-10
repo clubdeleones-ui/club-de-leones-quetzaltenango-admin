@@ -242,9 +242,15 @@ export const ParqueoManager: React.FC = () => {
       doc.text(`Fecha: ${fechaEntrada.toLocaleDateString()}`, 40, 45, { align: 'center' });
       doc.text(`Entrada: ${fechaEntrada.toLocaleTimeString()}`, 40, 50, { align: 'center' });
       
-      // QR Code
-      doc.addImage(qrDataUrl, 'PNG', 20, 56, 40, 40);
+      if (vehiculo.numeroEspacio) {
+        doc.setFont('Helvetica', 'bold');
+        doc.text(`ESPACIO: #${vehiculo.numeroEspacio}`, 40, 55, { align: 'center' });
+      }
 
+      // QR Code
+      doc.addImage(qrDataUrl, 'PNG', 20, 58, 40, 40);
+
+      doc.setFont('Helvetica', 'normal');
       doc.setFontSize(8);
       doc.text('Escanee para salida de parqueo', 40, 103, { align: 'center' });
       doc.text('--------------------------------------------', 40, 108, { align: 'center' });
@@ -559,6 +565,14 @@ export const ParqueoManager: React.FC = () => {
                           <p className="text-[11px] text-slate-500 font-bold">
                             {v.colorLabel}
                           </p>
+                          {v.numeroEspacio && (
+                            <>
+                              <span className="text-slate-300">•</span>
+                              <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200">
+                                Espacio #{v.numeroEspacio}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                       
