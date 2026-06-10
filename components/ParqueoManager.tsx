@@ -157,19 +157,14 @@ export const ParqueoManager: React.FC = () => {
     return `${pad(diffHrs)}:${pad(diffMins)}:${pad(diffSecs)}`;
   };
 
-  // Pricing Rule: Q10.00 first hour, then Q5.00 for every additional hour (or fraction)
+  // Pricing Rule: Q5.00 for every 30 minutes (or fraction). 0 to 29 mins = Q5, 30 to 59 mins = Q10...
   const calcularCosto = (entradaStr: string, salidaStr: string) => {
     const entrada = new Date(entradaStr).getTime();
     const salida = new Date(salidaStr).getTime();
     const diffMs = salida - entrada;
     const diffMins = Math.max(0, diffMs / 60000);
 
-    if (diffMins <= 10) return 0; // 10 minutes grace period (free)
-
-    const horasFacturables = Math.ceil(diffMins / 60);
-    
-    if (horasFacturables <= 1) return 10.00;
-    return 10.00 + (horasFacturables - 1) * 5.00;
+    return Math.floor(diffMins / 30) * 5.00 + 5.00;
   };
 
   const handleProcessExit = (vehiculo: VehiculoParqueo) => {
@@ -280,7 +275,7 @@ export const ParqueoManager: React.FC = () => {
     <div className="space-y-10 animate-in fade-in duration-500">
       
       {/* Tab Navigation Segmented Control */}
-      <div className="flex bg-slate-100/80 backdrop-blur-md p-2 rounded-[1.5rem] w-full max-w-2xl mx-auto shadow-inner border border-slate-200/50 mb-8">
+      <div className="flex flex-col sm:flex-row bg-slate-100/80 backdrop-blur-md p-2 rounded-[1.5rem] w-full max-w-2xl mx-auto shadow-inner border border-slate-200/50 mb-8 gap-2 sm:gap-0">
         <button 
           onClick={() => setActiveTab('ingreso')}
           className={`flex-1 py-3.5 text-sm font-black transition-all duration-300 rounded-xl flex items-center justify-center space-x-2 ${activeTab === 'ingreso' ? 'bg-white shadow-md text-blue-900 transform scale-[1.02]' : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'}`}
@@ -435,18 +430,18 @@ export const ParqueoManager: React.FC = () => {
 
         {/* Active Vehicles List */}
         {activeTab === 'salida' && (
-        <div className="w-full bg-white border border-slate-200/80 rounded-[2.5rem] p-8 shadow-xl shadow-slate-200/40 flex flex-col animate-in slide-in-from-bottom-8 duration-500">
-          <div className="flex justify-between items-center border-b border-slate-100 pb-5 mb-6">
+        <div className="w-full bg-white border border-slate-200/80 rounded-[2.5rem] p-6 sm:p-8 shadow-xl shadow-slate-200/40 flex flex-col animate-in slide-in-from-bottom-8 duration-500">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 border-b border-slate-100 pb-5 mb-6">
             <div className="flex items-center space-x-4">
-              <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+              <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
                 <Car size={24} />
               </div>
               <div>
-                <h3 className="font-black text-slate-900 text-xl tracking-tight">Vehículos Activos</h3>
-                <p className="text-xs text-slate-500 font-medium">Cronómetro en vivo y gestión de salidas</p>
+                <h3 className="font-black text-slate-900 text-lg sm:text-xl tracking-tight">Vehículos Activos</h3>
+                <p className="text-[10px] sm:text-xs text-slate-500 font-medium">Cronómetro en vivo y gestión de salidas</p>
               </div>
             </div>
-            <span className="bg-yellow-100 border border-yellow-200 text-yellow-800 text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest flex items-center space-x-1.5 shadow-sm">
+            <span className="bg-yellow-100 border border-yellow-200 text-yellow-800 text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest flex items-center space-x-1.5 shadow-sm self-start sm:self-auto">
               <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
               <span>En Curso: {vehiculosActivos.length}</span>
             </span>
@@ -514,8 +509,8 @@ export const ParqueoManager: React.FC = () => {
                     </div>
 
                     {/* Timer and Exit Button */}
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 flex justify-between items-center group-hover:bg-slate-100/50 transition-colors">
-                      <div className="flex items-center space-x-2.5">
+                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 group-hover:bg-slate-100/50 transition-colors">
+                      <div className="flex items-center space-x-2.5 w-full sm:w-auto justify-center sm:justify-start">
                         <Clock size={16} className="text-blue-500 animate-pulse" />
                         <span className="text-sm font-black text-slate-800 font-mono tracking-wider">
                           {getTiempoTranscurrido(v.horaEntrada)}
@@ -523,7 +518,7 @@ export const ParqueoManager: React.FC = () => {
                       </div>
                       <button
                         onClick={() => handleProcessExit(v)}
-                        className="bg-red-100 hover:bg-red-500 hover:text-white text-red-600 px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center space-x-2 active:scale-95 shadow-sm"
+                        className="w-full sm:w-auto bg-red-100 hover:bg-red-500 hover:text-white text-red-600 px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center space-x-2 active:scale-95 shadow-sm"
                       >
                         <LogOut size={14} />
                         <span>Dar Salida</span>
