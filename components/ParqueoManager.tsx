@@ -87,6 +87,10 @@ export const ParqueoManager: React.FC = () => {
   const [ticketVehiculo, setTicketVehiculo] = useState<VehiculoParqueo | null>(null);
   const [showExitModal, setShowExitModal] = useState<VehiculoParqueo | null>(null);
   
+  // State for parking spots
+  const [espacioSeleccionado, setEspacioSeleccionado] = useState<number | null>(null);
+  const [showEspaciosModal, setShowEspaciosModal] = useState(false);
+  
   // Real-time elapsed time trigger
   const [timeTrigger, setTimeTrigger] = useState(0);
 
@@ -326,6 +330,115 @@ export const ParqueoManager: React.FC = () => {
     v.colorLabel.toLowerCase().includes(searchQuery.toLowerCase()) ||
     v.tipoPlaca.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const renderEspaciosModal = () => {
+    if (!showEspaciosModal) return null;
+
+    const occupiedSpots = new Set(
+      vehiculosActivos.map(v => v.numeroEspacio).filter(e => e !== undefined)
+    );
+
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-[2rem] w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+          <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+            <div>
+              <h3 className="font-black text-slate-800 text-lg">Seleccionar Parqueo</h3>
+              <p className="text-xs text-slate-500 font-medium">Asigna un espacio al vehículo</p>
+            </div>
+            <button 
+              type="button"
+              onClick={() => setShowEspaciosModal(false)}
+              className="p-2 bg-white rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors shadow-sm"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="p-6">
+            <div className="flex justify-between items-end mb-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              <span className="flex items-center space-x-1.5">
+                <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-sm"></div>
+                <span>Disponible</span>
+              </span>
+              <span className="flex items-center space-x-1.5">
+                <div className="w-3 h-3 rounded-full bg-red-500 shadow-sm"></div>
+                <span>Ocupado</span>
+              </span>
+            </div>
+
+            <div className="flex justify-between gap-6">
+              {/* Left Side (1-12) */}
+              <div className="flex-1 grid grid-cols-2 gap-3">
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(num => {
+                  const isOccupied = occupiedSpots.has(num);
+                  const isSelected = espacioSeleccionado === num;
+                  return (
+                    <button
+                      key={num}
+                      type="button"
+                      disabled={isOccupied}
+                      onClick={() => {
+                        setEspacioSeleccionado(num);
+                        setShowEspaciosModal(false);
+                      }}
+                      className={`h-11 rounded-xl text-sm font-black border-2 transition-all flex items-center justify-center ${
+                        isOccupied 
+                          ? 'bg-red-50 border-red-100 text-red-400 cursor-not-allowed opacity-70' 
+                          : isSelected
+                            ? 'bg-emerald-500 border-emerald-600 text-white shadow-md transform scale-105'
+                            : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50'
+                      }`}
+                    >
+                      {num}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Right Side (13-24) */}
+              <div className="flex-1 grid grid-cols-2 gap-3">
+                {Array.from({ length: 12 }, (_, i) => i + 13).map(num => {
+                  const isOccupied = occupiedSpots.has(num);
+                  const isSelected = espacioSeleccionado === num;
+                  return (
+                    <button
+                      key={num}
+                      type="button"
+                      disabled={isOccupied}
+                      onClick={() => {
+                        setEspacioSeleccionado(num);
+                        setShowEspaciosModal(false);
+                      }}
+                      className={`h-11 rounded-xl text-sm font-black border-2 transition-all flex items-center justify-center ${
+                        isOccupied 
+                          ? 'bg-red-50 border-red-100 text-red-400 cursor-not-allowed opacity-70' 
+                          : isSelected
+                            ? 'bg-emerald-500 border-emerald-600 text-white shadow-md transform scale-105'
+                            : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50'
+                      }`}
+                    >
+                      {num}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            {espacioSeleccionado && (
+              <div className="mt-6 pt-4 border-t border-slate-100 flex justify-center">
+                <button 
+                  type="button"
+                  onClick={() => setEspacioSeleccionado(null)}
+                  className="text-xs font-bold text-red-500 hover:text-red-700 transition-colors"
+                >
+                  Quitar espacio seleccionado
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-10 animate-in fade-in duration-500">
@@ -1090,6 +1203,8 @@ export const ParqueoManager: React.FC = () => {
           </div>
         );
       })()}
+
+      {renderEspaciosModal()}
     </div>
   );
 };
