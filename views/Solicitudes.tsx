@@ -53,7 +53,16 @@ const TEMA_COLORS: { [key: string]: string } = {
 };
 
 const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
-  const [activeTab, setActiveTab] = useState<'abiertas' | 'internas' | 'sillas'>('abiertas');
+  const [activeTab, setActiveTab] = useState<'abiertas' | 'internas' | 'sillas'>(() => {
+    const saved = sessionStorage.getItem('solicitudes_active_tab');
+    if (saved) return saved as 'abiertas' | 'internas' | 'sillas';
+    return 'abiertas';
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem('solicitudes_active_tab', activeTab);
+  }, [activeTab]);
+
   const [isMobileTabMenuOpen, setIsMobileTabMenuOpen] = useState(false);
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
   const [isLoading, setIsLoading] = useState(true);

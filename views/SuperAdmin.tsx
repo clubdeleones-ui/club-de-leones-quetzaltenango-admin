@@ -123,9 +123,16 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   }, [user.rol]);
 
   const [activeTab, setActiveTab] = useState<TabType>(() => {
+    const saved = sessionStorage.getItem('super_admin_active_tab');
+    if (saved) return saved as TabType;
     if (user.rol === UserRole.ASESOR_SERVICIOS) return 'calendario';
     return 'resumen';
   });
+
+  useEffect(() => {
+    sessionStorage.setItem('super_admin_active_tab', activeTab);
+  }, [activeTab]);
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const getTabStyles = (tabId: string, active: boolean) => {
@@ -373,28 +380,66 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const [actaFilterCategory, setActaFilterCategory] = useState('Todas');
   
   // Modals / Form States
-  const [showAddActa, setShowAddActa] = useState(false);
+  const [showAddActa, setShowAddActa] = useState(() => {
+    return sessionStorage.getItem('super_admin_show_add_acta') === 'true';
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem('super_admin_show_add_acta', String(showAddActa));
+    if (!showAddActa) {
+      sessionStorage.removeItem('super_admin_acta_wizard_step');
+      sessionStorage.removeItem('super_admin_acta_wizard_data');
+    }
+  }, [showAddActa]);
+
   const [editingActaId, setEditingActaId] = useState<string | null>(null);
   const [newActa, setNewActa] = useState({ titulo: '', autor: '', contenido: '', categoria: 'Ordinaria' });
 
   // Wizard state for structured minutes
-  const [actaWizardStep, setActaWizardStep] = useState<'datos' | 'asistencia' | 'protocolo' | 'solicitudes' | 'libre' | 'vista_previa'>('datos');
-  const [actaWizardData, setActaWizardData] = useState({
-    titulo: '',
-    categoria: 'Ordinaria' as 'Ordinaria' | 'Extraordinaria' | 'Reunión de Comisión',
-    lugar: 'Quetzaltenango, Sede Social denominada "La Cueva", ubicada en la Calle Rodolfo Robles, 24-53 de la zona 1.',
-    fechaHoraText: '',
-    invocacionResponsableType: 'socio' as 'socio' | 'invitado',
-    invocacionSocioId: '',
-    invocacionInvitadoName: '',
-    saludoResponsableType: 'socio' as 'socio' | 'invitado',
-    saludoSocioId: '',
-    saludoInvitadoName: '',
-    solicitudesResoluciones: {} as Record<string, { decision: 'Aprobada' | 'Rechazada' | 'Pendiente', razon: string }>,
-    puntosAgenda: [] as { tema: string; debate: string; acuerdo: string }[],
-    asistencia: [] as string[],
-    numeroActa: ''
+  const [actaWizardStep, setActaWizardStep] = useState<'datos' | 'asistencia' | 'protocolo' | 'solicitudes' | 'libre' | 'vista_previa'>(() => {
+    const saved = sessionStorage.getItem('super_admin_acta_wizard_step');
+    if (saved) return saved as any;
+    return 'datos';
   });
+
+  useEffect(() => {
+    if (showAddActa) {
+      sessionStorage.setItem('super_admin_acta_wizard_step', actaWizardStep);
+    }
+  }, [actaWizardStep, showAddActa]);
+
+  const [actaWizardData, setActaWizardData] = useState(() => {
+    const saved = sessionStorage.getItem('super_admin_acta_wizard_data');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Error parsing saved minutes wizard data", e);
+      }
+    }
+    return {
+      titulo: '',
+      categoria: 'Ordinaria' as 'Ordinaria' | 'Extraordinaria' | 'Reunión de Comisión',
+      lugar: 'Quetzaltenango, Sede Social denominada "La Cueva", ubicada en la Calle Rodolfo Robles, 24-53 de la zona 1.',
+      fechaHoraText: '',
+      invocacionResponsableType: 'socio' as 'socio' | 'invitado',
+      invocacionSocioId: '',
+      invocacionInvitadoName: '',
+      saludoResponsableType: 'socio' as 'socio' | 'invitado',
+      saludoSocioId: '',
+      saludoInvitadoName: '',
+      solicitudesResoluciones: {} as Record<string, { decision: 'Aprobada' | 'Rechazada' | 'Pendiente', razon: string }>,
+      puntosAgenda: [] as { tema: string; debate: string; acuerdo: string }[],
+      asistencia: [] as string[],
+      numeroActa: ''
+    };
+  });
+
+  useEffect(() => {
+    if (showAddActa) {
+      sessionStorage.setItem('super_admin_acta_wizard_data', JSON.stringify(actaWizardData));
+    }
+  }, [actaWizardData, showAddActa]);
 
   const [newAgendaPoint, setNewAgendaPoint] = useState({ tema: '', debate: '', acuerdo: '' });
   const [asistenciaSearch, setAsistenciaSearch] = useState('');

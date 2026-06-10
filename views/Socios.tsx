@@ -30,7 +30,16 @@ interface SociosProps {
 }
 
 const Socios: React.FC<SociosProps> = ({ user }) => {
-  const [activeTab, setActiveTab] = useState<'activos' | 'propuestos'>('activos');
+  const [activeTab, setActiveTab] = useState<'activos' | 'propuestos'>(() => {
+    const saved = sessionStorage.getItem('socios_active_tab');
+    if (saved) return saved as 'activos' | 'propuestos';
+    return 'activos';
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem('socios_active_tab', activeTab);
+  }, [activeTab]);
+
   const [isMobileTabMenuOpen, setIsMobileTabMenuOpen] = useState(false);
   
   // Load members from localStorage or fallback to mock

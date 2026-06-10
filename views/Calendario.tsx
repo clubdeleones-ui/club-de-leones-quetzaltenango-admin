@@ -15,7 +15,15 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
     const [actividades, setActividades] = useState<Actividad[]>([]);
     const [events, setEvents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeView, setActiveView] = useState<'lista' | 'google'>('lista');
+    const [activeView, setActiveView] = useState<'lista' | 'google'>(() => {
+        const saved = sessionStorage.getItem('calendario_active_view');
+        if (saved) return saved as 'lista' | 'google';
+        return 'lista';
+    });
+
+    useEffect(() => {
+        sessionStorage.setItem('calendario_active_view', activeView);
+    }, [activeView]);
     
     // Search and filtering
     const [searchTerm, setSearchTerm] = useState('');

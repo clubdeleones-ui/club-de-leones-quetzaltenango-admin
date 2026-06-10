@@ -67,7 +67,16 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
-  const [activeTab, setActiveTab] = useState<'resumen' | 'perfil'>('resumen');
+  const [activeTab, setActiveTab] = useState<'resumen' | 'perfil'>(() => {
+    const saved = sessionStorage.getItem('dashboard_active_tab');
+    if (saved) return saved as 'resumen' | 'perfil';
+    return 'resumen';
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem('dashboard_active_tab', activeTab);
+  }, [activeTab]);
+
   const [isMobileTabMenuOpen, setIsMobileTabMenuOpen] = useState(false);
 
   // Check if the user has administrative privileges
