@@ -1,22 +1,26 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import Layout from './components/Layout';
-import Home from './views/Home';
-import Login from './views/Login';
-import Dashboard from './views/Dashboard';
-import Actas from './views/Actas';
-import Socios from './views/Socios';
-import Galeria from './views/Galeria';
-import Estatutos from './views/Estatutos';
-import Calendario from './views/Calendario';
-import SuperAdmin from './views/SuperAdmin';
-import ProponerSocio from './views/ProponerSocio';
-import Donar from './views/Donar';
-import Solicitudes from './views/Solicitudes';
 import { AuthState, Socio, UserRole } from './types';
 import { firebaseService } from './services/firebaseService';
+import { ToastProvider } from './context/ToastContext';
+import ErrorBoundary from './components/ErrorBoundary';
+import { env } from './config/env';
+
+// Lazy loading views for performance optimization
+const Home = lazy(() => import('./views/Home'));
+const Login = lazy(() => import('./views/Login'));
+const Dashboard = lazy(() => import('./views/Dashboard'));
+const Actas = lazy(() => import('./views/Actas'));
+const Socios = lazy(() => import('./views/Socios'));
+const Galeria = lazy(() => import('./views/Galeria'));
+const Estatutos = lazy(() => import('./views/Estatutos'));
+const Calendario = lazy(() => import('./views/Calendario'));
+const SuperAdmin = lazy(() => import('./views/SuperAdmin'));
+const ProponerSocio = lazy(() => import('./views/ProponerSocio'));
+const Donar = lazy(() => import('./views/Donar'));
+const Solicitudes = lazy(() => import('./views/Solicitudes'));
 
 // ProtectedRoute moved outside of App to resolve typing errors and improve performance
 interface ProtectedRouteProps {
@@ -51,11 +55,7 @@ const App: React.FC = () => {
     if (auth.isAuthenticated && auth.user) {
       const refreshUserSession = async () => {
         try {
-          const list = await firebaseService.getSocios();
-          const freshUser = list.find(s => 
-            s.correo.toLowerCase() === auth.user?.correo?.toLowerCase() || 
-            s.id === auth.user?.id
-          );
+          const freshUser = await firebaseService.getSocioByIdOrEmail(auth.user?.id, auth.user?.correo);
           if (freshUser) {
             // Compare stringified versions to avoid unnecessary updates
             if (JSON.stringify(freshUser) !== JSON.stringify(auth.user)) {
@@ -90,10 +90,18 @@ const App: React.FC = () => {
   };
 
   return (
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || '809679443982-1cohbkabbq88i05uk4d620013g5msed6.apps.googleusercontent.com'}>
-      <Router>
-        <Layout auth={auth} onLogout={handleLogout}>
-          <Routes>
+    <GoogleOAuthProvider clientId={env.googleClientId}>
+      <ToastProvider>
+        <ErrorBoundary>
+          <Router>
+            <Layout auth={auth} onLogout={handleLogout}>
+              <Suspense fallback={
+                <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50/50">
+                  <div className="w-12 h-12 border-4 border-blue-900 border-t-transparent rounded-full animate-spin shadow-lg"></div>
+                  <p className="mt-4 text-blue-900 font-bold animate-pulse">Cargando...</p>
+                </div>
+              }>
+                <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Home />} />
             <Route path="/actividades" element={<Calendario accessToken={auth.accessToken} isAuthenticated={auth.isAuthenticated} />} />
@@ -102,6 +110,7 @@ const App: React.FC = () => {
             <Route path="/proponer-socio" element={<ProponerSocio />} />
             <Route path="/donar" element={<Donar />} />
             <Route path="/solicitudes" element={<Solicitudes user={auth.user} />} />
+
             <Route path="/login" element={auth.isAuthenticated ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />} />
 
             {/* Protected Routes */}
@@ -144,9 +153,12 @@ const App: React.FC = () => {
                 </ProtectedRoute>
               }
             />
-          </Routes>
-        </Layout>
-      </Router>
+                </Routes>
+              </Suspense>
+            </Layout>
+          </Router>
+        </ErrorBoundary>
+      </ToastProvider>
     </GoogleOAuthProvider>
   );
 };

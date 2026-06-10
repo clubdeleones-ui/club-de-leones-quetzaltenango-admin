@@ -149,3 +149,4 @@ export interface Solicitud {
   edadBeneficiario?: number;
   tiempoUso?: string;
 }
+

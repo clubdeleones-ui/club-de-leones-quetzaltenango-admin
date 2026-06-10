@@ -5,16 +5,35 @@ import {
   setDoc, 
   getDocs, 
   updateDoc,
-  deleteDoc
+  deleteDoc,
+  getDoc,
+  query,
+  where,
+  limit
 } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { Socio, PropuestaSocio, Solicitud, Actividad } from "../types";
 
 export const firebaseService = {
   // Upload candidate photo to Firebase Storage (Supports Base64 data_url format)
-  uploadCandidatePhoto: async (base64Data: string, _candidateId: string): Promise<string> => {
-    // Return base64 directly to store in Firestore, avoiding Storage rules latency and timeouts
-    return base64Data;
+  uploadCandidatePhoto: async (base64Data: string, candidateId: string): Promise<string> => {
+    try {
+      // Si la imagen ya es una URL o no es base64, se devuelve tal cual
+      if (!base64Data.startsWith('data:image')) {
+        return base64Data;
+      }
+      
+      const uniqueName = `${candidateId}_${Date.now()}`;
+      const storageRef = ref(storage, `candidatos/${uniqueName}`);
+      
+      await uploadString(storageRef, base64Data, 'data_url');
+      const downloadURL = await getDownloadURL(storageRef);
+      return downloadURL;
+    } catch (error) {
+      console.error("Error al subir foto a Firebase Storage:", error);
+      // Fallback a base64 si hay error (ej. reglas de Storage no configuradas)
+      return base64Data;
+    }
   },
 
   // Save a new proposal to Firestore
@@ -75,6 +94,36 @@ export const firebaseService = {
       await deleteDoc(docRef);
     } catch (error) {
       console.error("Error deleting proposal from Firestore:", error);
+      throw error;
+    }
+  },
+
+  // Fetch a single active member (socio) from Firestore by ID or Email
+  getSocioByIdOrEmail: async (id?: string, correo?: string): Promise<Socio | null> => {
+    try {
+      if (id) {
+        const docRef = doc(db, "socios", id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          return docSnap.data() as Socio;
+        }
+      }
+      
+      if (correo) {
+        const q = query(
+          collection(db, "socios"), 
+          where("correo", "==", correo),
+          limit(1)
+        );
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          return querySnapshot.docs[0].data() as Socio;
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("Error fetching socio from Firestore:", error);
       throw error;
     }
   },
@@ -238,6 +287,7 @@ export const firebaseService = {
     } catch (error) {
       console.error("Error syncing initial actividades to Firestore:", error);
     }
-  }
+  },
+
 };
 
