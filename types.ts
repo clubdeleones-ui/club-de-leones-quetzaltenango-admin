@@ -198,6 +198,7 @@ export interface Comision {
   nombre: string;
   proposito: string;
   miembros: string[]; // IDs de los socios
+  coordinador?: string; // ID del socio coordinador
   actasVinculadas?: string[]; // IDs o Títulos de actas
   fechaCreacion: string;
   estado: 'Activa' | 'Inactiva';

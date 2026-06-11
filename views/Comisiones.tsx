@@ -3,7 +3,7 @@ import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { firebaseService } from '../services/firebaseService';
 import { Comision, Socio, AsignacionComision, Acta } from '../types';
-import { Briefcase, Plus, Search, Trash2, Users, CheckCircle, Save, DollarSign, FileText, X, Pencil, Calendar } from 'lucide-react';
+import { Briefcase, Plus, Search, Trash2, Users, CheckCircle, Save, DollarSign, FileText, X, Pencil, Calendar, Award } from 'lucide-react';
 import { MOCK_ACTAS } from '../constants';
 import { FormattedActa } from '../components/FormattedActa';
 import { generateActaPDF } from '../utils/pdfGenerator';
@@ -51,6 +51,7 @@ export const Comisiones: React.FC = () => {
     nombre: '',
     proposito: '',
     miembros: [],
+    coordinador: '',
     actasVinculadas: [],
     estado: 'Activa'
   });
@@ -130,6 +131,7 @@ export const Comisiones: React.FC = () => {
       nombre: form.nombre,
       proposito: form.proposito,
       miembros: form.miembros || [],
+      coordinador: form.coordinador || '',
       actasVinculadas: form.actasVinculadas || [],
       fechaCreacion: form.fechaCreacion || new Date().toISOString(),
       estado: form.estado || 'Activa'
@@ -138,7 +140,7 @@ export const Comisiones: React.FC = () => {
     await firebaseService.saveComision(newComision);
     setSelectedComisionId(commissionId);
     setShowForm(false);
-    setForm({ nombre: '', proposito: '', miembros: [], actasVinculadas: [], estado: 'Activa' });
+    setForm({ nombre: '', proposito: '', miembros: [], coordinador: '', actasVinculadas: [], estado: 'Activa' });
   };
 
   const handleDelete = async (id: string) => {
@@ -222,7 +224,7 @@ export const Comisiones: React.FC = () => {
             {/* Datos Generales */}
             <div className="space-y-6">
               <h4 className="font-extrabold text-blue-900 border-b border-slate-100 pb-2">1. Datos Generales</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Nombre de la Comisión</label>
                   <input
@@ -243,6 +245,19 @@ export const Comisiones: React.FC = () => {
                   >
                     <option value="Activa">Activa</option>
                     <option value="Inactiva">Inactiva</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Coordinador de Comisión</label>
+                  <select
+                    value={form.coordinador || ''}
+                    onChange={(e) => setForm({...form, coordinador: e.target.value})}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">-- Sin coordinador asignado --</option>
+                    {socios.map(s => (
+                      <option key={s.id} value={s.id}>{s.nombre} ({s.puesto || 'Socio'})</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -504,6 +519,35 @@ export const Comisiones: React.FC = () => {
                       </div>
                     </div>
 
+                    {/* Coordinador de la Comisión */}
+                    <div>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Coordinador de la Comisión</span>
+                      {selectedComision.coordinador ? (() => {
+                        const coord = socios.find(s => s.id === selectedComision.coordinador);
+                        if (!coord) return <span className="text-xs text-slate-450 italic bg-slate-50 p-3 rounded-2xl border border-slate-200/60 block">Coordinador no encontrado</span>;
+                        return (
+                          <button
+                            onClick={() => setSelectedSocioForModal(coord)}
+                            className="w-full flex items-center space-x-3 p-3 bg-amber-50/50 hover:bg-amber-50 border border-amber-200/60 rounded-2xl hover:shadow-sm transition-all text-left cursor-pointer group"
+                          >
+                            <img
+                              src={coord.foto || `https://picsum.photos/seed/${coord.nombre}/100/100`}
+                              className="w-10 h-10 rounded-full object-cover border-2 border-white ring-1 ring-amber-300 shrink-0"
+                              alt={coord.nombre}
+                            />
+                            <div className="overflow-hidden">
+                              <span className="text-xs font-black text-slate-800 group-hover:text-blue-600 transition-colors block truncate">{coord.nombre}</span>
+                              <span className="text-[9px] font-black text-amber-700 uppercase tracking-wider block mt-0.5">Coordinador Oficial</span>
+                            </div>
+                          </button>
+                        );
+                      })() : (
+                        <div className="p-3 text-center text-xs text-slate-450 bg-slate-50 rounded-2xl border border-slate-200/60 italic">
+                          Sin coordinador asignado.
+                        </div>
+                      )}
+                    </div>
+
                     {/* Presupuesto Detallado */}
                     <div className="bg-gradient-to-br from-blue-50/60 to-indigo-50/30 border border-blue-100 p-5 rounded-2xl shadow-sm">
                       <div className="flex justify-between items-center mb-3">
@@ -569,23 +613,39 @@ export const Comisiones: React.FC = () => {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {assignedMembers.map(m => (
-                        <button
-                          key={m.id}
-                          onClick={() => setSelectedSocioForModal(m)}
-                          className="flex items-center text-left space-x-4 p-4 bg-slate-50/70 border border-slate-200/60 rounded-2xl hover:bg-white hover:shadow-md transition-all w-full cursor-pointer group"
-                        >
-                          <img
-                            src={m.foto || `https://picsum.photos/seed/${m.nombre}/100/100`}
-                            className="w-12 h-12 rounded-full object-cover border-2 border-white ring-1 ring-slate-200 shrink-0"
-                            alt={m.nombre}
-                          />
-                          <div className="overflow-hidden">
-                            <p className="text-sm font-black text-slate-850 group-hover:text-blue-600 transition-colors truncate">{m.nombre}</p>
-                            <p className="text-[10px] font-black text-blue-600 uppercase tracking-wide truncate mt-0.5">{m.puesto || 'Socio'}</p>
-                          </div>
-                        </button>
-                      ))}
+                      {assignedMembers.map(m => {
+                        const isCoord = m.id === selectedComision.coordinador;
+                        return (
+                          <button
+                            key={m.id}
+                            onClick={() => setSelectedSocioForModal(m)}
+                            className={`flex items-center text-left space-x-4 p-4 rounded-2xl hover:bg-white hover:shadow-md transition-all w-full cursor-pointer group ${
+                              isCoord ? 'bg-amber-50/30 border-amber-200/60' : 'bg-slate-50/70 border-slate-200/60'
+                            }`}
+                          >
+                            <div className="relative shrink-0">
+                              <img
+                                src={m.foto || `https://picsum.photos/seed/${m.nombre}/100/100`}
+                                className={`w-12 h-12 rounded-full object-cover border-2 border-white shrink-0 ${
+                                  isCoord ? 'ring-2 ring-amber-400' : 'ring-1 ring-slate-200'
+                                }`}
+                                alt={m.nombre}
+                              />
+                              {isCoord && (
+                                <div className="absolute -bottom-1.5 -right-1 bg-amber-400 text-amber-950 p-0.5 rounded-full border border-white shadow-sm flex items-center justify-center">
+                                  <Award size={10} />
+                                </div>
+                              )}
+                            </div>
+                            <div className="overflow-hidden">
+                              <p className="text-sm font-black text-slate-850 group-hover:text-blue-600 transition-colors truncate">{m.nombre}</p>
+                              <p className="text-[10px] font-black text-blue-650 uppercase tracking-wide truncate mt-0.5">
+                                {isCoord ? 'Coordinador • ' : ''}{m.puesto || 'Socio'}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
