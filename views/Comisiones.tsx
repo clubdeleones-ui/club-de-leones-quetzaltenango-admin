@@ -401,7 +401,7 @@ export const Comisiones: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredComisiones.map(comision => {
               const assignedBudget = asignaciones
-                .filter(a => a.comision === comision.id)
+                .filter(a => a.comision === comision.id || a.comision === comision.nombre)
                 .reduce((acc, curr) => acc + curr.monto, 0);
 
               const assignedMembers = socios.filter(s => comision.miembros.includes(s.id));

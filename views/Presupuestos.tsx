@@ -423,7 +423,7 @@ export const Presupuestos: React.FC = () => {
                 <div className="space-y-4">
                   {asignaciones.map(asig => {
                     const rubroObj = rubros.find(r => r.id === asig.rubroId);
-                    const comisionObj = comisiones.find(c => c.id === asig.comision);
+                    const comisionObj = comisiones.find(c => c.id === asig.comision || c.nombre === asig.comision);
                     const comisionNombre = comisionObj ? comisionObj.nombre : asig.comision;
                     return (
                       <div key={asig.id} className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 hover:bg-white hover:shadow-md transition-all group relative">
