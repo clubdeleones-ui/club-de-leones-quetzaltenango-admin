@@ -5,6 +5,9 @@ import { firebaseService } from '../services/firebaseService';
 import { Comision, Socio, AsignacionComision, Acta } from '../types';
 import { Briefcase, Plus, Search, Trash2, Users, CheckCircle, Save, DollarSign, FileText, X, Pencil, Calendar } from 'lucide-react';
 import { MOCK_ACTAS } from '../constants';
+import { FormattedActa } from '../components/FormattedActa';
+import { generateActaPDF } from '../utils/pdfGenerator';
+import { Phone, Mail } from 'lucide-react';
 
 const cleanString = (str: string) => 
   str ? str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
@@ -25,6 +28,24 @@ export const Comisiones: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedComisionId, setSelectedComisionId] = useState<string>('');
+  const [selectedSocioForModal, setSelectedSocioForModal] = useState<Socio | null>(null);
+  const [selectedActaForModal, setSelectedActaForModal] = useState<Acta | null>(null);
+
+  const { presidentName, secretaryName } = useMemo(() => {
+    let pName = 'Edwin Ernesto Pacheco López';
+    let sName = 'Flor Rodríguez Cifuentes';
+    try {
+      const local = localStorage.getItem('club_leones_socios_v3');
+      if (local) {
+        const sociosList = JSON.parse(local);
+        const president = sociosList.find((s: any) => s.puesto?.toLowerCase().includes('presidente del club') || s.puesto?.toLowerCase() === 'presidente') || sociosList.find((s: any) => s.puesto?.toLowerCase().includes('presidente'));
+        const secretary = sociosList.find((s: any) => s.puesto?.toLowerCase().includes('secretario del club') || s.puesto?.toLowerCase() === 'secretario') || sociosList.find((s: any) => s.puesto?.toLowerCase().includes('secretario'));
+        if (president) pName = president.nombre;
+        if (secretary) sName = secretary.nombre;
+      }
+    } catch (e) {}
+    return { presidentName: pName, secretaryName: sName };
+  }, []);
   
   const [form, setForm] = useState<Partial<Comision>>({
     nombre: '',
@@ -549,17 +570,21 @@ export const Comisiones: React.FC = () => {
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {assignedMembers.map(m => (
-                        <div key={m.id} className="flex items-center space-x-4 p-4 bg-slate-50/70 border border-slate-200/60 rounded-2xl hover:bg-white hover:shadow-md transition-all">
+                        <button
+                          key={m.id}
+                          onClick={() => setSelectedSocioForModal(m)}
+                          className="flex items-center text-left space-x-4 p-4 bg-slate-50/70 border border-slate-200/60 rounded-2xl hover:bg-white hover:shadow-md transition-all w-full cursor-pointer group"
+                        >
                           <img
                             src={m.foto || `https://picsum.photos/seed/${m.nombre}/100/100`}
                             className="w-12 h-12 rounded-full object-cover border-2 border-white ring-1 ring-slate-200 shrink-0"
                             alt={m.nombre}
                           />
                           <div className="overflow-hidden">
-                            <p className="text-sm font-black text-slate-850 truncate">{m.nombre}</p>
+                            <p className="text-sm font-black text-slate-850 group-hover:text-blue-600 transition-colors truncate">{m.nombre}</p>
                             <p className="text-[10px] font-black text-blue-600 uppercase tracking-wide truncate mt-0.5">{m.puesto || 'Socio'}</p>
                           </div>
-                        </div>
+                        </button>
                       ))}
                     </div>
                   )}
@@ -584,15 +609,19 @@ export const Comisiones: React.FC = () => {
                   ) : (
                     <div className="space-y-3">
                       {linkedActas.map(acta => (
-                        <div key={acta.id} className="flex items-center justify-between p-4 bg-slate-50/70 hover:bg-white border border-slate-200/80 rounded-2xl hover:shadow-sm transition-all group">
+                        <button
+                          key={acta.id}
+                          onClick={() => setSelectedActaForModal(acta)}
+                          className="flex items-center justify-between p-4 bg-slate-50/70 hover:bg-white border border-slate-200/80 rounded-2xl hover:shadow-sm transition-all group w-full text-left cursor-pointer"
+                        >
                           <div className="flex items-center space-x-3 overflow-hidden">
                             <FileText size={18} className="text-slate-400 group-hover:text-blue-500 transition-colors shrink-0" />
                             <div className="overflow-hidden">
-                              <span className="text-sm font-bold text-slate-700 truncate block">{acta.titulo}</span>
+                              <span className="text-sm font-bold text-slate-700 group-hover:text-blue-600 transition-colors truncate block">{acta.titulo}</span>
                               <span className="text-[10px] font-bold text-slate-400 block mt-0.5">Fecha de Sesión: {acta.fecha}</span>
                             </div>
                           </div>
-                        </div>
+                        </button>
                       ))}
                     </div>
                   )}
@@ -606,6 +635,188 @@ export const Comisiones: React.FC = () => {
               <p className="text-sm text-slate-400 mt-2 max-w-md mx-auto">Selecciona una comisión del menú desplegable de arriba para ver su ficha técnica completa, integrantes y presupuesto.</p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* MODAL: Detalle Socio (Ficha de Socio en modo Lectura) */}
+      {selectedSocioForModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-blue-900/30 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2.5rem] max-w-lg w-full overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 shadow-2xl border border-slate-100">
+            {/* Header decoration */}
+            <div className="h-24 bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 relative">
+              <button 
+                onClick={() => setSelectedSocioForModal(null)} 
+                className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors cursor-pointer flex items-center justify-center"
+                title="Cerrar"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="px-6 pb-8 pt-12 flex flex-col items-center text-center relative overflow-y-auto max-h-[75vh]">
+              {/* Avatar floating */}
+              <div className="absolute -top-12 left-1/2 transform -translate-x-1/2">
+                <img 
+                  src={selectedSocioForModal.foto || `https://picsum.photos/seed/${selectedSocioForModal.nombre}/200/200`} 
+                  className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-xl ring-4 ring-blue-900/40 ring-offset-2" 
+                  alt={selectedSocioForModal.nombre}
+                />
+              </div>
+
+              {/* Name & Role */}
+              <div className="space-y-2.5 w-full">
+                <h3 className="font-extrabold text-xl text-slate-900 tracking-tight leading-snug">
+                  {selectedSocioForModal.nombre}
+                </h3>
+                
+                <div className="flex flex-col items-center gap-1.5">
+                  <span className="text-xs font-black uppercase tracking-wider px-3.5 py-1 rounded-full border bg-blue-50 text-blue-800 border-blue-200/70">
+                    {selectedSocioForModal.puesto || 'Socio Regular'}
+                  </span>
+                  {(selectedSocioForModal.puestosAdicionales || []).map((pa: string, pi: number) => (
+                    <span key={pi} className="text-[10px] font-black text-amber-800 bg-amber-50 px-3 py-0.5 rounded-full border border-amber-200 uppercase tracking-wide">
+                      {pa}
+                    </span>
+                  ))}
+                  {selectedSocioForModal.codigoSocio && (
+                    <span className="text-[10px] font-mono font-black text-blue-700 bg-blue-50/50 px-2.5 py-0.5 rounded-full border border-blue-100">
+                      # {selectedSocioForModal.codigoSocio}
+                    </span>
+                  )}
+                </div>
+                
+                {/* Details list */}
+                <div className="w-full bg-slate-50/70 rounded-2xl p-5 border border-slate-100 text-left text-xs font-bold text-slate-650 space-y-3 mt-6">
+                  {/* Club */}
+                  <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+                    <span className="text-slate-400 flex items-center space-x-2">
+                      <Briefcase size={15} />
+                      <span>Club</span>
+                    </span>
+                    <span className="font-black text-slate-800">{selectedSocioForModal.club || 'QUETZALTENANGO'}</span>
+                  </div>
+
+                  {/* Email */}
+                  <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+                    <span className="text-slate-400 flex items-center space-x-2">
+                      <Mail size={15} />
+                      <span>Correo</span>
+                    </span>
+                    {selectedSocioForModal.correo ? (
+                      <a href={`mailto:${selectedSocioForModal.correo}`} className="font-black text-blue-700 hover:text-blue-900 transition-colors">
+                        {selectedSocioForModal.correo}
+                      </a>
+                    ) : (
+                      <span className="text-slate-400 italic font-medium">Sin correo registrado</span>
+                    )}
+                  </div>
+
+                  {/* Phone */}
+                  <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+                    <span className="text-slate-400 flex items-center space-x-2">
+                      <Phone size={15} />
+                      <span>Teléfono</span>
+                    </span>
+                    {selectedSocioForModal.telefono && selectedSocioForModal.telefono !== 'Sin teléfono' ? (
+                      <a href={`tel:${selectedSocioForModal.telefono}`} className="font-black text-slate-800 hover:text-blue-700 transition-colors">
+                        {selectedSocioForModal.telefono}
+                      </a>
+                    ) : (
+                      <span className="text-slate-400 italic font-medium">Sin teléfono</span>
+                    )}
+                  </div>
+
+                  {/* Date of Entry */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400 flex items-center space-x-2">
+                      <Calendar size={15} />
+                      <span>Ingreso</span>
+                    </span>
+                    <span className="font-black text-slate-800">
+                      {selectedSocioForModal.fechaIngreso || 'N/A'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Status bar */}
+                <div className="flex items-center justify-between mt-5 px-1">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Membresía Financiera</span>
+                  <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                    selectedSocioForModal.estadoCuotas === 'Al día' 
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/50' 
+                      : 'bg-yellow-50 text-yellow-700 border border-yellow-200/50'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${selectedSocioForModal.estadoCuotas === 'Al día' ? 'bg-emerald-500' : 'bg-yellow-500'}`} />
+                    <span>{selectedSocioForModal.estadoCuotas || 'Al día'}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="py-4 px-6 border-t border-slate-100 bg-slate-50 text-center">
+              <button
+                onClick={() => setSelectedSocioForModal(null)}
+                className="w-full py-3 bg-white hover:bg-slate-100 text-slate-700 font-extrabold rounded-xl border border-slate-200 text-sm transition-all cursor-pointer"
+              >
+                Cerrar Ficha
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Detalle de Acta (Visualización formateada y PDF) */}
+      {selectedActaForModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4 bg-blue-900/20 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2.5rem] max-w-5xl w-full h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 shadow-2xl border border-slate-100">
+            <div className="py-4 px-6 sm:py-5 sm:px-8 border-b border-slate-100 flex justify-between items-center bg-blue-900 text-white relative shrink-0">
+              <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500" />
+              <div className="text-left pr-12 sm:pr-16">
+                <h3 className="text-lg sm:text-xl md:text-2xl font-black truncate max-w-[280px] sm:max-w-lg md:max-w-2xl">{selectedActaForModal.titulo}</h3>
+                <p className="text-[10px] sm:text-xs text-blue-200 mt-0.5 uppercase tracking-widest font-bold">{selectedActaForModal.fecha} • SECRETARÍA</p>
+              </div>
+              <button 
+                onClick={() => setSelectedActaForModal(null)} 
+                className="absolute top-3.5 right-4 sm:top-4.5 sm:right-6 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors cursor-pointer flex items-center justify-center"
+                title="Cerrar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div className="p-3 sm:p-5 md:p-8 overflow-y-auto bg-slate-50/50 flex-grow shadow-inner">
+              <FormattedActa
+                titulo={selectedActaForModal.titulo}
+                fecha={selectedActaForModal.fecha}
+                categoria={selectedActaForModal.categoria || 'Ordinaria'}
+                autor={selectedActaForModal.autor}
+                contenido={selectedActaForModal.contenido}
+                presidentName={presidentName}
+                secretaryName={secretaryName}
+                numeroActa={selectedActaForModal.numeroActa || '1'}
+                codigoRegistro={selectedActaForModal.codigoRegistro}
+              />
+            </div>
+
+            <div className="py-4 px-6 sm:py-5 sm:px-8 border-t border-slate-100 bg-white flex flex-col sm:flex-row justify-between items-center gap-4 text-left shrink-0">
+              <p className="text-[10px] sm:text-xs text-slate-400 uppercase font-black tracking-tighter italic">Propiedad Privada • Club de Leones Quetzaltenango</p>
+              <div className="flex space-x-3 w-full sm:w-auto">
+                <button
+                  onClick={() => setSelectedActaForModal(null)}
+                  className="flex-grow sm:flex-none px-6 py-2.5 text-slate-500 font-bold hover:text-slate-850 text-xs transition-colors cursor-pointer"
+                >
+                  Cerrar
+                </button>
+                <button
+                  onClick={() => generateActaPDF(selectedActaForModal, 'open')}
+                  className="flex-grow sm:flex-none bg-blue-900 text-white px-6 py-2.5 rounded-xl font-black text-xs shadow-xl shadow-blue-900/10 active:scale-95 transition-all cursor-pointer flex items-center justify-center space-x-1.5"
+                >
+                  <span>Ver PDF Completo</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
