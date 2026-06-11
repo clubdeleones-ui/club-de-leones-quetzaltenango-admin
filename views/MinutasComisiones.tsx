@@ -47,6 +47,36 @@ export const MinutasComisiones: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterComisionId, setFilterComisionId] = useState('');
+  const [filterYear, setFilterYear] = useState('Todos');
+  const [filterMonth, setFilterMonth] = useState('Todos');
+  const [filterSolicitud, setFilterSolicitud] = useState('Todos');
+
+  // Dynamic years and months for filters
+  const years = useMemo(() => {
+    const yearsSet = new Set<string>();
+    minutas.forEach(m => {
+      if (m.fechaHora) {
+        const year = new Date(m.fechaHora).getFullYear().toString();
+        yearsSet.add(year);
+      }
+    });
+    return Array.from(yearsSet).sort((a, b) => b.localeCompare(a));
+  }, [minutas]);
+
+  const months = [
+    { value: '0', label: 'Enero' },
+    { value: '1', label: 'Febrero' },
+    { value: '2', label: 'Marzo' },
+    { value: '3', label: 'Abril' },
+    { value: '4', label: 'Mayo' },
+    { value: '5', label: 'Junio' },
+    { value: '6', label: 'Julio' },
+    { value: '7', label: 'Agosto' },
+    { value: '8', label: 'Septiembre' },
+    { value: '9', label: 'Octubre' },
+    { value: '10', label: 'Noviembre' },
+    { value: '11', label: 'Diciembre' }
+  ];
 
   // Modales
   const [selectedSocioForModal, setSelectedSocioForModal] = useState<Socio | null>(null);
@@ -374,12 +404,40 @@ export const MinutasComisiones: React.FC = () => {
   const filteredMinutas = useMemo(() => {
     return minutas.filter(m => {
       const commission = comisiones.find(c => c.id === m.comisionId);
-      const matchesSearch = m.tema.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                            commission?.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+      const req = solicitudes.find(s => s.id === m.solicitudVinculadaId);
+      const date = new Date(m.fechaHora);
+
+      const attendeeNames = [
+        ...m.miembrosComision,
+        ...m.otrosParticipantes
+      ].map(id => socios.find(s => s.id === id)?.nombre || '').join(' ').toLowerCase();
+
+      const pointsText = m.puntos.map(p => p.punto + ' ' + p.discusion).join(' ').toLowerCase();
+
+      const matchesSearch = 
+        m.tema.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        commission?.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        attendeeNames.includes(searchTerm.toLowerCase()) ||
+        pointsText.includes(searchTerm.toLowerCase());
+
       const matchesComision = filterComisionId ? m.comisionId === filterComisionId : true;
-      return matchesSearch && matchesComision;
+      const matchesYear = filterYear === 'Todos' ? true : date.getFullYear().toString() === filterYear;
+      const matchesMonth = filterMonth === 'Todos' ? true : date.getMonth().toString() === filterMonth;
+
+      let matchesSolicitud = true;
+      if (filterSolicitud === 'con_solicitud') {
+        matchesSolicitud = !!m.solicitudVinculadaId;
+      } else if (filterSolicitud === 'sin_solicitud') {
+        matchesSolicitud = !m.solicitudVinculadaId;
+      } else if (filterSolicitud === 'solicitud_aprobada') {
+        matchesSolicitud = !!m.solicitudVinculadaId && req?.estado === 'Aprobada';
+      } else if (filterSolicitud === 'solicitud_pendiente') {
+        matchesSolicitud = !!m.solicitudVinculadaId && req?.estado === 'Pendiente';
+      }
+
+      return matchesSearch && matchesComision && matchesYear && matchesMonth && matchesSolicitud;
     });
-  }, [minutas, comisiones, searchTerm, filterComisionId]);
+  }, [minutas, comisiones, solicitudes, socios, searchTerm, filterComisionId, filterYear, filterMonth, filterSolicitud]);
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto px-4 md:px-8 py-6 animate-in fade-in duration-500">
@@ -793,28 +851,54 @@ export const MinutasComisiones: React.FC = () => {
           </form>
         </div>
       ) : (
-        /* MAIN DASHBOARD VIEW (Split Screen) */
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left Column: List & Filters */}
-          <div className="lg:col-span-5 space-y-6">
-            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  placeholder="Buscar minuta por tema..."
-                  className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-sm font-semibold text-slate-800 shadow-sm"
-                />
+        /* MAIN DASHBOARD VIEW (Full-width Horizontal Ficha & Grid list) */
+        <div className="space-y-8">
+          {/* TOP ADVANCED FILTERS CARD */}
+          <div className="bg-white rounded-[2rem] p-6 border border-slate-200 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 gap-2">
+              <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center space-x-2">
+                <Search size={16} className="text-blue-900" />
+                <span>Filtros de Búsqueda Avanzados</span>
+              </h3>
+              {(searchTerm || filterComisionId || filterYear !== 'Todos' || filterMonth !== 'Todos' || filterSolicitud !== 'Todos') && (
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setFilterComisionId('');
+                    setFilterYear('Todos');
+                    setFilterMonth('Todos');
+                    setFilterSolicitud('Todos');
+                  }}
+                  className="text-xs font-bold text-red-500 hover:text-red-700 transition-colors self-start sm:self-auto"
+                >
+                  Limpiar Filtros
+                </button>
+              )}
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {/* 1. Buscador */}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Buscador</label>
+                <div className="relative">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    placeholder="Tema, acuerdo o asistente..."
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-xs font-semibold text-slate-800"
+                  />
+                </div>
               </div>
 
+              {/* 2. Comisión */}
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Filtrar por Comisión</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Comisión</label>
                 <select
                   value={filterComisionId}
                   onChange={e => setFilterComisionId(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                 >
                   <option value="">Todas las Comisiones</option>
                   {comisiones.map(c => (
@@ -822,227 +906,198 @@ export const MinutasComisiones: React.FC = () => {
                   ))}
                 </select>
               </div>
-            </div>
 
-            {/* Minutas List */}
-            <div className="space-y-4">
-              {filteredMinutas.length === 0 ? (
-                <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center text-slate-400 text-sm font-bold italic">
-                  No se encontraron minutas con los filtros seleccionados.
-                </div>
-              ) : (
-                filteredMinutas.map(m => {
-                  const comm = comisiones.find(c => c.id === m.comisionId);
-                  const isSelected = m.id === selectedMinutaId;
-                  const dateStr = new Date(m.fechaHora).toLocaleDateString('es-GT', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric'
-                  });
-                  const participantsCount = m.miembrosComision.length + m.otrosParticipantes.length;
+              {/* 3. Año */}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Año</label>
+                <select
+                  value={filterYear}
+                  onChange={e => setFilterYear(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                >
+                  <option value="Todos">Todos los años</option>
+                  {years.map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
 
-                  return (
-                    <button
-                      key={m.id}
-                      onClick={() => setSelectedMinutaId(m.id)}
-                      className={`w-full text-left p-5 rounded-3xl border transition-all flex flex-col justify-between cursor-pointer group hover:shadow-md ${
-                        isSelected 
-                          ? 'bg-blue-900 border-blue-900 text-white shadow-lg shadow-blue-950/20' 
-                          : 'bg-white border-slate-200 text-slate-800'
-                      }`}
-                    >
-                      <div className="space-y-2 w-full">
-                        <div className="flex justify-between items-center w-full">
-                          <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
-                            isSelected ? 'bg-white/10 text-yellow-300' : 'bg-slate-100 text-slate-500'
-                          }`}>
-                            {comm?.nombre || 'Comisión'}
-                          </span>
-                          <span className={`text-[10px] font-bold ${isSelected ? 'text-slate-200' : 'text-slate-400'}`}>
-                            {dateStr}
-                          </span>
-                        </div>
-                        <h4 className="font-extrabold text-sm leading-snug group-hover:underline break-words">
-                          {m.tema}
-                        </h4>
-                      </div>
-                      
-                      <div className={`flex items-center justify-between border-t mt-4 pt-3 text-[10px] font-semibold ${
-                        isSelected ? 'border-white/10 text-slate-200' : 'border-slate-100 text-slate-400'
-                      }`}>
-                        <span>Puntos: {m.puntos.length}</span>
-                        <span>Asistencia: {participantsCount} Socios</span>
-                      </div>
-                    </button>
-                  );
-                })
-              )}
+              {/* 4. Mes */}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Mes</label>
+                <select
+                  value={filterMonth}
+                  onChange={e => setFilterMonth(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                >
+                  <option value="Todos">Todos los meses</option>
+                  {months.map(m => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 5. Solicitud */}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Solicitud Interna</label>
+                <select
+                  value={filterSolicitud}
+                  onChange={e => setFilterSolicitud(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                >
+                  <option value="Todos">Todas las minutas</option>
+                  <option value="con_solicitud">Con Solicitud Interna</option>
+                  <option value="sin_solicitud">Sin Solicitud Interna</option>
+                  <option value="solicitud_aprobada">Con Solicitud Aprobada</option>
+                  <option value="solicitud_pendiente">Con Solicitud Pendiente</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          {/* Right Column: Minute Ficha Sheet */}
-          <div className="lg:col-span-7">
-            {selectedMinuta ? (
-              <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-500">
-                {/* Header Decoration */}
-                <div className="bg-gradient-to-br from-blue-950 via-slate-900 to-indigo-950 text-white p-8 relative flex flex-col items-center text-center">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_120%,rgba(59,130,246,0.15),transparent)] pointer-events-none"></div>
+          {selectedMinuta ? (
+            /* FULL WIDTH HORIZONTAL FICHA SHEET */
+            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-500 p-8 space-y-8">
+              {/* Header row */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-100 pb-6">
+                <div className="space-y-4 grow">
+                  <button
+                    onClick={() => setSelectedMinutaId('')}
+                    className="flex items-center space-x-1.5 px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:text-blue-900 hover:bg-slate-50 transition-all font-black text-xs cursor-pointer shadow-sm w-fit"
+                  >
+                    <ChevronRight size={14} className="rotate-180" />
+                    <span>Regresar al Listado</span>
+                  </button>
                   
-                  {/* Icon */}
-                  <div className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-yellow-400 border border-white/10 mb-4 shadow-inner">
-                    <FileText size={28} />
-                  </div>
-
-                  {/* Commission Title */}
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Minuta de Reunión</span>
-                  <h3 className="text-xl font-black mt-2 text-yellow-400 tracking-wide">
-                    {comisiones.find(c => c.id === selectedMinuta.comisionId)?.nombre || 'Comisión'}
-                  </h3>
-
-                  {/* Actions */}
-                  <div className="absolute top-6 right-6 flex items-center space-x-2">
-                    <button
-                      onClick={() => {
-                        const comisionNombre = comisiones.find(c => c.id === selectedMinuta.comisionId)?.nombre || 'Comisión';
-                        generateMinutaPDF(selectedMinuta, comisionNombre, socios, 'download');
-                      }}
-                      className="p-2.5 bg-yellow-400 hover:bg-yellow-350 text-blue-950 rounded-xl transition-all hover:scale-105 cursor-pointer"
-                      title="Descargar PDF de Minuta"
-                    >
-                      <Download size={14} />
-                    </button>
-                    <button
-                      onClick={() => handleEdit(selectedMinuta)}
-                      className="p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all hover:scale-105 cursor-pointer"
-                      title="Editar Minuta"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(selectedMinuta.id)}
-                      className="p-2.5 bg-red-500/80 hover:bg-red-600 text-white rounded-xl transition-all hover:scale-105 cursor-pointer"
-                      title="Eliminar Minuta"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="p-8 space-y-8">
-                  {/* Topic & Metadata */}
-                  <div className="text-center space-y-4 border-b border-slate-100 pb-6">
-                    <h2 className="text-2xl font-black text-slate-850 max-w-lg mx-auto leading-tight break-words">
+                  <div className="text-left space-y-2">
+                    <span className="bg-blue-900 text-yellow-400 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                      {comisiones.find(c => c.id === selectedMinuta.comisionId)?.nombre || 'Comisión'}
+                    </span>
+                    <h2 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight">
                       "{selectedMinuta.tema}"
                     </h2>
-                    <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-slate-500 font-bold">
-                      <div className="flex items-center space-x-1.5">
-                        <Calendar size={14} className="text-slate-400" />
+                    <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-405 text-slate-400">
+                      <div className="flex items-center space-x-1">
+                        <Calendar size={13} />
                         <span>Fecha: {new Date(selectedMinuta.fechaHora).toLocaleDateString()}</span>
                       </div>
-                      <div className="flex items-center space-x-1.5">
-                        <Clock size={14} className="text-slate-400" />
+                      <div className="flex items-center space-x-1">
+                        <Clock size={13} />
                         <span>Hora: {new Date(selectedMinuta.fechaHora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
-                      <div className="flex items-center space-x-1.5">
-                        <FileText size={14} className="text-slate-400" />
+                      <div className="flex items-center space-x-1">
+                        <FileText size={13} />
                         <span>ID: {selectedMinuta.id}</span>
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  {/* Attendee Sections */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {/* Miembros de Comisión */}
-                    <div className="space-y-3">
-                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center space-x-1.5">
-                        <Users size={12} className="text-slate-400" />
-                        <span>Miembros de Comisión Asistentes ({selectedMinuta.miembrosComision.length})</span>
-                      </h4>
-                      <div className="bg-slate-50/50 p-4 border border-slate-200/50 rounded-2xl max-h-[220px] overflow-y-auto space-y-2">
-                        {selectedMinuta.miembrosComision.length === 0 ? (
-                          <p className="text-xs text-slate-400 italic">No se registró asistencia de miembros.</p>
-                        ) : (
-                          selectedMinuta.miembrosComision.map(id => {
-                            const s = socios.find(soc => soc.id === id);
-                            if (!s) return null;
-                            return (
-                              <button
-                                key={id}
-                                onClick={() => setSelectedSocioForModal(s)}
-                                className="w-full flex items-center space-x-2.5 p-2 bg-white rounded-xl border border-slate-100 hover:shadow-sm hover:border-slate-200 transition-all text-left cursor-pointer group"
-                              >
-                                <img src={s.foto || `https://picsum.photos/seed/${s.nombre}/100/100`} className="w-7 h-7 rounded-full object-cover" alt="" />
-                                <div className="overflow-hidden">
-                                  <p className="text-xs font-black text-slate-750 group-hover:text-blue-600 transition-colors truncate">{s.nombre}</p>
-                                  {s.puesto && <p className="text-[8px] text-slate-400 uppercase tracking-wider font-bold mt-0.5">{s.puesto}</p>}
-                                </div>
-                              </button>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
+                {/* Actions */}
+                <div className="flex items-center space-x-2 shrink-0 self-start md:self-center">
+                  <button
+                    onClick={() => {
+                      const comisionNombre = comisiones.find(c => c.id === selectedMinuta.comisionId)?.nombre || 'Comisión';
+                      generateMinutaPDF(selectedMinuta, comisionNombre, socios, 'download');
+                    }}
+                    className="px-5 py-3 bg-yellow-400 hover:bg-yellow-350 text-blue-950 rounded-2xl transition-all hover:scale-[1.02] font-black text-xs flex items-center justify-center space-x-2 shadow-lg shadow-yellow-500/10 cursor-pointer active:scale-95"
+                    title="Descargar PDF de Minuta"
+                  >
+                    <Download size={14} />
+                    <span>Descargar PDF</span>
+                  </button>
+                  <button
+                    onClick={() => handleEdit(selectedMinuta)}
+                    className="px-5 py-3 bg-slate-50 hover:bg-blue-55 hover:bg-blue-50 border border-slate-200 text-slate-600 hover:text-blue-900 rounded-2xl transition-all hover:scale-[1.02] font-black text-xs flex items-center justify-center space-x-2 cursor-pointer active:scale-95"
+                    title="Editar Minuta"
+                  >
+                    <Pencil size={14} />
+                    <span>Editar</span>
+                  </button>
+                  <button
+                    onClick={() => handleDelete(selectedMinuta.id)}
+                    className="px-5 py-3 bg-red-500/90 hover:bg-red-600 text-white rounded-2xl transition-all hover:scale-[1.02] font-black text-xs flex items-center justify-center space-x-2 cursor-pointer active:scale-95"
+                    title="Eliminar Minuta"
+                  >
+                    <Trash2 size={14} />
+                    <span>Eliminar</span>
+                  </button>
+                </div>
+              </div>
 
-                    {/* Otros Participantes */}
-                    <div className="space-y-3">
-                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center space-x-1.5">
-                        <Award size={12} className="text-slate-400" />
-                        <span>Otros Socios Invitados ({selectedMinuta.otrosParticipantes.length})</span>
-                      </h4>
-                      <div className="bg-slate-50/50 p-4 border border-slate-200/50 rounded-2xl max-h-[220px] overflow-y-auto space-y-2">
-                        {selectedMinuta.otrosParticipantes.length === 0 ? (
-                          <p className="text-xs text-slate-400 italic text-center py-4">Sin otros participantes.</p>
-                        ) : (
-                          selectedMinuta.otrosParticipantes.map(id => {
-                            const s = socios.find(soc => soc.id === id);
-                            if (!s) return null;
-                            return (
-                              <button
-                                key={id}
-                                onClick={() => setSelectedSocioForModal(s)}
-                                className="w-full flex items-center space-x-2.5 p-2 bg-white rounded-xl border border-slate-100 hover:shadow-sm hover:border-slate-200 transition-all text-left cursor-pointer group"
-                              >
-                                <img src={s.foto || `https://picsum.photos/seed/${s.nombre}/100/100`} className="w-7 h-7 rounded-full object-cover" alt="" />
-                                <div className="overflow-hidden">
-                                  <p className="text-xs font-black text-slate-750 group-hover:text-blue-600 transition-colors truncate">{s.nombre}</p>
-                                  {s.puesto && <p className="text-[8px] text-slate-400 uppercase tracking-wider font-bold mt-0.5">{s.puesto}</p>}
-                                </div>
-                              </button>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Puntos y Debate */}
-                  <div className="space-y-4">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center space-x-1.5 border-b border-slate-100 pb-2">
-                      <MessageSquare size={12} className="text-slate-400" />
-                      <span>Temas Discutidos y Acuerdos ({selectedMinuta.puntos.length})</span>
-                    </h4>
-
-                    <div className="space-y-4">
-                      {selectedMinuta.puntos.map((punto, idx) => (
-                        <div key={punto.id || idx} className="flex space-x-4">
-                          <div className="flex flex-col items-center">
-                            <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-900 border border-blue-200 flex items-center justify-center text-xs font-bold shrink-0">
-                              {idx + 1}
-                            </div>
-                            {idx < selectedMinuta.puntos.length - 1 && (
-                              <div className="w-0.5 bg-slate-200 grow my-1"></div>
-                            )}
-                          </div>
-                          <div className="bg-slate-50 border border-slate-100/80 rounded-2xl p-4 grow space-y-1.5">
-                            <h5 className="font-extrabold text-sm text-slate-800 leading-snug break-words">
-                              {punto.punto}
-                            </h5>
-                            <p className="text-xs text-slate-600 leading-relaxed font-semibold italic break-words">
-                              "{punto.discusion}"
-                            </p>
-                          </div>
+              {/* Body Layout (Grid) */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Left Column: Attendees & Linked Request (col-span-5) */}
+                <div className="lg:col-span-5 space-y-6">
+                  {/* Attendance Card */}
+                  <div className="bg-slate-50/40 border border-slate-200/60 rounded-3xl p-6 space-y-6">
+                    <h3 className="font-extrabold text-blue-900 text-sm border-b border-slate-100 pb-2 flex items-center space-x-2">
+                      <Users size={16} className="text-blue-900" />
+                      <span>Registro de Asistencia</span>
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      {/* Miembros */}
+                      <div className="space-y-3">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                          Miembros Comisión ({selectedMinuta.miembrosComision.length})
+                        </span>
+                        <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                          {selectedMinuta.miembrosComision.length === 0 ? (
+                            <p className="text-xs text-slate-400 italic">Sin miembros registrados.</p>
+                          ) : (
+                            selectedMinuta.miembrosComision.map(id => {
+                              const s = socios.find(soc => soc.id === id);
+                              if (!s) return null;
+                              return (
+                                <button
+                                  key={id}
+                                  type="button"
+                                  onClick={() => setSelectedSocioForModal(s)}
+                                  className="w-full flex items-center space-x-2.5 p-2 bg-white rounded-xl border border-slate-200/50 hover:border-slate-300 hover:shadow-sm transition-all text-left cursor-pointer group"
+                                >
+                                  <img src={s.foto || `https://picsum.photos/seed/${s.nombre}/100/100`} className="w-7 h-7 rounded-full object-cover border" alt="" />
+                                  <div className="overflow-hidden">
+                                    <p className="text-xs font-black text-slate-750 group-hover:text-blue-600 transition-colors truncate">{s.nombre}</p>
+                                    {s.puesto && <p className="text-[8px] text-slate-400 uppercase tracking-wider font-bold mt-0.5">{s.puesto}</p>}
+                                  </div>
+                                </button>
+                              );
+                            })
+                          )}
                         </div>
-                      ))}
+                      </div>
+
+                      {/* Invitados */}
+                      <div className="space-y-3">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                          Invitados / Otros ({selectedMinuta.otrosParticipantes.length})
+                        </span>
+                        <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                          {selectedMinuta.otrosParticipantes.length === 0 ? (
+                            <p className="text-xs text-slate-400 italic">Sin invitados adicionales.</p>
+                          ) : (
+                            selectedMinuta.otrosParticipantes.map(id => {
+                              const s = socios.find(soc => soc.id === id);
+                              if (!s) return null;
+                              return (
+                                <button
+                                  key={id}
+                                  type="button"
+                                  onClick={() => setSelectedSocioForModal(s)}
+                                  className="w-full flex items-center space-x-2.5 p-2 bg-white rounded-xl border border-slate-200/50 hover:border-slate-300 hover:shadow-sm transition-all text-left cursor-pointer group"
+                                >
+                                  <img src={s.foto || `https://picsum.photos/seed/${s.nombre}/100/100`} className="w-7 h-7 rounded-full object-cover border" alt="" />
+                                  <div className="overflow-hidden">
+                                    <p className="text-xs font-black text-slate-750 group-hover:text-blue-600 transition-colors truncate">{s.nombre}</p>
+                                    {s.puesto && <p className="text-[8px] text-slate-400 uppercase tracking-wider font-bold mt-0.5">{s.puesto}</p>}
+                                  </div>
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -1051,13 +1106,13 @@ export const MinutasComisiones: React.FC = () => {
                     const req = solicitudes.find(s => s.id === selectedMinuta.solicitudVinculadaId);
                     if (!req) return null;
                     return (
-                      <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/20 border border-amber-200/60 p-5 rounded-2xl space-y-3">
-                        <div className="flex justify-between items-center">
+                      <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/20 border border-amber-200/60 p-6 rounded-3xl space-y-4 shadow-sm">
+                        <div className="flex justify-between items-center border-b border-amber-200/30 pb-2">
                           <div className="flex items-center space-x-2 text-amber-900">
                             <FileText size={16} className="text-amber-500 animate-pulse" />
                             <span className="text-[10px] font-black uppercase tracking-widest">Solicitud Interna Vinculada</span>
                           </div>
-                          <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
+                          <span className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
                             req.estado === 'Aprobada' ? 'bg-emerald-100 text-emerald-800' :
                             req.estado === 'Rechazada' ? 'bg-rose-100 text-rose-800' :
                             'bg-amber-100 text-amber-800'
@@ -1065,21 +1120,161 @@ export const MinutasComisiones: React.FC = () => {
                             {req.estado}
                           </span>
                         </div>
-                        <div className="space-y-1">
-                          <h5 className="text-xs font-black text-slate-800 truncate">{req.nombre}</h5>
-                          <p className="text-[11px] text-slate-600 font-medium leading-relaxed italic">{req.descripcion}</p>
+                        <div className="space-y-2">
+                          <h5 className="text-sm font-black text-slate-800 leading-tight">{req.nombre}</h5>
+                          <p className="text-xs text-slate-600 font-semibold leading-relaxed italic">"{req.descripcion}"</p>
                         </div>
+                        
+                        {req.responsables && req.responsables.length > 0 && (
+                          <div className="pt-2 border-t border-amber-200/30 space-y-1.5">
+                            <span className="text-[9px] font-black text-amber-800 uppercase tracking-wider">Responsables designados:</span>
+                            <div className="flex flex-wrap gap-2">
+                              {req.responsables.map((r, idx) => (
+                                <span key={idx} className="bg-amber-100/60 text-amber-900 border border-amber-200 text-[9px] font-bold px-2 py-0.5 rounded-md">
+                                  {r.nombre}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })()}
                 </div>
+
+                {/* Right Column: Discussion Points (col-span-7) */}
+                <div className="lg:col-span-7 space-y-4">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center space-x-1.5 border-b border-slate-100 pb-2">
+                    <MessageSquare size={12} className="text-slate-400" />
+                    <span>Temas Discutidos y Acuerdos ({selectedMinuta.puntos.length})</span>
+                  </h4>
+
+                  <div className="space-y-4">
+                    {selectedMinuta.puntos.map((punto, idx) => (
+                      <div key={punto.id || idx} className="flex space-x-4">
+                        <div className="flex flex-col items-center">
+                          <div className="w-8 h-8 rounded-full bg-blue-900 text-yellow-400 border border-blue-955 border-blue-950 flex items-center justify-center text-sm font-black shrink-0">
+                            {idx + 1}
+                          </div>
+                          {idx < selectedMinuta.puntos.length - 1 && (
+                            <div className="w-0.5 bg-slate-200 grow my-1"></div>
+                          )}
+                        </div>
+                        <div className="bg-white border border-slate-200 rounded-3xl p-5 grow space-y-2 shadow-sm hover:shadow-md transition-all duration-300">
+                          <h5 className="font-black text-base text-slate-800 leading-snug break-words">
+                            {punto.punto}
+                          </h5>
+                          <p className="text-sm text-slate-600 leading-relaxed font-semibold italic break-words border-l-2 border-slate-200 pl-3.5">
+                            "{punto.discusion}"
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-            ) : (
-              <div className="bg-white rounded-[2.5rem] border border-slate-200 p-16 text-center text-slate-400 text-sm font-bold italic">
-                Selecciona una minuta de la lista para ver sus detalles.
+            </div>
+          ) : (
+            /* LIST OF MINUTAS (GRID OF HORIZONTAL CARDS) */
+            <div className="space-y-6">
+              <div className="flex justify-between items-center px-2">
+                <span className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                  Mostrando {filteredMinutas.length} de {minutas.length} minutas registradas
+                </span>
               </div>
-            )}
-          </div>
+
+              {filteredMinutas.length === 0 ? (
+                <div className="bg-white rounded-[2rem] border border-slate-200 p-16 text-center text-slate-400 text-sm font-bold italic shadow-sm">
+                  No se encontraron minutas con los filtros seleccionados.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {filteredMinutas.map(m => {
+                    const comm = comisiones.find(c => c.id === m.comisionId);
+                    const dateStr = new Date(m.fechaHora).toLocaleDateString('es-GT', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric'
+                    });
+                    const timeStr = new Date(m.fechaHora).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    });
+                    const req = solicitudes.find(s => s.id === m.solicitudVinculadaId);
+                    const totalAttendees = m.miembrosComision.length + m.otrosParticipantes.length;
+
+                    return (
+                      <button
+                        key={m.id}
+                        onClick={() => setSelectedMinutaId(m.id)}
+                        className="bg-white border border-slate-200/80 rounded-[2.5rem] p-6 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between text-left gap-4 group w-full cursor-pointer"
+                      >
+                        <div className="flex items-start space-x-4 overflow-hidden">
+                          {/* Simulated Document / Commission emblem */}
+                          <div className="w-12 h-16 bg-blue-900 rounded-xl relative shrink-0 flex flex-col justify-between p-1.5 overflow-hidden group-hover:scale-105 transition-transform border border-blue-950 select-none shadow-sm">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500" />
+                            <div className="text-[5px] text-yellow-400 font-black tracking-widest text-center mt-0.5 uppercase">
+                              LEONES
+                            </div>
+                            <div className="text-center z-10">
+                              <span className="block text-[6px] font-black text-white leading-none">MINUTA</span>
+                            </div>
+                            <div className="flex justify-between items-center z-10 text-white">
+                              <span className="text-[5px] font-black">L</span>
+                              <span className="text-[5px] text-slate-350 font-extrabold">{new Date(m.fechaHora).getFullYear()}</span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1.5 overflow-hidden grow">
+                            <div className="flex flex-wrap gap-1.5 items-center">
+                              <span className="bg-blue-50 text-blue-800 text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-blue-100">
+                                {comm?.nombre || 'Comisión'}
+                              </span>
+                              {req && (
+                                <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                                  req.estado === 'Aprobada' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                                  req.estado === 'Rechazada' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+                                  'bg-amber-50 text-amber-700 border border-amber-100'
+                                }`}>
+                                  Solicitud {req.estado}
+                                </span>
+                              )}
+                            </div>
+                            <h4 className="font-extrabold text-slate-800 text-sm leading-snug group-hover:text-blue-900 transition-colors break-words">
+                              {m.tema}
+                            </h4>
+                            <div className="flex items-center space-x-3 text-[10px] font-bold text-slate-400">
+                              <span className="flex items-center space-x-1">
+                                <Calendar size={11} />
+                                <span>{dateStr}</span>
+                              </span>
+                              <span>•</span>
+                              <span className="flex items-center space-x-1">
+                                <Clock size={11} />
+                                <span>{timeStr}</span>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between shrink-0 pt-3 border-t border-slate-100 w-full">
+                          <div className="text-[10px] font-bold text-slate-400 flex items-center space-x-3">
+                            <span>Puntos: <strong className="text-slate-700 font-extrabold">{m.puntos.length}</strong></span>
+                            <span className="text-slate-200">|</span>
+                            <span>Asistencia: <strong className="text-slate-700 font-extrabold">{totalAttendees}</strong></span>
+                          </div>
+                          <span className="text-blue-600 font-black text-xs group-hover:translate-x-1 transition-transform flex items-center space-x-0.5">
+                            <span>Ver Ficha</span>
+                            <ChevronRight size={14} />
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
