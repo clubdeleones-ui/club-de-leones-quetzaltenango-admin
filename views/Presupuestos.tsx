@@ -204,8 +204,8 @@ export const Presupuestos: React.FC = () => {
         
         {/* TAB 1: INGRESOS DE FONDOS */}
         {activeTab === 'fondos' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-1">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-5">
               <div className="bg-white border border-slate-200/80 rounded-[2.5rem] p-6 sm:p-8 shadow-xl shadow-slate-200/40">
                 <div className="flex items-center space-x-4 border-b border-slate-100 pb-5 mb-6">
                   <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl shrink-0">
@@ -266,7 +266,7 @@ export const Presupuestos: React.FC = () => {
               </div>
             </div>
 
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-7">
               <div className="bg-white border border-slate-200/80 rounded-[2.5rem] p-6 sm:p-8 shadow-sm">
                 <h3 className="font-black text-slate-800 text-lg mb-6">Historial de Ingresos</h3>
                 <div className="space-y-3">
@@ -313,8 +313,8 @@ export const Presupuestos: React.FC = () => {
 
         {/* TAB 2: ASIGNACIONES A COMISIONES */}
         {activeTab === 'asignaciones' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-1">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-5">
               <div className="bg-white border border-slate-200/80 rounded-[2.5rem] p-6 sm:p-8 shadow-xl shadow-slate-200/40">
                 <div className="flex items-center space-x-4 border-b border-slate-100 pb-5 mb-6">
                   <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
@@ -417,7 +417,7 @@ export const Presupuestos: React.FC = () => {
               </div>
             </div>
 
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-7">
               <div className="bg-white border border-slate-200/80 rounded-[2.5rem] p-6 sm:p-8 shadow-sm">
                 <h3 className="font-black text-slate-800 text-lg mb-6">Comisiones Asignadas</h3>
                 <div className="space-y-4">
@@ -478,8 +478,8 @@ export const Presupuestos: React.FC = () => {
 
         {/* TAB 3: CONFIGURAR RUBROS */}
         {activeTab === 'rubros' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-1">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-5">
               <div className="bg-white border border-slate-200/80 rounded-[2.5rem] p-6 sm:p-8 shadow-xl shadow-slate-200/40">
                 <div className="flex items-center space-x-4 border-b border-slate-100 pb-5 mb-6">
                   <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl shrink-0">
@@ -537,7 +537,7 @@ export const Presupuestos: React.FC = () => {
               </div>
             </div>
 
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-7">
               <div className="bg-white border border-slate-200/80 rounded-[2.5rem] p-6 sm:p-8 shadow-sm">
                 <h3 className="font-black text-slate-800 text-lg mb-6">Catálogo de Rubros</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
