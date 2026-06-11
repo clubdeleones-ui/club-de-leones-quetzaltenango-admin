@@ -6,6 +6,12 @@ import { Comision, Socio, AsignacionComision, Acta } from '../types';
 import { Briefcase, Plus, Search, Trash2, Users, CheckCircle, Save, DollarSign, FileText, X, Pencil, Calendar } from 'lucide-react';
 import { MOCK_ACTAS } from '../constants';
 
+const cleanString = (str: string) => 
+  str ? str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
+
+const isMatch = (val1: string, val2: string) => 
+  cleanString(val1) === cleanString(val2);
+
 export const Comisiones: React.FC = () => {
   const [comisiones, setComisiones] = useState<Comision[]>([]);
   const [socios, setSocios] = useState<Socio[]>(() => {
@@ -18,6 +24,7 @@ export const Comisiones: React.FC = () => {
   
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedComisionId, setSelectedComisionId] = useState<string>('');
   
   const [form, setForm] = useState<Partial<Comision>>({
     nombre: '',
@@ -68,6 +75,12 @@ export const Comisiones: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (comisiones.length > 0 && !selectedComisionId) {
+      setSelectedComisionId(comisiones[0].id);
+    }
+  }, [comisiones, selectedComisionId]);
+
   const handleToggleMember = (id: string) => {
     const current = form.miembros || [];
     if (current.includes(id)) {
@@ -90,8 +103,9 @@ export const Comisiones: React.FC = () => {
     e.preventDefault();
     if (!form.nombre || !form.proposito) return;
 
+    const commissionId = form.id || `com-${Date.now()}`;
     const newComision: Comision = {
-      id: form.id || `com-${Date.now()}`,
+      id: commissionId,
       nombre: form.nombre,
       proposito: form.proposito,
       miembros: form.miembros || [],
@@ -101,6 +115,7 @@ export const Comisiones: React.FC = () => {
     };
 
     await firebaseService.saveComision(newComision);
+    setSelectedComisionId(commissionId);
     setShowForm(false);
     setForm({ nombre: '', proposito: '', miembros: [], actasVinculadas: [], estado: 'Activa' });
   };
@@ -108,6 +123,10 @@ export const Comisiones: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (confirm('¿Estás seguro de eliminar esta comisión permanentemente?')) {
       await firebaseService.deleteComision(id);
+      if (selectedComisionId === id) {
+        const remaining = comisiones.filter(c => c.id !== id);
+        setSelectedComisionId(remaining.length > 0 ? remaining[0].id : '');
+      }
     }
   };
 
@@ -132,9 +151,26 @@ export const Comisiones: React.FC = () => {
   }, [unselectedActas, actasSearch]);
 
 
-  const filteredComisiones = useMemo(() => {
-    return comisiones.filter(c => c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || c.proposito.toLowerCase().includes(searchTerm.toLowerCase()));
-  }, [comisiones, searchTerm]);
+  const selectedComision = useMemo(() => {
+    return comisiones.find(c => c.id === selectedComisionId);
+  }, [comisiones, selectedComisionId]);
+
+  const assignedBudget = useMemo(() => {
+    if (!selectedComision) return 0;
+    return asignaciones
+      .filter(a => a.comision === selectedComision.id || isMatch(a.comision, selectedComision.nombre))
+      .reduce((acc, curr) => acc + (Number(curr.monto) || 0), 0);
+  }, [asignaciones, selectedComision]);
+
+  const assignedMembers = useMemo(() => {
+    if (!selectedComision) return [];
+    return socios.filter(s => selectedComision.miembros.includes(s.id));
+  }, [socios, selectedComision]);
+
+  const linkedActas = useMemo(() => {
+    if (!selectedComision) return [];
+    return actas.filter(a => (selectedComision.actasVinculadas || []).includes(a.id));
+  }, [actas, selectedComision]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 max-w-7xl mx-auto">
@@ -386,162 +422,191 @@ export const Comisiones: React.FC = () => {
           </form>
         </div>
       ) : (
-        <>
-          <div className="relative">
-            <Search className="absolute left-6 top-5 text-slate-400" size={20} />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar comisiones por nombre o propósito..."
-              className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-blue-500 outline-none font-bold text-sm text-slate-700"
-            />
+        <div className="space-y-8">
+          {/* Comisión Selector */}
+          <div className="bg-white border border-slate-200/80 rounded-[2rem] p-6 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex-1 w-full relative">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Seleccionar Comisión</label>
+              <select
+                value={selectedComisionId}
+                onChange={(e) => setSelectedComisionId(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-base font-black text-slate-800 outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all cursor-pointer"
+              >
+                <option value="">-- Elige una comisión para ver detalles --</option>
+                {comisiones.map(c => (
+                  <option key={c.id} value={c.id}>{c.nombre} ({c.estado})</option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Quick stats / summary in selector */}
+            <div className="flex items-center space-x-6 text-sm font-bold text-slate-500 shrink-0">
+              <div className="text-center">
+                <span className="block text-slate-400 text-[9px] font-black uppercase tracking-wider">Total Comisiones</span>
+                <span className="text-xl font-black text-slate-850">{comisiones.length}</span>
+              </div>
+              <div className="text-center">
+                <span className="block text-slate-400 text-[9px] font-black uppercase tracking-wider">Activas</span>
+                <span className="text-xl font-black text-emerald-600">{comisiones.filter(c => c.estado === 'Activa').length}</span>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredComisiones.map(comision => {
-              const assignedBudget = asignaciones
-                .filter(a => a.comision === comision.id || a.comision === comision.nombre)
-                .reduce((acc, curr) => acc + curr.monto, 0);
+          {/* Full Width Ficha details */}
+          {selectedComision ? (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
+              {/* Left Column: Info & Actions (5 columns) */}
+              <div className="lg:col-span-5 space-y-6">
+                <div className="bg-white border border-slate-200 rounded-[2.5rem] p-6 sm:p-8 shadow-sm relative overflow-hidden">
+                  <div className={`absolute top-0 left-0 right-0 h-2.5 ${selectedComision.estado === 'Activa' ? 'bg-gradient-to-r from-emerald-400 to-teal-500' : 'bg-slate-300'}`} />
 
-              const assignedMembers = socios.filter(s => comision.miembros.includes(s.id));
-              const linkedActas = actas.filter(a => (comision.actasVinculadas || []).includes(a.id));
-
-              return (
-                <div 
-                  key={comision.id} 
-                  className="bg-white rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 group relative flex flex-col justify-between overflow-hidden"
-                >
-                  {/* Decorative Top Border */}
-                  <div className={`h-2.5 w-full ${comision.estado === 'Activa' ? 'bg-gradient-to-r from-emerald-400 to-teal-500' : 'bg-slate-300'}`} />
-
-                  <div className="p-6 flex-grow flex flex-col justify-between">
+                  <div className="flex items-start space-x-4 mb-6 pt-2">
+                    <div className={`p-4 rounded-2xl shrink-0 ${selectedComision.estado === 'Activa' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-450'}`}>
+                      <Briefcase size={28} />
+                    </div>
                     <div>
-                      {/* Action buttons (Visible on hover) */}
-                      <div className="absolute right-4 top-5 flex items-center space-x-1.5 md:opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        <button 
-                          onClick={() => {
-                            setForm(comision);
-                            setShowForm(true);
-                          }}
-                          className="p-2 bg-slate-50 hover:bg-blue-50 text-slate-450 hover:text-blue-600 rounded-xl transition-all border border-slate-100"
-                          title="Editar comisión"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(comision.id)}
-                          className="p-2 bg-slate-50 hover:bg-red-50 text-slate-450 hover:text-red-500 rounded-xl transition-all border border-slate-100"
-                          title="Eliminar comisión"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
+                      <h3 className="font-black text-slate-900 text-2xl leading-tight">{selectedComision.nombre}</h3>
+                      <span className={`inline-flex items-center space-x-1.5 px-3 py-1 mt-2.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                        selectedComision.estado === 'Activa' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-650'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${selectedComision.estado === 'Activa' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                        <span>{selectedComision.estado}</span>
+                      </span>
+                    </div>
+                  </div>
 
-                      <div className="flex items-start space-x-3 mb-4 pr-16">
-                        <div className={`p-3 rounded-2xl shrink-0 ${comision.estado === 'Activa' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
-                          <Briefcase size={20} />
-                        </div>
-                        <div>
-                          <h3 className="font-extrabold text-slate-800 text-base leading-tight group-hover:text-blue-900 transition-colors">{comision.nombre}</h3>
-                          <span className={`inline-flex items-center space-x-1 px-2.5 py-0.5 mt-1.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                            comision.estado === 'Activa' ? 'bg-emerald-100/60 text-emerald-700' : 'bg-slate-200 text-slate-600'
-                          }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${comision.estado === 'Activa' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                            <span>{comision.estado}</span>
-                          </span>
-                        </div>
+                  <div className="space-y-6">
+                    <div>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Propósito y Objetivos</span>
+                      <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-semibold text-slate-650 leading-relaxed italic">
+                        "{selectedComision.proposito}"
                       </div>
-
-                      <p className="text-xs text-slate-600 font-medium mb-6 line-clamp-3 leading-relaxed">
-                        {comision.proposito}
-                      </p>
                     </div>
 
-                    <div className="space-y-4 pt-4 border-t border-slate-100">
-                      {/* Presupuesto */}
-                      <div className="flex justify-between items-center bg-blue-50/50 p-3.5 rounded-2xl border border-blue-100/50">
+                    {/* Presupuesto Detallado */}
+                    <div className="bg-gradient-to-br from-blue-50/60 to-indigo-50/30 border border-blue-100 p-5 rounded-2xl shadow-sm">
+                      <div className="flex justify-between items-center mb-3">
                         <div className="flex items-center space-x-2 text-blue-900">
-                          <DollarSign size={16} className="text-blue-500 shrink-0" />
-                          <span className="text-[10px] font-black uppercase tracking-widest">Presupuesto</span>
+                          <DollarSign size={18} className="text-blue-500" />
+                          <span className="text-[10px] font-black uppercase tracking-widest">Presupuesto Asignado</span>
                         </div>
-                        <span className="font-black text-blue-700 text-sm">
-                          Q{assignedBudget.toLocaleString('es-GT', {minimumFractionDigits: 2})}
-                        </span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Total</span>
                       </div>
-
-                      {/* Miembros */}
-                      <div>
-                        <div className="flex items-center space-x-1.5 mb-2.5">
-                          <Users size={14} className="text-slate-400" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-550">
-                            {comision.miembros.length} Miembros Asignados
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <div className="flex -space-x-2.5 overflow-hidden">
-                            {assignedMembers.slice(0, 5).map(m => (
-                              <img
-                                key={m.id}
-                                src={m.foto || `https://picsum.photos/seed/${m.nombre}/100/100`}
-                                className="w-8 h-8 rounded-full object-cover border-2 border-white ring-1 ring-slate-100 shrink-0"
-                                alt={m.nombre}
-                                title={`${m.nombre} - ${m.puesto || 'Socio'}`}
-                              />
-                            ))}
-                            {assignedMembers.length > 5 && (
-                              <div className="w-8 h-8 rounded-full bg-slate-100 border-2 border-white ring-1 ring-slate-200 flex items-center justify-center text-[10px] font-black text-slate-555 shrink-0">
-                                +{assignedMembers.length - 5}
-                              </div>
-                            )}
-                          </div>
-                          {assignedMembers.length === 0 ? (
-                            <span className="text-xs text-slate-400 italic">Sin miembros asignados</span>
-                          ) : (
-                            <span className="text-[11px] font-bold text-slate-600 truncate max-w-[140px]" title={assignedMembers.map(m => m.nombre).join(', ')}>
-                              {assignedMembers.slice(0, 2).map(m => m.nombre.split(' ')[0]).join(', ')}
-                              {assignedMembers.length > 2 && '...'}
-                            </span>
-                          )}
-                        </div>
+                      <div className="text-3xl font-black text-blue-800">
+                        Q{assignedBudget.toLocaleString('es-GT', {minimumFractionDigits: 2})}
                       </div>
+                    </div>
 
-                      {/* Actas Vinculadas */}
-                      {linkedActas.length > 0 && (
-                        <div className="pt-3.5 border-t border-slate-100">
-                          <div className="flex items-center space-x-1.5 mb-2">
-                            <FileText size={14} className="text-slate-400" />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-550">
-                              Actas Relacionadas ({linkedActas.length})
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {linkedActas.map(acta => (
-                              <span 
-                                key={acta.id} 
-                                className="inline-flex items-center text-[9px] font-bold text-slate-655 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg max-w-[140px] truncate" 
-                                title={acta.titulo}
-                              >
-                                {acta.titulo}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-450 border-t border-slate-100 pt-4">
+                      <span>Creación: {new Date(selectedComision.fechaCreacion).toLocaleDateString()}</span>
+                      <span>ID: {selectedComision.id}</span>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="grid grid-cols-2 gap-4 pt-2">
+                      <button
+                        onClick={() => {
+                          setForm(selectedComision);
+                          setShowForm(true);
+                        }}
+                        className="py-3 px-4 bg-slate-50 hover:bg-blue-50 border border-slate-200 text-slate-600 hover:text-blue-600 font-extrabold rounded-xl text-sm transition-all flex items-center justify-center space-x-2"
+                      >
+                        <Pencil size={15} />
+                        <span>Editar</span>
+                      </button>
+                      <button
+                        onClick={() => handleDelete(selectedComision.id)}
+                        className="py-3 px-4 bg-slate-50 hover:bg-red-50 border border-slate-200 text-slate-600 hover:text-red-500 font-extrabold rounded-xl text-sm transition-all flex items-center justify-center space-x-2"
+                      >
+                        <Trash2 size={15} />
+                        <span>Eliminar</span>
+                      </button>
                     </div>
                   </div>
                 </div>
-              );
-            })}
-            {filteredComisiones.length === 0 && (
-              <div className="col-span-full py-20 bg-white border-2 border-dashed border-slate-200 rounded-[2.5rem] text-center">
-                <Briefcase className="mx-auto text-slate-300 mb-4" size={48} />
-                <h3 className="text-lg font-black text-slate-500">No hay comisiones</h3>
-                <p className="text-sm text-slate-400 mt-1">No se encontraron comisiones registradas o que coincidan con la búsqueda.</p>
               </div>
-            )}
-          </div>
-        </>
+
+              {/* Right Column: Members & Actas (7 columns) */}
+              <div className="lg:col-span-7 space-y-6">
+                {/* Members list */}
+                <div className="bg-white border border-slate-200 rounded-[2.5rem] p-6 sm:p-8 shadow-sm">
+                  <div className="flex justify-between items-center mb-6">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl shrink-0">
+                        <Users size={20} />
+                      </div>
+                      <div>
+                        <h4 className="font-black text-slate-800 text-lg">Miembros de la Comisión</h4>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{assignedMembers.length} integrantes activos</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {assignedMembers.length === 0 ? (
+                    <div className="p-12 text-center text-slate-400 bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200/60 font-medium">
+                      No hay miembros asignados a esta comisión todavía. Puedes agregarlos haciendo clic en Editar.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {assignedMembers.map(m => (
+                        <div key={m.id} className="flex items-center space-x-4 p-4 bg-slate-50/70 border border-slate-200/60 rounded-2xl hover:bg-white hover:shadow-md transition-all">
+                          <img
+                            src={m.foto || `https://picsum.photos/seed/${m.nombre}/100/100`}
+                            className="w-12 h-12 rounded-full object-cover border-2 border-white ring-1 ring-slate-200 shrink-0"
+                            alt={m.nombre}
+                          />
+                          <div className="overflow-hidden">
+                            <p className="text-sm font-black text-slate-850 truncate">{m.nombre}</p>
+                            <p className="text-[10px] font-black text-blue-600 uppercase tracking-wide truncate mt-0.5">{m.puesto || 'Socio'}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Linked Actas list */}
+                <div className="bg-white border border-slate-200 rounded-[2.5rem] p-6 sm:p-8 shadow-sm">
+                  <div className="flex items-center space-x-3 mb-6">
+                    <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl shrink-0">
+                      <FileText size={20} />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-slate-800 text-lg">Actas Relacionadas</h4>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{linkedActas.length} actas vinculadas</p>
+                    </div>
+                  </div>
+
+                  {linkedActas.length === 0 ? (
+                    <div className="p-8 text-center text-slate-400 bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200/60 font-medium">
+                      No hay actas vinculadas a esta comisión.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {linkedActas.map(acta => (
+                        <div key={acta.id} className="flex items-center justify-between p-4 bg-slate-50/70 hover:bg-white border border-slate-200/80 rounded-2xl hover:shadow-sm transition-all group">
+                          <div className="flex items-center space-x-3 overflow-hidden">
+                            <FileText size={18} className="text-slate-400 group-hover:text-blue-500 transition-colors shrink-0" />
+                            <div className="overflow-hidden">
+                              <span className="text-sm font-bold text-slate-700 truncate block">{acta.titulo}</span>
+                              <span className="text-[10px] font-bold text-slate-400 block mt-0.5">Fecha de Sesión: {acta.fecha}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="py-20 bg-white border-2 border-dashed border-slate-200 rounded-[2.5rem] text-center">
+              <Briefcase className="mx-auto text-slate-300 mb-4" size={56} />
+              <h3 className="text-xl font-black text-slate-500">Ninguna Comisión Seleccionada</h3>
+              <p className="text-sm text-slate-400 mt-2 max-w-md mx-auto">Selecciona una comisión del menú desplegable de arriba para ver su ficha técnica completa, integrantes y presupuesto.</p>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
