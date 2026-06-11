@@ -1444,36 +1444,69 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               Navegación Módulos
             </div>
             {[
-              { id: 'resumen', label: 'Resumen General', icon: TrendingUp },
-              { id: 'socios', label: 'Gestión de Socios', icon: Users },
-              { id: 'calendario', label: 'Programas / Calendario', icon: Calendar },
-              { id: 'cuotas', label: 'Control de Cuotas', icon: CreditCard },
-              { id: 'actas', label: 'Libro de Actas', icon: FileText },
-              { id: 'donaciones', label: 'Donaciones Recibidas', icon: Gift },
-              { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
-              { id: 'parqueo', label: 'Gestión de Parqueo', icon: Car },
-              { id: 'presupuestos', label: 'Presupuestos', icon: DollarSign },
-            ].filter(tab => allowedTabs.includes(tab.id)).map(tab => {
-              const Icon = tab.icon;
-              const active = activeTab === tab.id;
+              {
+                category: 'Principal',
+                items: [
+                  { id: 'resumen', label: 'Resumen General', icon: TrendingUp }
+                ]
+              },
+              {
+                category: 'Secretaría',
+                items: [
+                  { id: 'actas', label: 'Libro de Actas', icon: FileText },
+                  { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
+                  { id: 'calendario', label: 'Programas / Calendario', icon: Calendar }
+                ]
+              },
+              {
+                category: 'Tesorería',
+                items: [
+                  { id: 'cuotas', label: 'Control de Cuotas', icon: CreditCard },
+                  { id: 'parqueo', label: 'Gestión de Parqueo', icon: Car },
+                  { id: 'donaciones', label: 'Donaciones Recibidas', icon: Gift },
+                  { id: 'presupuestos', label: 'Presupuestos', icon: DollarSign }
+                ]
+              },
+              {
+                category: 'Comité de Afiliación',
+                items: [
+                  { id: 'socios', label: 'Gestión de Socios', icon: Users }
+                ]
+              }
+            ].map(group => {
+              const visibleItems = group.items.filter(tab => allowedTabs.includes(tab.id));
+              if (visibleItems.length === 0) return null;
+              
               return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as TabType)}
-                  className={`w-full flex items-center space-x-4 px-5 py-4 rounded-2xl font-bold transition-all duration-300 ${
-                    getTabStyles(tab.id, active)
-                  }`}
-                >
-                  <Icon 
-                    size={22} 
-                    className={`transition-colors ${
-                      active 
-                        ? 'text-white' 
-                        : 'text-slate-400 group-hover:text-blue-600'
-                    }`} 
-                  />
-                  <span className="text-sm">{tab.label}</span>
-                </button>
+                <div key={group.category} className="space-y-2 mb-4 last:mb-0">
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 mb-2 flex items-center">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-300 mr-2"></span>
+                    {group.category}
+                  </div>
+                  {visibleItems.map(tab => {
+                    const Icon = tab.icon;
+                    const active = activeTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id as TabType)}
+                        className={`w-full flex items-center space-x-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 ${
+                          getTabStyles(tab.id, active)
+                        }`}
+                      >
+                        <Icon 
+                          size={18} 
+                          className={`transition-colors ${
+                            active 
+                              ? 'text-white' 
+                              : 'text-slate-400 group-hover:text-blue-600'
+                          }`} 
+                        />
+                        <span className="text-sm">{tab.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               );
             })}
           </nav>
@@ -1501,6 +1534,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     { id: 'donaciones', label: 'Donaciones Recibidas', icon: Gift },
                     { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
                     { id: 'parqueo', label: 'Gestión de Parqueo', icon: Car },
+                    { id: 'presupuestos', label: 'Presupuestos', icon: DollarSign },
                   ].find(t => t.id === activeTab);
                   if (currentTab) {
                     const Icon = currentTab.icon;
@@ -1518,6 +1552,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     { id: 'donaciones', label: 'Donaciones Recibidas' },
                     { id: 'beneficios', label: 'Beneficios a Socios' },
                     { id: 'parqueo', label: 'Gestión de Parqueo' },
+                    { id: 'presupuestos', label: 'Presupuestos' },
                   ].find(t => t.id === activeTab)?.label}
                 </span>
               </div>
@@ -1525,39 +1560,72 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
             </button>
 
             {isMobileMenuOpen && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200/80 py-2.5 z-40 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200/80 py-2.5 z-40 animate-in fade-in slide-in-from-top-2 duration-300 max-h-[60vh] overflow-y-auto">
                 {[
-                  { id: 'resumen', label: 'Resumen General', icon: TrendingUp },
-                  { id: 'socios', label: 'Gestión de Socios', icon: Users },
-                  { id: 'calendario', label: 'Programas / Calendario', icon: Calendar },
-                  { id: 'cuotas', label: 'Control de Cuotas', icon: CreditCard },
-                  { id: 'actas', label: 'Libro de Actas', icon: FileText },
-                  { id: 'donaciones', label: 'Donaciones Recibidas', icon: Gift },
-                  { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
-                  { id: 'parqueo', label: 'Gestión de Parqueo', icon: Car },
-                ].filter(tab => allowedTabs.includes(tab.id)).map(tab => {
-                  const Icon = tab.icon;
-                  const active = activeTab === tab.id;
+                  {
+                    category: 'Principal',
+                    items: [
+                      { id: 'resumen', label: 'Resumen General', icon: TrendingUp }
+                    ]
+                  },
+                  {
+                    category: 'Secretaría',
+                    items: [
+                      { id: 'actas', label: 'Libro de Actas', icon: FileText },
+                      { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
+                      { id: 'calendario', label: 'Programas / Calendario', icon: Calendar }
+                    ]
+                  },
+                  {
+                    category: 'Tesorería',
+                    items: [
+                      { id: 'cuotas', label: 'Control de Cuotas', icon: CreditCard },
+                      { id: 'parqueo', label: 'Gestión de Parqueo', icon: Car },
+                      { id: 'donaciones', label: 'Donaciones Recibidas', icon: Gift },
+                      { id: 'presupuestos', label: 'Presupuestos', icon: DollarSign }
+                    ]
+                  },
+                  {
+                    category: 'Comité de Afiliación',
+                    items: [
+                      { id: 'socios', label: 'Gestión de Socios', icon: Users }
+                    ]
+                  }
+                ].map(group => {
+                  const visibleItems = group.items.filter(tab => allowedTabs.includes(tab.id));
+                  if (visibleItems.length === 0) return null;
+                  
                   return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => {
-                        setActiveTab(tab.id as TabType);
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-6 py-3.5 text-sm font-extrabold transition-all text-left ${
-                        active 
-                          ? 'bg-slate-50 text-blue-900 font-black' 
-                          : 'text-slate-600 hover:bg-slate-50 hover:text-blue-900'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <Icon size={18} className={active ? 'text-blue-900' : 'text-slate-400'} />
-                        <span>{tab.label}</span>
+                    <div key={group.category}>
+                      <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-6 py-2 bg-slate-50/50">
+                        {group.category}
                       </div>
-                      {active && <Check size={16} className="text-blue-900" />}
-                    </button>
+                      {visibleItems.map(tab => {
+                        const Icon = tab.icon;
+                        const active = activeTab === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => {
+                              setActiveTab(tab.id as TabType);
+                              setIsMobileMenuOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between px-6 py-3.5 text-sm font-extrabold transition-all text-left ${
+                              active 
+                                ? 'bg-slate-50 text-blue-900 font-black' 
+                                : 'text-slate-600 hover:bg-slate-50 hover:text-blue-900'
+                            }`}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <Icon size={18} className={active ? 'text-blue-900' : 'text-slate-400'} />
+                              <span>{tab.label}</span>
+                            </div>
+                            {active && <Check size={16} className="text-blue-900" />}
+                          </button>
+                        );
+                      })}
+                    </div>
                   );
                 })}
               </div>
@@ -1929,211 +1997,184 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           {activeTab === 'resumen' && (
             <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
               {/* KPIs */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* KPI 1 (Total Donaciones for Admin/Tesorero, Total Actas for Secretario, Total Socios for Afiliacion) */}
-                {user.rol === UserRole.SECRETARIO ? (
-                  <div className="bg-gradient-to-br from-blue-900 to-indigo-950 p-8 rounded-[2rem] text-white shadow-xl relative overflow-hidden animate-in zoom-in-95 duration-300">
-                    <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
-                      <FileText size={120} />
-                    </div>
-                    <h3 className="text-blue-200 text-sm font-bold uppercase tracking-widest">Biblioteca de Actas</h3>
-                    <p className="text-4xl font-black mt-2">{actas.length} Actas</p>
-                    <p className="text-xs text-yellow-400 mt-3 font-semibold">Documentos redactados y firmados</p>
-                  </div>
-                ) : user.rol === UserRole.PRESIDENTE_AFILIACION ? (
-                  <div className="bg-gradient-to-br from-blue-900 to-indigo-950 p-8 rounded-[2rem] text-white shadow-xl relative overflow-hidden animate-in zoom-in-95 duration-300">
-                    <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
-                      <Award size={120} />
-                    </div>
-                    <h3 className="text-blue-200 text-sm font-bold uppercase tracking-widest">Total de Socios Afiliados</h3>
-                    <p className="text-4xl font-black mt-2">{socios.length} Miembros</p>
-                    <p className="text-xs text-yellow-400 mt-3 font-semibold">Socios registrados en el club</p>
-                  </div>
-                ) : (
-                  <div className="bg-gradient-to-br from-blue-900 to-indigo-950 p-8 rounded-[2rem] text-white shadow-xl relative overflow-hidden animate-in zoom-in-95 duration-300">
-                    <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
-                      <Gift size={120} />
-                    </div>
-                    <h3 className="text-blue-200 text-sm font-bold uppercase tracking-widest">Total Donaciones Recibidas</h3>
-                    <p className="text-4xl font-black mt-2">Q {totalDonaciones.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</p>
-                    <p className="text-xs text-yellow-400 mt-3 font-semibold">Total acumulado en este año fiscal</p>
-                  </div>
-                )}
-
-                {/* KPI 2 (Cuotas Pendientes for Admin/Tesorero/Afiliacion, Actividades Planificadas for Secretario) */}
-                {user.rol === UserRole.SECRETARIO ? (
-                  <div className="bg-white p-8 rounded-[2rem] border border-slate-200/80 shadow-sm relative overflow-hidden animate-in zoom-in-95 duration-300">
-                    <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none text-blue-900">
-                      <Calendar size={120} />
-                    </div>
-                    <h3 className="text-slate-400 text-sm font-bold uppercase tracking-widest">Programas Planificados</h3>
-                    <p className="text-4xl font-black text-slate-800 mt-2">{actividades.length} Actividades</p>
-                    <div className="flex items-center text-xs text-green-600 bg-green-50 px-2 py-1 rounded-lg w-fit mt-3 font-semibold">
-                      <CheckCircle size={12} className="mr-1" />
-                      En agenda y calendario
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-white p-8 rounded-[2rem] border border-slate-200/80 shadow-sm relative overflow-hidden animate-in zoom-in-95 duration-300">
-                    <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none text-blue-900">
-                      <CreditCard size={120} />
-                    </div>
-                    <h3 className="text-slate-400 text-sm font-bold uppercase tracking-widest">Saldo de Cuotas Pendiente</h3>
-                    <p className="text-4xl font-black text-slate-800 mt-2">Q {totalCuotasPendientes.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</p>
-                    <div className="flex items-center text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded-lg w-fit mt-3 font-semibold">
-                      <AlertTriangle size={12} className="mr-1" />
-                      {user.rol === UserRole.PRESIDENTE_AFILIACION ? 'Requiere gestión de membresía' : 'Requiere seguimiento de tesorería'}
-                    </div>
-                  </div>
-                )}
-
-                {/* KPI 3 (Socios Activos - visible to all) */}
-                <div className="bg-white p-8 rounded-[2rem] border border-slate-200/80 shadow-sm relative overflow-hidden animate-in zoom-in-95 duration-300">
-                  <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none text-blue-900">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                {/* Socios Activos */}
+                <div className="bg-gradient-to-br from-blue-900 to-indigo-950 p-8 rounded-[2rem] text-white shadow-xl relative overflow-hidden animate-in zoom-in-95 duration-300">
+                  <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
                     <Award size={120} />
                   </div>
-                  <h3 className="text-slate-400 text-sm font-bold uppercase tracking-widest">Estado de Socios Activos</h3>
-                  <p className="text-4xl font-black text-slate-800 mt-2">{sociosAlDia} / {socios.length}</p>
+                  <h3 className="text-blue-200 text-sm font-bold uppercase tracking-widest">Total de Socios</h3>
+                  <p className="text-4xl font-black mt-2">{sociosAlDia} / {socios.length}</p>
+                  <p className="text-xs text-yellow-400 mt-3 font-semibold">Socios solventes ("Al día")</p>
+                </div>
+
+                {/* Actas */}
+                <div className="bg-white p-8 rounded-[2rem] border border-slate-200/80 shadow-sm relative overflow-hidden animate-in zoom-in-95 duration-300">
+                  <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none text-blue-900">
+                    <FileText size={120} />
+                  </div>
+                  <h3 className="text-slate-400 text-sm font-bold uppercase tracking-widest">Biblioteca de Actas</h3>
+                  <p className="text-4xl font-black text-slate-800 mt-2">{actas.length} Actas</p>
                   <div className="flex items-center text-xs text-green-600 bg-green-50 px-2 py-1 rounded-lg w-fit mt-3 font-semibold">
-                    <CheckCircle size={12} className="mr-1" />
-                    Socios solventes ("Al día")
+                    <CheckCircle size={12} className="mr-1" /> Documentos redactados
                   </div>
                 </div>
+
+                {/* Donaciones */}
+                <div className="bg-white p-8 rounded-[2rem] border border-slate-200/80 shadow-sm relative overflow-hidden animate-in zoom-in-95 duration-300">
+                  <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none text-blue-900">
+                    <Gift size={120} />
+                  </div>
+                  <h3 className="text-slate-400 text-sm font-bold uppercase tracking-widest">Total Donaciones</h3>
+                  <p className="text-4xl font-black text-slate-800 mt-2">Q {totalDonaciones.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</p>
+                  <div className="flex items-center text-xs text-green-600 bg-green-50 px-2 py-1 rounded-lg w-fit mt-3 font-semibold">
+                    <CheckCircle size={12} className="mr-1" /> Acumulado anual
+                  </div>
+                </div>
+
+                {/* Actividades */}
+                <div className="bg-gradient-to-br from-amber-500 to-orange-500 p-8 rounded-[2rem] text-white shadow-xl relative overflow-hidden animate-in zoom-in-95 duration-300">
+                  <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
+                    <Calendar size={120} />
+                  </div>
+                  <h3 className="text-amber-100 text-sm font-bold uppercase tracking-widest">Programas Planificados</h3>
+                  <p className="text-4xl font-black mt-2">{actividades.length} Actividades</p>
+                  <p className="text-xs text-yellow-100 mt-3 font-semibold">En agenda y calendario</p>
+                </div>
+
+                {/* Saldo Cuotas */}
+                <div className="bg-white p-8 rounded-[2rem] border border-slate-200/80 shadow-sm relative overflow-hidden animate-in zoom-in-95 duration-300">
+                  <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none text-blue-900">
+                    <CreditCard size={120} />
+                  </div>
+                  <h3 className="text-slate-400 text-sm font-bold uppercase tracking-widest">Saldo de Cuotas Pendiente</h3>
+                  <p className="text-4xl font-black text-slate-800 mt-2">Q {totalCuotasPendientes.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</p>
+                  <div className="flex items-center text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded-lg w-fit mt-3 font-semibold">
+                    <AlertTriangle size={12} className="mr-1" /> Requiere seguimiento
+                  </div>
+                </div>
+
+                {/* Nuevos Ingresos */}
+                <div className="bg-white p-8 rounded-[2rem] border border-slate-200/80 shadow-sm relative overflow-hidden animate-in zoom-in-95 duration-300">
+                  <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none text-blue-900">
+                    <Users size={120} />
+                  </div>
+                  <h3 className="text-slate-400 text-sm font-bold uppercase tracking-widest">Nuevos Ingresos</h3>
+                  <p className="text-4xl font-black text-slate-800 mt-2">{socios.filter(s => new Date(s.fechaIngreso).getFullYear() === new Date().getFullYear()).length} Este Año</p>
+                  <div className="flex items-center text-xs text-green-600 bg-green-50 px-2 py-1 rounded-lg w-fit mt-3 font-semibold">
+                    <CheckCircle size={12} className="mr-1" /> Crecimiento del club
+                  </div>
+                </div>
+
               </div>
 
               {/* Quick Summary Tables */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Column 1 (Pending fees for Tesorero/Afiliacion, Activities list for Secretario/Admin) */}
-                {user.rol === UserRole.TESORERO || user.rol === UserRole.PRESIDENTE_AFILIACION ? (
-                  <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200/80 shadow-sm space-y-6">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-2xl font-black text-slate-800 tracking-tight">Cobros Pendientes</h3>
-                      <button onClick={() => setActiveTab('cuotas')} className="text-sm text-blue-900 font-bold hover:underline">Gestionar cuotas</button>
-                    </div>
-                    <div className="space-y-4">
-                      {socios.filter(s => s.montoPendiente > 0).slice(0, 3).map(s => (
-                        <div key={s.id} className="flex items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-slate-100/50 transition-colors">
-                          <img 
-                            src={s.foto} 
-                            alt={s.nombre} 
-                            className="w-10 h-10 rounded-full border border-slate-100 object-cover mr-4 cursor-zoom-in" 
-                            onClick={() => setSelectedPhoto({ url: s.foto, title: s.nombre })}
-                          />
-                          <div className="flex-grow min-w-0">
-                            <p className="font-extrabold text-slate-800 truncate">{s.nombre}</p>
-                            <p className="text-xs text-slate-400 mt-1 truncate">{s.puesto || 'Socio Regular'}</p>
-                          </div>
-                          <span className="text-sm font-black text-red-600 bg-red-50 px-3 py-1 rounded-xl ml-3">
-                            Q {s.montoPendiente.toFixed(2)}
-                          </span>
-                        </div>
-                      ))}
-                      {socios.filter(s => s.montoPendiente > 0).length === 0 && (
-                        <div className="text-center text-slate-400 text-sm py-4 italic">No hay cobros pendientes. ¡Todo al día!</div>
-                      )}
-                    </div>
+                {/* Cobros Pendientes */}
+                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200/80 shadow-sm space-y-6">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-2xl font-black text-slate-800 tracking-tight">Cobros Pendientes</h3>
+                    <button onClick={() => setActiveTab('cuotas')} className="text-sm text-blue-900 font-bold hover:underline">Gestionar cuotas</button>
                   </div>
-                ) : (
-                  <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200/80 shadow-sm space-y-6">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-2xl font-black text-slate-800 tracking-tight">Próximos Programas</h3>
-                      <button onClick={() => setActiveTab('calendario')} className="text-sm text-blue-900 font-bold hover:underline">Ver todos</button>
-                    </div>
-                    <div className="space-y-4">
-                      {actividades.slice(0, 3).map(act => (
-                        <div key={act.id} className="flex items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-slate-100/50 transition-colors">
-                          <div className="bg-blue-50 text-blue-900 p-3 rounded-xl mr-4">
-                            <Calendar size={20} />
-                          </div>
-                          <div className="flex-grow min-w-0">
-                            <p className="font-extrabold text-slate-800 truncate">{act.titulo}</p>
-                            <p className="text-xs text-slate-400 mt-1 truncate">{act.fecha} • {act.lugar}</p>
-                          </div>
-                          <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase ml-3 ${
-                            act.publica ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'
-                          }`}>
-                            {act.publica ? 'Público' : 'Socio'}
-                          </span>
+                  <div className="space-y-4">
+                    {socios.filter(s => s.montoPendiente > 0).slice(0, 3).map(s => (
+                      <div key={s.id} className="flex items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-slate-100/50 transition-colors">
+                        <img 
+                          src={s.foto} 
+                          alt={s.nombre} 
+                          className="w-10 h-10 rounded-full border border-slate-100 object-cover mr-4 cursor-zoom-in" 
+                          onClick={() => setSelectedPhoto({ url: s.foto, title: s.nombre })}
+                        />
+                        <div className="flex-grow min-w-0">
+                          <p className="font-extrabold text-slate-800 truncate">{s.nombre}</p>
+                          <p className="text-xs text-slate-400 mt-1 truncate">{s.puesto || 'Socio Regular'}</p>
                         </div>
-                      ))}
-                    </div>
+                        <span className="text-sm font-black text-red-600 bg-red-50 px-3 py-1 rounded-xl ml-3">
+                          Q {s.montoPendiente.toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
+                    {socios.filter(s => s.montoPendiente > 0).length === 0 && (
+                      <div className="text-center text-slate-400 text-sm py-4 italic">No hay cobros pendientes. ¡Todo al día!</div>
+                    )}
                   </div>
-                )}
+                </div>
 
-                {/* Column 2 (Donations for Tesorero, Actas for Secretario/Admin, New Members for Afiliacion) */}
-                {user.rol === UserRole.TESORERO ? (
-                  <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200/80 shadow-sm space-y-6">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-2xl font-black text-slate-800 tracking-tight">Donaciones Recientes</h3>
-                      <button onClick={() => setActiveTab('donaciones')} className="text-sm text-blue-900 font-bold hover:underline">Ver todas</button>
-                    </div>
-                    <div className="space-y-4">
-                      {donaciones.slice(0, 3).map(don => (
-                        <div key={don.id} className="flex items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-slate-100/50 transition-colors">
-                          <div className="bg-green-50 text-green-600 p-3 rounded-xl mr-4">
-                            <Gift size={20} />
-                          </div>
-                          <div className="flex-grow min-w-0">
-                            <p className="font-extrabold text-slate-800 truncate">{don.donante}</p>
-                            <p className="text-xs text-slate-400 mt-1 truncate">{don.proyecto} • {don.fecha}</p>
-                          </div>
-                          <span className="text-sm font-black text-green-600 bg-green-50 px-3 py-1 rounded-xl ml-3">
-                            + Q {don.monto.toFixed(2)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                {/* Próximos Programas */}
+                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200/80 shadow-sm space-y-6">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-2xl font-black text-slate-800 tracking-tight">Próximos Programas</h3>
+                    <button onClick={() => setActiveTab('calendario')} className="text-sm text-blue-900 font-bold hover:underline">Ver todos</button>
                   </div>
-                ) : user.rol === UserRole.PRESIDENTE_AFILIACION ? (
-                  <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200/80 shadow-sm space-y-6">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-2xl font-black text-slate-800 tracking-tight">Nuevos Afiliados</h3>
-                      <button onClick={() => setActiveTab('cuotas')} className="text-sm text-blue-900 font-bold hover:underline">Ver cuotas</button>
-                    </div>
-                    <div className="space-y-4">
-                      {socios.slice().reverse().slice(0, 3).map(s => (
-                        <div key={s.id} className="flex items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-slate-100/50 transition-colors">
-                          <img 
-                            src={s.foto} 
-                            alt={s.nombre} 
-                            className="w-10 h-10 rounded-full border border-slate-100 object-cover mr-4 cursor-zoom-in" 
-                            onClick={() => setSelectedPhoto({ url: s.foto, title: s.nombre })}
-                          />
-                          <div className="flex-grow min-w-0">
-                            <p className="font-extrabold text-slate-800 truncate">{s.nombre}</p>
-                            <p className="text-xs text-slate-400 mt-1 truncate">Ingreso: {s.fechaIngreso}</p>
-                          </div>
-                          <span className="text-[10px] font-black bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full uppercase ml-3">
-                            {s.puesto || 'Socio'}
-                          </span>
+                  <div className="space-y-4">
+                    {actividades.slice(0, 3).map(act => (
+                      <div key={act.id} className="flex items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-slate-100/50 transition-colors">
+                        <div className="bg-blue-50 text-blue-900 p-3 rounded-xl mr-4">
+                          <Calendar size={20} />
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200/80 shadow-sm space-y-6">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-2xl font-black text-slate-800 tracking-tight">Actas Recientes</h3>
-                      <button onClick={() => setActiveTab('actas')} className="text-sm text-blue-900 font-bold hover:underline">Ver biblioteca</button>
-                    </div>
-                    <div className="space-y-4">
-                      {actas.slice(0, 3).map(acta => (
-                        <div key={acta.id} className="flex items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-slate-100/50 transition-colors">
-                          <div className="bg-yellow-50 text-yellow-600 p-3 rounded-xl mr-4">
-                            <FileText size={20} />
-                          </div>
-                          <div className="flex-grow min-w-0">
-                            <p className="font-extrabold text-slate-800 truncate">{acta.titulo}</p>
-                            <p className="text-xs text-slate-400 mt-1">Por {acta.autor} • {acta.fecha}</p>
-                          </div>
-                          <span className="text-[10px] font-black bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full uppercase ml-3">
-                            {acta.categoria || 'Reunión'}
-                          </span>
+                        <div className="flex-grow min-w-0">
+                          <p className="font-extrabold text-slate-800 truncate">{act.titulo}</p>
+                          <p className="text-xs text-slate-400 mt-1 truncate">{act.fecha} • {act.lugar}</p>
                         </div>
-                      ))}
-                    </div>
+                        <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase ml-3 ${
+                          act.publica ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'
+                        }`}>
+                          {act.publica ? 'Público' : 'Socio'}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                )}
+                </div>
+
+                {/* Donaciones Recientes */}
+                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200/80 shadow-sm space-y-6">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-2xl font-black text-slate-800 tracking-tight">Donaciones Recientes</h3>
+                    <button onClick={() => setActiveTab('donaciones')} className="text-sm text-blue-900 font-bold hover:underline">Ver todas</button>
+                  </div>
+                  <div className="space-y-4">
+                    {donaciones.slice(0, 3).map(don => (
+                      <div key={don.id} className="flex items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-slate-100/50 transition-colors">
+                        <div className="bg-green-50 text-green-600 p-3 rounded-xl mr-4">
+                          <Gift size={20} />
+                        </div>
+                        <div className="flex-grow min-w-0">
+                          <p className="font-extrabold text-slate-800 truncate">{don.donante}</p>
+                          <p className="text-xs text-slate-400 mt-1 truncate">{don.proyecto} • {don.fecha}</p>
+                        </div>
+                        <span className="text-sm font-black text-green-600 bg-green-50 px-3 py-1 rounded-xl ml-3">
+                          + Q {don.monto.toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Actas Recientes */}
+                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200/80 shadow-sm space-y-6">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-2xl font-black text-slate-800 tracking-tight">Actas Recientes</h3>
+                    <button onClick={() => setActiveTab('actas')} className="text-sm text-blue-900 font-bold hover:underline">Ver biblioteca</button>
+                  </div>
+                  <div className="space-y-4">
+                    {actas.slice(0, 3).map(acta => (
+                      <div key={acta.id} className="flex items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-slate-100/50 transition-colors">
+                        <div className="bg-yellow-50 text-yellow-600 p-3 rounded-xl mr-4">
+                          <FileText size={20} />
+                        </div>
+                        <div className="flex-grow min-w-0">
+                          <p className="font-extrabold text-slate-800 truncate">{acta.titulo}</p>
+                          <p className="text-xs text-slate-400 mt-1">Por {acta.autor} • {acta.fecha}</p>
+                        </div>
+                        <span className="text-[10px] font-black bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full uppercase ml-3">
+                          {acta.categoria || 'Reunión'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
               </div>
             </div>
           )}
