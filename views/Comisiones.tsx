@@ -8,7 +8,11 @@ import { MOCK_ACTAS } from '../constants';
 
 export const Comisiones: React.FC = () => {
   const [comisiones, setComisiones] = useState<Comision[]>([]);
-  const [socios, setSocios] = useState<Socio[]>([]);
+  const [socios, setSocios] = useState<Socio[]>(() => {
+    const local = localStorage.getItem('club_leones_socios_v3');
+    if (local) return JSON.parse(local);
+    return [];
+  });
   const [asignaciones, setAsignaciones] = useState<AsignacionComision[]>([]);
   const [actas, setActas] = useState<Acta[]>([]);
   
@@ -28,7 +32,7 @@ export const Comisiones: React.FC = () => {
 
   useEffect(() => {
     // Suscripción a socios
-    const qSocios = query(collection(db, 'socios_activos'));
+    const qSocios = query(collection(db, 'socios'));
     const unsubSocios = onSnapshot(qSocios, (snapshot) => {
       setSocios(snapshot.docs.map(d => d.data() as Socio));
     });
