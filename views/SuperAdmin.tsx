@@ -57,6 +57,7 @@ import { generateActaPDF, generateActaCode, generateReciboPagoPDF } from '../uti
 import { FormattedActa } from '../components/FormattedActa';
 import { compressImageFile } from '../utils/imageCompressor';
 import { ParqueoManager } from '../components/ParqueoManager';
+import { Presupuestos } from './Presupuestos';
 
 
 const PUESTOS_PREDEFINIDOS = [
@@ -101,16 +102,16 @@ interface SuperAdminProps {
   onUpdateUser?: (user: Socio) => void;
 }
 
-type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo';
+type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos';
 
 const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   // Dynamic Tab Access based on Role
   const allowedTabs = useMemo(() => {
     switch (user.rol) {
       case UserRole.SUPER_ADMIN:
-        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo'];
+        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos'];
       case UserRole.TESORERO:
-        return ['resumen', 'socios', 'cuotas', 'donaciones', 'parqueo'];
+        return ['resumen', 'socios', 'cuotas', 'donaciones', 'parqueo', 'presupuestos'];
       case UserRole.SECRETARIO:
         return ['resumen', 'socios', 'calendario', 'actas'];
       case UserRole.ASESOR_SERVICIOS:
@@ -1451,6 +1452,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               { id: 'donaciones', label: 'Donaciones Recibidas', icon: Gift },
               { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
               { id: 'parqueo', label: 'Gestión de Parqueo', icon: Car },
+              { id: 'presupuestos', label: 'Presupuestos', icon: DollarSign },
             ].filter(tab => allowedTabs.includes(tab.id)).map(tab => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
@@ -4432,6 +4434,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           )}
           {activeTab === 'parqueo' && (
             <ParqueoManager />
+          )}
+          {activeTab === 'presupuestos' && (
+            <Presupuestos />
           )}
         </main>
       </div>
