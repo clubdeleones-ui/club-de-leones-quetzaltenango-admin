@@ -33,22 +33,22 @@ export const Presupuestos: React.FC = () => {
   useEffect(() => {
     const qRubros = query(collection(db, 'presupuestos_rubros'), orderBy('fechaCreacion', 'desc'));
     const unsubRubros = onSnapshot(qRubros, (snapshot) => {
-      setRubros(snapshot.docs.map(doc => doc.data() as RubroPresupuesto));
+      setRubros(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as RubroPresupuesto));
     });
 
     const qFondos = query(collection(db, 'presupuestos_fondos'), orderBy('fecha', 'desc'));
     const unsubFondos = onSnapshot(qFondos, (snapshot) => {
-      setFondos(snapshot.docs.map(doc => doc.data() as FondoPresupuesto));
+      setFondos(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as FondoPresupuesto));
     });
 
     const qAsignaciones = query(collection(db, 'presupuestos_asignaciones'), orderBy('fechaCreacion', 'desc'));
     const unsubAsignaciones = onSnapshot(qAsignaciones, (snapshot) => {
-      setAsignaciones(snapshot.docs.map(doc => doc.data() as AsignacionComision));
+      setAsignaciones(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as AsignacionComision));
     });
 
     const qComisiones = query(collection(db, 'comisiones'), orderBy('fechaCreacion', 'desc'));
     const unsubComisiones = onSnapshot(qComisiones, (snapshot) => {
-      setComisiones(snapshot.docs.map(doc => doc.data() as Comision));
+      setComisiones(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Comision));
     });
 
     return () => {
