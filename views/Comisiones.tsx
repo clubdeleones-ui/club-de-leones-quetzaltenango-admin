@@ -481,11 +481,11 @@ export const Comisiones: React.FC = () => {
                 <div className="bg-white border border-slate-200 rounded-[2.5rem] p-6 sm:p-8 shadow-sm relative overflow-hidden">
                   <div className={`absolute top-0 left-0 right-0 h-2.5 ${selectedComision.estado === 'Activa' ? 'bg-gradient-to-r from-emerald-400 to-teal-500' : 'bg-slate-300'}`} />
 
-                  <div className="flex items-start space-x-4 mb-6 pt-2">
+                  <div className="flex items-start space-x-4 mb-6 pt-2 pr-6">
                     <div className={`p-4 rounded-2xl shrink-0 ${selectedComision.estado === 'Activa' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-450'}`}>
                       <Briefcase size={28} />
                     </div>
-                    <div>
+                    <div className="pr-4 flex-1">
                       <h3 className="font-black text-slate-900 text-2xl leading-tight">{selectedComision.nombre}</h3>
                       <span className={`inline-flex items-center space-x-1.5 px-3 py-1 mt-2.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
                         selectedComision.estado === 'Activa' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-650'
@@ -643,7 +643,7 @@ export const Comisiones: React.FC = () => {
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-blue-900/30 backdrop-blur-md animate-in fade-in duration-200">
           <div className="bg-white rounded-[2.5rem] max-w-lg w-full overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 shadow-2xl border border-slate-100">
             {/* Header decoration */}
-            <div className="h-24 bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 relative">
+            <div className="h-28 bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 relative">
               <button 
                 onClick={() => setSelectedSocioForModal(null)} 
                 className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors cursor-pointer flex items-center justify-center"
@@ -651,18 +651,18 @@ export const Comisiones: React.FC = () => {
               >
                 <X size={16} />
               </button>
-            </div>
-
-            {/* Content */}
-            <div className="px-6 pb-8 pt-12 flex flex-col items-center text-center relative overflow-y-auto max-h-[75vh]">
-              {/* Avatar floating */}
-              <div className="absolute -top-12 left-1/2 transform -translate-x-1/2">
+              {/* Avatar floating inside header decoration (not overflow hidden) */}
+              <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 z-10">
                 <img 
                   src={selectedSocioForModal.foto || `https://picsum.photos/seed/${selectedSocioForModal.nombre}/200/200`} 
                   className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-xl ring-4 ring-blue-900/40 ring-offset-2" 
                   alt={selectedSocioForModal.nombre}
                 />
               </div>
+            </div>
+
+            {/* Content */}
+            <div className="px-6 pb-8 pt-12 flex flex-col items-center text-center overflow-y-auto max-h-[60vh]">
 
               {/* Name & Role */}
               <div className="space-y-2.5 w-full">
