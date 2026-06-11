@@ -440,7 +440,7 @@ export const MinutasComisiones: React.FC = () => {
   }, [minutas, comisiones, solicitudes, socios, searchTerm, filterComisionId, filterYear, filterMonth, filterSolicitud]);
 
   return (
-    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto px-2 sm:px-4 md:px-8 py-4 sm:py-6 animate-in fade-in duration-500">
+    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto py-4 sm:py-6 animate-in fade-in duration-500">
       {/* Header Panel */}
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 text-white p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-xl relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.06),transparent)] pointer-events-none"></div>
