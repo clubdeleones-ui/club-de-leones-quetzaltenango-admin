@@ -481,12 +481,12 @@ export const Comisiones: React.FC = () => {
                 <div className="bg-white border border-slate-200 rounded-[2.5rem] p-6 sm:p-8 shadow-sm relative overflow-hidden">
                   <div className={`absolute top-0 left-0 right-0 h-2.5 ${selectedComision.estado === 'Activa' ? 'bg-gradient-to-r from-emerald-400 to-teal-500' : 'bg-slate-300'}`} />
 
-                  <div className="flex items-start space-x-4 mb-6 pt-2 pr-6">
-                    <div className={`p-4 rounded-2xl shrink-0 ${selectedComision.estado === 'Activa' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-450'}`}>
+                  <div className="flex flex-col items-center text-center mb-6 pt-2">
+                    <div className={`p-4 rounded-2xl shrink-0 mb-4 ${selectedComision.estado === 'Activa' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-450'}`}>
                       <Briefcase size={28} />
                     </div>
-                    <div className="pr-4 flex-1">
-                      <h3 className="font-black text-slate-900 text-2xl leading-tight">{selectedComision.nombre}</h3>
+                    <div className="w-full">
+                      <h3 className="font-black text-slate-900 text-2xl leading-tight px-4">{selectedComision.nombre}</h3>
                       <span className={`inline-flex items-center space-x-1.5 px-3 py-1 mt-2.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
                         selectedComision.estado === 'Activa' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-650'
                       }`}>
