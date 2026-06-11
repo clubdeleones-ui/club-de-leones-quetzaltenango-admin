@@ -12,7 +12,7 @@ import {
   limit
 } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad } from "../types";
+import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision } from "../types";
 
 export const firebaseService = {
   // Upload candidate photo to Firebase Storage (Supports Base64 data_url format)
@@ -331,5 +331,66 @@ export const firebaseService = {
     }
   },
 
-};
+  // ================= PRESUPUESTOS =================
 
+  saveRubroPresupuesto: async (rubro: RubroPresupuesto): Promise<void> => {
+    try {
+      const docRef = doc(db, "presupuestos_rubros", rubro.id);
+      await setDoc(docRef, rubro);
+    } catch (error) {
+      console.error("Error saving rubro:", error);
+      throw error;
+    }
+  },
+
+  deleteRubroPresupuesto: async (id: string): Promise<void> => {
+    try {
+      const docRef = doc(db, "presupuestos_rubros", id);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting rubro:", error);
+      throw error;
+    }
+  },
+
+  saveFondoPresupuesto: async (fondo: FondoPresupuesto): Promise<void> => {
+    try {
+      const docRef = doc(db, "presupuestos_fondos", fondo.id);
+      await setDoc(docRef, fondo);
+    } catch (error) {
+      console.error("Error saving fondo:", error);
+      throw error;
+    }
+  },
+
+  deleteFondoPresupuesto: async (id: string): Promise<void> => {
+    try {
+      const docRef = doc(db, "presupuestos_fondos", id);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting fondo:", error);
+      throw error;
+    }
+  },
+
+  saveAsignacionComision: async (asignacion: AsignacionComision): Promise<void> => {
+    try {
+      const docRef = doc(db, "presupuestos_asignaciones", asignacion.id);
+      await setDoc(docRef, asignacion);
+    } catch (error) {
+      console.error("Error saving asignacion:", error);
+      throw error;
+    }
+  },
+
+  deleteAsignacionComision: async (id: string): Promise<void> => {
+    try {
+      const docRef = doc(db, "presupuestos_asignaciones", id);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting asignacion:", error);
+      throw error;
+    }
+  },
+
+};

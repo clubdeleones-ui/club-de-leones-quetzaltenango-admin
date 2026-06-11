@@ -14,7 +14,8 @@ import {
   Users,
   ChevronDown,
   Info,
-  Gift
+  Gift,
+  DollarSign
 } from 'lucide-react';
 import { AuthState, UserRole } from '../types';
 import { googleService } from '../services/googleService';
@@ -96,6 +97,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
       auth.user.rol === UserRole.PRESIDENTE_AFILIACION;
       
     if (isAdministrative) {
+      items.push({ label: 'Presupuestos', path: '/presupuestos', icon: DollarSign });
       items.push({ label: 'Gestión', path: '/admin', icon: ShieldCheck });
     }
     

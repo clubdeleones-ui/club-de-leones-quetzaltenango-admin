@@ -164,3 +164,31 @@ export interface VehiculoParqueo {
   metodoPago?: 'Efectivo' | 'Tarjeta' | 'Transferencia';
   numeroEspacio?: number;
 }
+
+export interface RubroPresupuesto {
+  id: string;
+  codigo: string;
+  nombre: string;
+  descripcion?: string;
+  fechaCreacion: string;
+  activo: boolean;
+}
+
+export interface FondoPresupuesto {
+  id: string;
+  tipo: 'Cuotas' | 'Autónomo' | 'Actividad';
+  monto: number;
+  descripcion: string;
+  fecha: string;
+}
+
+export interface AsignacionComision {
+  id: string;
+  comision: string;
+  monto: number;
+  rubroId: string;
+  temporalidad: 'Mensual' | 'Bimensual' | 'Trimestral' | 'Semestral' | 'Anual' | 'Unica';
+  actividad?: string;
+  descripcion: string;
+  fechaCreacion: string;
+}

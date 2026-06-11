@@ -21,6 +21,7 @@ const SuperAdmin = lazy(() => import('./views/SuperAdmin'));
 const ProponerSocio = lazy(() => import('./views/ProponerSocio'));
 const Donar = lazy(() => import('./views/Donar'));
 const Solicitudes = lazy(() => import('./views/Solicitudes'));
+const Presupuestos = lazy(() => import('./views/Presupuestos').then(module => ({ default: module.Presupuestos })));
 
 // ProtectedRoute moved outside of App to resolve typing errors and improve performance
 interface ProtectedRouteProps {
@@ -150,6 +151,14 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute isAuthenticated={auth.isAuthenticated}>
                   <Actas accessToken={auth.accessToken} />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/presupuestos"
+              element={
+                <ProtectedRoute isAuthenticated={auth.isAuthenticated}>
+                  <Presupuestos />
                 </ProtectedRoute>
               }
             />
