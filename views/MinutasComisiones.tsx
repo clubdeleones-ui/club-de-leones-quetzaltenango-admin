@@ -852,9 +852,9 @@ export const MinutasComisiones: React.FC = () => {
         </div>
       ) : (
         /* MAIN DASHBOARD VIEW (Full-width Horizontal Ficha & Grid list) */
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
           {/* TOP ADVANCED FILTERS CARD */}
-          <div className="bg-white rounded-[2rem] p-6 border border-slate-200 shadow-sm space-y-4">
+          <div className="bg-white rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 border border-slate-200 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 gap-2">
               <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center space-x-2">
                 <Search size={16} className="text-blue-900" />
@@ -876,7 +876,7 @@ export const MinutasComisiones: React.FC = () => {
               )}
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
               {/* 1. Buscador */}
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Buscador</label>
@@ -957,57 +957,57 @@ export const MinutasComisiones: React.FC = () => {
 
           {selectedMinuta ? (
             /* FULL WIDTH HORIZONTAL FICHA SHEET */
-            <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-500 p-8 space-y-8">
+            <div className="bg-white rounded-2xl sm:rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-500 p-4 sm:p-6 md:p-8 space-y-6 sm:space-y-8">
               {/* Header row */}
-              <div className="space-y-4 border-b border-slate-100 pb-6 w-full">
+              <div className="space-y-3 sm:space-y-4 border-b border-slate-100 pb-5 sm:pb-6 w-full">
                 <button
                   onClick={() => setSelectedMinutaId('')}
-                  className="flex items-center space-x-1.5 px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:text-blue-900 hover:bg-slate-50 transition-all font-black text-xs cursor-pointer shadow-sm w-fit"
+                  className="flex items-center space-x-1.5 px-3 py-1.5 sm:px-4 sm:py-2 border border-slate-200 rounded-xl text-slate-600 hover:text-blue-900 hover:bg-slate-50 transition-all font-black text-xs cursor-pointer shadow-sm w-fit"
                 >
                   <ChevronRight size={14} className="rotate-180" />
                   <span>Regresar al Listado</span>
                 </button>
                 
                 <div className="text-left space-y-2">
-                  <span className="bg-blue-900 text-yellow-400 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                  <span className="bg-blue-900 text-yellow-400 text-[9px] sm:text-[10px] font-black px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full uppercase tracking-wider">
                     {comisiones.find(c => c.id === selectedMinuta.comisionId)?.nombre || 'Comisión'}
                   </span>
-                  <h2 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight w-full break-words">
+                  <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 leading-tight w-full break-words">
                     "{selectedMinuta.tema}"
                   </h2>
-                  <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-400">
+                  <div className="flex flex-wrap items-center gap-2.5 sm:gap-4 text-[11px] sm:text-xs font-semibold text-slate-400">
                     <div className="flex items-center space-x-1">
                       <Calendar size={13} />
-                      <span>Fecha: {new Date(selectedMinuta.fechaHora).toLocaleDateString()}</span>
+                      <span>{new Date(selectedMinuta.fechaHora).toLocaleDateString()}</span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <Clock size={13} />
-                      <span>Hora: {new Date(selectedMinuta.fechaHora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span>{new Date(selectedMinuta.fechaHora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <FileText size={13} />
-                      <span>ID: {selectedMinuta.id}</span>
+                      <span className="truncate max-w-[120px] sm:max-w-none">ID: {selectedMinuta.id}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Registro de Asistencia */}
-              <div className="bg-slate-50/40 border border-slate-200/60 rounded-3xl p-6 space-y-6 w-full">
+              <div className="bg-slate-50/40 border border-slate-200/60 rounded-2xl sm:rounded-3xl p-4 sm:p-6 space-y-4 sm:space-y-6 w-full">
                 <h3 className="font-extrabold text-blue-900 text-sm border-b border-slate-100 pb-2 flex items-center space-x-2">
                   <Users size={16} className="text-blue-900" />
                   <span>Registro de Asistencia</span>
                 </h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
                   {/* Miembros */}
                   <div className="space-y-3">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
                       Miembros Comisión ({selectedMinuta.miembrosComision.length})
                     </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[280px] overflow-y-auto pr-1">
+                    <div className="grid grid-cols-1 min-[480px]:grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3 max-h-[280px] overflow-y-auto pr-1">
                       {selectedMinuta.miembrosComision.length === 0 ? (
-                        <p className="text-xs text-slate-400 italic col-span-2">Sin miembros registrados.</p>
+                        <p className="text-xs text-slate-400 italic min-[480px]:col-span-2">Sin miembros registrados.</p>
                       ) : (
                         selectedMinuta.miembrosComision.map(id => {
                           const s = socios.find(soc => soc.id === id);
@@ -1017,9 +1017,9 @@ export const MinutasComisiones: React.FC = () => {
                               key={id}
                               type="button"
                               onClick={() => setSelectedSocioForModal(s)}
-                              className="w-full flex items-center space-x-2.5 p-2 bg-white rounded-xl border border-slate-200/50 hover:border-slate-300 hover:shadow-sm transition-all text-left cursor-pointer group"
+                              className="w-full flex items-center space-x-2.5 p-1.5 sm:p-2 bg-white rounded-xl border border-slate-200/50 hover:border-slate-300 hover:shadow-sm transition-all text-left cursor-pointer group"
                             >
-                              <img src={s.foto || `https://picsum.photos/seed/${s.nombre}/100/100`} className="w-7 h-7 rounded-full object-cover border" alt="" />
+                              <img src={s.foto || `https://picsum.photos/seed/${s.nombre}/100/100`} className="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover border" alt="" />
                               <div className="overflow-hidden">
                                 <p className="text-xs font-black text-slate-750 group-hover:text-blue-600 transition-colors truncate">{s.nombre}</p>
                                 {s.puesto && <p className="text-[8px] text-slate-400 uppercase tracking-wider font-bold mt-0.5">{s.puesto}</p>}
@@ -1036,9 +1036,9 @@ export const MinutasComisiones: React.FC = () => {
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
                       Invitados / Otros ({selectedMinuta.otrosParticipantes.length})
                     </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[280px] overflow-y-auto pr-1">
+                    <div className="grid grid-cols-1 min-[480px]:grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3 max-h-[280px] overflow-y-auto pr-1">
                       {selectedMinuta.otrosParticipantes.length === 0 ? (
-                        <p className="text-xs text-slate-400 italic col-span-2">Sin invitados adicionales.</p>
+                        <p className="text-xs text-slate-400 italic min-[480px]:col-span-2">Sin invitados adicionales.</p>
                       ) : (
                         selectedMinuta.otrosParticipantes.map(id => {
                           const s = socios.find(soc => soc.id === id);
@@ -1048,9 +1048,9 @@ export const MinutasComisiones: React.FC = () => {
                               key={id}
                               type="button"
                               onClick={() => setSelectedSocioForModal(s)}
-                              className="w-full flex items-center space-x-2.5 p-2 bg-white rounded-xl border border-slate-200/50 hover:border-slate-300 hover:shadow-sm transition-all text-left cursor-pointer group"
+                              className="w-full flex items-center space-x-2.5 p-1.5 sm:p-2 bg-white rounded-xl border border-slate-200/50 hover:border-slate-300 hover:shadow-sm transition-all text-left cursor-pointer group"
                             >
-                              <img src={s.foto || `https://picsum.photos/seed/${s.nombre}/100/100`} className="w-7 h-7 rounded-full object-cover border" alt="" />
+                              <img src={s.foto || `https://picsum.photos/seed/${s.nombre}/100/100`} className="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover border" alt="" />
                               <div className="overflow-hidden">
                                 <p className="text-xs font-black text-slate-750 group-hover:text-blue-600 transition-colors truncate">{s.nombre}</p>
                                 {s.puesto && <p className="text-[8px] text-slate-400 uppercase tracking-wider font-bold mt-0.5">{s.puesto}</p>}
@@ -1073,20 +1073,20 @@ export const MinutasComisiones: React.FC = () => {
 
                 <div className="space-y-4">
                   {selectedMinuta.puntos.map((punto, idx) => (
-                    <div key={punto.id || idx} className="flex space-x-4">
+                    <div key={punto.id || idx} className="flex space-x-3 sm:space-x-4">
                       <div className="flex flex-col items-center">
-                        <div className="w-8 h-8 rounded-full bg-blue-900 text-yellow-400 border border-blue-950 flex items-center justify-center text-sm font-black shrink-0">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-900 text-yellow-400 border border-blue-950 flex items-center justify-center text-xs sm:text-sm font-black shrink-0">
                           {idx + 1}
                         </div>
                         {idx < selectedMinuta.puntos.length - 1 && (
                           <div className="w-0.5 bg-slate-200 grow my-1"></div>
                         )}
                       </div>
-                      <div className="bg-white border border-slate-200 rounded-3xl p-5 grow space-y-2 shadow-sm hover:shadow-md transition-all duration-300">
-                        <h5 className="font-black text-base text-slate-800 leading-snug break-words">
+                      <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl p-4 sm:p-5 grow space-y-2 shadow-sm hover:shadow-md transition-all duration-300">
+                        <h5 className="font-black text-sm sm:text-base text-slate-800 leading-snug break-words">
                           {punto.punto}
                         </h5>
-                        <p className="text-sm text-slate-600 leading-relaxed font-semibold italic break-words border-l-2 border-slate-200 pl-3.5">
+                        <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-semibold italic break-words border-l-2 border-slate-200 pl-3 sm:pl-3.5">
                           "{punto.discusion}"
                         </p>
                       </div>
@@ -1100,13 +1100,13 @@ export const MinutasComisiones: React.FC = () => {
                 const req = solicitudes.find(s => s.id === selectedMinuta.solicitudVinculadaId);
                 if (!req) return null;
                 return (
-                  <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/20 border border-amber-200/60 p-6 rounded-3xl space-y-4 shadow-sm w-full">
-                    <div className="flex justify-between items-center border-b border-amber-200/30 pb-2">
+                  <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/20 border border-amber-200/60 p-4 sm:p-6 rounded-2xl sm:rounded-3xl space-y-4 shadow-sm w-full">
+                    <div className="flex justify-between items-center border-b border-amber-200/30 pb-2 gap-2">
                       <div className="flex items-center space-x-2 text-amber-900">
-                        <FileText size={16} className="text-amber-500 animate-pulse" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Solicitud Interna Vinculada</span>
+                        <FileText size={16} className="text-amber-500 animate-pulse shrink-0" />
+                        <span className="text-[10px] font-black uppercase tracking-widest truncate">Solicitud Interna Vinculada</span>
                       </div>
-                      <span className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                      <span className={`text-[8px] sm:text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full shrink-0 ${
                         req.estado === 'Aprobada' ? 'bg-emerald-100 text-emerald-800' :
                         req.estado === 'Rechazada' ? 'bg-rose-100 text-rose-800' :
                         'bg-amber-100 text-amber-800'
@@ -1115,7 +1115,7 @@ export const MinutasComisiones: React.FC = () => {
                       </span>
                     </div>
                     <div className="space-y-2">
-                      <h5 className="text-sm font-black text-slate-800 leading-tight">{req.nombre}</h5>
+                      <h5 className="text-xs sm:text-sm font-black text-slate-800 leading-tight">{req.nombre}</h5>
                       <p className="text-xs text-slate-600 font-semibold leading-relaxed italic">"{req.descripcion}"</p>
                     </div>
                     
@@ -1136,52 +1136,54 @@ export const MinutasComisiones: React.FC = () => {
               })()}
 
               {/* Acciones (Descargar PDF, Editar, Eliminar al final de la ficha) */}
-              <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-100 pt-6 w-full">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 border-t border-slate-100 pt-5 sm:pt-6 w-full">
                 <button
                   onClick={() => {
                     const comisionNombre = comisiones.find(c => c.id === selectedMinuta.comisionId)?.nombre || 'Comisión';
                     generateMinutaPDF(selectedMinuta, comisionNombre, socios, 'download');
                   }}
-                  className="px-5 py-3 bg-yellow-400 hover:bg-yellow-350 text-blue-955 text-blue-900 rounded-2xl transition-all hover:scale-[1.02] font-black text-xs flex items-center justify-center space-x-2 shadow-lg shadow-yellow-500/10 cursor-pointer active:scale-95"
+                  className="w-full sm:w-auto px-5 py-3.5 sm:py-3 bg-yellow-400 hover:bg-yellow-350 text-blue-900 rounded-2xl transition-all hover:scale-[1.02] font-black text-xs flex items-center justify-center space-x-2 shadow-lg shadow-yellow-500/10 cursor-pointer active:scale-95"
                   title="Descargar PDF de Minuta"
                 >
                   <Download size={14} />
                   <span>Descargar PDF</span>
                 </button>
-                <button
-                  onClick={() => handleEdit(selectedMinuta)}
-                  className="px-5 py-3 bg-slate-50 hover:bg-blue-50 border border-slate-200 text-slate-600 hover:text-blue-900 rounded-2xl transition-all hover:scale-[1.02] font-black text-xs flex items-center justify-center space-x-2 cursor-pointer active:scale-95"
-                  title="Editar Minuta"
-                >
-                  <Pencil size={14} />
-                  <span>Editar</span>
-                </button>
-                <button
-                  onClick={() => handleDelete(selectedMinuta.id)}
-                  className="px-5 py-3 bg-red-500/90 hover:bg-red-600 text-white rounded-2xl transition-all hover:scale-[1.02] font-black text-xs flex items-center justify-center space-x-2 cursor-pointer active:scale-95"
-                  title="Eliminar Minuta"
-                >
-                  <Trash2 size={14} />
-                  <span>Eliminar</span>
-                </button>
+                <div className="grid grid-cols-2 gap-3 w-full sm:w-auto">
+                  <button
+                    onClick={() => handleEdit(selectedMinuta)}
+                    className="px-5 py-3 bg-slate-50 hover:bg-blue-50 border border-slate-200 text-slate-600 hover:text-blue-900 rounded-2xl transition-all hover:scale-[1.02] font-black text-xs flex items-center justify-center space-x-2 cursor-pointer active:scale-95"
+                    title="Editar Minuta"
+                  >
+                    <Pencil size={14} />
+                    <span>Editar</span>
+                  </button>
+                  <button
+                    onClick={() => handleDelete(selectedMinuta.id)}
+                    className="px-5 py-3 bg-red-500/90 hover:bg-red-600 text-white rounded-2xl transition-all hover:scale-[1.02] font-black text-xs flex items-center justify-center space-x-2 cursor-pointer active:scale-95"
+                    title="Eliminar Minuta"
+                  >
+                    <Trash2 size={14} />
+                    <span>Eliminar</span>
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
 
             /* LIST OF MINUTAS (GRID OF HORIZONTAL CARDS) */
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               <div className="flex justify-between items-center px-2">
-                <span className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                <span className="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-widest">
                   Mostrando {filteredMinutas.length} de {minutas.length} minutas registradas
                 </span>
               </div>
 
               {filteredMinutas.length === 0 ? (
-                <div className="bg-white rounded-[2rem] border border-slate-200 p-16 text-center text-slate-400 text-sm font-bold italic shadow-sm">
+                <div className="bg-white rounded-2xl sm:rounded-[2rem] border border-slate-200 p-12 sm:p-16 text-center text-slate-400 text-sm font-bold italic shadow-sm">
                   No se encontraron minutas con los filtros seleccionados.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   {filteredMinutas.map(m => {
                     const comm = comisiones.find(c => c.id === m.comisionId);
                     const dateStr = new Date(m.fechaHora).toLocaleDateString('es-GT', {
@@ -1200,17 +1202,17 @@ export const MinutasComisiones: React.FC = () => {
                       <button
                         key={m.id}
                         onClick={() => setSelectedMinutaId(m.id)}
-                        className="bg-white border border-slate-200/80 rounded-[2.5rem] p-6 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between text-left gap-4 group w-full cursor-pointer"
+                        className="bg-white border border-slate-200/80 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between text-left gap-4 group w-full cursor-pointer"
                       >
-                        <div className="flex items-start space-x-4 overflow-hidden">
+                        <div className="flex items-start space-x-3 sm:space-x-4 overflow-hidden w-full">
                           {/* Simulated Document / Commission emblem */}
-                          <div className="w-12 h-16 bg-blue-900 rounded-xl relative shrink-0 flex flex-col justify-between p-1.5 overflow-hidden group-hover:scale-105 transition-transform border border-blue-950 select-none shadow-sm">
+                          <div className="w-10 h-14 sm:w-12 sm:h-16 bg-blue-900 rounded-xl relative shrink-0 flex flex-col justify-between p-1.5 overflow-hidden group-hover:scale-105 transition-transform border border-blue-950 select-none shadow-sm">
                             <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500" />
                             <div className="text-[5px] text-yellow-400 font-black tracking-widest text-center mt-0.5 uppercase">
                               LEONES
                             </div>
                             <div className="text-center z-10">
-                              <span className="block text-[6px] font-black text-white leading-none">MINUTA</span>
+                              <span className="block text-[5px] sm:text-[6px] font-black text-white leading-none">MINUTA</span>
                             </div>
                             <div className="flex justify-between items-center z-10 text-white">
                               <span className="text-[5px] font-black">L</span>
@@ -1220,7 +1222,7 @@ export const MinutasComisiones: React.FC = () => {
 
                           <div className="space-y-1.5 overflow-hidden grow">
                             <div className="flex flex-wrap gap-1.5 items-center">
-                              <span className="bg-blue-50 text-blue-800 text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-blue-100">
+                              <span className="bg-blue-50 text-blue-800 text-[8px] sm:text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-blue-100">
                                 {comm?.nombre || 'Comisión'}
                               </span>
                               {req && (
@@ -1233,25 +1235,25 @@ export const MinutasComisiones: React.FC = () => {
                                 </span>
                               )}
                             </div>
-                            <h4 className="font-extrabold text-slate-800 text-sm leading-snug group-hover:text-blue-900 transition-colors break-words">
+                            <h4 className="font-extrabold text-slate-800 text-xs sm:text-sm leading-snug group-hover:text-blue-900 transition-colors break-words">
                               {m.tema}
                             </h4>
-                            <div className="flex items-center space-x-3 text-[10px] font-bold text-slate-400">
+                            <div className="flex items-center space-x-2.5 sm:space-x-3 text-[9px] sm:text-[10px] font-bold text-slate-400">
                               <span className="flex items-center space-x-1">
-                                <Calendar size={11} />
+                                <Calendar size={11} className="shrink-0" />
                                 <span>{dateStr}</span>
                               </span>
                               <span>•</span>
                               <span className="flex items-center space-x-1">
-                                <Clock size={11} />
+                                <Clock size={11} className="shrink-0" />
                                 <span>{timeStr}</span>
                               </span>
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between shrink-0 pt-3 border-t border-slate-100 w-full">
-                          <div className="text-[10px] font-bold text-slate-400 flex items-center space-x-3">
+                        <div className="flex items-center justify-between shrink-0 pt-2.5 sm:pt-3 border-t border-slate-100 w-full">
+                          <div className="text-[9px] sm:text-[10px] font-bold text-slate-400 flex items-center space-x-2.5 sm:space-x-3">
                             <span>Puntos: <strong className="text-slate-700 font-extrabold">{m.puntos.length}</strong></span>
                             <span className="text-slate-200">|</span>
                             <span>Asistencia: <strong className="text-slate-700 font-extrabold">{totalAttendees}</strong></span>
@@ -1269,9 +1271,7 @@ export const MinutasComisiones: React.FC = () => {
             </div>
           )}
         </div>
-      )}
-
-      {/* MODAL FICHA DE SOCIO (Lectura) */}
+      )/* MODAL FICHA DE SOCIO (Lectura) */}
       {selectedSocioForModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300">
           <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden relative animate-in zoom-in-95 duration-300">
