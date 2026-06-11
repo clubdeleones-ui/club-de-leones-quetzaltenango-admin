@@ -224,7 +224,7 @@ export const Comisiones: React.FC = () => {
             {/* Datos Generales */}
             <div className="space-y-6">
               <h4 className="font-extrabold text-blue-900 border-b border-slate-100 pb-2">1. Datos Generales</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Nombre de la Comisión</label>
                   <input
@@ -245,19 +245,6 @@ export const Comisiones: React.FC = () => {
                   >
                     <option value="Activa">Activa</option>
                     <option value="Inactiva">Inactiva</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Coordinador de Comisión</label>
-                  <select
-                    value={form.coordinador || ''}
-                    onChange={(e) => setForm({...form, coordinador: e.target.value})}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">-- Sin coordinador asignado --</option>
-                    {socios.map(s => (
-                      <option key={s.id} value={s.id}>{s.nombre} ({s.puesto || 'Socio'})</option>
-                    ))}
                   </select>
                 </div>
               </div>
@@ -337,25 +324,54 @@ export const Comisiones: React.FC = () => {
                     {selectedSocios.length === 0 ? (
                       <div className="p-12 text-center text-slate-400 text-sm italic font-medium">Aún no has agregado miembros a esta comisión.</div>
                     ) : (
-                      selectedSocios.map((member, index) => (
-                        <div key={member.id} className="p-3.5 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
-                          <div className="flex items-center space-x-3">
-                            <span className="text-[10px] font-black text-slate-400 w-5 text-right">{index + 1}.</span>
-                            <div>
-                              <p className="text-sm font-extrabold text-slate-800 leading-tight">{member.nombre}</p>
-                              {member.puesto && <p className="text-[10px] font-black text-blue-600 uppercase tracking-wide mt-0.5">{member.puesto}</p>}
+                      selectedSocios.map((member, index) => {
+                        const isFormCoord = form.coordinador === member.id;
+                        return (
+                          <div key={member.id} className={`p-3.5 flex items-center justify-between hover:bg-slate-50/50 transition-colors ${isFormCoord ? 'bg-amber-50/40 border-l-4 border-amber-400' : ''}`}>
+                            <div className="flex items-center space-x-3 overflow-hidden">
+                              <span className="text-[10px] font-black text-slate-400 w-5 text-right shrink-0">{index + 1}.</span>
+                              <div className="overflow-hidden">
+                                <div className="flex items-center space-x-2">
+                                  <p className="text-sm font-extrabold text-slate-800 leading-tight truncate">{member.nombre}</p>
+                                  {isFormCoord && (
+                                    <span className="inline-flex items-center space-x-0.5 text-[8px] font-black bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0">
+                                      <Award size={8} className="mr-0.5" />
+                                      Coord.
+                                    </span>
+                                  )}
+                                </div>
+                                {member.puesto && <p className="text-[10px] font-black text-blue-600 uppercase tracking-wide mt-0.5 truncate">{member.puesto}</p>}
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setForm({ ...form, coordinador: isFormCoord ? '' : member.id })}
+                                className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-lg transition-all border cursor-pointer ${
+                                  isFormCoord 
+                                    ? 'bg-amber-100 border-amber-200 text-amber-800 hover:bg-amber-200/60' 
+                                    : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-amber-50 hover:text-amber-700 hover:border-amber-200'
+                                }`}
+                              >
+                                {isFormCoord ? 'Quitar Cargo' : 'Nombrar Coordinador'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleToggleMember(member.id);
+                                  if (isFormCoord) {
+                                    setForm({ ...form, coordinador: '' });
+                                  }
+                                }}
+                                className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all cursor-pointer"
+                                title="Remover miembro"
+                              >
+                                <X size={16} />
+                              </button>
                             </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => handleToggleMember(member.id)}
-                            className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all"
-                            title="Remover miembro"
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>
