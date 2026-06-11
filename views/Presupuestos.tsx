@@ -14,7 +14,7 @@ import {
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { firebaseService } from '../services/firebaseService';
-import { RubroPresupuesto, FondoPresupuesto, AsignacionComision } from '../types';
+import { RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision } from '../types';
 
 export const Presupuestos: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'fondos' | 'asignaciones' | 'rubros'>('fondos');
@@ -22,6 +22,7 @@ export const Presupuestos: React.FC = () => {
   const [rubros, setRubros] = useState<RubroPresupuesto[]>([]);
   const [fondos, setFondos] = useState<FondoPresupuesto[]>([]);
   const [asignaciones, setAsignaciones] = useState<AsignacionComision[]>([]);
+  const [comisiones, setComisiones] = useState<Comision[]>([]);
   
   // Forms States
   const [rubroForm, setRubroForm] = useState({ codigo: '', nombre: '', descripcion: '' });
@@ -45,10 +46,16 @@ export const Presupuestos: React.FC = () => {
       setAsignaciones(snapshot.docs.map(doc => doc.data() as AsignacionComision));
     });
 
+    const qComisiones = query(collection(db, 'comisiones'), orderBy('fechaCreacion', 'desc'));
+    const unsubComisiones = onSnapshot(qComisiones, (snapshot) => {
+      setComisiones(snapshot.docs.map(doc => doc.data() as Comision));
+    });
+
     return () => {
       unsubRubros();
       unsubFondos();
       unsubAsignaciones();
+      unsubComisiones();
     };
   }, []);
 
@@ -322,14 +329,17 @@ export const Presupuestos: React.FC = () => {
                 <form onSubmit={handleSaveAsignacion} className="space-y-4">
                   <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Comisión</label>
-                    <input
-                      type="text"
+                    <select
                       required
                       value={asignacionForm.comision}
                       onChange={(e) => setAsignacionForm({...asignacionForm, comision: e.target.value})}
-                      placeholder="Nombre de la comisión"
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    >
+                      <option value="">Seleccione una comisión...</option>
+                      {comisiones.map(c => (
+                        <option key={c.id} value={c.id}>{c.nombre}</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Rubro</label>
@@ -413,6 +423,8 @@ export const Presupuestos: React.FC = () => {
                 <div className="space-y-4">
                   {asignaciones.map(asig => {
                     const rubroObj = rubros.find(r => r.id === asig.rubroId);
+                    const comisionObj = comisiones.find(c => c.id === asig.comision);
+                    const comisionNombre = comisionObj ? comisionObj.nombre : asig.comision;
                     return (
                       <div key={asig.id} className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 hover:bg-white hover:shadow-md transition-all group relative">
                         <div className="absolute right-4 top-4">
@@ -426,10 +438,10 @@ export const Presupuestos: React.FC = () => {
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                           <div className="flex items-center space-x-4">
                             <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-black text-xl shrink-0">
-                              {asig.comision.charAt(0).toUpperCase()}
+                              {comisionNombre.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                              <h4 className="text-base font-black text-slate-800">{asig.comision}</h4>
+                              <h4 className="text-base font-black text-slate-800">{comisionNombre}</h4>
                               <p className="text-xs font-bold text-slate-500 mt-0.5">{asig.descripcion}</p>
                             </div>
                           </div>

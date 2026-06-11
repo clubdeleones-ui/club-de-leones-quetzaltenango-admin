@@ -58,6 +58,7 @@ import { FormattedActa } from '../components/FormattedActa';
 import { compressImageFile } from '../utils/imageCompressor';
 import { ParqueoManager } from '../components/ParqueoManager';
 import { Presupuestos } from './Presupuestos';
+import { Comisiones } from './Comisiones';
 
 
 const PUESTOS_PREDEFINIDOS = [
@@ -102,18 +103,18 @@ interface SuperAdminProps {
   onUpdateUser?: (user: Socio) => void;
 }
 
-type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos';
+type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones';
 
 const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   // Dynamic Tab Access based on Role
   const allowedTabs = useMemo(() => {
     switch (user.rol) {
       case UserRole.SUPER_ADMIN:
-        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos'];
+        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones'];
       case UserRole.TESORERO:
         return ['resumen', 'socios', 'cuotas', 'donaciones', 'parqueo', 'presupuestos'];
       case UserRole.SECRETARIO:
-        return ['resumen', 'socios', 'calendario', 'actas'];
+        return ['resumen', 'socios', 'calendario', 'actas', 'comisiones'];
       case UserRole.ASESOR_SERVICIOS:
         return ['socios', 'calendario', 'beneficios'];
       case UserRole.PRESIDENTE_AFILIACION:
@@ -1455,7 +1456,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 items: [
                   { id: 'actas', label: 'Libro de Actas', icon: FileText },
                   { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
-                  { id: 'calendario', label: 'Programas / Calendario', icon: Calendar }
+                  { id: 'calendario', label: 'Actividades', icon: Calendar },
+                  { id: 'comisiones', label: 'Gestión de Comisiones', icon: Briefcase }
                 ]
               },
               {
@@ -1528,13 +1530,14 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   const currentTab = [
                     { id: 'resumen', label: 'Resumen General', icon: TrendingUp },
                     { id: 'socios', label: 'Gestión de Socios', icon: Users },
-                    { id: 'calendario', label: 'Programas / Calendario', icon: Calendar },
+                    { id: 'calendario', label: 'Actividades', icon: Calendar },
                     { id: 'cuotas', label: 'Control de Cuotas', icon: CreditCard },
                     { id: 'actas', label: 'Libro de Actas', icon: FileText },
                     { id: 'donaciones', label: 'Donaciones Recibidas', icon: Gift },
                     { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
                     { id: 'parqueo', label: 'Gestión de Parqueo', icon: Car },
                     { id: 'presupuestos', label: 'Presupuestos', icon: DollarSign },
+                    { id: 'comisiones', label: 'Gestión de Comisiones', icon: Briefcase },
                   ].find(t => t.id === activeTab);
                   if (currentTab) {
                     const Icon = currentTab.icon;
@@ -1546,13 +1549,14 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   {[
                     { id: 'resumen', label: 'Resumen General' },
                     { id: 'socios', label: 'Gestión de Socios' },
-                    { id: 'calendario', label: 'Programas / Calendario' },
+                    { id: 'calendario', label: 'Actividades' },
                     { id: 'cuotas', label: 'Control de Cuotas' },
                     { id: 'actas', label: 'Libro de Actas' },
                     { id: 'donaciones', label: 'Donaciones Recibidas' },
                     { id: 'beneficios', label: 'Beneficios a Socios' },
                     { id: 'parqueo', label: 'Gestión de Parqueo' },
                     { id: 'presupuestos', label: 'Presupuestos' },
+                    { id: 'comisiones', label: 'Gestión de Comisiones' },
                   ].find(t => t.id === activeTab)?.label}
                 </span>
               </div>
@@ -1573,7 +1577,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     items: [
                       { id: 'actas', label: 'Libro de Actas', icon: FileText },
                       { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
-                      { id: 'calendario', label: 'Programas / Calendario', icon: Calendar }
+                      { id: 'calendario', label: 'Actividades', icon: Calendar },
+                      { id: 'comisiones', label: 'Gestión de Comisiones', icon: Briefcase }
                     ]
                   },
                   {
@@ -2179,7 +2184,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
             </div>
           )}
 
-          {/* TAB: PROGRAMAS / CALENDARIO */}
+          {/* TAB: ACTIVIDADES */}
           {activeTab === 'calendario' && (
             <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -4478,6 +4483,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           )}
           {activeTab === 'presupuestos' && (
             <Presupuestos />
+          )}
+          {activeTab === 'comisiones' && (
+            <Comisiones />
           )}
         </main>
       </div>

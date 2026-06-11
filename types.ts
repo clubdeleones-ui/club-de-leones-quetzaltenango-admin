@@ -184,11 +184,20 @@ export interface FondoPresupuesto {
 
 export interface AsignacionComision {
   id: string;
-  comision: string;
+  comision: string; // ID of the Comision
   monto: number;
   rubroId: string;
   temporalidad: 'Mensual' | 'Bimensual' | 'Trimestral' | 'Semestral' | 'Anual' | 'Unica';
   actividad?: string;
   descripcion: string;
   fechaCreacion: string;
+}
+
+export interface Comision {
+  id: string;
+  nombre: string;
+  proposito: string;
+  miembros: string[]; // IDs de los socios
+  fechaCreacion: string;
+  estado: 'Activa' | 'Inactiva';
 }

@@ -12,7 +12,7 @@ import {
   limit
 } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision } from "../types";
+import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision } from "../types";
 
 export const firebaseService = {
   // Upload candidate photo to Firebase Storage (Supports Base64 data_url format)
@@ -393,4 +393,44 @@ export const firebaseService = {
     }
   },
 
+  // COMISIONES
+  getComisiones: async (): Promise<Comision[]> => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "comisiones"));
+      const comisiones: Comision[] = [];
+      querySnapshot.forEach((doc) => {
+        comisiones.push({ id: doc.id, ...doc.data() } as Comision);
+      });
+      return comisiones;
+    } catch (error) {
+      console.error("Error getting comisiones:", error);
+      return [];
+    }
+  },
+
+  saveComision: async (comision: Comision): Promise<void> => {
+    try {
+      const { id, ...data } = comision;
+      if (id) {
+        const docRef = doc(db, "comisiones", id);
+        await setDoc(docRef, data, { merge: true });
+      } else {
+        const newDocRef = doc(collection(db, "comisiones"));
+        await setDoc(newDocRef, data);
+      }
+    } catch (error) {
+      console.error("Error saving comision:", error);
+      throw error;
+    }
+  },
+
+  deleteComision: async (id: string): Promise<void> => {
+    try {
+      const docRef = doc(db, "comisiones", id);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting comision:", error);
+      throw error;
+    }
+  },
 };
