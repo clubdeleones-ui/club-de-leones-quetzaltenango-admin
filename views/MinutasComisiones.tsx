@@ -440,9 +440,9 @@ export const MinutasComisiones: React.FC = () => {
   }, [minutas, comisiones, solicitudes, socios, searchTerm, filterComisionId, filterYear, filterMonth, filterSolicitud]);
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto px-4 md:px-8 py-6 animate-in fade-in duration-500">
+    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto px-2 sm:px-4 md:px-8 py-4 sm:py-6 animate-in fade-in duration-500">
       {/* Header Panel */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 text-white p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 text-white p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-xl relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.06),transparent)] pointer-events-none"></div>
         <div className="relative z-10 space-y-1">
           <span className="bg-yellow-400 text-blue-950 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">Comité de Servicio</span>
@@ -478,7 +478,7 @@ export const MinutasComisiones: React.FC = () => {
 
       {showForm ? (
         /* CREATE / EDIT FORM VIEW */
-        <div className="bg-white rounded-[2.5rem] p-8 border border-slate-200 shadow-sm relative animate-in zoom-in-95 duration-300">
+        <div className="bg-white rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 md:p-8 border border-slate-200 shadow-sm relative animate-in zoom-in-95 duration-300">
           <div className="flex justify-between items-center mb-8 border-b border-slate-100 pb-4">
             <h3 className="text-xl font-black text-slate-800">{form.id ? 'Editar Minuta de Comisión' : 'Nueva Minuta de Comisión'}</h3>
             <button 
@@ -854,7 +854,7 @@ export const MinutasComisiones: React.FC = () => {
         /* MAIN DASHBOARD VIEW (Full-width Horizontal Ficha & Grid list) */
         <div className="space-y-6 sm:space-y-8">
           {/* TOP ADVANCED FILTERS CARD */}
-          <div className="bg-white rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 border border-slate-200 shadow-sm space-y-4">
+          <div className="bg-white rounded-2xl sm:rounded-[2rem] p-3 sm:p-6 border border-slate-200 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 gap-2">
               <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center space-x-2">
                 <Search size={16} className="text-blue-900" />
@@ -957,7 +957,7 @@ export const MinutasComisiones: React.FC = () => {
 
           {selectedMinuta ? (
             /* FULL WIDTH HORIZONTAL FICHA SHEET */
-            <div className="bg-white rounded-2xl sm:rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-500 p-4 sm:p-6 md:p-8 space-y-6 sm:space-y-8">
+            <div className="bg-white rounded-2xl sm:rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-500 p-3 sm:p-6 md:p-8 space-y-5 sm:space-y-8">
               {/* Header row */}
               <div className="space-y-3 sm:space-y-4 border-b border-slate-100 pb-5 sm:pb-6 w-full">
                 <button
@@ -1202,7 +1202,7 @@ export const MinutasComisiones: React.FC = () => {
                       <button
                         key={m.id}
                         onClick={() => setSelectedMinutaId(m.id)}
-                        className="bg-white border border-slate-200/80 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between text-left gap-4 group w-full cursor-pointer"
+                        className="bg-white border border-slate-200/80 rounded-2xl sm:rounded-[2.5rem] p-3 sm:p-6 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between text-left gap-4 group w-full cursor-pointer"
                       >
                         <div className="flex items-start space-x-3 sm:space-x-4 overflow-hidden w-full">
                           {/* Simulated Document / Commission emblem */}
