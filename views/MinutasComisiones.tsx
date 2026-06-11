@@ -959,222 +959,215 @@ export const MinutasComisiones: React.FC = () => {
             /* FULL WIDTH HORIZONTAL FICHA SHEET */
             <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-500 p-8 space-y-8">
               {/* Header row */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-100 pb-6">
-                <div className="space-y-4 grow">
-                  <button
-                    onClick={() => setSelectedMinutaId('')}
-                    className="flex items-center space-x-1.5 px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:text-blue-900 hover:bg-slate-50 transition-all font-black text-xs cursor-pointer shadow-sm w-fit"
-                  >
-                    <ChevronRight size={14} className="rotate-180" />
-                    <span>Regresar al Listado</span>
-                  </button>
-                  
-                  <div className="text-left space-y-2">
-                    <span className="bg-blue-900 text-yellow-400 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
-                      {comisiones.find(c => c.id === selectedMinuta.comisionId)?.nombre || 'Comisión'}
-                    </span>
-                    <h2 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight">
-                      "{selectedMinuta.tema}"
-                    </h2>
-                    <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-405 text-slate-400">
-                      <div className="flex items-center space-x-1">
-                        <Calendar size={13} />
-                        <span>Fecha: {new Date(selectedMinuta.fechaHora).toLocaleDateString()}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Clock size={13} />
-                        <span>Hora: {new Date(selectedMinuta.fechaHora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <FileText size={13} />
-                        <span>ID: {selectedMinuta.id}</span>
-                      </div>
+              <div className="space-y-4 border-b border-slate-100 pb-6 w-full">
+                <button
+                  onClick={() => setSelectedMinutaId('')}
+                  className="flex items-center space-x-1.5 px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:text-blue-900 hover:bg-slate-50 transition-all font-black text-xs cursor-pointer shadow-sm w-fit"
+                >
+                  <ChevronRight size={14} className="rotate-180" />
+                  <span>Regresar al Listado</span>
+                </button>
+                
+                <div className="text-left space-y-2">
+                  <span className="bg-blue-900 text-yellow-400 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                    {comisiones.find(c => c.id === selectedMinuta.comisionId)?.nombre || 'Comisión'}
+                  </span>
+                  <h2 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight w-full break-words">
+                    "{selectedMinuta.tema}"
+                  </h2>
+                  <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-400">
+                    <div className="flex items-center space-x-1">
+                      <Calendar size={13} />
+                      <span>Fecha: {new Date(selectedMinuta.fechaHora).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <Clock size={13} />
+                      <span>Hora: {new Date(selectedMinuta.fechaHora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <FileText size={13} />
+                      <span>ID: {selectedMinuta.id}</span>
                     </div>
                   </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center space-x-2 shrink-0 self-start md:self-center">
-                  <button
-                    onClick={() => {
-                      const comisionNombre = comisiones.find(c => c.id === selectedMinuta.comisionId)?.nombre || 'Comisión';
-                      generateMinutaPDF(selectedMinuta, comisionNombre, socios, 'download');
-                    }}
-                    className="px-5 py-3 bg-yellow-400 hover:bg-yellow-350 text-blue-950 rounded-2xl transition-all hover:scale-[1.02] font-black text-xs flex items-center justify-center space-x-2 shadow-lg shadow-yellow-500/10 cursor-pointer active:scale-95"
-                    title="Descargar PDF de Minuta"
-                  >
-                    <Download size={14} />
-                    <span>Descargar PDF</span>
-                  </button>
-                  <button
-                    onClick={() => handleEdit(selectedMinuta)}
-                    className="px-5 py-3 bg-slate-50 hover:bg-blue-55 hover:bg-blue-50 border border-slate-200 text-slate-600 hover:text-blue-900 rounded-2xl transition-all hover:scale-[1.02] font-black text-xs flex items-center justify-center space-x-2 cursor-pointer active:scale-95"
-                    title="Editar Minuta"
-                  >
-                    <Pencil size={14} />
-                    <span>Editar</span>
-                  </button>
-                  <button
-                    onClick={() => handleDelete(selectedMinuta.id)}
-                    className="px-5 py-3 bg-red-500/90 hover:bg-red-600 text-white rounded-2xl transition-all hover:scale-[1.02] font-black text-xs flex items-center justify-center space-x-2 cursor-pointer active:scale-95"
-                    title="Eliminar Minuta"
-                  >
-                    <Trash2 size={14} />
-                    <span>Eliminar</span>
-                  </button>
                 </div>
               </div>
 
-              {/* Body Layout (Grid) */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Left Column: Attendees & Linked Request (col-span-5) */}
-                <div className="lg:col-span-5 space-y-6">
-                  {/* Attendance Card */}
-                  <div className="bg-slate-50/40 border border-slate-200/60 rounded-3xl p-6 space-y-6">
-                    <h3 className="font-extrabold text-blue-900 text-sm border-b border-slate-100 pb-2 flex items-center space-x-2">
-                      <Users size={16} className="text-blue-900" />
-                      <span>Registro de Asistencia</span>
-                    </h3>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      {/* Miembros */}
-                      <div className="space-y-3">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
-                          Miembros Comisión ({selectedMinuta.miembrosComision.length})
-                        </span>
-                        <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-                          {selectedMinuta.miembrosComision.length === 0 ? (
-                            <p className="text-xs text-slate-400 italic">Sin miembros registrados.</p>
-                          ) : (
-                            selectedMinuta.miembrosComision.map(id => {
-                              const s = socios.find(soc => soc.id === id);
-                              if (!s) return null;
-                              return (
-                                <button
-                                  key={id}
-                                  type="button"
-                                  onClick={() => setSelectedSocioForModal(s)}
-                                  className="w-full flex items-center space-x-2.5 p-2 bg-white rounded-xl border border-slate-200/50 hover:border-slate-300 hover:shadow-sm transition-all text-left cursor-pointer group"
-                                >
-                                  <img src={s.foto || `https://picsum.photos/seed/${s.nombre}/100/100`} className="w-7 h-7 rounded-full object-cover border" alt="" />
-                                  <div className="overflow-hidden">
-                                    <p className="text-xs font-black text-slate-750 group-hover:text-blue-600 transition-colors truncate">{s.nombre}</p>
-                                    {s.puesto && <p className="text-[8px] text-slate-400 uppercase tracking-wider font-bold mt-0.5">{s.puesto}</p>}
-                                  </div>
-                                </button>
-                              );
-                            })
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Invitados */}
-                      <div className="space-y-3">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
-                          Invitados / Otros ({selectedMinuta.otrosParticipantes.length})
-                        </span>
-                        <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-                          {selectedMinuta.otrosParticipantes.length === 0 ? (
-                            <p className="text-xs text-slate-400 italic">Sin invitados adicionales.</p>
-                          ) : (
-                            selectedMinuta.otrosParticipantes.map(id => {
-                              const s = socios.find(soc => soc.id === id);
-                              if (!s) return null;
-                              return (
-                                <button
-                                  key={id}
-                                  type="button"
-                                  onClick={() => setSelectedSocioForModal(s)}
-                                  className="w-full flex items-center space-x-2.5 p-2 bg-white rounded-xl border border-slate-200/50 hover:border-slate-300 hover:shadow-sm transition-all text-left cursor-pointer group"
-                                >
-                                  <img src={s.foto || `https://picsum.photos/seed/${s.nombre}/100/100`} className="w-7 h-7 rounded-full object-cover border" alt="" />
-                                  <div className="overflow-hidden">
-                                    <p className="text-xs font-black text-slate-750 group-hover:text-blue-600 transition-colors truncate">{s.nombre}</p>
-                                    {s.puesto && <p className="text-[8px] text-slate-400 uppercase tracking-wider font-bold mt-0.5">{s.puesto}</p>}
-                                  </div>
-                                </button>
-                              );
-                            })
-                          )}
-                        </div>
-                      </div>
+              {/* Registro de Asistencia */}
+              <div className="bg-slate-50/40 border border-slate-200/60 rounded-3xl p-6 space-y-6 w-full">
+                <h3 className="font-extrabold text-blue-900 text-sm border-b border-slate-100 pb-2 flex items-center space-x-2">
+                  <Users size={16} className="text-blue-900" />
+                  <span>Registro de Asistencia</span>
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Miembros */}
+                  <div className="space-y-3">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                      Miembros Comisión ({selectedMinuta.miembrosComision.length})
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[280px] overflow-y-auto pr-1">
+                      {selectedMinuta.miembrosComision.length === 0 ? (
+                        <p className="text-xs text-slate-400 italic col-span-2">Sin miembros registrados.</p>
+                      ) : (
+                        selectedMinuta.miembrosComision.map(id => {
+                          const s = socios.find(soc => soc.id === id);
+                          if (!s) return null;
+                          return (
+                            <button
+                              key={id}
+                              type="button"
+                              onClick={() => setSelectedSocioForModal(s)}
+                              className="w-full flex items-center space-x-2.5 p-2 bg-white rounded-xl border border-slate-200/50 hover:border-slate-300 hover:shadow-sm transition-all text-left cursor-pointer group"
+                            >
+                              <img src={s.foto || `https://picsum.photos/seed/${s.nombre}/100/100`} className="w-7 h-7 rounded-full object-cover border" alt="" />
+                              <div className="overflow-hidden">
+                                <p className="text-xs font-black text-slate-750 group-hover:text-blue-600 transition-colors truncate">{s.nombre}</p>
+                                {s.puesto && <p className="text-[8px] text-slate-400 uppercase tracking-wider font-bold mt-0.5">{s.puesto}</p>}
+                              </div>
+                            </button>
+                          );
+                        })
+                      )}
                     </div>
                   </div>
 
-                  {/* Linked Request Status */}
-                  {selectedMinuta.solicitudVinculadaId && (() => {
-                    const req = solicitudes.find(s => s.id === selectedMinuta.solicitudVinculadaId);
-                    if (!req) return null;
-                    return (
-                      <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/20 border border-amber-200/60 p-6 rounded-3xl space-y-4 shadow-sm">
-                        <div className="flex justify-between items-center border-b border-amber-200/30 pb-2">
-                          <div className="flex items-center space-x-2 text-amber-900">
-                            <FileText size={16} className="text-amber-500 animate-pulse" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Solicitud Interna Vinculada</span>
-                          </div>
-                          <span className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
-                            req.estado === 'Aprobada' ? 'bg-emerald-100 text-emerald-800' :
-                            req.estado === 'Rechazada' ? 'bg-rose-100 text-rose-800' :
-                            'bg-amber-100 text-amber-800'
-                          }`}>
-                            {req.estado}
-                          </span>
-                        </div>
-                        <div className="space-y-2">
-                          <h5 className="text-sm font-black text-slate-800 leading-tight">{req.nombre}</h5>
-                          <p className="text-xs text-slate-600 font-semibold leading-relaxed italic">"{req.descripcion}"</p>
-                        </div>
-                        
-                        {req.responsables && req.responsables.length > 0 && (
-                          <div className="pt-2 border-t border-amber-200/30 space-y-1.5">
-                            <span className="text-[9px] font-black text-amber-800 uppercase tracking-wider">Responsables designados:</span>
-                            <div className="flex flex-wrap gap-2">
-                              {req.responsables.map((r, idx) => (
-                                <span key={idx} className="bg-amber-100/60 text-amber-900 border border-amber-200 text-[9px] font-bold px-2 py-0.5 rounded-md">
-                                  {r.nombre}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {/* Right Column: Discussion Points (col-span-7) */}
-                <div className="lg:col-span-7 space-y-4">
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center space-x-1.5 border-b border-slate-100 pb-2">
-                    <MessageSquare size={12} className="text-slate-400" />
-                    <span>Temas Discutidos y Acuerdos ({selectedMinuta.puntos.length})</span>
-                  </h4>
-
-                  <div className="space-y-4">
-                    {selectedMinuta.puntos.map((punto, idx) => (
-                      <div key={punto.id || idx} className="flex space-x-4">
-                        <div className="flex flex-col items-center">
-                          <div className="w-8 h-8 rounded-full bg-blue-900 text-yellow-400 border border-blue-955 border-blue-950 flex items-center justify-center text-sm font-black shrink-0">
-                            {idx + 1}
-                          </div>
-                          {idx < selectedMinuta.puntos.length - 1 && (
-                            <div className="w-0.5 bg-slate-200 grow my-1"></div>
-                          )}
-                        </div>
-                        <div className="bg-white border border-slate-200 rounded-3xl p-5 grow space-y-2 shadow-sm hover:shadow-md transition-all duration-300">
-                          <h5 className="font-black text-base text-slate-800 leading-snug break-words">
-                            {punto.punto}
-                          </h5>
-                          <p className="text-sm text-slate-600 leading-relaxed font-semibold italic break-words border-l-2 border-slate-200 pl-3.5">
-                            "{punto.discusion}"
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                  {/* Invitados */}
+                  <div className="space-y-3">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                      Invitados / Otros ({selectedMinuta.otrosParticipantes.length})
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[280px] overflow-y-auto pr-1">
+                      {selectedMinuta.otrosParticipantes.length === 0 ? (
+                        <p className="text-xs text-slate-400 italic col-span-2">Sin invitados adicionales.</p>
+                      ) : (
+                        selectedMinuta.otrosParticipantes.map(id => {
+                          const s = socios.find(soc => soc.id === id);
+                          if (!s) return null;
+                          return (
+                            <button
+                              key={id}
+                              type="button"
+                              onClick={() => setSelectedSocioForModal(s)}
+                              className="w-full flex items-center space-x-2.5 p-2 bg-white rounded-xl border border-slate-200/50 hover:border-slate-300 hover:shadow-sm transition-all text-left cursor-pointer group"
+                            >
+                              <img src={s.foto || `https://picsum.photos/seed/${s.nombre}/100/100`} className="w-7 h-7 rounded-full object-cover border" alt="" />
+                              <div className="overflow-hidden">
+                                <p className="text-xs font-black text-slate-750 group-hover:text-blue-600 transition-colors truncate">{s.nombre}</p>
+                                {s.puesto && <p className="text-[8px] text-slate-400 uppercase tracking-wider font-bold mt-0.5">{s.puesto}</p>}
+                              </div>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Temas Discutidos y Acuerdos (Puntos) */}
+              <div className="space-y-4 w-full">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center space-x-1.5 border-b border-slate-100 pb-2">
+                  <MessageSquare size={12} className="text-slate-400" />
+                  <span>Temas Discutidos y Acuerdos ({selectedMinuta.puntos.length})</span>
+                </h4>
+
+                <div className="space-y-4">
+                  {selectedMinuta.puntos.map((punto, idx) => (
+                    <div key={punto.id || idx} className="flex space-x-4">
+                      <div className="flex flex-col items-center">
+                        <div className="w-8 h-8 rounded-full bg-blue-900 text-yellow-400 border border-blue-950 flex items-center justify-center text-sm font-black shrink-0">
+                          {idx + 1}
+                        </div>
+                        {idx < selectedMinuta.puntos.length - 1 && (
+                          <div className="w-0.5 bg-slate-200 grow my-1"></div>
+                        )}
+                      </div>
+                      <div className="bg-white border border-slate-200 rounded-3xl p-5 grow space-y-2 shadow-sm hover:shadow-md transition-all duration-300">
+                        <h5 className="font-black text-base text-slate-800 leading-snug break-words">
+                          {punto.punto}
+                        </h5>
+                        <p className="text-sm text-slate-600 leading-relaxed font-semibold italic break-words border-l-2 border-slate-200 pl-3.5">
+                          "{punto.discusion}"
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Solicitud Interna Vinculada (abajo de los puntos) */}
+              {selectedMinuta.solicitudVinculadaId && (() => {
+                const req = solicitudes.find(s => s.id === selectedMinuta.solicitudVinculadaId);
+                if (!req) return null;
+                return (
+                  <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/20 border border-amber-200/60 p-6 rounded-3xl space-y-4 shadow-sm w-full">
+                    <div className="flex justify-between items-center border-b border-amber-200/30 pb-2">
+                      <div className="flex items-center space-x-2 text-amber-900">
+                        <FileText size={16} className="text-amber-500 animate-pulse" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Solicitud Interna Vinculada</span>
+                      </div>
+                      <span className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                        req.estado === 'Aprobada' ? 'bg-emerald-100 text-emerald-800' :
+                        req.estado === 'Rechazada' ? 'bg-rose-100 text-rose-800' :
+                        'bg-amber-100 text-amber-800'
+                      }`}>
+                        {req.estado}
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      <h5 className="text-sm font-black text-slate-800 leading-tight">{req.nombre}</h5>
+                      <p className="text-xs text-slate-600 font-semibold leading-relaxed italic">"{req.descripcion}"</p>
+                    </div>
+                    
+                    {req.responsables && req.responsables.length > 0 && (
+                      <div className="pt-2 border-t border-amber-200/30 space-y-1.5">
+                        <span className="text-[9px] font-black text-amber-800 uppercase tracking-wider">Responsables designados:</span>
+                        <div className="flex flex-wrap gap-2">
+                          {req.responsables.map((r, idx) => (
+                            <span key={idx} className="bg-amber-100/60 text-amber-900 border border-amber-200 text-[9px] font-bold px-2 py-0.5 rounded-md">
+                              {r.nombre}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Acciones (Descargar PDF, Editar, Eliminar al final de la ficha) */}
+              <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-100 pt-6 w-full">
+                <button
+                  onClick={() => {
+                    const comisionNombre = comisiones.find(c => c.id === selectedMinuta.comisionId)?.nombre || 'Comisión';
+                    generateMinutaPDF(selectedMinuta, comisionNombre, socios, 'download');
+                  }}
+                  className="px-5 py-3 bg-yellow-400 hover:bg-yellow-350 text-blue-955 text-blue-900 rounded-2xl transition-all hover:scale-[1.02] font-black text-xs flex items-center justify-center space-x-2 shadow-lg shadow-yellow-500/10 cursor-pointer active:scale-95"
+                  title="Descargar PDF de Minuta"
+                >
+                  <Download size={14} />
+                  <span>Descargar PDF</span>
+                </button>
+                <button
+                  onClick={() => handleEdit(selectedMinuta)}
+                  className="px-5 py-3 bg-slate-50 hover:bg-blue-50 border border-slate-200 text-slate-600 hover:text-blue-900 rounded-2xl transition-all hover:scale-[1.02] font-black text-xs flex items-center justify-center space-x-2 cursor-pointer active:scale-95"
+                  title="Editar Minuta"
+                >
+                  <Pencil size={14} />
+                  <span>Editar</span>
+                </button>
+                <button
+                  onClick={() => handleDelete(selectedMinuta.id)}
+                  className="px-5 py-3 bg-red-500/90 hover:bg-red-600 text-white rounded-2xl transition-all hover:scale-[1.02] font-black text-xs flex items-center justify-center space-x-2 cursor-pointer active:scale-95"
+                  title="Eliminar Minuta"
+                >
+                  <Trash2 size={14} />
+                  <span>Eliminar</span>
+                </button>
               </div>
             </div>
           ) : (
+
             /* LIST OF MINUTAS (GRID OF HORIZONTAL CARDS) */
             <div className="space-y-6">
               <div className="flex justify-between items-center px-2">
