@@ -59,6 +59,7 @@ import { compressImageFile } from '../utils/imageCompressor';
 import { ParqueoManager } from '../components/ParqueoManager';
 import { Presupuestos } from './Presupuestos';
 import { Comisiones } from './Comisiones';
+import { MinutasComisiones } from './MinutasComisiones';
 
 
 const PUESTOS_PREDEFINIDOS = [
@@ -103,20 +104,20 @@ interface SuperAdminProps {
   onUpdateUser?: (user: Socio) => void;
 }
 
-type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones';
+type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas';
 
 const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   // Dynamic Tab Access based on Role
   const allowedTabs = useMemo(() => {
     switch (user.rol) {
       case UserRole.SUPER_ADMIN:
-        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones'];
+        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas'];
       case UserRole.TESORERO:
         return ['resumen', 'socios', 'cuotas', 'donaciones', 'parqueo', 'presupuestos'];
       case UserRole.SECRETARIO:
-        return ['resumen', 'socios', 'calendario', 'actas', 'comisiones'];
+        return ['resumen', 'socios', 'calendario', 'actas', 'comisiones', 'minutas'];
       case UserRole.ASESOR_SERVICIOS:
-        return ['socios', 'calendario', 'beneficios'];
+        return ['socios', 'calendario', 'beneficios', 'minutas'];
       case UserRole.PRESIDENTE_AFILIACION:
         return ['resumen', 'socios', 'cuotas'];
       default:
@@ -1474,6 +1475,12 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 items: [
                   { id: 'socios', label: 'Gestión de Socios', icon: Users }
                 ]
+              },
+              {
+                category: 'Comité de Servicio',
+                items: [
+                  { id: 'minutas', label: 'Minutas de Comisiones', icon: FileText }
+                ]
               }
             ].map(group => {
               const visibleItems = group.items.filter(tab => allowedTabs.includes(tab.id));
@@ -1538,6 +1545,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     { id: 'parqueo', label: 'Gestión de Parqueo', icon: Car },
                     { id: 'presupuestos', label: 'Presupuestos', icon: DollarSign },
                     { id: 'comisiones', label: 'Gestión de Comisiones', icon: Briefcase },
+                    { id: 'minutas', label: 'Minutas de Comisiones', icon: FileText },
                   ].find(t => t.id === activeTab);
                   if (currentTab) {
                     const Icon = currentTab.icon;
@@ -1557,12 +1565,13 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     { id: 'parqueo', label: 'Gestión de Parqueo' },
                     { id: 'presupuestos', label: 'Presupuestos' },
                     { id: 'comisiones', label: 'Gestión de Comisiones' },
+                    { id: 'minutas', label: 'Minutas de Comisiones' },
                   ].find(t => t.id === activeTab)?.label}
                 </span>
               </div>
               <ChevronDown size={18} className={`text-white transition-transform duration-300 ${isMobileMenuOpen ? 'rotate-180' : ''}`} />
             </button>
-
+ 
             {isMobileMenuOpen && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200/80 py-2.5 z-40 animate-in fade-in slide-in-from-top-2 duration-300 max-h-[60vh] overflow-y-auto">
                 {[
@@ -1594,6 +1603,12 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     category: 'Comité de Afiliación',
                     items: [
                       { id: 'socios', label: 'Gestión de Socios', icon: Users }
+                    ]
+                  },
+                  {
+                    category: 'Comité de Servicio',
+                    items: [
+                      { id: 'minutas', label: 'Minutas de Comisiones', icon: FileText }
                     ]
                   }
                 ].map(group => {
@@ -4486,6 +4501,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           )}
           {activeTab === 'comisiones' && (
             <Comisiones />
+          )}
+          {activeTab === 'minutas' && (
+            <MinutasComisiones />
           )}
         </main>
       </div>

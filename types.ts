@@ -203,3 +203,20 @@ export interface Comision {
   fechaCreacion: string;
   estado: 'Activa' | 'Inactiva';
 }
+
+export interface MinutaPunto {
+  id: string;
+  punto: string;
+  discusion: string;
+}
+
+export interface MinutaComision {
+  id: string;
+  tema: string;
+  comisionId: string;
+  miembrosComision: string[];
+  otrosParticipantes: string[];
+  fechaHora: string;
+  puntos: MinutaPunto[];
+  solicitudVinculadaId?: string;
+}

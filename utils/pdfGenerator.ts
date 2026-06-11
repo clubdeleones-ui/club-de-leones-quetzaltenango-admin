@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { Acta } from '../types';
+import { Acta, MinutaComision, Socio } from '../types';
 
 export const generateActaCode = (
   categoria: string,
@@ -615,4 +615,205 @@ export const generateReciboPagoPDF = (socio: any, pago: any) => {
 
   const cleanName = socio.nombre.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   doc.save(`recibo-cuota-${cleanName}-${pago.id.split('-')[1] || 'pago'}.pdf`);
+};
+
+export const generateMinutaPDF = (
+  minuta: MinutaComision,
+  comisionNombre: string,
+  socios: Socio[],
+  action: 'download' | 'open' = 'download'
+) => {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'letter'
+  });
+
+  const margin = 20;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const contentWidth = pageWidth - (margin * 2);
+
+  // Header Blue Bar (Primary Color)
+  doc.setFillColor(27, 54, 93); // Blue-900
+  doc.rect(0, 0, pageWidth, 15, 'F');
+  
+  // Header Gold Bar (Secondary Accent Color)
+  doc.setFillColor(234, 179, 8); // Yellow-500
+  doc.rect(0, 15, pageWidth, 2, 'F');
+
+  // Draw Logo
+  const logoX = margin;
+  const logoY = 22;
+  const logoRadius = 7;
+  doc.setFillColor(27, 54, 93);
+  doc.circle(logoX + logoRadius, logoY + logoRadius, logoRadius, 'F');
+  doc.setDrawColor(234, 179, 8);
+  doc.setLineWidth(0.5);
+  doc.circle(logoX + logoRadius, logoY + logoRadius, logoRadius - 0.5, 'S');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(234, 179, 8);
+  doc.text('L', logoX + logoRadius, logoY + logoRadius + 4.5, { align: 'center' });
+
+  // Title Branding
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(27, 54, 93);
+  doc.text('CLUB DE LEONES DE QUETZALTENANGO', logoX + 18, logoY + 5.5);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(217, 119, 6);
+  doc.text('MINUTA DE REUNIÓN DE COMISIÓN', logoX + 18, logoY + 11.5);
+
+  // Metadata block
+  const metaY = 42;
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(margin, metaY, contentWidth, 24, 2.5, 2.5, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(71, 85, 105);
+
+  const col1X = margin + 4;
+  const col2X = margin + (contentWidth / 2) + 4;
+
+  doc.text('TEMA / DISCUSIÓN:', col1X, metaY + 6.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(27, 54, 93);
+  doc.text(minuta.tema.substring(0, 50) + (minuta.tema.length > 50 ? '...' : ''), col1X + 35, metaY + 6.5);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(71, 85, 105);
+  doc.text('COMISIÓN:', col1X, metaY + 14.5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(comisionNombre, col1X + 35, metaY + 14.5);
+
+  const formattedDate = new Date(minuta.fechaHora).toLocaleDateString('es-GT', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  }) + ' - ' + new Date(minuta.fechaHora).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('FECHA Y HORA:', col2X, metaY + 14.5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(formattedDate, col2X + 35, metaY + 14.5);
+
+  // Participants block
+  const miembrosNombres = minuta.miembrosComision
+    .map(id => socios.find(s => s.id === id)?.nombre || '')
+    .filter(Boolean)
+    .join(', ');
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('ASISTENTES COMISIÓN:', col1X, metaY + 20.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.text(miembrosNombres.substring(0, 80) + (miembrosNombres.length > 80 ? '...' : ''), col1X + 38, metaY + 20.5);
+
+  let y = 72;
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const bottomMargin = 22;
+
+  const checkPageOverflow = (neededHeight: number) => {
+    if (y + neededHeight > pageHeight - bottomMargin) {
+      doc.addPage();
+      doc.setFillColor(27, 54, 93);
+      doc.rect(0, 0, pageWidth, 12, 'F');
+      doc.setFillColor(234, 179, 8);
+      doc.rect(0, 12, pageWidth, 1.5, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text(`Minuta: ${minuta.tema} - Página ${doc.internal.pages.length - 1}`, margin, 18);
+      y = 26;
+    }
+  };
+
+  // Title for discussion points
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(27, 54, 93);
+  doc.text('PUNTOS DISCUTIDOS Y ACUERDOS TOMADOS:', margin, y);
+  y += 8;
+
+  minuta.puntos.forEach((p, idx) => {
+    checkPageOverflow(30);
+
+    // Number circle representation
+    doc.setFillColor(27, 54, 93);
+    doc.circle(margin + 3, y + 2, 3, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(255, 255, 255);
+    doc.text((idx + 1).toString(), margin + 3, y + 3, { align: 'center' });
+
+    // Title of the point
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10.5);
+    doc.setTextColor(27, 54, 93);
+    doc.text(p.punto, margin + 9, y + 2.5);
+    y += 7;
+
+    // Discussion text
+    doc.setFont('times', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(51, 65, 85);
+
+    const splitDiscusion = doc.splitTextToSize(p.discusion, contentWidth - 12);
+    splitDiscusion.forEach((subLine: string) => {
+      checkPageOverflow(6.5);
+      doc.text(subLine, margin + 9, y);
+      y += 5.5;
+    });
+
+    y += 4; // spacing between points
+  });
+
+  // Footer / stamp section
+  checkPageOverflow(30);
+  y += 10;
+  doc.setDrawColor(217, 119, 6);
+  doc.setLineWidth(0.25);
+  const stampW = 70;
+  const stampH = 7;
+  const stampX = (pageWidth - stampW) / 2;
+  doc.roundedRect(stampX, y, stampW, stampH, 1.5, 1.5, 'S');
+  
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7);
+  doc.setTextColor(217, 119, 6);
+  doc.text('REGISTRO DE MINUTAS - COMITÉ DE SERVICIO', pageWidth / 2, y + 4.8, { align: 'center' });
+
+  // Document Footer (all pages)
+  const pageCount = doc.internal.pages.length - 1;
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.text(
+      'Documento de carácter privado y confidencial - Club de Leones de Quetzaltenango © 2026', 
+      margin, 
+      pageHeight - 10
+    );
+    doc.text(
+      `Pág. ${i} de ${pageCount}`, 
+      pageWidth - margin - 15, 
+      pageHeight - 10
+    );
+  }
+
+  // Handle PDF Output
+  if (action === 'open') {
+    const blob = doc.output('blob');
+    const blobUrl = URL.createObjectURL(blob);
+    window.open(blobUrl, '_blank');
+  } else {
+    const cleanTitle = minuta.tema.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    doc.save(`minuta-${cleanTitle}.pdf`);
+  }
 };

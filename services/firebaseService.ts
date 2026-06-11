@@ -12,7 +12,7 @@ import {
   limit
 } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision } from "../types";
+import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision } from "../types";
 
 export const firebaseService = {
   // Upload candidate photo to Firebase Storage (Supports Base64 data_url format)
@@ -430,6 +430,47 @@ export const firebaseService = {
       await deleteDoc(docRef);
     } catch (error) {
       console.error("Error deleting comision:", error);
+      throw error;
+    }
+  },
+
+  getMinutas: async (): Promise<MinutaComision[]> => {
+    try {
+      const colRef = collection(db, "minutas");
+      const snapshot = await getDocs(colRef);
+      const list: MinutaComision[] = [];
+      snapshot.forEach(doc => {
+        list.push({ id: doc.id, ...doc.data() } as MinutaComision);
+      });
+      return list;
+    } catch (error) {
+      console.error("Error fetching minutas:", error);
+      throw error;
+    }
+  },
+
+  saveMinuta: async (minuta: MinutaComision): Promise<void> => {
+    try {
+      const { id, ...data } = minuta;
+      if (id) {
+        const docRef = doc(db, "minutas", id);
+        await setDoc(docRef, data, { merge: true });
+      } else {
+        const newDocRef = doc(collection(db, "minutas"));
+        await setDoc(newDocRef, data);
+      }
+    } catch (error) {
+      console.error("Error saving minuta:", error);
+      throw error;
+    }
+  },
+
+  deleteMinuta: async (id: string): Promise<void> => {
+    try {
+      const docRef = doc(db, "minutas", id);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting minuta:", error);
       throw error;
     }
   },
