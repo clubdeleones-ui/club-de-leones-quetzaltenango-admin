@@ -141,12 +141,7 @@ export const MinutasComisiones: React.FC = () => {
     };
   }, []);
 
-  // Set default selected minuta
-  useEffect(() => {
-    if (minutas.length > 0 && !selectedMinutaId) {
-      setSelectedMinutaId(minutas[0].id);
-    }
-  }, [minutas, selectedMinutaId]);
+
 
   // Selected Minuta Details
   const selectedMinuta = useMemo(() => {
