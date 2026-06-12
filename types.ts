@@ -120,7 +120,19 @@ export interface PropuestaSocio {
   hijos?: string;
   nombreEsposa?: string;
   habilitarOpinion?: boolean;
-  opiniones?: { id: string; fecha: string; comentario: string }[];
+  opiniones?: { 
+    id: string; 
+    fecha: string; 
+    comentario: string;
+    metadatos?: {
+      navegador: string;
+      sistemaOperativo: string;
+      dispositivo: string;
+      idioma: string;
+      resolucion: string;
+      zonaHoraria: string;
+    };
+  }[];
 }
 
 export interface Responsable {

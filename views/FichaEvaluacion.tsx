@@ -44,6 +44,40 @@ export const FichaEvaluacion: React.FC = () => {
     fetchProposal();
   }, [id]);
 
+  const obtenerMetadatosTecnicos = () => {
+    const ua = navigator.userAgent;
+    
+    let os = "Desconocido";
+    if (ua.indexOf("Win") !== -1) os = "Windows";
+    else if (ua.indexOf("Mac") !== -1) os = "macOS";
+    else if (ua.indexOf("Linux") !== -1) os = "Linux";
+    else if (ua.indexOf("Android") !== -1) os = "Android";
+    else if (ua.indexOf("like Mac") !== -1) os = "iOS";
+
+    let browser = "Desconocido";
+    if (ua.indexOf("Chrome") !== -1) browser = "Chrome";
+    else if (ua.indexOf("Safari") !== -1) browser = "Safari";
+    else if (ua.indexOf("Firefox") !== -1) browser = "Firefox";
+    else if (ua.indexOf("MSIE") !== -1 || !!(document as any).documentMode) browser = "IE";
+    else if (ua.indexOf("Edge") !== -1) browser = "Edge";
+
+    let device = "Escritorio";
+    if (/Mobi|Android|iPhone/i.test(ua)) {
+      device = "Móvil";
+    } else if (/Tablet|iPad/i.test(ua)) {
+      device = "Tablet";
+    }
+
+    return {
+      navegador: browser,
+      sistemaOperativo: os,
+      dispositivo: device,
+      idioma: navigator.language || "es",
+      resolucion: `${window.screen.width}x${window.screen.height}`,
+      zonaHoraria: Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Guatemala"
+    };
+  };
+
   const handleSubmitOpinion = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!proposal || !comentario.trim()) return;
@@ -59,7 +93,8 @@ export const FichaEvaluacion: React.FC = () => {
           hour: '2-digit',
           minute: '2-digit'
         }),
-        comentario: comentario.trim()
+        comentario: comentario.trim(),
+        metadatos: obtenerMetadatosTecnicos()
       };
 
       const updatedOpiniones = [...(proposal.opiniones || []), newOpinion];

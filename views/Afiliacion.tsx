@@ -815,6 +815,25 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                           <p className="text-slate-700 leading-relaxed font-semibold break-words">
                             "{op.comentario}"
                           </p>
+                          {op.metadatos && (
+                            <div className="flex flex-wrap gap-1 pt-1.5">
+                              <span className="bg-slate-100 text-[9px] font-bold text-slate-500 px-2 py-0.5 rounded-md" title="Sistema Operativo">
+                                💻 {op.metadatos.sistemaOperativo}
+                              </span>
+                              <span className="bg-slate-100 text-[9px] font-bold text-slate-500 px-2 py-0.5 rounded-md" title="Navegador">
+                                🌐 {op.metadatos.navegador}
+                              </span>
+                              <span className="bg-slate-100 text-[9px] font-bold text-slate-500 px-2 py-0.5 rounded-md" title="Tipo de Dispositivo">
+                                📱 {op.metadatos.dispositivo}
+                              </span>
+                              <span className="bg-slate-100 text-[9px] font-bold text-slate-500 px-2 py-0.5 rounded-md" title="Resolución de pantalla">
+                                🖥️ {op.metadatos.resolucion}
+                              </span>
+                              <span className="bg-slate-100 text-[9px] font-bold text-slate-500 px-2 py-0.5 rounded-md truncate max-w-[120px]" title={`Zona horaria: ${op.metadatos.zonaHoraria}`}>
+                                🕒 {op.metadatos.zonaHoraria.split('/').pop()?.replace('_', ' ')}
+                              </span>
+                            </div>
+                          )}
                         </div>
                         <button
                           type="button"
