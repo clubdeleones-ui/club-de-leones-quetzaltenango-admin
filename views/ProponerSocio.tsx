@@ -123,7 +123,9 @@ const ProponerSocio: React.FC = () => {
         estado: 'Pendiente',
         estadoCivil,
         hijos,
-        nombreEsposa: estadoCivil === 'Casado' ? nombreEsposa : undefined
+        nombreEsposa: estadoCivil === 'Casado' ? nombreEsposa : undefined,
+        presidenteComision: 'Rolando José Daniel Mérida del Valle',
+        habilitarOpinion: true
       };
 
       let isSynced = false;

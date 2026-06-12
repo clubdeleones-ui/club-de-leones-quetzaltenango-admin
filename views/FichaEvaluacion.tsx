@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { firebaseService } from '../services/firebaseService';
 import { PropuestaSocio } from '../types';
 import { useToast } from '../context/ToastContext';
@@ -21,6 +21,7 @@ import {
 export const FichaEvaluacion: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { showToast } = useToast();
   const [proposal, setProposal] = useState<PropuestaSocio | null>(null);
   const [allProposals, setAllProposals] = useState<PropuestaSocio[]>([]);
@@ -80,6 +81,14 @@ export const FichaEvaluacion: React.FC = () => {
         const all = await firebaseService.getProposals();
         const pending = all.filter(p => p.estado === 'Pendiente');
         setAllProposals(pending);
+
+        const isMobile = window.innerWidth < 768 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
+        const fromNavigation = location.state?.fromNavigation;
+
+        if (isMobile && !fromNavigation && pending.length > 0 && id !== pending[0].id) {
+          navigate(`/ficha-evaluacion/${pending[0].id}`, { replace: true, state: { fromNavigation: true } });
+          return;
+        }
       } catch (err) {
         console.error("Error fetching proposal or all:", err);
         showToast("Error al cargar la información", "error");
@@ -218,13 +227,13 @@ export const FichaEvaluacion: React.FC = () => {
 
       <div className="max-w-xl mx-auto px-4 pt-6 space-y-4">
         {/* President of Commission Header Banner */}
-        {proposal.presidenteComision && (
-          <div className="bg-blue-900 text-white rounded-2xl p-4 shadow-md flex items-center justify-between border border-blue-950/20">
+        {(proposal.presidenteComision || 'Rolando José Daniel Mérida del Valle') && (
+          <div className="bg-blue-900 text-white rounded-2xl p-4 shadow-md flex items-center justify-between border border-blue-955/20">
             <div className="flex items-center space-x-3 min-w-0">
               <span className="p-2 bg-white/10 rounded-xl text-yellow-400 shrink-0"><User size={18} /></span>
               <div className="min-w-0 flex-1 flex flex-col justify-center">
                 <p className="text-[9px] text-blue-200 font-extrabold uppercase tracking-widest leading-none">Presidente de la Comisión de Afiliación</p>
-                <h2 className="font-black text-sm text-white mt-1 truncate">{proposal.presidenteComision}</h2>
+                <h2 className="font-black text-sm text-white mt-1 truncate">{proposal.presidenteComision || 'Rolando José Daniel Mérida del Valle'}</h2>
               </div>
             </div>
             <span className="text-[9px] font-black bg-yellow-500 text-blue-955 px-2.5 py-1 rounded-lg uppercase tracking-wider shrink-0 hidden sm:inline-block">
@@ -235,25 +244,25 @@ export const FichaEvaluacion: React.FC = () => {
 
         {/* Progress Indicator with Navigation Arrows */}
         {allProposals.length > 1 && currentIndex !== -1 && (
-          <div className="flex items-center justify-between bg-white border border-slate-200/80 px-4 py-3 rounded-2xl shadow-sm text-xs">
+          <div className="flex items-center justify-between bg-white border border-slate-200/80 px-5 py-4 rounded-3xl shadow-sm text-xs">
             <button
               onClick={() => {
                 if (currentIndex > 0) {
                   const prevId = allProposals[currentIndex - 1].id;
                   setComentario('');
                   setSubmitted(false);
-                  navigate(`/ficha-evaluacion/${prevId}`);
+                  navigate(`/ficha-evaluacion/${prevId}`, { state: { fromNavigation: true } });
                 }
               }}
               disabled={currentIndex === 0}
-              className="p-1.5 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-2 bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-900 border border-blue-200/60 rounded-xl disabled:opacity-40 disabled:bg-slate-50 disabled:text-slate-350 disabled:border-slate-100 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-sm"
               title="Anterior Candidato"
             >
-              <ChevronLeft size={16} />
+              <ChevronLeft size={24} strokeWidth={2.5} />
             </button>
-            <div className="flex items-center space-x-1.5 font-bold text-slate-600">
+            <div className="flex items-center space-x-2 font-bold text-slate-655 text-sm">
               <span>Candidato:</span>
-              <span className="font-black text-blue-900 bg-blue-50 px-2.5 py-1 rounded-lg">
+              <span className="font-black text-blue-900 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl">
                 {currentIndex + 1} de {allProposals.length}
               </span>
             </div>
@@ -263,14 +272,14 @@ export const FichaEvaluacion: React.FC = () => {
                   const nextId = allProposals[currentIndex + 1].id;
                   setComentario('');
                   setSubmitted(false);
-                  navigate(`/ficha-evaluacion/${nextId}`);
+                  navigate(`/ficha-evaluacion/${nextId}`, { state: { fromNavigation: true } });
                 }
               }}
               disabled={currentIndex === allProposals.length - 1}
-              className="p-1.5 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-2 bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-900 border border-blue-200/60 rounded-xl disabled:opacity-40 disabled:bg-slate-50 disabled:text-slate-350 disabled:border-slate-100 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-sm"
               title="Siguiente Candidato"
             >
-              <ChevronRight size={16} />
+              <ChevronRight size={24} strokeWidth={2.5} />
             </button>
           </div>
         )}
@@ -481,25 +490,25 @@ export const FichaEvaluacion: React.FC = () => {
 
         {/* Bottom Progress Indicator with Navigation Arrows (Duplicated) */}
         {allProposals.length > 1 && currentIndex !== -1 && (
-          <div className="flex items-center justify-between bg-white border border-slate-200/80 px-4 py-3 rounded-2xl shadow-sm text-xs">
+          <div className="flex items-center justify-between bg-white border border-slate-200/80 px-5 py-4 rounded-3xl shadow-sm text-xs">
             <button
               onClick={() => {
                 if (currentIndex > 0) {
                   const prevId = allProposals[currentIndex - 1].id;
                   setComentario('');
                   setSubmitted(false);
-                  navigate(`/ficha-evaluacion/${prevId}`);
+                  navigate(`/ficha-evaluacion/${prevId}`, { state: { fromNavigation: true } });
                 }
               }}
               disabled={currentIndex === 0}
-              className="p-1.5 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-2 bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-900 border border-blue-200/60 rounded-xl disabled:opacity-40 disabled:bg-slate-50 disabled:text-slate-350 disabled:border-slate-100 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-sm"
               title="Anterior Candidato"
             >
-              <ChevronLeft size={16} />
+              <ChevronLeft size={24} strokeWidth={2.5} />
             </button>
-            <div className="flex items-center space-x-1.5 font-bold text-slate-600">
+            <div className="flex items-center space-x-2 font-bold text-slate-655 text-sm">
               <span>Candidato:</span>
-              <span className="font-black text-blue-900 bg-blue-50 px-2.5 py-1 rounded-lg">
+              <span className="font-black text-blue-900 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl">
                 {currentIndex + 1} de {allProposals.length}
               </span>
             </div>
@@ -509,14 +518,14 @@ export const FichaEvaluacion: React.FC = () => {
                   const nextId = allProposals[currentIndex + 1].id;
                   setComentario('');
                   setSubmitted(false);
-                  navigate(`/ficha-evaluacion/${nextId}`);
+                  navigate(`/ficha-evaluacion/${nextId}`, { state: { fromNavigation: true } });
                 }
               }}
               disabled={currentIndex === allProposals.length - 1}
-              className="p-1.5 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-2 bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-900 border border-blue-200/60 rounded-xl disabled:opacity-40 disabled:bg-slate-50 disabled:text-slate-355 disabled:border-slate-100 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-sm"
               title="Siguiente Candidato"
             >
-              <ChevronRight size={16} />
+              <ChevronRight size={24} strokeWidth={2.5} />
             </button>
           </div>
         )}

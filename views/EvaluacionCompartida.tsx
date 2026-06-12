@@ -204,13 +204,13 @@ export const EvaluacionCompartida: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         {/* President of Commission Header Banner */}
-        {currentProposal.presidenteComision && (
-          <div className="bg-blue-900 text-white rounded-2xl p-4 shadow-md flex items-center justify-between border border-blue-950/20">
+        {(currentProposal.presidenteComision || 'Rolando José Daniel Mérida del Valle') && (
+          <div className="bg-blue-900 text-white rounded-2xl p-4 shadow-md flex items-center justify-between border border-blue-955/20">
             <div className="flex items-center space-x-3 min-w-0">
               <span className="p-2 bg-white/10 rounded-xl text-yellow-400 shrink-0"><User size={18} /></span>
               <div className="min-w-0 flex-1 flex flex-col justify-center">
                 <p className="text-[9px] text-blue-200 font-extrabold uppercase tracking-widest leading-none">Presidente de la Comisión de Afiliación</p>
-                <h2 className="font-black text-sm text-white mt-1 truncate">{currentProposal.presidenteComision}</h2>
+                <h2 className="font-black text-sm text-white mt-1 truncate">{currentProposal.presidenteComision || 'Rolando José Daniel Mérida del Valle'}</h2>
               </div>
             </div>
             <span className="text-[9px] font-black bg-yellow-500 text-blue-955 px-2.5 py-1 rounded-lg uppercase tracking-wider shrink-0 hidden sm:inline-block">
@@ -461,7 +461,7 @@ export const EvaluacionCompartida: React.FC = () => {
         {/* Mobile Swipeable Gallery (One profile per page) */}
         <div className="md:hidden space-y-5">
           {/* Progress Indicator with Navigation Arrows */}
-          <div className="flex items-center justify-between bg-white border border-slate-200/80 px-4 py-3 rounded-2xl shadow-sm text-xs">
+          <div className="flex items-center justify-between bg-white border border-slate-200/80 px-5 py-4 rounded-3xl shadow-sm text-xs">
             <button
               onClick={() => {
                 if (selectedIndex > 0) {
@@ -471,14 +471,14 @@ export const EvaluacionCompartida: React.FC = () => {
                 }
               }}
               disabled={selectedIndex === 0}
-              className="p-1.5 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-2 bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-900 border border-blue-200/60 rounded-xl disabled:opacity-40 disabled:bg-slate-50 disabled:text-slate-355 disabled:border-slate-100 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-sm"
               title="Anterior Candidato"
             >
-              <ChevronLeft size={16} />
+              <ChevronLeft size={24} strokeWidth={2.5} />
             </button>
-            <div className="flex items-center space-x-1.5 font-bold text-slate-600">
+            <div className="flex items-center space-x-2 font-bold text-slate-655 text-sm">
               <span>Candidato:</span>
-              <span className="font-black text-blue-900 bg-blue-50 px-2.5 py-1 rounded-lg">
+              <span className="font-black text-blue-900 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl">
                 {selectedIndex + 1} de {proposals.length}
               </span>
             </div>
@@ -491,10 +491,10 @@ export const EvaluacionCompartida: React.FC = () => {
                 }
               }}
               disabled={selectedIndex === proposals.length - 1}
-              className="p-1.5 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-2 bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-900 border border-blue-200/60 rounded-xl disabled:opacity-40 disabled:bg-slate-50 disabled:text-slate-355 disabled:border-slate-100 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-sm"
               title="Siguiente Candidato"
             >
-              <ChevronRight size={16} />
+              <ChevronRight size={24} strokeWidth={2.5} />
             </button>
           </div>
 
@@ -700,7 +700,7 @@ export const EvaluacionCompartida: React.FC = () => {
           </div>
 
           {/* Bottom Progress Indicator with Navigation Arrows (Duplicated) */}
-          <div className="flex items-center justify-between bg-white border border-slate-200/80 px-4 py-3 rounded-2xl shadow-sm text-xs">
+          <div className="flex items-center justify-between bg-white border border-slate-200/80 px-5 py-4 rounded-3xl shadow-sm text-xs">
             <button
               onClick={() => {
                 if (selectedIndex > 0) {
@@ -710,14 +710,14 @@ export const EvaluacionCompartida: React.FC = () => {
                 }
               }}
               disabled={selectedIndex === 0}
-              className="p-1.5 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-2 bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-900 border border-blue-200/60 rounded-xl disabled:opacity-40 disabled:bg-slate-50 disabled:text-slate-355 disabled:border-slate-100 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-sm"
               title="Anterior Candidato"
             >
-              <ChevronLeft size={16} />
+              <ChevronLeft size={24} strokeWidth={2.5} />
             </button>
-            <div className="flex items-center space-x-1.5 font-bold text-slate-600">
+            <div className="flex items-center space-x-2 font-bold text-slate-655 text-sm">
               <span>Candidato:</span>
-              <span className="font-black text-blue-900 bg-blue-50 px-2.5 py-1 rounded-lg">
+              <span className="font-black text-blue-900 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl">
                 {selectedIndex + 1} de {proposals.length}
               </span>
             </div>
@@ -730,10 +730,10 @@ export const EvaluacionCompartida: React.FC = () => {
                 }
               }}
               disabled={selectedIndex === proposals.length - 1}
-              className="p-1.5 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-2 bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-900 border border-blue-200/60 rounded-xl disabled:opacity-40 disabled:bg-slate-50 disabled:text-slate-355 disabled:border-slate-100 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-sm"
               title="Siguiente Candidato"
             >
-              <ChevronRight size={16} />
+              <ChevronRight size={24} strokeWidth={2.5} />
             </button>
           </div>
         </div>
