@@ -32,6 +32,7 @@ import {
   CheckCircle, 
   AlertTriangle, 
   UserPlus,
+  UserCheck,
   Trash2,
   Filter,
   Check,
@@ -60,7 +61,7 @@ import { ParqueoManager } from '../components/ParqueoManager';
 import { Presupuestos } from './Presupuestos';
 import { Comisiones } from './Comisiones';
 import { MinutasComisiones } from './MinutasComisiones';
-
+import { Afiliacion } from './Afiliacion';
 
 const PUESTOS_PREDEFINIDOS = [
   'Presidente del Club',
@@ -104,14 +105,14 @@ interface SuperAdminProps {
   onUpdateUser?: (user: Socio) => void;
 }
 
-type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas';
+type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas' | 'afiliacion';
 
 const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   // Dynamic Tab Access based on Role
   const allowedTabs = useMemo(() => {
     switch (user.rol) {
       case UserRole.SUPER_ADMIN:
-        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas'];
+        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion'];
       case UserRole.TESORERO:
         return ['resumen', 'socios', 'cuotas', 'donaciones', 'parqueo', 'presupuestos'];
       case UserRole.SECRETARIO:
@@ -119,7 +120,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
       case UserRole.ASESOR_SERVICIOS:
         return ['socios', 'calendario', 'beneficios', 'minutas'];
       case UserRole.PRESIDENTE_AFILIACION:
-        return ['resumen', 'socios', 'cuotas'];
+        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion'];
       default:
         return [];
     }
@@ -1473,7 +1474,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               {
                 category: 'Comité de Afiliación',
                 items: [
-                  { id: 'socios', label: 'Gestión de Socios', icon: Users }
+                  { id: 'socios', label: 'Gestión de Socios', icon: Users },
+                  { id: 'afiliacion', label: 'Comité de Afiliación', icon: UserCheck }
                 ]
               },
               {
@@ -1546,6 +1548,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     { id: 'presupuestos', label: 'Presupuestos', icon: DollarSign },
                     { id: 'comisiones', label: 'Gestión de Comisiones', icon: Briefcase },
                     { id: 'minutas', label: 'Minutas de Comisiones', icon: FileText },
+                    { id: 'afiliacion', label: 'Comité de Afiliación', icon: UserCheck }
                   ].find(t => t.id === activeTab);
                   if (currentTab) {
                     const Icon = currentTab.icon;
@@ -1566,6 +1569,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     { id: 'presupuestos', label: 'Presupuestos' },
                     { id: 'comisiones', label: 'Gestión de Comisiones' },
                     { id: 'minutas', label: 'Minutas de Comisiones' },
+                    { id: 'afiliacion', label: 'Comité de Afiliación' },
                   ].find(t => t.id === activeTab)?.label}
                 </span>
               </div>
@@ -1602,7 +1606,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   {
                     category: 'Comité de Afiliación',
                     items: [
-                      { id: 'socios', label: 'Gestión de Socios', icon: Users }
+                      { id: 'socios', label: 'Gestión de Socios', icon: Users },
+                      { id: 'afiliacion', label: 'Comité de Afiliación', icon: UserCheck }
                     ]
                   },
                   {
@@ -4504,6 +4509,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           )}
           {activeTab === 'minutas' && (
             <MinutasComisiones />
+          )}
+          {activeTab === 'afiliacion' && (
+            <Afiliacion user={user} />
           )}
         </main>
       </div>
