@@ -217,6 +217,22 @@ export const FichaEvaluacion: React.FC = () => {
       </div>
 
       <div className="max-w-xl mx-auto px-4 pt-6 space-y-4">
+        {/* President of Commission Header Banner */}
+        {proposal.presidenteComision && (
+          <div className="bg-blue-900 text-white rounded-2xl p-4 shadow-md flex items-center justify-between border border-blue-950/20">
+            <div className="flex items-center space-x-3 min-w-0">
+              <span className="p-2 bg-white/10 rounded-xl text-yellow-400 shrink-0"><User size={18} /></span>
+              <div className="min-w-0 flex-1 flex flex-col justify-center">
+                <p className="text-[9px] text-blue-200 font-extrabold uppercase tracking-widest leading-none">Presidente de la Comisión de Afiliación</p>
+                <h2 className="font-black text-sm text-white mt-1 truncate">{proposal.presidenteComision}</h2>
+              </div>
+            </div>
+            <span className="text-[9px] font-black bg-yellow-500 text-blue-955 px-2.5 py-1 rounded-lg uppercase tracking-wider shrink-0 hidden sm:inline-block">
+              Coordinador
+            </span>
+          </div>
+        )}
+
         {/* Progress Indicator with Navigation Arrows */}
         {allProposals.length > 1 && currentIndex !== -1 && (
           <div className="flex items-center justify-between bg-white border border-slate-200/80 px-4 py-3 rounded-2xl shadow-sm text-xs">
@@ -288,15 +304,6 @@ export const FichaEvaluacion: React.FC = () => {
           </div>
 
           <div className="p-5 sm:p-6 space-y-6">
-            {proposal.presidenteComision && (
-              <div className="bg-blue-50/60 border border-blue-100/40 rounded-2xl p-3 flex items-center space-x-2.5 text-xs text-blue-900 shadow-sm/10">
-                <span className="p-1.5 bg-blue-100/80 rounded-xl text-blue-800 shrink-0"><User size={14} /></span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] text-blue-800 font-extrabold uppercase tracking-wider leading-none">Presidente de Comisión</p>
-                  <p className="font-black text-slate-800 mt-0.5 truncate">{proposal.presidenteComision}</p>
-                </div>
-              </div>
-            )}
             {/* Candidate Header */}
             <div className="flex items-start space-x-4">
               <div className="w-20 h-20 rounded-2xl overflow-hidden bg-slate-150 border-4 border-slate-50 shadow-md shrink-0">

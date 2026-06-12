@@ -202,7 +202,23 @@ export const EvaluacionCompartida: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        {/* President of Commission Header Banner */}
+        {currentProposal.presidenteComision && (
+          <div className="bg-blue-900 text-white rounded-2xl p-4 shadow-md flex items-center justify-between border border-blue-950/20">
+            <div className="flex items-center space-x-3 min-w-0">
+              <span className="p-2 bg-white/10 rounded-xl text-yellow-400 shrink-0"><User size={18} /></span>
+              <div className="min-w-0 flex-1 flex flex-col justify-center">
+                <p className="text-[9px] text-blue-200 font-extrabold uppercase tracking-widest leading-none">Presidente de la Comisión de Afiliación</p>
+                <h2 className="font-black text-sm text-white mt-1 truncate">{currentProposal.presidenteComision}</h2>
+              </div>
+            </div>
+            <span className="text-[9px] font-black bg-yellow-500 text-blue-955 px-2.5 py-1 rounded-lg uppercase tracking-wider shrink-0 hidden sm:inline-block">
+              Coordinador
+            </span>
+          </div>
+        )}
+
         {/* Desktop Split Layout (Master-Detail) */}
         <div className="hidden md:grid grid-cols-12 gap-8 items-start">
           {/* Sidebar: List of candidates */}
@@ -252,15 +268,6 @@ export const EvaluacionCompartida: React.FC = () => {
           {/* Main Content Area (Selected Candidate details) */}
           <div className="col-span-8 space-y-6">
             <div className="bg-white border border-slate-200/80 rounded-[2rem] p-8 shadow-sm space-y-6">
-              {currentProposal.presidenteComision && (
-                <div className="bg-blue-50/60 border border-blue-100/40 rounded-2xl p-3 flex items-center space-x-2.5 text-xs text-blue-900 shadow-sm/10">
-                  <span className="p-1.5 bg-blue-100/80 rounded-xl text-blue-800 shrink-0"><User size={14} /></span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] text-blue-800 font-extrabold uppercase tracking-wider leading-none">Presidente de Comisión</p>
-                    <p className="font-black text-slate-800 mt-0.5 truncate">{currentProposal.presidenteComision}</p>
-                  </div>
-                </div>
-              )}
               {/* Top Meta Info */}
               <div className="flex justify-between items-center pb-4 border-b border-slate-100">
                 <div className="flex items-center space-x-2">
@@ -506,15 +513,6 @@ export const EvaluacionCompartida: React.FC = () => {
 
           {/* Active Candidate Card */}
           <div className="bg-white border border-slate-200/80 rounded-[2rem] p-5 shadow-sm space-y-5 relative overflow-hidden">
-            {currentProposal.presidenteComision && (
-              <div className="bg-blue-50/60 border border-blue-100/40 rounded-xl p-2.5 flex items-center space-x-2 text-[11px] text-blue-900 shadow-sm/10">
-                <span className="p-1 bg-blue-100/80 rounded-lg text-blue-800 shrink-0"><User size={12} /></span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[9px] text-blue-800 font-extrabold uppercase tracking-wider leading-none">Presidente de Comisión</p>
-                  <p className="font-black text-slate-800 mt-0.5 truncate">{currentProposal.presidenteComision}</p>
-                </div>
-              </div>
-            )}
             {/* Header info */}
             <div className="flex items-center space-x-4">
               <img
