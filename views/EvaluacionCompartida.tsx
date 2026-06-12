@@ -25,6 +25,45 @@ export const EvaluacionCompartida: React.FC = () => {
   const [comentario, setComentario] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submittedId, setSubmittedId] = useState<string | null>(null);
+  const currentProposal = proposals[selectedIndex];
+  const [timeLeft, setTimeLeft] = useState<string | null>(null);
+  const [isExpired, setIsExpired] = useState(false);
+
+  useEffect(() => {
+    if (!currentProposal || !currentProposal.fechaLimiteOpinion) {
+      setTimeLeft(null);
+      setIsExpired(false);
+      return;
+    }
+
+    const calculateTimeLeft = () => {
+      const difference = +new Date(currentProposal.fechaLimiteOpinion!) - +new Date();
+      if (difference <= 0) {
+        setIsExpired(true);
+        setTimeLeft("Expirado");
+        return;
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((difference / 1000 / 60) % 60);
+      const seconds = Math.floor((difference / 1000) % 60);
+
+      const parts = [];
+      if (days > 0) parts.push(`${days}d`);
+      if (hours > 0 || days > 0) parts.push(`${hours}h`);
+      parts.push(`${minutes}m`);
+      parts.push(`${seconds}s`);
+
+      setTimeLeft(parts.join(' '));
+      setIsExpired(false);
+    };
+
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+
+    return () => clearInterval(timer);
+  }, [currentProposal]);
 
   useEffect(() => {
     const fetchProposals = async () => {
@@ -143,9 +182,6 @@ export const EvaluacionCompartida: React.FC = () => {
       </div>
     );
   }
-
-  const currentProposal = proposals[selectedIndex];
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100/60 pb-12">
       {/* Header Branding */}
