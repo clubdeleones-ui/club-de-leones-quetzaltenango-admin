@@ -22,6 +22,7 @@ const ProponerSocio = lazy(() => import('./views/ProponerSocio'));
 const Donar = lazy(() => import('./views/Donar'));
 const Solicitudes = lazy(() => import('./views/Solicitudes'));
 const FichaEvaluacion = lazy(() => import('./views/FichaEvaluacion').then(m => ({ default: m.FichaEvaluacion })));
+const EvaluacionCompartida = lazy(() => import('./views/EvaluacionCompartida').then(m => ({ default: m.EvaluacionCompartida })));
 
 // ProtectedRoute moved outside of App to resolve typing errors and improve performance
 interface ProtectedRouteProps {
@@ -112,6 +113,7 @@ const App: React.FC = () => {
             <Route path="/donar" element={<Donar />} />
             <Route path="/solicitudes" element={<Solicitudes user={auth.user} />} />
             <Route path="/ficha-evaluacion/:id" element={<FichaEvaluacion />} />
+            <Route path="/evaluacion-compartida" element={<EvaluacionCompartida />} />
 
             <Route path="/login" element={auth.isAuthenticated ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />} />
 

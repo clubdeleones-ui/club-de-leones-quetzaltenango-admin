@@ -50,6 +50,8 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
   const [isCompressingPhoto, setIsCompressingPhoto] = useState(false);
   const [isSavingPropuesta, setIsSavingPropuesta] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [isOpenCollectiveModal, setIsOpenCollectiveModal] = useState(false);
+  const [copiedCollective, setCopiedCollective] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleProposalImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -187,6 +189,15 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
           <h2 className="text-3xl font-black text-blue-900">Comité de Afiliación</h2>
           <p className="text-sm font-bold text-slate-500 mt-1 uppercase tracking-wider">Gestión y Aprobación de Candidatos</p>
         </div>
+        {canEditPropuestas && (
+          <button
+            onClick={() => setIsOpenCollectiveModal(true)}
+            className="bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs px-5 py-3.5 rounded-2xl shadow-lg shadow-indigo-900/10 flex items-center space-x-2 transition-all active:scale-95 self-stretch sm:self-auto justify-center shrink-0"
+          >
+            <Share2 size={15} />
+            <span>Compartir Evaluación Colectiva</span>
+          </button>
+        )}
       </div>
 
       {errorMsg && (
@@ -839,6 +850,137 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
               <button
                 type="button"
                 onClick={() => setShareConfigPropuesta(null)}
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all text-xs"
+              >
+                Cerrar Ventana
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* COLLECTIVE SHARE MODAL */}
+      {isOpenCollectiveModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 sm:p-10 space-y-6 relative animate-in zoom-in-95 duration-300">
+            <button 
+              type="button"
+              onClick={() => setIsOpenCollectiveModal(false)}
+              className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="space-y-1">
+              <h2 className="text-xl sm:text-2xl font-black text-blue-900">Enlace de Evaluación Colectiva</h2>
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Enviar todos los postulados pendientes en un solo link</p>
+            </div>
+
+            <div className="space-y-6">
+              {/* Share Link */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">
+                  Enlace Colectivo (Muestra todos los candidatos activos)
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={`${window.location.origin}${window.location.pathname}#/evaluacion-compartida`}
+                    className="flex-1 px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 text-xs font-semibold select-all text-slate-600 truncate"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const link = `${window.location.origin}${window.location.pathname}#/evaluacion-compartida`;
+                      navigator.clipboard.writeText(link);
+                      setCopiedCollective(true);
+                      setTimeout(() => setCopiedCollective(false), 2000);
+                    }}
+                    className={`px-5 py-3 rounded-xl font-black text-xs transition-all flex items-center justify-center space-x-1.5 shrink-0 ${
+                      copiedCollective 
+                        ? 'bg-emerald-600 text-white' 
+                        : 'bg-indigo-900 hover:bg-indigo-850 text-white active:scale-95'
+                    }`}
+                  >
+                    {copiedCollective ? <Check size={14} /> : <Copy size={14} />}
+                    <span>{copiedCollective ? 'Copiado!' : 'Copiar Link'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* List of candidates for quick configuration */}
+              <div className="space-y-3 pt-4 border-t border-slate-100">
+                <h3 className="text-sm font-black text-slate-800">
+                  Configuración de opiniones por Candidato
+                </h3>
+                <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                  Activa o desactiva la recepción de opiniones de forma individual para cada postulado.
+                </p>
+
+                <div className="space-y-3 max-h-[35vh] overflow-y-auto pr-1">
+                  {propuestas.filter(p => p.estado === 'Pendiente').length > 0 ? (
+                    propuestas.filter(p => p.estado === 'Pendiente').map((prop) => (
+                      <div 
+                        key={prop.id} 
+                        className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex items-center justify-between gap-4"
+                      >
+                        <div className="flex items-center space-x-3 min-w-0">
+                          <img
+                            src={prop.fotoCandidato || `https://picsum.photos/seed/${prop.id}/100/100`}
+                            alt={prop.nombreCandidato}
+                            className="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <h4 className="font-black text-xs text-slate-800 truncate">
+                              {prop.nombreCandidato}
+                            </h4>
+                            <p className="text-[10px] text-slate-450 truncate font-semibold">
+                              {prop.profesionCandidato}
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const nextVal = !prop.habilitarOpinion;
+                            const updated = { ...prop, habilitarOpinion: nextVal };
+                            setPropuestas(propuestas.map(p => p.id === updated.id ? updated : p));
+                            
+                            if (shareConfigPropuesta && shareConfigPropuesta.id === prop.id) {
+                              setShareConfigPropuesta(updated);
+                            }
+
+                            try {
+                              await firebaseService.updateProposal(updated.id, { habilitarOpinion: nextVal });
+                            } catch (err) {
+                              console.error("Error setting proposal opinion flag:", err);
+                            }
+                          }}
+                          className={`w-12 h-7 rounded-full transition-colors relative shrink-0 ${
+                            prop.habilitarOpinion ? 'bg-blue-900' : 'bg-slate-300'
+                          }`}
+                        >
+                          <span className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white transition-transform ${
+                            prop.habilitarOpinion ? 'translate-x-5' : 'translate-x-0'
+                          }`} />
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-slate-455 italic font-medium bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                      No hay propuestas pendientes en evaluación.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsOpenCollectiveModal(false)}
                 className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all text-xs"
               >
                 Cerrar Ventana
