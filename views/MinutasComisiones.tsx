@@ -1201,17 +1201,21 @@ export const MinutasComisiones: React.FC = () => {
                       >
                         <div className="flex items-start space-x-3 sm:space-x-4 overflow-hidden w-full">
                           {/* Simulated Document / Commission emblem */}
-                          <div className="w-10 h-14 sm:w-12 sm:h-16 bg-blue-900 rounded-xl relative shrink-0 flex flex-col justify-between p-1.5 overflow-hidden group-hover:scale-105 transition-transform border border-blue-950 select-none shadow-sm">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500" />
-                            <div className="text-[5px] text-yellow-400 font-black tracking-widest text-center mt-0.5 uppercase">
+                          <div className="w-10 h-14 sm:w-12 sm:h-16 bg-yellow-400 rounded-xl relative shrink-0 flex flex-col justify-between p-1.5 overflow-hidden group-hover:scale-105 transition-transform border border-yellow-500 select-none shadow-sm">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-blue-900" />
+                            <div className="text-[5px] text-blue-900 font-black tracking-widest text-center mt-0.5 uppercase">
                               LEONES
                             </div>
-                            <div className="text-center z-10">
-                              <span className="block text-[5px] sm:text-[6px] font-black text-white leading-none">MINUTA</span>
+                            {/* Seal background logo */}
+                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-blue-900/5 text-2xl sm:text-3xl font-black select-none pointer-events-none">
+                              L
                             </div>
-                            <div className="flex justify-between items-center z-10 text-white">
+                            <div className="text-center z-10">
+                              <span className="block text-[5px] sm:text-[6px] font-black text-blue-900 leading-none">MINUTA</span>
+                            </div>
+                            <div className="flex justify-between items-center z-10 text-blue-900">
                               <span className="text-[5px] font-black">L</span>
-                              <span className="text-[5px] text-slate-350 font-extrabold">{new Date(m.fechaHora).getFullYear()}</span>
+                              <span className="text-[5px] text-blue-900/80 font-extrabold">{new Date(m.fechaHora).getFullYear()}</span>
                             </div>
                           </div>
 
