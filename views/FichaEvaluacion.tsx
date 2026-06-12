@@ -288,6 +288,15 @@ export const FichaEvaluacion: React.FC = () => {
           </div>
 
           <div className="p-5 sm:p-6 space-y-6">
+            {proposal.presidenteComision && (
+              <div className="bg-blue-50/60 border border-blue-100/40 rounded-2xl p-3 flex items-center space-x-2.5 text-xs text-blue-900 shadow-sm/10">
+                <span className="p-1.5 bg-blue-100/80 rounded-xl text-blue-800 shrink-0"><User size={14} /></span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] text-blue-800 font-extrabold uppercase tracking-wider leading-none">Presidente de Comisión</p>
+                  <p className="font-black text-slate-800 mt-0.5 truncate">{proposal.presidenteComision}</p>
+                </div>
+              </div>
+            )}
             {/* Candidate Header */}
             <div className="flex items-start space-x-4">
               <div className="w-20 h-20 rounded-2xl overflow-hidden bg-slate-150 border-4 border-slate-50 shadow-md shrink-0">

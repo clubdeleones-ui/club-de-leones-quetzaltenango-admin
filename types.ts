@@ -121,6 +121,7 @@ export interface PropuestaSocio {
   nombreEsposa?: string;
   habilitarOpinion?: boolean;
   fechaLimiteOpinion?: string;
+  presidenteComision?: string;
   opiniones?: { 
     id: string; 
     fecha: string; 

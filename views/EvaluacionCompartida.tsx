@@ -252,6 +252,15 @@ export const EvaluacionCompartida: React.FC = () => {
           {/* Main Content Area (Selected Candidate details) */}
           <div className="col-span-8 space-y-6">
             <div className="bg-white border border-slate-200/80 rounded-[2rem] p-8 shadow-sm space-y-6">
+              {currentProposal.presidenteComision && (
+                <div className="bg-blue-50/60 border border-blue-100/40 rounded-2xl p-3 flex items-center space-x-2.5 text-xs text-blue-900 shadow-sm/10">
+                  <span className="p-1.5 bg-blue-100/80 rounded-xl text-blue-800 shrink-0"><User size={14} /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] text-blue-800 font-extrabold uppercase tracking-wider leading-none">Presidente de Comisión</p>
+                    <p className="font-black text-slate-800 mt-0.5 truncate">{currentProposal.presidenteComision}</p>
+                  </div>
+                </div>
+              )}
               {/* Top Meta Info */}
               <div className="flex justify-between items-center pb-4 border-b border-slate-100">
                 <div className="flex items-center space-x-2">
@@ -497,6 +506,15 @@ export const EvaluacionCompartida: React.FC = () => {
 
           {/* Active Candidate Card */}
           <div className="bg-white border border-slate-200/80 rounded-[2rem] p-5 shadow-sm space-y-5 relative overflow-hidden">
+            {currentProposal.presidenteComision && (
+              <div className="bg-blue-50/60 border border-blue-100/40 rounded-xl p-2.5 flex items-center space-x-2 text-[11px] text-blue-900 shadow-sm/10">
+                <span className="p-1 bg-blue-100/80 rounded-lg text-blue-800 shrink-0"><User size={12} /></span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[9px] text-blue-800 font-extrabold uppercase tracking-wider leading-none">Presidente de Comisión</p>
+                  <p className="font-black text-slate-800 mt-0.5 truncate">{currentProposal.presidenteComision}</p>
+                </div>
+              </div>
+            )}
             {/* Header info */}
             <div className="flex items-center space-x-4">
               <img

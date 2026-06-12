@@ -22,7 +22,8 @@ import {
   Share2,
   Copy,
   Check,
-  MessageSquare
+  MessageSquare,
+  User
 } from 'lucide-react';
 
 interface AfiliacionProps {
@@ -792,6 +793,40 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                 </div>
               )}
 
+              {/* President of Commission Configuration */}
+              {shareConfigPropuesta.habilitarOpinion && (
+                <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 space-y-3">
+                  <div className="space-y-1">
+                    <label className="block text-sm font-black text-slate-800">
+                      Presidente de la Comisión de Afiliación
+                    </label>
+                    <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                      Selecciona al presidente designado para coordinar y recibir esta consulta.
+                    </p>
+                  </div>
+                  <select
+                    value={shareConfigPropuesta.presidenteComision || ''}
+                    onChange={async (e) => {
+                      const val = e.target.value;
+                      const updated = { ...shareConfigPropuesta, presidenteComision: val || undefined };
+                      setPropuestas(propuestas.map(p => p.id === updated.id ? updated : p));
+                      setShareConfigPropuesta(updated);
+                      try {
+                        await firebaseService.updateProposal(updated.id, { presidenteComision: val || null });
+                      } catch (err) {
+                        console.error("Error setting proposal commission president:", err);
+                      }
+                    }}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700"
+                  >
+                    <option value="">No designado</option>
+                    {socios.map(socio => (
+                      <option key={socio.id} value={socio.nombre}>{socio.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* Share Link Generation */}
               <div className="space-y-2">
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">
@@ -1029,6 +1064,42 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                   }}
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-900 focus:border-transparent outline-none transition-all text-xs"
                 />
+              </div>
+
+              {/* President of Commission configuration for the entire list */}
+              <div className="space-y-2 bg-indigo-50/50 border border-indigo-100 rounded-2xl p-4">
+                <label className="block text-xs font-black text-indigo-950 uppercase tracking-wider flex items-center">
+                  <User size={14} className="mr-1.5 text-indigo-700" />
+                  Presidente de la Comisión (Toda la lista)
+                </label>
+                <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                  Asigna al presidente de la comisión de afiliación que coordinará esta lista colectiva de consulta.
+                </p>
+                <select
+                  value={propuestas.filter(p => p.estado === 'Pendiente').find(p => p.presidenteComision)?.presidenteComision || ''}
+                  onChange={async (e) => {
+                    const val = e.target.value;
+                    const updatedPropuestas = propuestas.map(p => 
+                      p.estado === 'Pendiente' ? { ...p, presidenteComision: val || undefined } : p
+                    );
+                    setPropuestas(updatedPropuestas);
+                    
+                    const pending = propuestas.filter(p => p.estado === 'Pendiente');
+                    for (const prop of pending) {
+                      try {
+                        await firebaseService.updateProposal(prop.id, { presidenteComision: val || null });
+                      } catch (err) {
+                        console.error("Error setting proposal commission president:", err);
+                      }
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-900 focus:border-transparent outline-none transition-all text-xs text-slate-700"
+                >
+                  <option value="">No designado</option>
+                  {socios.map(socio => (
+                    <option key={socio.id} value={socio.nombre}>{socio.nombre}</option>
+                  ))}
+                </select>
               </div>
 
               {/* List of candidates for quick configuration */}
