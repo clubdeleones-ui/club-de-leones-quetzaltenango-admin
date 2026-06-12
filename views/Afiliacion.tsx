@@ -999,6 +999,38 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                 </div>
               </div>
 
+              {/* Deadline configuration for the entire list */}
+              <div className="space-y-2 bg-indigo-50/50 border border-indigo-100 rounded-2xl p-4">
+                <label className="block text-xs font-black text-indigo-950 uppercase tracking-wider flex items-center">
+                  <Clock size={14} className="mr-1.5 text-indigo-700 animate-pulse" />
+                  Límite para opinar (Toda la lista)
+                </label>
+                <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                  Establece una fecha y hora límite unificada para todos los candidatos que tienen habilitada la consulta de opinión en esta lista.
+                </p>
+                <input
+                  type="datetime-local"
+                  value={propuestas.filter(p => p.estado === 'Pendiente').find(p => p.fechaLimiteOpinion)?.fechaLimiteOpinion || ''}
+                  onChange={async (e) => {
+                    const val = e.target.value;
+                    const updatedPropuestas = propuestas.map(p => 
+                      p.estado === 'Pendiente' ? { ...p, fechaLimiteOpinion: val || undefined } : p
+                    );
+                    setPropuestas(updatedPropuestas);
+                    
+                    const pending = propuestas.filter(p => p.estado === 'Pendiente');
+                    for (const prop of pending) {
+                      try {
+                        await firebaseService.updateProposal(prop.id, { fechaLimiteOpinion: val || null });
+                      } catch (err) {
+                        console.error("Error setting proposal opinion date limit:", err);
+                      }
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-900 focus:border-transparent outline-none transition-all text-xs"
+                />
+              </div>
+
               {/* List of candidates for quick configuration */}
               <div className="space-y-3 pt-4 border-t border-slate-100">
                 <h3 className="text-sm font-black text-slate-800">
@@ -1058,27 +1090,6 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                             }`} />
                           </button>
                         </div>
-
-                        {prop.habilitarOpinion && (
-                          <div className="pt-2 border-t border-slate-250 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[10px]">
-                            <span className="font-bold text-slate-500 shrink-0">Límite para opinar:</span>
-                            <input
-                              type="datetime-local"
-                              value={prop.fechaLimiteOpinion || ''}
-                              onChange={async (e) => {
-                                const val = e.target.value;
-                                const updated = { ...prop, fechaLimiteOpinion: val || undefined };
-                                setPropuestas(propuestas.map(p => p.id === updated.id ? updated : p));
-                                try {
-                                  await firebaseService.updateProposal(updated.id, { fechaLimiteOpinion: val || null });
-                                } catch (err) {
-                                  console.error("Error setting proposal opinion date limit:", err);
-                                }
-                              }}
-                              className="px-2 py-1 border border-slate-200 rounded-lg bg-white font-semibold text-slate-655 focus:ring-1 focus:ring-blue-900 focus:border-transparent outline-none transition-all w-full sm:w-auto text-[9.5px]"
-                            />
-                          </div>
-                        )}
                       </div>
                     ))
                   ) : (
