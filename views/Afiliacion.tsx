@@ -762,6 +762,36 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                 </button>
               </div>
 
+              {/* Date Limit Configuration */}
+              {shareConfigPropuesta.habilitarOpinion && (
+                <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 space-y-3">
+                  <div className="space-y-1">
+                    <label className="block text-sm font-black text-slate-800">
+                      Fecha y Hora Límite
+                    </label>
+                    <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                      Define el momento límite para recibir opiniones. Deja vacío si no deseas establecer un límite de tiempo.
+                    </p>
+                  </div>
+                  <input
+                    type="datetime-local"
+                    value={shareConfigPropuesta.fechaLimiteOpinion || ''}
+                    onChange={async (e) => {
+                      const val = e.target.value;
+                      const updated = { ...shareConfigPropuesta, fechaLimiteOpinion: val || undefined };
+                      setPropuestas(propuestas.map(p => p.id === updated.id ? updated : p));
+                      setShareConfigPropuesta(updated);
+                      try {
+                        await firebaseService.updateProposal(updated.id, { fechaLimiteOpinion: val || null });
+                      } catch (err) {
+                        console.error("Error setting proposal opinion date limit:", err);
+                      }
+                    }}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-600"
+                  />
+                </div>
+              )}
+
               {/* Share Link Generation */}
               <div className="space-y-2">
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">
@@ -983,49 +1013,72 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                     propuestas.filter(p => p.estado === 'Pendiente').map((prop) => (
                       <div 
                         key={prop.id} 
-                        className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex items-center justify-between gap-4"
+                        className="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-3"
                       >
-                        <div className="flex items-center space-x-3 min-w-0">
-                          <img
-                            src={prop.fotoCandidato || `https://picsum.photos/seed/${prop.id}/100/100`}
-                            alt={prop.nombreCandidato}
-                            className="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0"
-                          />
-                          <div className="min-w-0">
-                            <h4 className="font-black text-xs text-slate-800 truncate">
-                              {prop.nombreCandidato}
-                            </h4>
-                            <p className="text-[10px] text-slate-450 truncate font-semibold">
-                              {prop.profesionCandidato}
-                            </p>
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center space-x-3 min-w-0">
+                            <img
+                              src={prop.fotoCandidato || `https://picsum.photos/seed/${prop.id}/100/100`}
+                              alt={prop.nombreCandidato}
+                              className="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <h4 className="font-black text-xs text-slate-800 truncate">
+                                {prop.nombreCandidato}
+                              </h4>
+                              <p className="text-[10px] text-slate-450 truncate font-semibold">
+                                {prop.profesionCandidato}
+                              </p>
+                            </div>
                           </div>
+
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const nextVal = !prop.habilitarOpinion;
+                              const updated = { ...prop, habilitarOpinion: nextVal };
+                              setPropuestas(propuestas.map(p => p.id === updated.id ? updated : p));
+                              
+                              if (shareConfigPropuesta && shareConfigPropuesta.id === prop.id) {
+                                setShareConfigPropuesta(updated);
+                              }
+
+                              try {
+                                await firebaseService.updateProposal(updated.id, { habilitarOpinion: nextVal });
+                              } catch (err) {
+                                console.error("Error setting proposal opinion flag:", err);
+                              }
+                            }}
+                            className={`w-12 h-7 rounded-full transition-colors relative shrink-0 ${
+                              prop.habilitarOpinion ? 'bg-blue-900' : 'bg-slate-300'
+                            }`}
+                          >
+                            <span className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white transition-transform ${
+                              prop.habilitarOpinion ? 'translate-x-5' : 'translate-x-0'
+                            }`} />
+                          </button>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            const nextVal = !prop.habilitarOpinion;
-                            const updated = { ...prop, habilitarOpinion: nextVal };
-                            setPropuestas(propuestas.map(p => p.id === updated.id ? updated : p));
-                            
-                            if (shareConfigPropuesta && shareConfigPropuesta.id === prop.id) {
-                              setShareConfigPropuesta(updated);
-                            }
-
-                            try {
-                              await firebaseService.updateProposal(updated.id, { habilitarOpinion: nextVal });
-                            } catch (err) {
-                              console.error("Error setting proposal opinion flag:", err);
-                            }
-                          }}
-                          className={`w-12 h-7 rounded-full transition-colors relative shrink-0 ${
-                            prop.habilitarOpinion ? 'bg-blue-900' : 'bg-slate-300'
-                          }`}
-                        >
-                          <span className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white transition-transform ${
-                            prop.habilitarOpinion ? 'translate-x-5' : 'translate-x-0'
-                          }`} />
-                        </button>
+                        {prop.habilitarOpinion && (
+                          <div className="pt-2 border-t border-slate-250 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[10px]">
+                            <span className="font-bold text-slate-500 shrink-0">Límite para opinar:</span>
+                            <input
+                              type="datetime-local"
+                              value={prop.fechaLimiteOpinion || ''}
+                              onChange={async (e) => {
+                                const val = e.target.value;
+                                const updated = { ...prop, fechaLimiteOpinion: val || undefined };
+                                setPropuestas(propuestas.map(p => p.id === updated.id ? updated : p));
+                                try {
+                                  await firebaseService.updateProposal(updated.id, { fechaLimiteOpinion: val || null });
+                                } catch (err) {
+                                  console.error("Error setting proposal opinion date limit:", err);
+                                }
+                              }}
+                              className="px-2 py-1 border border-slate-200 rounded-lg bg-white font-semibold text-slate-655 focus:ring-1 focus:ring-blue-900 focus:border-transparent outline-none transition-all w-full sm:w-auto text-[9.5px]"
+                            />
+                          </div>
+                        )}
                       </div>
                     ))
                   ) : (

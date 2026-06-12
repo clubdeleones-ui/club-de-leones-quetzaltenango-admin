@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { firebaseService } from '../services/firebaseService';
 import { PropuestaSocio } from '../types';
 import { useToast } from '../context/ToastContext';
@@ -14,34 +14,80 @@ import {
   Users, 
   Clock, 
   Heart,
-  ChevronLeft
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 export const FichaEvaluacion: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { showToast } = useToast();
   const [proposal, setProposal] = useState<PropuestaSocio | null>(null);
+  const [allProposals, setAllProposals] = useState<PropuestaSocio[]>([]);
   const [loading, setLoading] = useState(true);
   const [comentario, setComentario] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<string | null>(null);
+  const [isExpired, setIsExpired] = useState(false);
 
   useEffect(() => {
-    const fetchProposal = async () => {
+    if (!proposal || !proposal.fechaLimiteOpinion) {
+      setTimeLeft(null);
+      setIsExpired(false);
+      return;
+    }
+
+    const calculateTimeLeft = () => {
+      const difference = +new Date(proposal.fechaLimiteOpinion!) - +new Date();
+      if (difference <= 0) {
+        setIsExpired(true);
+        setTimeLeft("Expirado");
+        return;
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((difference / 1000 / 60) % 60);
+      const seconds = Math.floor((difference / 1000) % 60);
+
+      const parts = [];
+      if (days > 0) parts.push(`${days}d`);
+      if (hours > 0 || days > 0) parts.push(`${hours}h`);
+      parts.push(`${minutes}m`);
+      parts.push(`${seconds}s`);
+
+      setTimeLeft(parts.join(' '));
+      setIsExpired(false);
+    };
+
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+
+    return () => clearInterval(timer);
+  }, [proposal]);
+
+  useEffect(() => {
+    const fetchProposalAndAll = async () => {
       if (!id) return;
       try {
         const data = await firebaseService.getProposalById(id);
         if (data) {
           setProposal(data);
         }
+        
+        // Fetch all pending proposals for navigation
+        const all = await firebaseService.getProposals();
+        const pending = all.filter(p => p.estado === 'Pendiente');
+        setAllProposals(pending);
       } catch (err) {
-        console.error("Error fetching proposal:", err);
-        showToast("Error al cargar la ficha del candidato", "error");
+        console.error("Error fetching proposal or all:", err);
+        showToast("Error al cargar la información", "error");
       } finally {
         setLoading(false);
       }
     };
-    fetchProposal();
+    fetchProposalAndAll();
   }, [id]);
 
   const obtenerMetadatosTecnicos = () => {
@@ -150,6 +196,8 @@ export const FichaEvaluacion: React.FC = () => {
     );
   }
 
+  const currentIndex = allProposals.findIndex(p => p.id === id);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100/60 pb-16">
       {/* Top branding bar */}
@@ -168,7 +216,49 @@ export const FichaEvaluacion: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-xl mx-auto px-4 pt-6 space-y-6">
+      <div className="max-w-xl mx-auto px-4 pt-6 space-y-4">
+        {/* Progress Indicator with Navigation Arrows */}
+        {allProposals.length > 1 && currentIndex !== -1 && (
+          <div className="flex items-center justify-between bg-white border border-slate-200/80 px-4 py-3 rounded-2xl shadow-sm text-xs">
+            <button
+              onClick={() => {
+                if (currentIndex > 0) {
+                  const prevId = allProposals[currentIndex - 1].id;
+                  setComentario('');
+                  setSubmitted(false);
+                  navigate(`/ficha-evaluacion/${prevId}`);
+                }
+              }}
+              disabled={currentIndex === 0}
+              className="p-1.5 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="Anterior Candidato"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <div className="flex items-center space-x-1.5 font-bold text-slate-600">
+              <span>Candidato:</span>
+              <span className="font-black text-blue-900 bg-blue-50 px-2.5 py-1 rounded-lg">
+                {currentIndex + 1} de {allProposals.length}
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                if (currentIndex < allProposals.length - 1) {
+                  const nextId = allProposals[currentIndex + 1].id;
+                  setComentario('');
+                  setSubmitted(false);
+                  navigate(`/ficha-evaluacion/${nextId}`);
+                }
+              }}
+              disabled={currentIndex === allProposals.length - 1}
+              className="p-1.5 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="Siguiente Candidato"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
+
         {/* Candidate Profile Card */}
         <div className="bg-white rounded-3xl border border-slate-200/80 shadow-md overflow-hidden relative">
           {/* Top Status Header */}
@@ -283,7 +373,21 @@ export const FichaEvaluacion: React.FC = () => {
           </div>
 
           {proposal.habilitarOpinion ? (
-            submitted ? (
+            isExpired ? (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-center text-amber-850 space-y-3 animate-in fade-in duration-300">
+                <Clock size={32} className="text-amber-500 mx-auto animate-pulse" />
+                <h4 className="font-black text-sm">Tiempo Límite Expirado</h4>
+                <p className="text-xs text-amber-700 font-semibold leading-relaxed">
+                  El período de consulta establecido para enviar opiniones sobre esta candidatura ha finalizado el{' '}
+                  <span className="font-bold text-amber-900 bg-amber-100/60 px-2 py-0.5 rounded-md text-[11.5px]">
+                    {new Date(proposal.fechaLimiteOpinion!).toLocaleString('es-GT', {
+                      dateStyle: 'short',
+                      timeStyle: 'short'
+                    })}
+                  </span>.
+                </p>
+              </div>
+            ) : submitted ? (
               <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 text-center text-emerald-800 space-y-3 animate-in fade-in duration-300">
                 <CheckCircle size={32} className="text-emerald-500 mx-auto" />
                 <h4 className="font-black text-sm">¡Muchas gracias por tu opinión!</h4>
@@ -299,6 +403,17 @@ export const FichaEvaluacion: React.FC = () => {
               </div>
             ) : (
               <form onSubmit={handleSubmitOpinion} className="space-y-4">
+                {timeLeft && (
+                  <div className="bg-amber-50/70 border border-amber-200/50 rounded-2xl p-3.5 flex items-center justify-between text-xs text-amber-900 shadow-sm/20">
+                    <span className="font-bold flex items-center">
+                      <Clock size={14} className="mr-1.5 text-amber-600 animate-pulse" />
+                      Tiempo restante para opinar:
+                    </span>
+                    <span className="font-black bg-amber-600 text-white px-2.5 py-1 rounded-xl text-[10.5px] tracking-wider font-mono animate-pulse shadow-sm shadow-amber-600/10">
+                      {timeLeft}
+                    </span>
+                  </div>
+                )}
                 <p className="text-xs text-slate-500 font-medium leading-relaxed">
                   Tus comentarios o referencias sobre la idoneidad, valores, o trayectoria del candidato ayudarán a robustecer la decisión del Comité de Ingreso. Esta opinión es confidencial y anónima.
                 </p>

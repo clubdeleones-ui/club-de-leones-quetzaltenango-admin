@@ -314,8 +314,22 @@ export const EvaluacionCompartida: React.FC = () => {
               </div>
 
               {currentProposal.habilitarOpinion ? (
-                submittedId === currentProposal.id ? (
-                  <div className="bg-emerald-50 border border-emerald-250 rounded-2xl p-5 text-center text-emerald-800 space-y-3 animate-in fade-in duration-300">
+                isExpired ? (
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-center text-amber-800 space-y-3 animate-in fade-in duration-300">
+                    <Clock size={32} className="text-amber-500 mx-auto animate-pulse" />
+                    <h4 className="font-black text-sm">Tiempo Límite Expirado</h4>
+                    <p className="text-xs text-amber-700 font-semibold leading-relaxed">
+                      El período de consulta establecido para enviar opiniones sobre esta candidatura ha finalizado el{' '}
+                      <span className="font-bold text-amber-900 bg-amber-100/60 px-2 py-0.5 rounded-md text-[11.5px]">
+                        {new Date(currentProposal.fechaLimiteOpinion!).toLocaleString('es-GT', {
+                          dateStyle: 'short',
+                          timeStyle: 'short'
+                        })}
+                      </span>.
+                    </p>
+                  </div>
+                ) : submittedId === currentProposal.id ? (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 text-center text-emerald-800 space-y-3 animate-in fade-in duration-300">
                     <CheckCircle size={32} className="text-emerald-500 mx-auto" />
                     <h4 className="font-black text-sm">¡Muchas gracias por tu opinión!</h4>
                     <p className="text-xs text-emerald-700 font-medium leading-relaxed">
@@ -330,6 +344,17 @@ export const EvaluacionCompartida: React.FC = () => {
                   </div>
                 ) : (
                   <form onSubmit={(e) => handleSendOpinion(e, currentProposal)} className="space-y-4">
+                    {timeLeft && (
+                      <div className="bg-amber-50/70 border border-amber-200/50 rounded-2xl p-3.5 flex items-center justify-between text-xs text-amber-900 shadow-sm/20">
+                        <span className="font-bold flex items-center">
+                          <Clock size={14} className="mr-1.5 text-amber-600 animate-pulse" />
+                          Tiempo restante para opinar:
+                        </span>
+                        <span className="font-black bg-amber-600 text-white px-2.5 py-1 rounded-xl text-[10.5px] tracking-wider font-mono animate-pulse shadow-sm shadow-amber-600/10">
+                          {timeLeft}
+                        </span>
+                      </div>
+                    )}
                     <p className="text-xs text-slate-500 font-medium leading-relaxed">
                       Tus comentarios o referencias sobre la idoneidad, valores, o trayectoria del candidato ayudarán a robustecer la decisión del Comité de Ingreso. Esta opinión es confidencial y anónima.
                     </p>
@@ -381,12 +406,42 @@ export const EvaluacionCompartida: React.FC = () => {
 
         {/* Mobile Swipeable Gallery (One profile per page) */}
         <div className="md:hidden space-y-5">
-          {/* Progress Indicator */}
+          {/* Progress Indicator with Navigation Arrows */}
           <div className="flex items-center justify-between bg-white border border-slate-200/80 px-4 py-3 rounded-2xl shadow-sm text-xs">
-            <span className="font-bold text-slate-500">Candidato actual:</span>
-            <span className="font-black text-blue-900 bg-blue-50 px-2.5 py-1 rounded-lg">
-              {selectedIndex + 1} de {proposals.length}
-            </span>
+            <button
+              onClick={() => {
+                if (selectedIndex > 0) {
+                  setSelectedIndex(selectedIndex - 1);
+                  setComentario('');
+                  setSubmittedId(null);
+                }
+              }}
+              disabled={selectedIndex === 0}
+              className="p-1.5 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="Anterior Candidato"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <div className="flex items-center space-x-1.5 font-bold text-slate-600">
+              <span>Candidato:</span>
+              <span className="font-black text-blue-900 bg-blue-50 px-2.5 py-1 rounded-lg">
+                {selectedIndex + 1} de {proposals.length}
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                if (selectedIndex < proposals.length - 1) {
+                  setSelectedIndex(selectedIndex + 1);
+                  setComentario('');
+                  setSubmittedId(null);
+                }
+              }}
+              disabled={selectedIndex === proposals.length - 1}
+              className="p-1.5 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="Siguiente Candidato"
+            >
+              <ChevronRight size={16} />
+            </button>
           </div>
 
           {/* Active Candidate Card */}
@@ -507,7 +562,21 @@ export const EvaluacionCompartida: React.FC = () => {
             </div>
 
             {currentProposal.habilitarOpinion ? (
-              submittedId === currentProposal.id ? (
+              isExpired ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center text-amber-800 space-y-2">
+                  <Clock size={24} className="text-amber-500 mx-auto animate-pulse" />
+                  <h4 className="font-black text-xs">Tiempo Límite Expirado</h4>
+                  <p className="text-[10px] text-amber-700 font-semibold leading-relaxed">
+                    El período de consulta establecido para enviar opiniones sobre esta candidatura ha finalizado el{' '}
+                    <span className="font-bold text-amber-900 bg-amber-100/60 px-1.5 py-0.5 rounded-md text-[10px]">
+                      {new Date(currentProposal.fechaLimiteOpinion!).toLocaleString('es-GT', {
+                        dateStyle: 'short',
+                        timeStyle: 'short'
+                      })}
+                    </span>.
+                  </p>
+                </div>
+              ) : submittedId === currentProposal.id ? (
                 <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-center text-emerald-800 space-y-2.5">
                   <CheckCircle size={24} className="text-emerald-500 mx-auto" />
                   <h4 className="font-black text-xs">¡Muchas gracias por tu opinión!</h4>
@@ -523,6 +592,17 @@ export const EvaluacionCompartida: React.FC = () => {
                 </div>
               ) : (
                 <form onSubmit={(e) => handleSendOpinion(e, currentProposal)} className="space-y-3">
+                  {timeLeft && (
+                    <div className="bg-amber-50/70 border border-amber-200/50 rounded-xl p-2.5 flex items-center justify-between text-[11px] text-amber-900 shadow-sm/20">
+                      <span className="font-bold flex items-center">
+                        <Clock size={12} className="mr-1 text-amber-600 animate-pulse" />
+                        Tiempo restante:
+                      </span>
+                      <span className="font-black bg-amber-600 text-white px-2 py-0.5 rounded-lg text-[9.5px] tracking-wider font-mono animate-pulse shadow-sm shadow-amber-600/10">
+                        {timeLeft}
+                      </span>
+                    </div>
+                  )}
                   <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
                     Tu comentario es completamente confidencial y anónimo.
                   </p>

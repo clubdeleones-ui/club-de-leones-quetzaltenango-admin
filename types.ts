@@ -120,6 +120,7 @@ export interface PropuestaSocio {
   hijos?: string;
   nombreEsposa?: string;
   habilitarOpinion?: boolean;
+  fechaLimiteOpinion?: string;
   opiniones?: { 
     id: string; 
     fecha: string; 
