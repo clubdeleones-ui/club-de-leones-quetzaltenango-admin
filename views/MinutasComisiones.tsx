@@ -50,6 +50,12 @@ export const MinutasComisiones: React.FC = () => {
   const [filterYear, setFilterYear] = useState('Todos');
   const [filterMonth, setFilterMonth] = useState('Todos');
   const [filterSolicitud, setFilterSolicitud] = useState('Todos');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset page on filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterComisionId, filterYear, filterMonth, filterSolicitud]);
 
   // Dynamic years and months for filters
   const years = useMemo(() => {
@@ -433,6 +439,13 @@ export const MinutasComisiones: React.FC = () => {
       return matchesSearch && matchesComision && matchesYear && matchesMonth && matchesSolicitud;
     });
   }, [minutas, comisiones, solicitudes, socios, searchTerm, filterComisionId, filterYear, filterMonth, filterSolicitud]);
+
+  const ITEMS_PER_PAGE = 10;
+  const totalPages = Math.ceil(filteredMinutas.length / ITEMS_PER_PAGE);
+  const paginatedMinutas = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredMinutas.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredMinutas, currentPage]);
 
   return (
     <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto py-4 sm:py-6 animate-in fade-in duration-500">
@@ -1169,7 +1182,9 @@ export const MinutasComisiones: React.FC = () => {
             <div className="space-y-4 sm:space-y-6">
               <div className="flex justify-between items-center px-2">
                 <span className="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-widest">
-                  Mostrando {filteredMinutas.length} de {minutas.length} minutas registradas
+                  {filteredMinutas.length === 0 
+                    ? 'Mostrando 0 minutas' 
+                    : `Mostrando ${((currentPage - 1) * ITEMS_PER_PAGE) + 1} - ${Math.min(currentPage * ITEMS_PER_PAGE, filteredMinutas.length)} de ${filteredMinutas.length} minutas`}
                 </span>
               </div>
 
@@ -1179,7 +1194,7 @@ export const MinutasComisiones: React.FC = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                  {filteredMinutas.map(m => {
+                  {paginatedMinutas.map(m => {
                     const comm = comisiones.find(c => c.id === m.comisionId);
                     const dateStr = new Date(m.fechaHora).toLocaleDateString('es-GT', {
                       day: 'numeric',
@@ -1265,6 +1280,45 @@ export const MinutasComisiones: React.FC = () => {
                       </button>
                     );
                   })}
+                </div>
+              )}
+
+              {/* PAGINATION CONTROLS */}
+              {totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-slate-100 w-full">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="w-full sm:w-auto px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:text-blue-900 hover:bg-slate-50 transition-all font-black text-xs cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1"
+                  >
+                    <ChevronRight size={14} className="rotate-180" />
+                    <span>Anterior</span>
+                  </button>
+
+                  <div className="flex items-center space-x-1.5">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`w-8 h-8 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center justify-center ${
+                          currentPage === page
+                            ? 'bg-blue-900 text-yellow-400 border border-blue-950 shadow-md'
+                            : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="w-full sm:w-auto px-4 py-2 border border-slate-200 rounded-xl text-slate-600 hover:text-blue-900 hover:bg-slate-50 transition-all font-black text-xs cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1"
+                  >
+                    <span>Siguiente</span>
+                    <ChevronRight size={14} />
+                  </button>
                 </div>
               )}
             </div>
