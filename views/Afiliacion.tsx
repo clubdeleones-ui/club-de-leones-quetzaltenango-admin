@@ -46,6 +46,7 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
 
   const [editingPropuesta, setEditingPropuesta] = useState<PropuestaSocio | null>(null);
   const [shareConfigPropuesta, setShareConfigPropuesta] = useState<PropuestaSocio | null>(null);
+  const [viewingOpinionsPropuesta, setViewingOpinionsPropuesta] = useState<PropuestaSocio | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; title: string } | null>(null);
   const [isCompressingPhoto, setIsCompressingPhoto] = useState(false);
   const [isSavingPropuesta, setIsSavingPropuesta] = useState(false);
@@ -374,14 +375,20 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
 
                   {/* Opinions summary banner */}
                   {propuesta.opiniones && propuesta.opiniones.length > 0 && (
-                    <div className="mt-4 bg-emerald-50/60 border border-emerald-100/60 rounded-2xl p-3.5 flex justify-between items-center text-xs">
-                      <span className="font-bold text-emerald-800 flex items-center">
-                        <MessageSquare size={14} className="mr-1.5 text-emerald-650" />
-                        {propuesta.opiniones.length} opiniones anónimas recibidas
-                      </span>
+                    <div className="mt-4 bg-gradient-to-r from-emerald-50/65 to-teal-50/45 border border-emerald-100/70 rounded-2xl p-4 flex items-center justify-between shadow-sm/50">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-emerald-500/10 text-emerald-650 rounded-xl relative">
+                          <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <MessageSquare size={16} />
+                        </div>
+                        <div>
+                          <h5 className="font-black text-emerald-900 text-xs leading-none">Opiniones Recibidas</h5>
+                          <p className="text-[10px] text-emerald-700/80 font-bold mt-1.5">Se han registrado {propuesta.opiniones.length} opiniones de los Leones.</p>
+                        </div>
+                      </div>
                       <button 
-                        onClick={() => setShareConfigPropuesta(propuesta)}
-                        className="text-[10px] font-black text-indigo-700 hover:text-indigo-950 uppercase tracking-wider bg-white px-2.5 py-1.5 rounded-lg border border-slate-200/50 hover:bg-slate-50 transition-colors shadow-sm"
+                        onClick={() => setViewingOpinionsPropuesta(propuesta)}
+                        className="text-[10px] font-black bg-emerald-600 hover:bg-emerald-750 text-white px-3.5 py-2 rounded-xl transition-all shadow-md shadow-emerald-600/10 active:scale-95 uppercase tracking-wider shrink-0"
                       >
                         Ver opiniones
                       </button>
@@ -704,10 +711,10 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
         </div>
       )}
 
-      {/* SHARE CONFIG & OPINIONS MODAL */}
+      {/* SHARE CONFIG MODAL */}
       {shareConfigPropuesta && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 sm:p-10 space-y-6 relative animate-in zoom-in-95 duration-300">
+          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full max-w-xl p-6 sm:p-10 space-y-6 relative animate-in zoom-in-95 duration-300">
             <button 
               type="button"
               onClick={() => setShareConfigPropuesta(null)}
@@ -717,8 +724,8 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
             </button>
 
             <div className="space-y-1">
-              <h2 className="text-xl sm:text-2xl font-black text-blue-900">Enlace Compartido y Opiniones</h2>
-              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">{shareConfigPropuesta.nombreCandidato}</p>
+              <h2 className="text-xl sm:text-2xl font-black text-blue-900">Compartir Ficha del Candidato</h2>
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">{shareConfigPropuesta.nombreCandidato}</p>
             </div>
 
             <div className="space-y-6">
@@ -786,89 +793,123 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                   </button>
                 </div>
               </div>
-
-              {/* Opinions list */}
-              <div className="space-y-3 pt-4 border-t border-slate-100">
-                <div className="flex items-center space-x-2 text-slate-800">
-                  <MessageSquare size={16} />
-                  <h3 className="text-sm font-black">
-                    Opiniones Recibidas ({shareConfigPropuesta.opiniones?.length || 0})
-                  </h3>
-                </div>
-
-                <div className="space-y-3.5 max-h-[30vh] overflow-y-auto pr-1">
-                  {shareConfigPropuesta.opiniones && shareConfigPropuesta.opiniones.length > 0 ? (
-                    shareConfigPropuesta.opiniones.map((op) => (
-                      <div 
-                        key={op.id} 
-                        className="bg-slate-50 rounded-2xl p-4 border border-slate-100 text-xs relative group flex justify-between items-start gap-4 animate-in fade-in duration-300"
-                      >
-                        <div className="space-y-1.5 flex-1 min-w-0">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                              Anónimo
-                            </span>
-                            <span className="text-[9px] text-slate-450 font-bold">
-                              • {op.fecha}
-                            </span>
-                          </div>
-                          <p className="text-slate-700 leading-relaxed font-semibold break-words">
-                            "{op.comentario}"
-                          </p>
-                          {op.metadatos && (
-                            <div className="flex flex-wrap gap-1 pt-1.5">
-                              <span className="bg-slate-100 text-[9px] font-bold text-slate-500 px-2 py-0.5 rounded-md" title="Sistema Operativo">
-                                💻 {op.metadatos.sistemaOperativo}
-                              </span>
-                              <span className="bg-slate-100 text-[9px] font-bold text-slate-500 px-2 py-0.5 rounded-md" title="Navegador">
-                                🌐 {op.metadatos.navegador}
-                              </span>
-                              <span className="bg-slate-100 text-[9px] font-bold text-slate-500 px-2 py-0.5 rounded-md" title="Tipo de Dispositivo">
-                                📱 {op.metadatos.dispositivo}
-                              </span>
-                              <span className="bg-slate-100 text-[9px] font-bold text-slate-500 px-2 py-0.5 rounded-md" title="Resolución de pantalla">
-                                🖥️ {op.metadatos.resolucion}
-                              </span>
-                              <span className="bg-slate-100 text-[9px] font-bold text-slate-500 px-2 py-0.5 rounded-md truncate max-w-[120px]" title={`Zona horaria: ${op.metadatos.zonaHoraria}`}>
-                                🕒 {op.metadatos.zonaHoraria.split('/').pop()?.replace('_', ' ')}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (!window.confirm("¿Está seguro de eliminar esta opinión permanentemente?")) return;
-                            const filtered = (shareConfigPropuesta.opiniones || []).filter(o => o.id !== op.id);
-                            const updated = { ...shareConfigPropuesta, opiniones: filtered };
-                            setPropuestas(propuestas.map(p => p.id === updated.id ? updated : p));
-                            setShareConfigPropuesta(updated);
-                            try {
-                              await firebaseService.updateProposal(updated.id, { opiniones: filtered });
-                            } catch (err) {
-                              console.error("Error deleting opinion:", err);
-                            }
-                          }}
-                          className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors shrink-0"
-                          title="Eliminar opinión"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-8 text-slate-405 italic font-medium bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-                      No se han recibido opiniones anónimas aún para este candidato.
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
 
             <div className="flex justify-end pt-4 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setShareConfigPropuesta(null)}
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all text-xs"
+              >
+                Cerrar Ventana
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW OPINIONS MODAL */}
+      {viewingOpinionsPropuesta && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 sm:p-10 space-y-6 relative animate-in zoom-in-95 duration-300">
+            <button 
+              type="button"
+              onClick={() => setViewingOpinionsPropuesta(null)}
+              className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="space-y-1">
+              <div className="flex items-center space-x-2.5 text-blue-900">
+                <MessageSquare size={22} className="shrink-0" />
+                <h2 className="text-xl sm:text-2xl font-black">Opiniones Recibidas</h2>
+              </div>
+              <p className="text-xs text-slate-505 font-bold uppercase tracking-wider">{viewingOpinionsPropuesta.nombreCandidato}</p>
+            </div>
+
+            <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-1">
+              {viewingOpinionsPropuesta.opiniones && viewingOpinionsPropuesta.opiniones.length > 0 ? (
+                viewingOpinionsPropuesta.opiniones.map((op) => (
+                  <div 
+                    key={op.id} 
+                    className="bg-slate-50/70 rounded-2xl p-5 border border-slate-200/60 text-xs relative group flex justify-between items-start gap-4 hover:border-slate-300 transition-all shadow-sm/30"
+                  >
+                    <div className="space-y-2.5 flex-1 min-w-0">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-[10px] font-black text-blue-900 bg-blue-50 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                          Opinión Anónima
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-bold">
+                          {op.fecha}
+                        </span>
+                      </div>
+                      <p className="text-slate-800 leading-relaxed font-semibold text-xs bg-white p-3.5 rounded-xl border border-slate-150 break-words shadow-sm/10">
+                        "{op.comentario}"
+                      </p>
+                      
+                      {/* Technical details context */}
+                      <div className="space-y-1">
+                        <span className="text-[9px] font-bold text-slate-450 uppercase tracking-wider block">
+                          Detalles Técnicos del Envío
+                        </span>
+                        {op.metadatos ? (
+                          <div className="flex flex-wrap gap-1.5 pt-0.5">
+                            <span className="bg-slate-100 border border-slate-200/50 text-[9.5px] font-extrabold text-slate-655 px-2.5 py-1 rounded-lg flex items-center" title="Sistema Operativo">
+                              <span className="mr-1">💻</span> {op.metadatos.sistemaOperativo}
+                            </span>
+                            <span className="bg-slate-100 border border-slate-200/50 text-[9.5px] font-extrabold text-slate-655 px-2.5 py-1 rounded-lg flex items-center" title="Navegador">
+                              <span className="mr-1">🌐</span> {op.metadatos.navegador}
+                            </span>
+                            <span className="bg-slate-100 border border-slate-200/50 text-[9.5px] font-extrabold text-slate-655 px-2.5 py-1 rounded-lg flex items-center" title="Tipo de Dispositivo">
+                              <span className="mr-1">📱</span> {op.metadatos.dispositivo}
+                            </span>
+                            <span className="bg-slate-100 border border-slate-200/50 text-[9.5px] font-extrabold text-slate-655 px-2.5 py-1 rounded-lg flex items-center" title="Resolución de pantalla">
+                              <span className="mr-1">🖥️</span> {op.metadatos.resolucion}
+                            </span>
+                            <span className="bg-slate-100 border border-slate-200/50 text-[9.5px] font-extrabold text-slate-655 px-2.5 py-1 rounded-lg flex items-center truncate max-w-[165px]" title={`Zona horaria: ${op.metadatos.zonaHoraria}`}>
+                              <span className="mr-1">🕒</span> {op.metadatos.zonaHoraria.split('/').pop()?.replace('_', ' ')}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-slate-400 italic font-semibold">
+                            Sin información de dispositivo (opinión previa a actualización).
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!window.confirm("¿Está seguro de eliminar esta opinión permanentemente?")) return;
+                        const filtered = (viewingOpinionsPropuesta.opiniones || []).filter(o => o.id !== op.id);
+                        const updated = { ...viewingOpinionsPropuesta, opiniones: filtered };
+                        setPropuestas(propuestas.map(p => p.id === updated.id ? updated : p));
+                        setViewingOpinionsPropuesta(updated);
+                        try {
+                          await firebaseService.updateProposal(updated.id, { opiniones: filtered });
+                        } catch (err) {
+                          console.error("Error deleting opinion:", err);
+                        }
+                      }}
+                      className="p-2 text-slate-450 hover:text-red-655 rounded-lg hover:bg-red-50 transition-colors shrink-0"
+                      title="Eliminar opinión permanentemente"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-12 text-slate-400 italic font-medium bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                  No se han recibido opiniones anónimas aún para este candidato.
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setViewingOpinionsPropuesta(null)}
                 className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all text-xs"
               >
                 Cerrar Ventana
