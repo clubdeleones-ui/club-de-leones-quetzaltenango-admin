@@ -32,6 +32,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
   const [mobileTab, setMobileTab] = useState<'public' | 'private'>('public');
   const navigate = useNavigate();
   const location = useLocation();
+  const isEvaluationView = location.pathname.startsWith('/ficha-evaluacion') || location.pathname === '/evaluacion-compartida';
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Reset mobile menu tab to public when mobile drawer is closed
@@ -126,128 +127,132 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
                 <span className="text-[11px] font-black text-yellow-400 uppercase tracking-widest mt-1">Quetzaltenango</span>
               </div>
             </div>
-            {/* Desktop Nav Items */}
-            <div className="hidden md:flex items-center space-x-2">
-              {navItems.map((item) => {
-                const active = location.pathname === item.path;
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 flex items-center space-x-2 border border-transparent ${
-                      active 
-                        ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20 shadow-sm' 
-                        : 'text-slate-200 hover:bg-white/5 hover:text-white'
-                    }`}
-                  >
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
+             {/* Desktop Nav Items */}
+             {!isEvaluationView && (
+               <div className="hidden md:flex items-center space-x-2">
+                 {navItems.map((item) => {
+                   const active = location.pathname === item.path;
+                   return (
+                     <Link
+                       key={item.path}
+                       to={item.path}
+                       className={`px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 flex items-center space-x-2 border border-transparent ${
+                         active 
+                           ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20 shadow-sm' 
+                           : 'text-slate-200 hover:bg-white/5 hover:text-white'
+                       }`}
+                     >
+                       <span>{item.label}</span>
+                     </Link>
+                   );
+                 })}
 
-              <Link
-                to="/donar"
-                className="ml-3 px-4 py-2.5 rounded-xl text-sm font-black transition-all duration-305 flex items-center space-x-2 bg-gradient-to-r from-yellow-500 to-amber-500 text-blue-955 hover:from-yellow-400 hover:to-amber-400 shadow-lg shadow-yellow-500/10 hover:scale-105 active:scale-95"
-              >
-                <Gift size={16} />
-                <span>Donar</span>
-              </Link>
+                 <Link
+                   to="/donar"
+                   className="ml-3 px-4 py-2.5 rounded-xl text-sm font-black transition-all duration-305 flex items-center space-x-2 bg-gradient-to-r from-yellow-500 to-amber-500 text-blue-955 hover:from-yellow-400 hover:to-amber-400 shadow-lg shadow-yellow-500/10 hover:scale-105 active:scale-95"
+                 >
+                   <Gift size={16} />
+                   <span>Donar</span>
+                 </Link>
 
-              {/* Authentication Actions / Dropdown */}
-              {auth.isAuthenticated ? (
-                <>
-                  <div className="h-8 w-px bg-blue-850/60 mx-4" />
-                  
-                  {/* User Dropdown */}
-                  <div className="relative" ref={dropdownRef}>
-                    <button
-                      onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
-                      className="flex items-center space-x-2 focus:outline-none hover:bg-blue-800/50 p-1.5 rounded-2xl transition-all duration-300 border border-transparent hover:border-blue-750"
-                    >
-                      <img
-                        src={auth.user?.foto || 'https://picsum.photos/seed/' + auth.user?.id + '/100/100'}
-                        alt={auth.user?.nombre}
-                        className="w-10 h-10 rounded-xl object-cover border border-slate-300/30"
-                      />
-                      <ChevronDown size={16} className={`text-slate-300 transition-transform duration-300 ${isUserDropdownOpen ? 'rotate-180' : ''}`} />
-                    </button>
+                 {/* Authentication Actions / Dropdown */}
+                 {auth.isAuthenticated ? (
+                   <>
+                     <div className="h-8 w-px bg-blue-850/60 mx-4" />
+                     
+                     {/* User Dropdown */}
+                     <div className="relative" ref={dropdownRef}>
+                       <button
+                         onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+                         className="flex items-center space-x-2 focus:outline-none hover:bg-blue-800/50 p-1.5 rounded-2xl transition-all duration-300 border border-transparent hover:border-blue-750"
+                       >
+                         <img
+                           src={auth.user?.foto || 'https://picsum.photos/seed/' + auth.user?.id + '/100/100'}
+                           alt={auth.user?.nombre}
+                           className="w-10 h-10 rounded-xl object-cover border border-slate-300/30"
+                         />
+                         <ChevronDown size={16} className={`text-slate-300 transition-transform duration-300 ${isUserDropdownOpen ? 'rotate-180' : ''}`} />
+                       </button>
 
-                    {/* Dropdown Menu Floating Card */}
-                    {isUserDropdownOpen && (
-                      <div className="absolute right-0 mt-3 w-64 bg-white/95 backdrop-blur-md text-slate-800 rounded-[1.75rem] shadow-2xl border border-slate-100/90 py-3.5 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                        {/* Member Details */}
-                        <div className="px-5 py-3.5 mx-2 mb-2 bg-blue-50/50 rounded-2xl border border-blue-100/40">
-                          <p className="font-black text-slate-850 text-base truncate leading-tight">{auth.user?.nombre}</p>
-                          <p className="text-[10px] text-blue-800 font-extrabold uppercase tracking-wider mt-1 inline-block bg-blue-100/80 px-2.5 py-0.5 rounded-md">
-                            {auth.user?.puesto || 'Socio Regular'}
-                          </p>
-                        </div>
-                        
-                        {/* Protected links */}
-                        <div className="py-1 px-2 space-y-1">
-                          {protectedItems.map((item) => {
-                            const Icon = item.icon;
-                            const isLinkActive = location.pathname === item.path;
-                            return (
-                              <Link
-                                key={item.path}
-                                to={item.path}
-                                onClick={() => setIsUserDropdownOpen(false)}
-                                className={`flex items-center space-x-3 px-4 py-2.5 text-sm font-bold rounded-xl transition-all duration-200 group ${
-                                  isLinkActive 
-                                    ? 'bg-blue-900 text-white shadow-md shadow-blue-900/10' 
-                                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                                }`}
-                              >
-                                <Icon size={18} className={`transition-transform duration-200 group-hover:scale-110 ${isLinkActive ? 'text-white' : 'text-slate-400 group-hover:text-blue-900'}`} />
-                                <span>{item.label}</span>
-                              </Link>
-                            );
-                          })}
-                        </div>
+                       {/* Dropdown Menu Floating Card */}
+                       {isUserDropdownOpen && (
+                         <div className="absolute right-0 mt-3 w-64 bg-white/95 backdrop-blur-md text-slate-800 rounded-[1.75rem] shadow-2xl border border-slate-100/90 py-3.5 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                           {/* Member Details */}
+                           <div className="px-5 py-3.5 mx-2 mb-2 bg-blue-50/50 rounded-2xl border border-blue-100/40">
+                             <p className="font-black text-slate-850 text-base truncate leading-tight">{auth.user?.nombre}</p>
+                             <p className="text-[10px] text-blue-800 font-extrabold uppercase tracking-wider mt-1 inline-block bg-blue-100/80 px-2.5 py-0.5 rounded-md">
+                               {auth.user?.puesto || 'Socio Regular'}
+                             </p>
+                           </div>
+                           
+                           {/* Protected links */}
+                           <div className="py-1 px-2 space-y-1">
+                             {protectedItems.map((item) => {
+                               const Icon = item.icon;
+                               const isLinkActive = location.pathname === item.path;
+                               return (
+                                 <Link
+                                   key={item.path}
+                                   to={item.path}
+                                   onClick={() => setIsUserDropdownOpen(false)}
+                                   className={`flex items-center space-x-3 px-4 py-2.5 text-sm font-bold rounded-xl transition-all duration-200 group ${
+                                     isLinkActive 
+                                       ? 'bg-blue-900 text-white shadow-md shadow-blue-900/10' 
+                                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                                   }`}
+                                 >
+                                   <Icon size={18} className={`transition-transform duration-200 group-hover:scale-110 ${isLinkActive ? 'text-white' : 'text-slate-400 group-hover:text-blue-900'}`} />
+                                   <span>{item.label}</span>
+                                 </Link>
+                               );
+                             })}
+                           </div>
 
-                        {/* Logout action */}
-                        <div className="border-t border-slate-100 pt-2 px-2">
-                          <button
-                            onClick={() => {
-                              setIsUserDropdownOpen(false);
-                              onLogout();
-                            }}
-                            className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-red-650 hover:bg-red-50 rounded-xl transition-all duration-200 group"
-                          >
-                            <LogOut size={18} className="transition-transform duration-200 group-hover:-translate-x-0.5 text-red-400 group-hover:text-red-650" />
-                            <span>Cerrar Sesión</span>
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <button
-                  onClick={() => navigate('/login')}
-                  className="flex items-center space-x-2 bg-yellow-500 hover:bg-yellow-600 text-blue-955 px-5 py-2.5 rounded-xl font-black transition-all ml-4 shadow-lg shadow-yellow-500/10 hover:-translate-y-0.5"
-                >
-                  <LogIn size={18} />
-                  <span>Acceso Socios</span>
-                </button>
-              )}
-            </div>
+                           {/* Logout action */}
+                           <div className="border-t border-slate-100 pt-2 px-2">
+                             <button
+                               onClick={() => {
+                                 setIsUserDropdownOpen(false);
+                                 onLogout();
+                               }}
+                               className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm font-bold text-red-650 hover:bg-red-50 rounded-xl transition-all duration-200 group"
+                             >
+                               <LogOut size={18} className="transition-transform duration-200 group-hover:-translate-x-0.5 text-red-400 group-hover:text-red-650" />
+                               <span>Cerrar Sesión</span>
+                             </button>
+                           </div>
+                         </div>
+                       )}
+                     </div>
+                   </>
+                 ) : (
+                   <button
+                     onClick={() => navigate('/login')}
+                     className="flex items-center space-x-2 bg-yellow-500 hover:bg-yellow-600 text-blue-955 px-5 py-2.5 rounded-xl font-black transition-all ml-4 shadow-lg shadow-yellow-500/10 hover:-translate-y-0.5"
+                   >
+                     <LogIn size={18} />
+                     <span>Acceso Socios</span>
+                   </button>
+                 )}
+               </div>
+             )}
 
             {/* Mobile menu button */}
-            <div className="md:hidden flex items-center">
-              <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="inline-flex items-center justify-center p-2.5 rounded-xl hover:bg-blue-800 focus:outline-none transition-colors border border-transparent hover:border-blue-750"
-              >
-                {isOpen ? <X size={24} /> : <Menu size={24} />}
-              </button>
-            </div>
+            {!isEvaluationView && (
+              <div className="md:hidden flex items-center">
+                <button
+                  onClick={() => setIsOpen(!isOpen)}
+                  className="inline-flex items-center justify-center p-2.5 rounded-xl hover:bg-blue-800 focus:outline-none transition-colors border border-transparent hover:border-blue-750"
+                >
+                  {isOpen ? <X size={24} /> : <Menu size={24} />}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Mobile Navigation Drawer */}
-        {isOpen && (
+        {!isEvaluationView && isOpen && (
           <div className="md:hidden bg-blue-900 border-t border-blue-800 px-4 py-5 space-y-4 animate-in slide-in-from-top duration-300">
             {/* Segmented Tab Control */}
             <div className="bg-blue-950/60 p-1.5 rounded-2xl flex border border-blue-800/40">
@@ -388,7 +393,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
 
       {/* Footer Section */}
       <footer className="bg-slate-900 text-slate-400 py-16 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-12">
+        <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 ${isEvaluationView ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-12`}>
           <div className="space-y-4">
             <h3 className="text-white text-xl font-bold tracking-tight flex items-center space-x-2">
               <span className="bg-white p-1 rounded-xl block"><img src="images/logo.png" alt="Logo" className="w-8 h-8 object-contain" /></span>
@@ -398,20 +403,22 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
               Sirviendo a la comunidad altense y de Quetzaltenango desde hace décadas con integridad, compañerismo y un firme compromiso de servicio comunitario.
             </p>
           </div>
-          <div>
-            <h4 className="text-white font-black uppercase text-sm tracking-widest mb-6">Enlaces Rápidos</h4>
-            <ul className="space-y-3 text-sm font-semibold">
-              <li><Link to="/estatutos" className="hover:text-yellow-400 transition-colors">Estatutos Oficiales</Link></li>
-              <li><Link to="/actividades" className="hover:text-yellow-400 transition-colors">Calendario de Actividades</Link></li>
-              <li><Link to="/galeria" className="hover:text-yellow-400 transition-colors">Galería Histórica</Link></li>
-              <li>
-                <Link to="/proponer-socio" className="text-yellow-400 hover:text-yellow-500 font-bold flex items-center transition-colors">
-                  <Info size={14} className="mr-2" />
-                  Proponer Nuevo Socio (Público)
-                </Link>
-              </li>
-            </ul>
-          </div>
+          {!isEvaluationView && (
+            <div>
+              <h4 className="text-white font-black uppercase text-sm tracking-widest mb-6">Enlaces Rápidos</h4>
+              <ul className="space-y-3 text-sm font-semibold">
+                <li><Link to="/estatutos" className="hover:text-yellow-400 transition-colors">Estatutos Oficiales</Link></li>
+                <li><Link to="/actividades" className="hover:text-yellow-400 transition-colors">Calendario de Actividades</Link></li>
+                <li><Link to="/galeria" className="hover:text-yellow-400 transition-colors">Galería Histórica</Link></li>
+                <li>
+                  <Link to="/proponer-socio" className="text-yellow-400 hover:text-yellow-500 font-bold flex items-center transition-colors">
+                    <Info size={14} className="mr-2" />
+                    Proponer Nuevo Socio (Público)
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          )}
           <div className="space-y-4">
             <h4 className="text-white font-black uppercase text-sm tracking-widest mb-6">Contacto y Sede</h4>
             <p className="text-sm leading-relaxed">

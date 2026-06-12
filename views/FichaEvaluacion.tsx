@@ -259,6 +259,19 @@ export const FichaEvaluacion: React.FC = () => {
           </div>
         )}
 
+        {/* Countdown Timer */}
+        {timeLeft && !isExpired && proposal.habilitarOpinion && (
+          <div className="bg-amber-50/70 border border-amber-200/50 rounded-2xl p-3.5 flex items-center justify-between text-xs text-amber-900 shadow-sm/20">
+            <span className="font-bold flex items-center">
+              <Clock size={14} className="mr-1.5 text-amber-600 animate-pulse" />
+              Tiempo restante para opinar:
+            </span>
+            <span className="font-black bg-amber-600 text-white px-2.5 py-1 rounded-xl text-[10.5px] tracking-wider font-mono animate-pulse shadow-sm shadow-amber-600/10">
+              {timeLeft}
+            </span>
+          </div>
+        )}
+
         {/* Candidate Profile Card */}
         <div className="bg-white rounded-3xl border border-slate-200/80 shadow-md overflow-hidden relative">
           {/* Top Status Header */}
@@ -403,17 +416,6 @@ export const FichaEvaluacion: React.FC = () => {
               </div>
             ) : (
               <form onSubmit={handleSubmitOpinion} className="space-y-4">
-                {timeLeft && (
-                  <div className="bg-amber-50/70 border border-amber-200/50 rounded-2xl p-3.5 flex items-center justify-between text-xs text-amber-900 shadow-sm/20">
-                    <span className="font-bold flex items-center">
-                      <Clock size={14} className="mr-1.5 text-amber-600 animate-pulse" />
-                      Tiempo restante para opinar:
-                    </span>
-                    <span className="font-black bg-amber-600 text-white px-2.5 py-1 rounded-xl text-[10.5px] tracking-wider font-mono animate-pulse shadow-sm shadow-amber-600/10">
-                      {timeLeft}
-                    </span>
-                  </div>
-                )}
                 <p className="text-xs text-slate-500 font-medium leading-relaxed">
                   Tus comentarios o referencias sobre la idoneidad, valores, o trayectoria del candidato ayudarán a robustecer la decisión del Comité de Ingreso. Esta opinión es confidencial y anónima.
                 </p>
@@ -460,6 +462,48 @@ export const FichaEvaluacion: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Bottom Progress Indicator with Navigation Arrows (Duplicated) */}
+        {allProposals.length > 1 && currentIndex !== -1 && (
+          <div className="flex items-center justify-between bg-white border border-slate-200/80 px-4 py-3 rounded-2xl shadow-sm text-xs">
+            <button
+              onClick={() => {
+                if (currentIndex > 0) {
+                  const prevId = allProposals[currentIndex - 1].id;
+                  setComentario('');
+                  setSubmitted(false);
+                  navigate(`/ficha-evaluacion/${prevId}`);
+                }
+              }}
+              disabled={currentIndex === 0}
+              className="p-1.5 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="Anterior Candidato"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <div className="flex items-center space-x-1.5 font-bold text-slate-600">
+              <span>Candidato:</span>
+              <span className="font-black text-blue-900 bg-blue-50 px-2.5 py-1 rounded-lg">
+                {currentIndex + 1} de {allProposals.length}
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                if (currentIndex < allProposals.length - 1) {
+                  const nextId = allProposals[currentIndex + 1].id;
+                  setComentario('');
+                  setSubmitted(false);
+                  navigate(`/ficha-evaluacion/${nextId}`);
+                }
+              }}
+              disabled={currentIndex === allProposals.length - 1}
+              className="p-1.5 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="Siguiente Candidato"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

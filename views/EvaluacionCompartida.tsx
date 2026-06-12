@@ -306,6 +306,19 @@ export const EvaluacionCompartida: React.FC = () => {
               </div>
             </div>
 
+            {/* Countdown Timer */}
+            {timeLeft && !isExpired && currentProposal.habilitarOpinion && (
+              <div className="bg-amber-50/70 border border-amber-200/50 rounded-2xl p-3.5 flex items-center justify-between text-xs text-amber-900 shadow-sm/20">
+                <span className="font-bold flex items-center">
+                  <Clock size={14} className="mr-1.5 text-amber-600 animate-pulse" />
+                  Tiempo restante para opinar:
+                </span>
+                <span className="font-black bg-amber-600 text-white px-2.5 py-1 rounded-xl text-[10.5px] tracking-wider font-mono animate-pulse shadow-sm shadow-amber-600/10">
+                  {timeLeft}
+                </span>
+              </div>
+            )}
+
             {/* Opinion submission box */}
             <div className="bg-white border border-slate-200/80 rounded-[2rem] p-8 shadow-sm space-y-4">
               <div className="flex items-center space-x-3 text-blue-900">
@@ -344,17 +357,6 @@ export const EvaluacionCompartida: React.FC = () => {
                   </div>
                 ) : (
                   <form onSubmit={(e) => handleSendOpinion(e, currentProposal)} className="space-y-4">
-                    {timeLeft && (
-                      <div className="bg-amber-50/70 border border-amber-200/50 rounded-2xl p-3.5 flex items-center justify-between text-xs text-amber-900 shadow-sm/20">
-                        <span className="font-bold flex items-center">
-                          <Clock size={14} className="mr-1.5 text-amber-600 animate-pulse" />
-                          Tiempo restante para opinar:
-                        </span>
-                        <span className="font-black bg-amber-600 text-white px-2.5 py-1 rounded-xl text-[10.5px] tracking-wider font-mono animate-pulse shadow-sm shadow-amber-600/10">
-                          {timeLeft}
-                        </span>
-                      </div>
-                    )}
                     <p className="text-xs text-slate-500 font-medium leading-relaxed">
                       Tus comentarios o referencias sobre la idoneidad, valores, o trayectoria del candidato ayudarán a robustecer la decisión del Comité de Ingreso. Esta opinión es confidencial y anónima.
                     </p>
@@ -443,6 +445,19 @@ export const EvaluacionCompartida: React.FC = () => {
               <ChevronRight size={16} />
             </button>
           </div>
+
+          {/* Countdown Timer */}
+          {timeLeft && !isExpired && currentProposal.habilitarOpinion && (
+            <div className="bg-amber-50/70 border border-amber-200/50 rounded-xl p-2.5 flex items-center justify-between text-[11px] text-amber-900 shadow-sm/20">
+              <span className="font-bold flex items-center">
+                <Clock size={12} className="mr-1 text-amber-600 animate-pulse" />
+                Tiempo restante para opinar:
+              </span>
+              <span className="font-black bg-amber-600 text-white px-2 py-0.5 rounded-lg text-[9.5px] tracking-wider font-mono animate-pulse shadow-sm shadow-amber-600/10">
+                {timeLeft}
+              </span>
+            </div>
+          )}
 
           {/* Active Candidate Card */}
           <div className="bg-white border border-slate-200/80 rounded-[2rem] p-5 shadow-sm space-y-5 relative overflow-hidden">
@@ -592,17 +607,6 @@ export const EvaluacionCompartida: React.FC = () => {
                 </div>
               ) : (
                 <form onSubmit={(e) => handleSendOpinion(e, currentProposal)} className="space-y-3">
-                  {timeLeft && (
-                    <div className="bg-amber-50/70 border border-amber-200/50 rounded-xl p-2.5 flex items-center justify-between text-[11px] text-amber-900 shadow-sm/20">
-                      <span className="font-bold flex items-center">
-                        <Clock size={12} className="mr-1 text-amber-600 animate-pulse" />
-                        Tiempo restante:
-                      </span>
-                      <span className="font-black bg-amber-600 text-white px-2 py-0.5 rounded-lg text-[9.5px] tracking-wider font-mono animate-pulse shadow-sm shadow-amber-600/10">
-                        {timeLeft}
-                      </span>
-                    </div>
-                  )}
                   <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
                     Tu comentario es completamente confidencial y anónimo.
                   </p>
@@ -641,6 +645,44 @@ export const EvaluacionCompartida: React.FC = () => {
                 Esta candidatura no requiere del proceso de consulta anónima.
               </div>
             )}
+          </div>
+
+          {/* Bottom Progress Indicator with Navigation Arrows (Duplicated) */}
+          <div className="flex items-center justify-between bg-white border border-slate-200/80 px-4 py-3 rounded-2xl shadow-sm text-xs">
+            <button
+              onClick={() => {
+                if (selectedIndex > 0) {
+                  setSelectedIndex(selectedIndex - 1);
+                  setComentario('');
+                  setSubmittedId(null);
+                }
+              }}
+              disabled={selectedIndex === 0}
+              className="p-1.5 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="Anterior Candidato"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <div className="flex items-center space-x-1.5 font-bold text-slate-600">
+              <span>Candidato:</span>
+              <span className="font-black text-blue-900 bg-blue-50 px-2.5 py-1 rounded-lg">
+                {selectedIndex + 1} de {proposals.length}
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                if (selectedIndex < proposals.length - 1) {
+                  setSelectedIndex(selectedIndex + 1);
+                  setComentario('');
+                  setSubmittedId(null);
+                }
+              }}
+              disabled={selectedIndex === proposals.length - 1}
+              className="p-1.5 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="Siguiente Candidato"
+            >
+              <ChevronRight size={16} />
+            </button>
           </div>
         </div>
       </div>
