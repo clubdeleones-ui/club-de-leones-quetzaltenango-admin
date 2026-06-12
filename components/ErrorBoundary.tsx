@@ -21,6 +21,21 @@ class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Uncaught error:', error, errorInfo);
+    const isChunkError = 
+      error.message?.includes('Failed to fetch dynamically imported module') ||
+      error.name === 'ChunkLoadError' ||
+      error.message?.includes('chunk') ||
+      error.message?.includes('dynamic import');
+      
+    if (isChunkError) {
+      console.warn('Chunk load error detected in ErrorBoundary. Automatically reloading page to fetch latest version...');
+      const lastReload = localStorage.getItem('last_chunk_error_reload');
+      const now = Date.now();
+      if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
+        localStorage.setItem('last_chunk_error_reload', now.toString());
+        window.location.reload();
+      }
+    }
   }
 
   public render() {
