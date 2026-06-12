@@ -18,7 +18,11 @@ import {
   Trash2,
   Pencil,
   Image as ImageIcon,
-  AlertCircle
+  AlertCircle,
+  Share2,
+  Copy,
+  Check,
+  MessageSquare
 } from 'lucide-react';
 
 interface AfiliacionProps {
@@ -41,9 +45,11 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
   });
 
   const [editingPropuesta, setEditingPropuesta] = useState<PropuestaSocio | null>(null);
+  const [shareConfigPropuesta, setShareConfigPropuesta] = useState<PropuestaSocio | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; title: string } | null>(null);
   const [isCompressingPhoto, setIsCompressingPhoto] = useState(false);
   const [isSavingPropuesta, setIsSavingPropuesta] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleProposalImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -262,6 +268,13 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                     {canEditPropuestas && (
                       <div className="flex items-center space-x-2 sm:self-start self-end flex-shrink-0">
                         <button 
+                          onClick={() => setShareConfigPropuesta(propuesta)}
+                          className="p-2.5 sm:p-2 bg-slate-50 hover:bg-indigo-50 text-slate-450 hover:text-indigo-900 rounded-full transition-all border border-slate-100 shadow-sm flex items-center justify-center"
+                          title="Enlace y opiniones"
+                        >
+                          <Share2 size={16} />
+                        </button>
+                        <button 
                           onClick={() => setEditingPropuesta(propuesta)}
                           className="p-2.5 sm:p-2 bg-slate-50 hover:bg-blue-50 text-slate-450 hover:text-blue-900 rounded-full transition-all border border-slate-100 shadow-sm flex items-center justify-center"
                           title="Editar propuesta"
@@ -347,6 +360,22 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                       </div>
                     )}
                   </div>
+
+                  {/* Opinions summary banner */}
+                  {propuesta.opiniones && propuesta.opiniones.length > 0 && (
+                    <div className="mt-4 bg-emerald-50/60 border border-emerald-100/60 rounded-2xl p-3.5 flex justify-between items-center text-xs">
+                      <span className="font-bold text-emerald-800 flex items-center">
+                        <MessageSquare size={14} className="mr-1.5 text-emerald-650" />
+                        {propuesta.opiniones.length} opiniones anónimas recibidas
+                      </span>
+                      <button 
+                        onClick={() => setShareConfigPropuesta(propuesta)}
+                        className="text-[10px] font-black text-indigo-700 hover:text-indigo-950 uppercase tracking-wider bg-white px-2.5 py-1.5 rounded-lg border border-slate-200/50 hover:bg-slate-50 transition-colors shadow-sm"
+                      >
+                        Ver opiniones
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Admin Actions */}
@@ -660,6 +689,161 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
             <p className="text-white text-base font-bold mt-4 bg-slate-900/80 px-4 py-2 rounded-xl shadow-lg border border-white/5">
               {selectedPhoto.title}
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* SHARE CONFIG & OPINIONS MODAL */}
+      {shareConfigPropuesta && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 sm:p-10 space-y-6 relative animate-in zoom-in-95 duration-300">
+            <button 
+              type="button"
+              onClick={() => setShareConfigPropuesta(null)}
+              className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="space-y-1">
+              <h2 className="text-xl sm:text-2xl font-black text-blue-900">Enlace Compartido y Opiniones</h2>
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">{shareConfigPropuesta.nombreCandidato}</p>
+            </div>
+
+            <div className="space-y-6">
+              {/* Configuration: Enable/Disable Opinions */}
+              <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="space-y-1 max-w-[70%]">
+                  <label className="block text-sm font-black text-slate-800">
+                    Habilitar opiniones anónimas
+                  </label>
+                  <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                    Si está activo, las personas que tengan el enlace podrán opinar sobre esta postulación de forma anónima.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const nextVal = !shareConfigPropuesta.habilitarOpinion;
+                    const updated = { ...shareConfigPropuesta, habilitarOpinion: nextVal };
+                    setPropuestas(propuestas.map(p => p.id === updated.id ? updated : p));
+                    setShareConfigPropuesta(updated);
+                    try {
+                      await firebaseService.updateProposal(updated.id, { habilitarOpinion: nextVal });
+                    } catch (err) {
+                      console.error("Error setting proposal opinion flag:", err);
+                    }
+                  }}
+                  className={`w-14 h-8 rounded-full transition-colors relative shrink-0 ${
+                    shareConfigPropuesta.habilitarOpinion ? 'bg-blue-900' : 'bg-slate-355'
+                  }`}
+                >
+                  <span className={`absolute top-1 left-1 w-6 h-6 rounded-full bg-white transition-transform ${
+                    shareConfigPropuesta.habilitarOpinion ? 'translate-x-6' : 'translate-x-0'
+                  }`} />
+                </button>
+              </div>
+
+              {/* Share Link Generation */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">
+                  Enlace de Compartir (Optimizado para móvil)
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={`${window.location.origin}${window.location.pathname}#/ficha-evaluacion/${shareConfigPropuesta.id}`}
+                    className="flex-1 px-4 py-3 border border-slate-200 rounded-xl bg-slate-50 text-xs font-semibold select-all text-slate-600 truncate"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const link = `${window.location.origin}${window.location.pathname}#/ficha-evaluacion/${shareConfigPropuesta.id}`;
+                      navigator.clipboard.writeText(link);
+                      setCopiedLink(true);
+                      setTimeout(() => setCopiedLink(false), 2000);
+                    }}
+                    className={`px-5 py-3 rounded-xl font-black text-xs transition-all flex items-center justify-center space-x-1.5 shrink-0 ${
+                      copiedLink 
+                        ? 'bg-emerald-600 text-white' 
+                        : 'bg-indigo-900 hover:bg-indigo-800 text-white active:scale-95'
+                    }`}
+                  >
+                    {copiedLink ? <Check size={14} /> : <Copy size={14} />}
+                    <span>{copiedLink ? 'Copiado!' : 'Copiar Link'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Opinions list */}
+              <div className="space-y-3 pt-4 border-t border-slate-100">
+                <div className="flex items-center space-x-2 text-slate-800">
+                  <MessageSquare size={16} />
+                  <h3 className="text-sm font-black">
+                    Opiniones Recibidas ({shareConfigPropuesta.opiniones?.length || 0})
+                  </h3>
+                </div>
+
+                <div className="space-y-3.5 max-h-[30vh] overflow-y-auto pr-1">
+                  {shareConfigPropuesta.opiniones && shareConfigPropuesta.opiniones.length > 0 ? (
+                    shareConfigPropuesta.opiniones.map((op) => (
+                      <div 
+                        key={op.id} 
+                        className="bg-slate-50 rounded-2xl p-4 border border-slate-100 text-xs relative group flex justify-between items-start gap-4 animate-in fade-in duration-300"
+                      >
+                        <div className="space-y-1.5 flex-1 min-w-0">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                              Anónimo
+                            </span>
+                            <span className="text-[9px] text-slate-450 font-bold">
+                              • {op.fecha}
+                            </span>
+                          </div>
+                          <p className="text-slate-700 leading-relaxed font-semibold break-words">
+                            "{op.comentario}"
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!window.confirm("¿Está seguro de eliminar esta opinión permanentemente?")) return;
+                            const filtered = (shareConfigPropuesta.opiniones || []).filter(o => o.id !== op.id);
+                            const updated = { ...shareConfigPropuesta, opiniones: filtered };
+                            setPropuestas(propuestas.map(p => p.id === updated.id ? updated : p));
+                            setShareConfigPropuesta(updated);
+                            try {
+                              await firebaseService.updateProposal(updated.id, { opiniones: filtered });
+                            } catch (err) {
+                              console.error("Error deleting opinion:", err);
+                            }
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors shrink-0"
+                          title="Eliminar opinión"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-slate-405 italic font-medium bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                      No se han recibido opiniones anónimas aún para este candidato.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShareConfigPropuesta(null)}
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all text-xs"
+              >
+                Cerrar Ventana
+              </button>
+            </div>
           </div>
         </div>
       )}

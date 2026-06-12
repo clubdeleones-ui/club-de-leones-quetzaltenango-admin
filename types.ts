@@ -119,6 +119,8 @@ export interface PropuestaSocio {
   estadoCivil?: string;
   hijos?: string;
   nombreEsposa?: string;
+  habilitarOpinion?: boolean;
+  opiniones?: { id: string; fecha: string; comentario: string }[];
 }
 
 export interface Responsable {

@@ -64,6 +64,21 @@ export const firebaseService = {
     }
   },
 
+  // Fetch a single proposal by ID
+  getProposalById: async (proposalId: string): Promise<PropuestaSocio | null> => {
+    try {
+      const docRef = doc(db, "propuestas", proposalId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return docSnap.data() as PropuestaSocio;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching proposal by ID from Firestore:", error);
+      throw error;
+    }
+  },
+
   // Update proposal status
   updateProposalStatus: async (proposalId: string, estado: "Pendiente" | "Aprobado" | "Rechazado"): Promise<void> => {
     try {
