@@ -15,7 +15,8 @@ import {
   Clock, 
   Heart,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  WifiOff
 } from 'lucide-react';
 
 export const FichaEvaluacion: React.FC = () => {
@@ -26,6 +27,7 @@ export const FichaEvaluacion: React.FC = () => {
   const [proposal, setProposal] = useState<PropuestaSocio | null>(null);
   const [allProposals, setAllProposals] = useState<PropuestaSocio[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorType, setErrorType] = useState<'not_found' | 'network' | null>(null);
   const [comentario, setComentario] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -75,6 +77,8 @@ export const FichaEvaluacion: React.FC = () => {
         const data = await firebaseService.getProposalById(id);
         if (data) {
           setProposal(data);
+        } else {
+          setErrorType('not_found');
         }
         
         // Fetch all pending proposals for navigation
@@ -91,7 +95,7 @@ export const FichaEvaluacion: React.FC = () => {
         }
       } catch (err) {
         console.error("Error fetching proposal or all:", err);
-        showToast("Error al cargar la información", "error");
+        setErrorType('network');
       } finally {
         setLoading(false);
       }
@@ -184,7 +188,27 @@ export const FichaEvaluacion: React.FC = () => {
     );
   }
 
-  if (!proposal) {
+  if (errorType === 'network') {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
+        <div className="bg-orange-50 p-4 rounded-full text-orange-500 mb-4 border border-orange-150">
+          <WifiOff size={36} />
+        </div>
+        <h3 className="text-xl font-bold text-slate-800">Error de Conexión</h3>
+        <p className="text-slate-500 mt-2 max-w-md text-sm font-medium">
+          No pudimos conectar con la base de datos. Es posible que tu navegador esté bloqueando la conexión (ej. bloqueadores de anuncios o protección de rastreo estricta). Por favor, desactívalos temporalmente o intenta en otro navegador (recomendamos Chrome).
+        </p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-6 px-6 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-extrabold rounded-xl shadow-lg transition-all text-xs flex items-center space-x-1.5"
+        >
+          <span>Reintentar</span>
+        </button>
+      </div>
+    );
+  }
+
+  if (!proposal || errorType === 'not_found') {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
         <div className="bg-red-50 p-4 rounded-full text-red-500 mb-4 border border-red-150">

@@ -14,13 +14,15 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
-  Users
+  Users,
+  WifiOff
 } from 'lucide-react';
 
 export const EvaluacionCompartida: React.FC = () => {
   const { showToast } = useToast();
   const [proposals, setProposals] = useState<PropuestaSocio[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorType, setErrorType] = useState<'network' | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [comentario, setComentario] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -74,7 +76,7 @@ export const EvaluacionCompartida: React.FC = () => {
         setProposals(pending);
       } catch (err) {
         console.error("Error fetching proposals:", err);
-        showToast("Error al cargar las candidaturas", "error");
+        setErrorType('network');
       } finally {
         setLoading(false);
       }
@@ -159,6 +161,26 @@ export const EvaluacionCompartida: React.FC = () => {
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <div className="w-12 h-12 border-4 border-blue-900 border-t-transparent rounded-full animate-spin shadow-lg"></div>
         <p className="mt-4 text-blue-900 font-bold animate-pulse text-sm">Cargando candidaturas en evaluación...</p>
+      </div>
+    );
+  }
+
+  if (errorType === 'network') {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
+        <div className="bg-orange-50 p-4 rounded-full text-orange-500 mb-4 border border-orange-150">
+          <WifiOff size={36} />
+        </div>
+        <h3 className="text-xl font-bold text-slate-800">Error de Conexión</h3>
+        <p className="text-slate-500 mt-2 max-w-md text-sm font-medium">
+          No pudimos conectar con la base de datos. Es posible que tu navegador esté bloqueando la conexión (ej. bloqueadores de anuncios o protección de rastreo estricta). Por favor, desactívalos temporalmente o intenta en otro navegador (recomendamos Chrome).
+        </p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-6 px-6 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-extrabold rounded-xl shadow-lg transition-all text-xs flex items-center space-x-1.5 justify-center mx-auto"
+        >
+          <span>Reintentar</span>
+        </button>
       </div>
     );
   }
