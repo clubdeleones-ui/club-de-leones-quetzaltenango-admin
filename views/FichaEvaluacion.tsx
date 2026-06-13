@@ -235,7 +235,7 @@ export const FichaEvaluacion: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100/60 pb-16">
       {/* Top branding bar */}
       <div className="bg-white border-b border-slate-200/80 sticky top-0 z-40 shadow-sm">
-        <div className="max-w-xl mx-auto px-4 py-3.5 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 py-3.5 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <span className="text-xl">🦁</span>
             <div>
@@ -249,7 +249,7 @@ export const FichaEvaluacion: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-xl mx-auto px-4 pt-6 space-y-4">
+      <div className="max-w-6xl mx-auto px-4 pt-6 space-y-6">
         {/* President of Commission Header Banner */}
         {(proposal.presidenteComision || 'Rolando José Daniel Mérida del Valle') && (
           <div className="bg-blue-900 text-white rounded-2xl p-4 shadow-md flex items-center justify-between border border-blue-955/20">
@@ -266,60 +266,110 @@ export const FichaEvaluacion: React.FC = () => {
           </div>
         )}
 
-        {/* Progress Indicator with Navigation Arrows */}
-        {allProposals.length > 1 && currentIndex !== -1 && (
-          <div className="flex items-center justify-between bg-white border border-slate-200/80 px-5 py-4 rounded-3xl shadow-sm text-xs">
-            <button
-              onClick={() => {
-                if (currentIndex > 0) {
-                  const prevId = allProposals[currentIndex - 1].id;
-                  setComentario('');
-                  setSubmitted(false);
-                  navigate(`/ficha-evaluacion/${prevId}`, { state: { fromNavigation: true } });
-                }
-              }}
-              disabled={currentIndex === 0}
-              className="p-2 bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-900 border border-blue-200/60 rounded-xl disabled:opacity-40 disabled:bg-slate-50 disabled:text-slate-350 disabled:border-slate-100 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-sm"
-              title="Anterior Candidato"
-            >
-              <ChevronLeft size={24} strokeWidth={2.5} />
-            </button>
-            <div className="flex items-center space-x-2 font-bold text-slate-655 text-sm">
-              <span>Candidato:</span>
-              <span className="font-black text-blue-900 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl">
-                {currentIndex + 1} de {allProposals.length}
-              </span>
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+          {/* Sidebar ONLY visible on desktop */}
+          {allProposals.length > 1 && (
+            <div className="hidden md:block md:col-span-4 bg-white border border-slate-200/80 rounded-3xl p-4 shadow-sm space-y-3.5 sticky top-24 max-h-[80vh] overflow-y-auto">
+              <h3 className="font-black text-slate-850 text-xs uppercase tracking-wider px-2 flex items-center justify-between">
+                <span>Postulados</span>
+                <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-bold">
+                  {allProposals.length}
+                </span>
+              </h3>
+              <div className="space-y-1.5">
+                {allProposals.map((prop) => (
+                  <button
+                    key={prop.id}
+                    onClick={() => {
+                      setComentario('');
+                      setSubmitted(false);
+                      navigate(`/ficha-evaluacion/${prop.id}`, { state: { fromNavigation: true } });
+                    }}
+                    className={`w-full text-left p-3 rounded-2xl border transition-all flex items-center space-x-3 ${
+                      prop.id === id 
+                        ? 'bg-blue-50/70 border-blue-200 shadow-sm' 
+                        : 'border-transparent hover:bg-slate-50/80'
+                    }`}
+                  >
+                    <img
+                      src={prop.fotoCandidato || `https://picsum.photos/seed/${prop.id}/100/100`}
+                      alt={prop.nombreCandidato}
+                      className="w-10 h-10 rounded-xl object-cover border border-slate-100"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <h4 className={`font-black text-xs truncate ${prop.id === id ? 'text-blue-900' : 'text-slate-800'}`}>
+                        {prop.nombreCandidato}
+                      </h4>
+                      <p className="text-[10px] text-slate-450 truncate font-semibold">
+                        {prop.profesionCandidato}
+                      </p>
+                    </div>
+                    {prop.habilitarOpinion && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-900 shrink-0" title="Requiere opinión" />
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
-            <button
-              onClick={() => {
-                if (currentIndex < allProposals.length - 1) {
-                  const nextId = allProposals[currentIndex + 1].id;
-                  setComentario('');
-                  setSubmitted(false);
-                  navigate(`/ficha-evaluacion/${nextId}`, { state: { fromNavigation: true } });
-                }
-              }}
-              disabled={currentIndex === allProposals.length - 1}
-              className="p-2 bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-900 border border-blue-200/60 rounded-xl disabled:opacity-40 disabled:bg-slate-50 disabled:text-slate-350 disabled:border-slate-100 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-sm"
-              title="Siguiente Candidato"
-            >
-              <ChevronRight size={24} strokeWidth={2.5} />
-            </button>
-          </div>
-        )}
+          )}
 
-        {/* Countdown Timer */}
-        {timeLeft && !isExpired && proposal.habilitarOpinion && (
-          <div className="bg-amber-50/70 border border-amber-200/50 rounded-2xl p-3.5 flex items-center justify-between text-xs text-amber-900 shadow-sm/20">
-            <span className="font-bold flex items-center">
-              <Clock size={14} className="mr-1.5 text-amber-600 animate-pulse" />
-              Tiempo restante para opinar:
-            </span>
-            <span className="font-black bg-amber-600 text-white px-2.5 py-1 rounded-xl text-[10.5px] tracking-wider font-mono animate-pulse shadow-sm shadow-amber-600/10">
-              {timeLeft}
-            </span>
-          </div>
-        )}
+          {/* Main content: Candidate details & form */}
+          <div className={`${allProposals.length > 1 ? 'md:col-span-8' : 'md:col-span-8 md:col-start-3'} space-y-4 w-full`}>
+            
+            {/* Progress Indicator with Navigation Arrows (Mobile ONLY) */}
+            {allProposals.length > 1 && currentIndex !== -1 && (
+              <div className="md:hidden flex items-center justify-between bg-white border border-slate-200/80 px-5 py-4 rounded-3xl shadow-sm text-xs">
+                <button
+                  onClick={() => {
+                    if (currentIndex > 0) {
+                      const prevId = allProposals[currentIndex - 1].id;
+                      setComentario('');
+                      setSubmitted(false);
+                      navigate(`/ficha-evaluacion/${prevId}`, { state: { fromNavigation: true } });
+                    }
+                  }}
+                  disabled={currentIndex === 0}
+                  className="p-2 bg-blue-50 hover:bg-blue-150 active:scale-95 text-blue-900 border border-blue-200/60 rounded-xl disabled:opacity-40 disabled:bg-slate-50 disabled:text-slate-350 disabled:border-slate-100 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-sm"
+                  title="Anterior Candidato"
+                >
+                  <ChevronLeft size={24} strokeWidth={2.5} />
+                </button>
+                <div className="flex items-center space-x-2 font-bold text-slate-655 text-sm">
+                  <span>Candidato:</span>
+                  <span className="font-black text-blue-900 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl">
+                    {currentIndex + 1} de {allProposals.length}
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    if (currentIndex < allProposals.length - 1) {
+                      const nextId = allProposals[currentIndex + 1].id;
+                      setComentario('');
+                      setSubmitted(false);
+                      navigate(`/ficha-evaluacion/${nextId}`, { state: { fromNavigation: true } });
+                    }
+                  }}
+                  disabled={currentIndex === allProposals.length - 1}
+                  className="p-2 bg-blue-50 hover:bg-blue-150 active:scale-95 text-blue-900 border border-blue-200/60 rounded-xl disabled:opacity-40 disabled:bg-slate-50 disabled:text-slate-350 disabled:border-slate-100 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-sm"
+                  title="Siguiente Candidato"
+                >
+                  <ChevronRight size={24} strokeWidth={2.5} />
+                </button>
+              </div>
+            )}
+
+            {/* Countdown Timer */}
+            {timeLeft && !isExpired && proposal.habilitarOpinion && (
+              <div className="bg-amber-50/70 border border-amber-200/50 rounded-2xl p-3.5 flex items-center justify-between text-xs text-amber-900 shadow-sm/20">
+                <span className="font-bold flex items-center">
+                  <Clock size={14} className="mr-1.5 text-amber-600 animate-pulse" />
+                  Tiempo restante para opinar:
+                </span>
+                <span className="font-black bg-amber-600 text-white px-2.5 py-1 rounded-xl text-[10.5px] tracking-wider font-mono animate-pulse shadow-sm shadow-amber-600/10">
+                  {timeLeft}
+                </span>
+              </div>
+            )}
 
         {/* Candidate Profile Card */}
         <div className="bg-white rounded-3xl border border-slate-200/80 shadow-md overflow-hidden relative">
@@ -512,47 +562,50 @@ export const FichaEvaluacion: React.FC = () => {
           )}
         </div>
 
-        {/* Bottom Progress Indicator with Navigation Arrows (Duplicated) */}
-        {allProposals.length > 1 && currentIndex !== -1 && (
-          <div className="flex items-center justify-between bg-white border border-slate-200/80 px-5 py-4 rounded-3xl shadow-sm text-xs">
-            <button
-              onClick={() => {
-                if (currentIndex > 0) {
-                  const prevId = allProposals[currentIndex - 1].id;
-                  setComentario('');
-                  setSubmitted(false);
-                  navigate(`/ficha-evaluacion/${prevId}`, { state: { fromNavigation: true } });
-                }
-              }}
-              disabled={currentIndex === 0}
-              className="p-2 bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-900 border border-blue-200/60 rounded-xl disabled:opacity-40 disabled:bg-slate-50 disabled:text-slate-350 disabled:border-slate-100 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-sm"
-              title="Anterior Candidato"
-            >
-              <ChevronLeft size={24} strokeWidth={2.5} />
-            </button>
-            <div className="flex items-center space-x-2 font-bold text-slate-655 text-sm">
-              <span>Candidato:</span>
-              <span className="font-black text-blue-900 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl">
-                {currentIndex + 1} de {allProposals.length}
-              </span>
-            </div>
-            <button
-              onClick={() => {
-                if (currentIndex < allProposals.length - 1) {
-                  const nextId = allProposals[currentIndex + 1].id;
-                  setComentario('');
-                  setSubmitted(false);
-                  navigate(`/ficha-evaluacion/${nextId}`, { state: { fromNavigation: true } });
-                }
-              }}
-              disabled={currentIndex === allProposals.length - 1}
-              className="p-2 bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-900 border border-blue-200/60 rounded-xl disabled:opacity-40 disabled:bg-slate-50 disabled:text-slate-355 disabled:border-slate-100 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-sm"
-              title="Siguiente Candidato"
-            >
-              <ChevronRight size={24} strokeWidth={2.5} />
-            </button>
+            {/* Bottom Progress Indicator with Navigation Arrows (Mobile ONLY) */}
+            {allProposals.length > 1 && currentIndex !== -1 && (
+              <div className="md:hidden flex items-center justify-between bg-white border border-slate-200/80 px-5 py-4 rounded-3xl shadow-sm text-xs">
+                <button
+                  onClick={() => {
+                    if (currentIndex > 0) {
+                      const prevId = allProposals[currentIndex - 1].id;
+                      setComentario('');
+                      setSubmitted(false);
+                      navigate(`/ficha-evaluacion/${prevId}`, { state: { fromNavigation: true } });
+                    }
+                  }}
+                  disabled={currentIndex === 0}
+                  className="p-2 bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-900 border border-blue-200/60 rounded-xl disabled:opacity-40 disabled:bg-slate-50 disabled:text-slate-350 disabled:border-slate-100 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-sm"
+                  title="Anterior Candidato"
+                >
+                  <ChevronLeft size={24} strokeWidth={2.5} />
+                </button>
+                <div className="flex items-center space-x-2 font-bold text-slate-655 text-sm">
+                  <span>Candidato:</span>
+                  <span className="font-black text-blue-900 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-xl">
+                    {currentIndex + 1} de {allProposals.length}
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    if (currentIndex < allProposals.length - 1) {
+                      const nextId = allProposals[currentIndex + 1].id;
+                      setComentario('');
+                      setSubmitted(false);
+                      navigate(`/ficha-evaluacion/${nextId}`, { state: { fromNavigation: true } });
+                    }
+                  }}
+                  disabled={currentIndex === allProposals.length - 1}
+                  className="p-2 bg-blue-50 hover:bg-blue-100 active:scale-95 text-blue-900 border border-blue-200/60 rounded-xl disabled:opacity-40 disabled:bg-slate-50 disabled:text-slate-355 disabled:border-slate-100 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-sm"
+                  title="Siguiente Candidato"
+                >
+                  <ChevronRight size={24} strokeWidth={2.5} />
+                </button>
+              </div>
+            )}
+
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
