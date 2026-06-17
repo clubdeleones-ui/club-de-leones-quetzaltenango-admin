@@ -506,9 +506,20 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                             const nextConfirmState = !propuesta.invitacionConfirmada;
                             let phone = propuesta.telefonoConfirmacionCandidato || '';
                             if (nextConfirmState && !phone) {
-                              const inputPhone = window.prompt("Ingrese el teléfono del candidato para la confirmación (opcional):", "");
+                              const inputPhone = window.prompt("Ingrese el número de teléfono de 8 dígitos del candidato (opcional):", "");
                               if (inputPhone === null) return;
-                              phone = inputPhone;
+                              const cleanDigits = inputPhone.replace(/\D/g, '');
+                              if (cleanDigits.length === 8) {
+                                phone = `+502 ${cleanDigits}`;
+                              } else if (cleanDigits.length > 0) {
+                                if (cleanDigits.startsWith('502') && cleanDigits.length === 11) {
+                                  phone = `+502 ${cleanDigits.substring(3)}`;
+                                } else {
+                                  phone = inputPhone.trim();
+                                }
+                              } else {
+                                phone = '';
+                              }
                             }
                             const updated = { 
                               ...propuesta, 
@@ -907,13 +918,29 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                       <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">
                         Teléfono de Confirmación del Candidato
                       </label>
-                      <input 
-                        type="text"
-                        value={editingPropuesta.telefonoConfirmacionCandidato || ''}
-                        onChange={e => setEditingPropuesta({ ...editingPropuesta, telefonoConfirmacionCandidato: e.target.value })}
-                        placeholder="Ej. 5691 1935"
-                        className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-xs font-semibold text-slate-700 bg-white"
-                      />
+                      <div className="relative rounded-xl shadow-sm flex overflow-hidden border border-slate-200 focus-within:ring-2 focus-within:ring-blue-900 focus-within:border-transparent transition-all">
+                        <span className="inline-flex items-center px-3 bg-slate-50 text-slate-500 font-extrabold text-[10px] border-r border-slate-200 select-none">
+                          +502
+                        </span>
+                        <input 
+                          type="tel"
+                          inputMode="numeric"
+                          pattern="[0-9]{8}"
+                          maxLength={8}
+                          value={(editingPropuesta.telefonoConfirmacionCandidato || '').replace('+502', '').trim()}
+                          onChange={e => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            if (val.length <= 8) {
+                              setEditingPropuesta({ 
+                                ...editingPropuesta, 
+                                telefonoConfirmacionCandidato: val ? `+502 ${val}` : '' 
+                              });
+                            }
+                          }}
+                          placeholder="4000 1234"
+                          className="w-full px-3 py-2 outline-none text-xs font-semibold text-slate-700 bg-white"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

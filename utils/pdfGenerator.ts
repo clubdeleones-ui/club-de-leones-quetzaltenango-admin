@@ -1006,7 +1006,7 @@ export const generateCartasInvitacionPDF = async (
 
     // Body Paragraph 3
     y += 2;
-    const p3 = `Por favor confirmar tu asistencia antes del ${fechaLimite}. Puedes escanear el código QR adjunto para confirmar digitalmente tu participación, o bien comunicarte con nosotros llamando o al WhatsApp al número de teléfono ${telefonoConfirmacion}.`;
+    const p3 = `Por favor confirmar tu asistencia antes del ${fechaLimite}. Puedes escanear el código QR adjunto o bien hacer clic en el enlace digital al pie de esta página para confirmar tu participación de manera automática, o bien comunicarte con nosotros llamando o al WhatsApp al número de teléfono ${telefonoConfirmacion}.`;
     const splitP3 = doc.splitTextToSize(p3, contentWidth);
     splitP3.forEach((line: string) => {
       doc.text(line, margin, y);
