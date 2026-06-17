@@ -27,6 +27,24 @@ import {
   User
 } from 'lucide-react';
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage = "Timeout exceeded"): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(errorMessage));
+    }, timeoutMs);
+
+    promise
+      .then((res) => {
+        clearTimeout(timer);
+        resolve(res);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
+
 const guessGender = (name: string): 'Masculino' | 'Femenino' => {
   const firstName = name.trim().split(' ')[0].toLowerCase();
   if (firstName.endsWith('a') || firstName.endsWith('is') || firstName.endsWith('y')) {
@@ -555,7 +573,11 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                 let finalPhotoUrl = editingPropuesta.fotoCandidato || '';
                 if (finalPhotoUrl && finalPhotoUrl.startsWith('data:')) {
                   try {
-                    finalPhotoUrl = await firebaseService.uploadCandidatePhoto(finalPhotoUrl, editingPropuesta.id);
+                    finalPhotoUrl = await withTimeout(
+                      firebaseService.uploadCandidatePhoto(finalPhotoUrl, editingPropuesta.id),
+                      8000,
+                      "El servidor tardó demasiado en subir la fotografía."
+                    );
                   } catch (uploadErr) {
                     console.error("Error uploading candidate photo, using original base64:", uploadErr);
                   }
@@ -571,7 +593,11 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                 setPropuestas(propuestas.map(p => p.id === updatedPropuesta.id ? updatedPropuesta : p));
 
                 // Save to Firebase
-                await firebaseService.updateProposal(updatedPropuesta.id, updatedPropuesta);
+                await withTimeout(
+                  firebaseService.updateProposal(updatedPropuesta.id, updatedPropuesta),
+                  8000,
+                  "El servidor central de base de datos tardó demasiado en responder."
+                );
                 
                 // Also update localStorage
                 const localPropuestas = localStorage.getItem('club_leones_propuestas');
