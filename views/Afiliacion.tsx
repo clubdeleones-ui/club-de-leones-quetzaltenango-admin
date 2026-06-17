@@ -24,7 +24,8 @@ import {
   Copy,
   Check,
   MessageSquare,
-  User
+  User,
+  ChevronDown
 } from 'lucide-react';
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage = "Timeout exceeded"): Promise<T> {
@@ -106,6 +107,7 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
   const [copiedLink, setCopiedLink] = useState(false);
   const [isOpenCollectiveModal, setIsOpenCollectiveModal] = useState(false);
   const [isOpenLettersModal, setIsOpenLettersModal] = useState(false);
+  const [isOpenActionsDropdown, setIsOpenActionsDropdown] = useState(false);
   const [copiedCollective, setCopiedCollective] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -281,22 +283,64 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
           <p className="text-sm font-bold text-slate-500 mt-1 uppercase tracking-wider">Gestión y Aprobación de Candidatos</p>
         </div>
         {canEditPropuestas && (
-          <div className="flex flex-col sm:flex-row gap-2 self-stretch sm:self-auto w-full sm:w-auto">
+          <div className="relative self-stretch sm:self-auto">
             <button
-              onClick={() => setIsOpenCollectiveModal(true)}
-              className="bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs px-5 py-3.5 rounded-2xl shadow-lg shadow-indigo-900/10 flex items-center space-x-2 transition-all active:scale-95 justify-center shrink-0"
+              onClick={() => setIsOpenActionsDropdown(!isOpenActionsDropdown)}
+              className="bg-indigo-950 hover:bg-indigo-900 text-white font-extrabold text-xs px-5 py-3.5 rounded-2xl shadow-lg shadow-indigo-950/20 flex items-center space-x-2 transition-all active:scale-95 justify-center w-full sm:w-auto shrink-0"
             >
-              <Share2 size={15} />
-              <span>Compartir Evaluación Colectiva</span>
+              <Briefcase size={15} />
+              <span>Acciones del Comité</span>
+              <ChevronDown size={15} className={`transition-transform duration-200 ${isOpenActionsDropdown ? 'rotate-180' : ''}`} />
             </button>
-            {propuestas.some(p => p.estado === 'Aprobado') && (
-              <button
-                onClick={() => setIsOpenLettersModal(true)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-5 py-3.5 rounded-2xl shadow-lg shadow-emerald-600/10 flex items-center space-x-2 transition-all active:scale-95 justify-center shrink-0"
-              >
-                <Mail size={15} />
-                <span>Generar Cartas de Invitación</span>
-              </button>
+
+            {isOpenActionsDropdown && (
+              <>
+                {/* Backdrop overlay to close when clicking outside */}
+                <div 
+                  className="fixed inset-0 z-30" 
+                  onClick={() => setIsOpenActionsDropdown(false)}
+                />
+                
+                <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-40 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="px-4 py-2 border-b border-slate-50">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Opciones Disponibles</span>
+                  </div>
+                  
+                  <button
+                    onClick={() => {
+                      setIsOpenActionsDropdown(false);
+                      setIsOpenCollectiveModal(true);
+                    }}
+                    className="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-start space-x-3 transition-colors"
+                  >
+                    <div className="p-2 bg-indigo-50 rounded-xl text-indigo-900 shrink-0">
+                      <Share2 size={16} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-800">Compartir Evaluación</div>
+                      <div className="text-[10px] text-slate-500 font-semibold mt-0.5">Copiar link de votación colectiva</div>
+                    </div>
+                  </button>
+
+                  {propuestas.some(p => p.estado === 'Aprobado') && (
+                    <button
+                      onClick={() => {
+                        setIsOpenActionsDropdown(false);
+                        setIsOpenLettersModal(true);
+                      }}
+                      className="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-start space-x-3 transition-colors border-t border-slate-50"
+                    >
+                      <div className="p-2 bg-emerald-50 rounded-xl text-emerald-600 shrink-0">
+                        <Mail size={16} />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-800">Generar Cartas</div>
+                        <div className="text-[10px] text-slate-500 font-semibold mt-0.5">Crear invitaciones para aprobados</div>
+                      </div>
+                    </button>
+                  )}
+                </div>
+              </>
             )}
           </div>
         )}
