@@ -41,7 +41,9 @@ export default function ConfirmarInvitacion() {
           setPropuesta(data);
           if (data.invitacionConfirmada) {
             setSuccess(true);
-            setTelefono(data.telefonoConfirmacionCandidato || '');
+            const rawPhone = data.telefonoConfirmacionCandidato || '';
+            const cleanPhone = rawPhone.replace('+502', '').trim();
+            setTelefono(cleanPhone);
           }
         }
       } catch (err) {
@@ -57,17 +59,19 @@ export default function ConfirmarInvitacion() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!telefono.trim()) {
-      alert('Por favor ingrese un número de teléfono válido.');
+    const cleanNum = telefono.trim().replace(/\D/g, '');
+    if (cleanNum.length !== 8) {
+      alert('Por favor ingrese un número de teléfono de 8 dígitos.');
       return;
     }
 
     setSubmitting(true);
     try {
       const todayStr = new Date().toISOString().split('T')[0];
+      const formattedPhone = `+502 ${cleanNum}`;
       await firebaseService.updateProposal(id!, {
         invitacionConfirmada: true,
-        telefonoConfirmacionCandidato: telefono.trim(),
+        telefonoConfirmacionCandidato: formattedPhone,
         fechaConfirmacionInvitacion: todayStr
       });
       setSuccess(true);
@@ -156,7 +160,7 @@ export default function ConfirmarInvitacion() {
                   </div>
                   <div>
                     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Teléfono de Contacto</div>
-                    <div className="text-xs font-extrabold text-slate-800">{telefono}</div>
+                    <div className="text-xs font-extrabold text-slate-800">+502 {telefono}</div>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3 text-slate-700">
@@ -218,25 +222,31 @@ export default function ConfirmarInvitacion() {
               {/* Phone Input */}
               <div className="space-y-2">
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">
-                  Número Telefónico o WhatsApp *
+                  Número Telefónico o WhatsApp (Guatemala) *
                 </label>
-                <div className="relative rounded-xl shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Phone size={16} />
-                  </div>
+                <div className="relative rounded-xl shadow-sm flex overflow-hidden border border-slate-200 focus-within:ring-2 focus-within:ring-blue-900 focus-within:border-transparent transition-all">
+                  <span className="inline-flex items-center px-4 bg-slate-50 text-slate-500 font-extrabold text-sm border-r border-slate-200 select-none">
+                    +502
+                  </span>
                   <input
                     type="tel"
-                    inputMode="tel"
-                    autoComplete="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]{8}"
+                    maxLength={8}
                     required
                     value={telefono}
-                    onChange={(e) => setTelefono(e.target.value)}
-                    placeholder="Ej. +502 5691 1935"
-                    className="w-full pl-10 pr-4 py-3.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-bold text-slate-700 bg-white"
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      if (val.length <= 8) {
+                        setTelefono(val);
+                      }
+                    }}
+                    placeholder="4000 1234"
+                    className="w-full px-4 py-3.5 outline-none text-sm font-bold text-slate-700 bg-white"
                   />
                 </div>
                 <p className="text-[10px] text-slate-400 font-medium">
-                  Utilizaremos este número exclusivamente para ponernos en contacto y coordinar el evento.
+                  Ingrese únicamente los 8 dígitos de su número de teléfono o WhatsApp.
                 </p>
               </div>
 
