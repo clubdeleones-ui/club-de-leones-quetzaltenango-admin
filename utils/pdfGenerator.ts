@@ -838,6 +838,7 @@ export interface CartaInvitacionInput {
 export const generateCartasInvitacionPDF = async (
   candidatos: CartaInvitacionInput[],
   fechaCharla: string,
+  horaCharla: string,
   fechaLimite: string,
   telefonoConfirmacion: string,
   action: 'download' | 'open' = 'download'
@@ -959,7 +960,7 @@ export const generateCartasInvitacionPDF = async (
     const items = [
       { label: 'Evento:', value: 'Charla informativa sobre el Club de Leones y sus actividades de voluntariado.' },
       { label: 'Fecha de la Charla:', value: fechaCharla },
-      { label: 'Hora:', value: '20:00 horas' },
+      { label: 'Hora:', value: horaCharla },
       { label: 'Lugar:', value: 'Sede del Club de Leones de Quetzaltenango' },
       { label: 'Dirección:', value: 'Calle Rodolfo Robles 24-53 zona 1 (abajo del Templo Minerva)' }
     ];

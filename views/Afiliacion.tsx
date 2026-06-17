@@ -123,6 +123,7 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
   });
   const [charlaDateText, setCharlaDateText] = useState<string>('');
   const [limiteDateText, setLimiteDateText] = useState<string>('');
+  const [charlaHoraText, setCharlaHoraText] = useState<string>('20:00 horas');
   const [telefonoConfirmacion, setTelefonoConfirmacion] = useState<string>('5691 1935');
   const [candidateGenders, setCandidateGenders] = useState<Record<string, 'Masculino' | 'Femenino'>>({});
 
@@ -1486,60 +1487,86 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
 
             <div className="space-y-6">
               {/* Event Settings */}
-              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4">
+              {/* Event Settings */}
+              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-150 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">
-                      Fecha de la Charla *
-                    </label>
-                    <input
-                      type="date"
-                      value={charlaDate}
-                      onChange={e => setCharlaDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700"
-                    />
-                    <input
-                      type="text"
-                      value={charlaDateText}
-                      onChange={e => setCharlaDateText(e.target.value)}
-                      placeholder="Ej. jueves 25 de julio de 2024"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700 mt-1.5"
-                    />
-                    <p className="text-[10px] text-slate-400 font-medium">Formato largo de la fecha que se imprimirá en la carta.</p>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">
-                      Fecha Límite de Confirmación *
-                    </label>
-                    <input
-                      type="date"
-                      value={limiteDate}
-                      onChange={e => setLimiteDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700"
-                    />
-                    <input
-                      type="text"
-                      value={limiteDateText}
-                      onChange={e => setLimiteDateText(e.target.value)}
-                      placeholder="Ej. 22 de julio de 2024"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700 mt-1.5"
-                    />
-                    <p className="text-[10px] text-slate-400 font-medium">Fecha límite para confirmar asistencia.</p>
-                  </div>
-                </div>
+                  {/* Columna 1: Datos de la Charla */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">
+                        Fecha de la Charla *
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="date"
+                          value={charlaDate}
+                          onChange={e => setCharlaDate(e.target.value)}
+                          className="px-3 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700 shrink-0 w-[120px]"
+                        />
+                        <input
+                          type="text"
+                          value={charlaDateText}
+                          onChange={e => setCharlaDateText(e.target.value)}
+                          placeholder="Ej. jueves 25 de julio de 2024"
+                          className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700"
+                        />
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-medium">Fecha en formato largo que irá en la carta.</p>
+                    </div>
 
-                <div className="space-y-2 pt-3 border-t border-slate-200/60">
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">
-                    Teléfono de Confirmación *
-                  </label>
-                  <input
-                    type="text"
-                    value={telefonoConfirmacion}
-                    onChange={e => setTelefonoConfirmacion(e.target.value)}
-                    placeholder="Ej. 5691 1935"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700"
-                  />
-                  <p className="text-[10px] text-slate-400 font-medium">Número de contacto (llamadas o WhatsApp) impreso en la sección de RSVP.</p>
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">
+                        Hora de la Charla *
+                      </label>
+                      <input
+                        type="text"
+                        value={charlaHoraText}
+                        onChange={e => setCharlaHoraText(e.target.value)}
+                        placeholder="Ej. 20:00 horas"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700"
+                      />
+                      <p className="text-[10px] text-slate-400 font-medium">Hora de inicio de la charla informativa.</p>
+                    </div>
+                  </div>
+
+                  {/* Columna 2: Confirmación */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">
+                        Fecha Límite de Confirmación *
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="date"
+                          value={limiteDate}
+                          onChange={e => setLimiteDate(e.target.value)}
+                          className="px-3 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700 shrink-0 w-[120px]"
+                        />
+                        <input
+                          type="text"
+                          value={limiteDateText}
+                          onChange={e => setLimiteDateText(e.target.value)}
+                          placeholder="Ej. 22 de julio de 2024"
+                          className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700"
+                        />
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-medium">Fecha límite para confirmar asistencia.</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">
+                        Teléfono de Confirmación *
+                      </label>
+                      <input
+                        type="text"
+                        value={telefonoConfirmacion}
+                        onChange={e => setTelefonoConfirmacion(e.target.value)}
+                        placeholder="Ej. 5691 1935"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700"
+                      />
+                      <p className="text-[10px] text-slate-400 font-medium">Número impreso para contacto y WhatsApp.</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1601,13 +1628,14 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                         <button
                           type="button"
                           onClick={() => {
-                            if (!charlaDateText || !limiteDateText) {
-                              alert('Por favor complete las fechas.');
+                            if (!charlaDateText || !charlaHoraText || !limiteDateText) {
+                              alert('Por favor complete todos los campos requeridos.');
                               return;
                             }
                             generateCartasInvitacionPDF(
                               [{ id: p.id, nombreCandidato: p.nombreCandidato, generoCandidato: candidateGenders[p.id] || 'Masculino' }],
                               charlaDateText,
+                              charlaHoraText,
                               limiteDateText,
                               telefonoConfirmacion,
                               'download'
@@ -1637,8 +1665,8 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
               <button
                 type="button"
                 onClick={() => {
-                  if (!charlaDateText || !limiteDateText) {
-                    alert('Por favor complete las fechas.');
+                  if (!charlaDateText || !charlaHoraText || !limiteDateText) {
+                    alert('Por favor complete todos los campos requeridos.');
                     return;
                   }
                   const approvedList = propuestas.filter(p => p.estado === 'Aprobado');
@@ -1648,7 +1676,7 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                     nombreCandidato: p.nombreCandidato,
                     generoCandidato: candidateGenders[p.id] || 'Masculino'
                   }));
-                  generateCartasInvitacionPDF(inputs, charlaDateText, limiteDateText, telefonoConfirmacion, 'download');
+                  generateCartasInvitacionPDF(inputs, charlaDateText, charlaHoraText, limiteDateText, telefonoConfirmacion, 'download');
                 }}
                 className="px-5 py-3 bg-emerald-600 hover:bg-emerald-750 text-white font-black rounded-xl transition-all text-xs flex items-center justify-center space-x-1.5 shadow-lg shadow-emerald-600/15 active:scale-95"
               >
