@@ -91,34 +91,33 @@ export default function ConfirmarInvitacion() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex flex-col items-center justify-center p-4 sm:p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex flex-col items-center justify-center p-3 sm:p-6 relative overflow-hidden">
       {/* Background elegant lights */}
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-900/5 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-yellow-500/5 blur-[120px] pointer-events-none" />
 
-      <div className="w-full max-w-lg bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl overflow-hidden relative z-10 animate-in zoom-in-95 duration-500">
+      <div className="w-full max-w-lg bg-white rounded-[1.75rem] sm:rounded-[2.5rem] border border-slate-200 shadow-2xl overflow-hidden relative z-10 animate-in zoom-in-95 duration-500">
         {/* Top Branding Header */}
-        <div className="bg-blue-900 px-8 py-7 text-center relative">
+        <div className="bg-blue-900 px-6 sm:px-8 py-6 sm:py-7 text-center relative">
           <div className="absolute left-0 bottom-0 right-0 h-1.5 bg-yellow-500" />
           <img 
             src="images/logo.png" 
             alt="Logo Club de Leones" 
-            className="w-16 h-16 mx-auto mb-3 bg-white p-2 rounded-full shadow-lg border border-slate-150"
+            className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-3 bg-white p-2 rounded-full shadow-lg border border-slate-150"
             onError={(e) => {
-              // Fallback if image isn't loaded properly
               e.currentTarget.style.display = 'none';
             }}
           />
-          <h1 className="text-white text-lg font-black tracking-wider uppercase">
+          <h1 className="text-white text-base sm:text-lg font-black tracking-wider uppercase">
             Club de Leones de Quetzaltenango
           </h1>
-          <p className="text-blue-200 text-xs font-semibold tracking-widest uppercase mt-1">
+          <p className="text-blue-200 text-[10px] sm:text-xs font-semibold tracking-widest uppercase mt-1">
             Nosotros Servimos
           </p>
         </div>
 
         {/* Content body */}
-        <div className="p-6 sm:p-10">
+        <div className="p-5 sm:p-10">
           {error ? (
             <div className="text-center space-y-6">
               <div className="w-16 h-16 bg-rose-50 border border-rose-250 text-rose-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
@@ -227,11 +226,13 @@ export default function ConfirmarInvitacion() {
                   </div>
                   <input
                     type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
                     required
                     value={telefono}
                     onChange={(e) => setTelefono(e.target.value)}
                     placeholder="Ej. +502 5691 1935"
-                    className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-700 bg-white"
+                    className="w-full pl-10 pr-4 py-3.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-bold text-slate-700 bg-white"
                   />
                 </div>
                 <p className="text-[10px] text-slate-400 font-medium">
@@ -243,7 +244,7 @@ export default function ConfirmarInvitacion() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black text-xs py-4 rounded-2xl flex items-center justify-center space-x-2 transition-all shadow-lg shadow-emerald-600/10 active:scale-[0.98] uppercase tracking-wider"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black text-xs py-4.5 rounded-2xl flex items-center justify-center space-x-2 transition-all shadow-lg shadow-emerald-600/10 active:scale-[0.98] uppercase tracking-wider"
               >
                 <span>{submitting ? 'Confirmando...' : 'Confirmar Mi Asistencia'}</span>
                 <ArrowRight size={14} />

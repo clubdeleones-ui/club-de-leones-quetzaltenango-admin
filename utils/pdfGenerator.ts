@@ -1061,6 +1061,24 @@ export const generateCartasInvitacionPDF = async (
       const qrY = y + 5; // aligned below the stamp
       doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
 
+      // Make the QR code image itself clickable
+      doc.link(qrX, qrY, qrSize, qrSize, { url: confirmUrl });
+
+      // Clickable text link next to the QR code
+      const linkText = "Abrir enlace de confirmación";
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(27, 54, 93); // Club Blue
+      doc.text(linkText, qrX - 4, qrY + 11, { align: 'right' });
+      
+      const textWidth = doc.getTextWidth(linkText);
+      doc.link(qrX - 4 - textWidth, qrY + 7, textWidth, 6, { url: confirmUrl });
+      
+      // Draw underline for the link
+      doc.setDrawColor(27, 54, 93);
+      doc.setLineWidth(0.2);
+      doc.line(qrX - 4 - textWidth, qrY + 12.2, qrX - 4, qrY + 12.2);
+
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(6);
       doc.setTextColor(71, 85, 105);
