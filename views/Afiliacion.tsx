@@ -570,62 +570,62 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
 
               setIsSavingPropuesta(true);
               try {
-                let finalPhotoUrl = editingPropuesta.fotoCandidato || '';
-                if (finalPhotoUrl && finalPhotoUrl.startsWith('data:')) {
-                  try {
-                    finalPhotoUrl = await withTimeout(
-                      firebaseService.uploadCandidatePhoto(finalPhotoUrl, editingPropuesta.id),
-                      8000,
-                      "El servidor tardó demasiado en subir la fotografía."
-                    );
-                  } catch (uploadErr) {
-                    console.error("Error uploading candidate photo, using original base64:", uploadErr);
-                  }
-                }
-
                 const updatedPropuesta = {
                   ...editingPropuesta,
-                  fotoCandidato: finalPhotoUrl,
                   nombreEsposa: editingPropuesta.estadoCivil === 'Casado' ? editingPropuesta.nombreEsposa : ''
                 };
 
-                // Update local state
-                setPropuestas(propuestas.map(p => p.id === updatedPropuesta.id ? updatedPropuesta : p));
+                // 1. Update React state immediately (Optimistic Update)
+                setPropuestas(prev => prev.map(p => p.id === updatedPropuesta.id ? updatedPropuesta : p));
 
-                // Save to Firebase
-                await withTimeout(
-                  firebaseService.updateProposal(updatedPropuesta.id, updatedPropuesta),
-                  8000,
-                  "El servidor central de base de datos tardó demasiado en responder."
-                );
-                
-                // Also update localStorage
+                // 2. Save to localStorage immediately as unsynced
                 const localPropuestas = localStorage.getItem('club_leones_propuestas');
                 const propuestasActuales: PropuestaSocio[] = localPropuestas ? JSON.parse(localPropuestas) : [];
                 localStorage.setItem('club_leones_propuestas', JSON.stringify(
-                  propuestasActuales.map(p => p.id === updatedPropuesta.id ? { ...updatedPropuesta, synced: true } : p)
+                  propuestasActuales.map(p => p.id === updatedPropuesta.id ? { ...updatedPropuesta, synced: false } : p)
                 ));
-                
-                alert('Propuesta actualizada exitosamente.');
+
+                // 3. Close the modal immediately so there is ZERO waiting time for the user!
                 setEditingPropuesta(null);
+                setIsSavingPropuesta(false);
+
+                // 4. Sync with Firebase in the background
+                (async () => {
+                  try {
+                    let finalPhotoUrl = updatedPropuesta.fotoCandidato || '';
+                    if (finalPhotoUrl && finalPhotoUrl.startsWith('data:')) {
+                      finalPhotoUrl = await withTimeout(
+                        firebaseService.uploadCandidatePhoto(finalPhotoUrl, updatedPropuesta.id),
+                        12000,
+                        "El servidor tardó demasiado en subir la fotografía."
+                      );
+                      updatedPropuesta.fotoCandidato = finalPhotoUrl;
+                      
+                      // Update React state & localStorage with the uploaded photo URL
+                      setPropuestas(prev => prev.map(p => p.id === updatedPropuesta.id ? { ...p, fotoCandidato: finalPhotoUrl } : p));
+                    }
+
+                    await withTimeout(
+                      firebaseService.updateProposal(updatedPropuesta.id, updatedPropuesta),
+                      10000,
+                      "El servidor de base de datos tardó demasiado."
+                    );
+
+                    // Mark as synced in localStorage
+                    const currentLocal = localStorage.getItem('club_leones_propuestas');
+                    const currentProps: PropuestaSocio[] = currentLocal ? JSON.parse(currentLocal) : [];
+                    localStorage.setItem('club_leones_propuestas', JSON.stringify(
+                      currentProps.map(p => p.id === updatedPropuesta.id ? { ...p, fotoCandidato: finalPhotoUrl, synced: true } : p)
+                    ));
+                  } catch (backgroundErr: any) {
+                    console.error("Error en sincronización en segundo plano:", backgroundErr);
+                    setErrorMsg(`Cambios guardados localmente. Sincronización pendiente: ${backgroundErr?.message || backgroundErr}`);
+                  }
+                })();
+
               } catch (err: any) {
-                console.error("Error updating proposal in Firestore:", err);
-                
-                const updatedPropuestaFallback = {
-                  ...editingPropuesta,
-                  nombreEsposa: editingPropuesta.estadoCivil === 'Casado' ? editingPropuesta.nombreEsposa : ''
-                };
-
-                // fallback localStorage update
-                const localPropuestas = localStorage.getItem('club_leones_propuestas');
-                const propuestasActuales: PropuestaSocio[] = localPropuestas ? JSON.parse(localPropuestas) : [];
-                localStorage.setItem('club_leones_propuestas', JSON.stringify(
-                  propuestasActuales.map(p => p.id === updatedPropuestaFallback.id ? { ...updatedPropuestaFallback, synced: false } : p)
-                ));
-                
-                alert(`Se guardó localmente pero no se pudo sincronizar: ${err?.message || err}`);
-                setEditingPropuesta(null);
-              } finally {
+                console.error("Error local de guardado:", err);
+                alert(`Error al procesar los cambios: ${err?.message || err}`);
                 setIsSavingPropuesta(false);
               }
             }} className="space-y-6">
