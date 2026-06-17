@@ -337,6 +337,7 @@ export const MOCK_PROPUESTAS: PropuestaSocio[] = [
     porQueBuenLeon: 'Mario aportará su conocimiento médico y redes de apoyo para robustecer nuestras jornadas oftalmológicas y médicas en el valle de Palajunoj. Su capacidad de liderazgo facilitará la consecución de donaciones de insumos de salud.',
     fechaPropuesta: '2026-05-26',
     estado: 'Pendiente',
+    generoCandidato: 'Masculino',
     estadoCivil: 'Casado',
     hijos: 'Con hijos',
     nombreEsposa: 'María Fernanda López'

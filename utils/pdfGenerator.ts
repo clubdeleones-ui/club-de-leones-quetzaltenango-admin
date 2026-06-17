@@ -817,3 +817,226 @@ export const generateMinutaPDF = (
     doc.save(`minuta-${cleanTitle}.pdf`);
   }
 };
+
+export interface CartaInvitacionInput {
+  nombreCandidato: string;
+  generoCandidato: 'Masculino' | 'Femenino';
+}
+
+export const generateCartasInvitacionPDF = (
+  candidatos: CartaInvitacionInput[],
+  fechaCharla: string,
+  fechaLimite: string,
+  action: 'download' | 'open' = 'download'
+) => {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'letter'
+  });
+
+  let presidentName = 'Edwin Ernesto Pacheco López';
+  try {
+    const local = localStorage.getItem('club_leones_socios_v3') || localStorage.getItem('club_leones_socios');
+    if (local) {
+      const sociosList = JSON.parse(local);
+      const president = sociosList.find((s: any) => s.puesto?.toLowerCase().includes('presidente del club') || s.puesto?.toLowerCase() === 'presidente') || sociosList.find((s: any) => s.puesto?.toLowerCase().includes('presidente'));
+      if (president) presidentName = president.nombre;
+    }
+  } catch (e) {}
+
+  const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const today = new Date();
+  const dateString = `Quetzaltenango, ${today.getDate()} de ${months[today.getMonth()]} de ${today.getFullYear()}`;
+
+  for (let i = 0; i < candidatos.length; i++) {
+    if (i > 0) {
+      doc.addPage();
+    }
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 20;
+    const contentWidth = pageWidth - (margin * 2);
+
+    // Header Blue Bar (Primary Color)
+    doc.setFillColor(27, 54, 93); // Blue-900
+    doc.rect(0, 0, pageWidth, 15, 'F');
+    
+    // Header Gold Bar (Secondary Accent Color)
+    doc.setFillColor(234, 179, 8); // Yellow-500
+    doc.rect(0, 15, pageWidth, 2, 'F');
+
+    // Draw Vector Logo
+    const logoX = margin;
+    const logoY = 22;
+    const logoRadius = 7;
+    doc.setFillColor(27, 54, 93);
+    doc.circle(logoX + logoRadius, logoY + logoRadius, logoRadius, 'F');
+    doc.setDrawColor(234, 179, 8);
+    doc.setLineWidth(0.5);
+    doc.circle(logoX + logoRadius, logoY + logoRadius, logoRadius - 0.5, 'S');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(234, 179, 8);
+    doc.text('L', logoX + logoRadius, logoY + logoRadius + 4.5, { align: 'center' });
+
+    // Title Branding
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(27, 54, 93);
+    doc.text('CLUB DE LEONES DE QUETZALTENANGO', logoX + 18, logoY + 5.5);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(217, 119, 6);
+    doc.text('NOSOTROS SERVIMOS', logoX + 18, logoY + 11.5);
+
+    // Separator line
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.5);
+    doc.line(margin, 42, pageWidth - margin, 42);
+
+    // Date
+    doc.setFont('times', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(51, 65, 85);
+    doc.text(dateString, pageWidth - margin, 52, { align: 'right' });
+
+    // Recipient
+    const salutation = candidatos[i].generoCandidato === 'Femenino' ? 'Estimada' : 'Estimado';
+    doc.setFont('times', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(27, 54, 93);
+    doc.text(`${salutation} ${candidatos[i].nombreCandidato},`, margin, 65);
+    doc.setFont('times', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(51, 65, 85);
+    doc.text('Presente.', margin, 71);
+
+    // Body Paragraph 1
+    const p1 = 'Como presidente del Club de Leones de Quetzaltenango, me complace extenderte una cordial invitación para que formes parte de nuestra distinguida organización. Los Leones somos un grupo comprometido con el servicio voluntario y la mejora de nuestras comunidades locales, y al participar conjuntamente nos convierte en una gran familia a nosotros los socios.';
+    let y = 80;
+    const splitP1 = doc.splitTextToSize(p1, contentWidth);
+    splitP1.forEach((line: string) => {
+      doc.text(line, margin, y);
+      y += 6;
+    });
+
+    // Event Details elegant Box
+    y += 2;
+    const items = [
+      { label: 'Evento:', value: 'Charla informativa sobre el Club de Leones y sus actividades de voluntariado.' },
+      { label: 'Fecha de la Charla:', value: fechaCharla },
+      { label: 'Hora:', value: '20:00 horas' },
+      { label: 'Lugar:', value: 'Sede del Club de Leones de Quetzaltenango' },
+      { label: 'Dirección:', value: 'Calle Rodolfo Robles 24-53 zona 1 (abajo del Templo Minerva)' }
+    ];
+
+    let calculatedBoxHeight = 8; // top/bottom padding
+    items.forEach(item => {
+      const splitVal = doc.splitTextToSize(item.value, contentWidth - 46);
+      calculatedBoxHeight += 4.5 + (splitVal.length - 1) * 4.5 + 2;
+    });
+
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(margin, y, contentWidth, calculatedBoxHeight, 2.5, 2.5, 'FD');
+
+    const labelX = margin + 5;
+    const valueX = margin + 42;
+    let currentY = y + 6;
+
+    items.forEach(item => {
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(27, 54, 93);
+      doc.text(item.label, labelX, currentY);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(51, 65, 85);
+      const valWidth = contentWidth - 48;
+      const splitVal = doc.splitTextToSize(item.value, valWidth);
+      splitVal.forEach((line: string, idx: number) => {
+        doc.text(line, valueX, currentY + (idx * 4.5));
+      });
+      currentY += 4.5 + (splitVal.length - 1) * 4.5 + 2;
+    });
+
+    y += calculatedBoxHeight + 8;
+
+    // Body Paragraph 2
+    const p2 = 'Durante esta charla, compartiremos detalles sobre nuestras iniciativas, proyectos y cómo contribuimos al bienestar de nuestra comunidad. También nos gustaría conocer más sobre ti y tus intereses para que puedas encontrar un espacio significativo dentro de nuestro club.';
+    doc.setFont('times', 'normal');
+    const splitP2 = doc.splitTextToSize(p2, contentWidth);
+    splitP2.forEach((line: string) => {
+      doc.text(line, margin, y);
+      y += 6;
+    });
+
+    // Body Paragraph 3
+    y += 2;
+    const p3 = `Por favor confirmar tu asistencia antes del ${fechaLimite}. Puedes comunicarte con nosotros llamando o al WhatsApp al número de teléfono 5691 1935.`;
+    const splitP3 = doc.splitTextToSize(p3, contentWidth);
+    splitP3.forEach((line: string) => {
+      doc.text(line, margin, y);
+      y += 6;
+    });
+
+    // Body Paragraph 4
+    y += 2;
+    const p4 = 'Esperamos contar con tu presencia y entusiasmo. Juntos podemos marcar la diferencia en Quetzaltenango.';
+    const splitP4 = doc.splitTextToSize(p4, contentWidth);
+    splitP4.forEach((line: string) => {
+      doc.text(line, margin, y);
+      y += 6;
+    });
+
+    // Signatures
+    y += 12;
+    doc.text('Atentamente,', margin, y);
+
+    y += 18;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10.5);
+    doc.setTextColor(27, 54, 93);
+    doc.text(presidentName, margin, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(71, 85, 105);
+    doc.text('Presidente', margin, y + 4.5);
+    doc.text('Club de Leones de Quetzaltenango', margin, y + 9);
+
+    // Stamp
+    const stampY = y - 10;
+    const stampX = pageWidth - margin - 65;
+    doc.setDrawColor(217, 119, 6);
+    doc.setLineWidth(0.2);
+    doc.roundedRect(stampX, stampY, 60, 7, 1.5, 1.5, 'S');
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6.5);
+    doc.setTextColor(217, 119, 6);
+    doc.text('INVITACIÓN OFICIAL - COMITÉ DE AFILIACIÓN', stampX + 30, stampY + 4.8, { align: 'center' });
+
+    // Footer decoration
+    doc.setDrawColor(234, 179, 8);
+    doc.setLineWidth(0.5);
+    doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Nosotros Servimos - Lions Clubs International', margin, pageHeight - 10);
+    doc.text(`Carta ${i + 1} de ${candidatos.length}`, pageWidth - margin - 15, pageHeight - 10);
+  }
+
+  // Handle PDF Output
+  if (action === 'open') {
+    const blob = doc.output('blob');
+    const blobUrl = URL.createObjectURL(blob);
+    window.open(blobUrl, '_blank');
+  } else {
+    doc.save(`cartas-invitacion.pdf`);
+  }
+};
+

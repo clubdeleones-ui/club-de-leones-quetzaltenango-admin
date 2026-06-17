@@ -3,6 +3,7 @@ import { MOCK_PROPUESTAS } from '../constants';
 import { Socio, PropuestaSocio, UserRole } from '../types';
 import { firebaseService } from '../services/firebaseService';
 import { compressImageFile } from '../utils/imageCompressor';
+import { generateCartasInvitacionPDF } from '../utils/pdfGenerator';
 import { 
   Mail, 
   Calendar, 
@@ -25,6 +26,39 @@ import {
   MessageSquare,
   User
 } from 'lucide-react';
+
+const guessGender = (name: string): 'Masculino' | 'Femenino' => {
+  const firstName = name.trim().split(' ')[0].toLowerCase();
+  if (firstName.endsWith('a') || firstName.endsWith('is') || firstName.endsWith('y')) {
+    const maleExceptions = ['luca', 'noa', 'elias', 'josue', 'rene'];
+    if (maleExceptions.includes(firstName)) {
+      return 'Masculino';
+    }
+    return 'Femenino';
+  }
+  const femaleNames = ['beatriz', 'carmen', 'dolores', 'isabel', 'lourdes', 'mercedes', 'pilar', 'raquel', 'ruth', 'ester', 'estér', 'irene', 'consuelo', 'socorro'];
+  if (femaleNames.includes(firstName)) {
+    return 'Femenino';
+  }
+  return 'Masculino';
+};
+
+const formatLongDateSpanish = (dateStr: string): string => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  const days = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  return `${days[d.getDay()]} ${d.getDate()} de ${months[d.getMonth()]} de ${d.getFullYear()}`;
+};
+
+const formatShortDateSpanish = (dateStr: string): string => {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  return `${d.getDate()} de ${months[d.getMonth()]} de ${d.getFullYear()}`;
+};
 
 interface AfiliacionProps {
   user: Socio;
@@ -53,8 +87,45 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
   const [isSavingPropuesta, setIsSavingPropuesta] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [isOpenCollectiveModal, setIsOpenCollectiveModal] = useState(false);
+  const [isOpenLettersModal, setIsOpenLettersModal] = useState(false);
   const [copiedCollective, setCopiedCollective] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const [charlaDate, setCharlaDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + ((4 + 7 - d.getDay()) % 7 || 7)); // Next Thursday
+    return d.toISOString().split('T')[0];
+  });
+  const [limiteDate, setLimiteDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + ((1 + 7 - d.getDay()) % 7 || 7)); // Next Monday
+    return d.toISOString().split('T')[0];
+  });
+  const [charlaDateText, setCharlaDateText] = useState<string>('');
+  const [limiteDateText, setLimiteDateText] = useState<string>('');
+  const [candidateGenders, setCandidateGenders] = useState<Record<string, 'Masculino' | 'Femenino'>>({});
+
+  useEffect(() => {
+    if (charlaDate) setCharlaDateText(formatLongDateSpanish(charlaDate));
+  }, [charlaDate]);
+
+  useEffect(() => {
+    if (limiteDate) setLimiteDateText(formatShortDateSpanish(limiteDate));
+  }, [limiteDate]);
+
+  useEffect(() => {
+    if (isOpenLettersModal) {
+      const initialGenders: Record<string, 'Masculino' | 'Femenino'> = {};
+      propuestas.filter(p => p.estado === 'Aprobado').forEach(p => {
+        if (p.generoCandidato) {
+          initialGenders[p.id] = p.generoCandidato;
+        } else {
+          initialGenders[p.id] = guessGender(p.nombreCandidato);
+        }
+      });
+      setCandidateGenders(initialGenders);
+    }
+  }, [isOpenLettersModal, propuestas]);
 
   const handleProposalImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -192,13 +263,24 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
           <p className="text-sm font-bold text-slate-500 mt-1 uppercase tracking-wider">Gestión y Aprobación de Candidatos</p>
         </div>
         {canEditPropuestas && (
-          <button
-            onClick={() => setIsOpenCollectiveModal(true)}
-            className="bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs px-5 py-3.5 rounded-2xl shadow-lg shadow-indigo-900/10 flex items-center space-x-2 transition-all active:scale-95 self-stretch sm:self-auto justify-center shrink-0"
-          >
-            <Share2 size={15} />
-            <span>Compartir Evaluación Colectiva</span>
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2 self-stretch sm:self-auto w-full sm:w-auto">
+            <button
+              onClick={() => setIsOpenCollectiveModal(true)}
+              className="bg-indigo-900 hover:bg-indigo-800 text-white font-black text-xs px-5 py-3.5 rounded-2xl shadow-lg shadow-indigo-900/10 flex items-center space-x-2 transition-all active:scale-95 justify-center shrink-0"
+            >
+              <Share2 size={15} />
+              <span>Compartir Evaluación Colectiva</span>
+            </button>
+            {propuestas.some(p => p.estado === 'Aprobado') && (
+              <button
+                onClick={() => setIsOpenLettersModal(true)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-5 py-3.5 rounded-2xl shadow-lg shadow-emerald-600/10 flex items-center space-x-2 transition-all active:scale-95 justify-center shrink-0"
+              >
+                <Mail size={15} />
+                <span>Generar Cartas de Invitación</span>
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -463,7 +545,7 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
 
             <form onSubmit={async (e) => {
               e.preventDefault();
-              if (!editingPropuesta.proponente || !editingPropuesta.nombreCandidato || !editingPropuesta.profesionCandidato || !editingPropuesta.motivoPropuesta || !editingPropuesta.porQueBuenLeon || !editingPropuesta.estadoCivil || !editingPropuesta.hijos) {
+              if (!editingPropuesta.proponente || !editingPropuesta.nombreCandidato || !editingPropuesta.profesionCandidato || !editingPropuesta.motivoPropuesta || !editingPropuesta.porQueBuenLeon || !editingPropuesta.estadoCivil || !editingPropuesta.hijos || !editingPropuesta.generoCandidato) {
                 alert('Por favor complete todos los campos obligatorios.');
                 return;
               }
@@ -568,8 +650,8 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                 </div>
               </div>
 
-              {/* Nombre y Profesión */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Nombre, Profesión y Género */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Nombre del Candidato *</label>
                   <input 
@@ -589,6 +671,24 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                     onChange={e => setEditingPropuesta({ ...editingPropuesta, profesionCandidato: e.target.value })}
                     className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all font-semibold"
                   />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Género del Candidato *</label>
+                  <div className="relative">
+                    <select 
+                      required
+                      value={editingPropuesta.generoCandidato || ''}
+                      onChange={e => setEditingPropuesta({ ...editingPropuesta, generoCandidato: e.target.value as 'Masculino' | 'Femenino' })}
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all font-semibold appearance-none bg-white cursor-pointer"
+                    >
+                      <option value="">Seleccione género</option>
+                      <option value="Masculino">Masculino</option>
+                      <option value="Femenino">Femenino</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1179,6 +1279,180 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                 className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all text-xs"
               >
                 Cerrar Ventana
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isOpenLettersModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 sm:p-10 space-y-6 relative animate-in zoom-in-95 duration-300">
+            <button 
+              type="button"
+              onClick={() => setIsOpenLettersModal(false)}
+              className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="space-y-1">
+              <h2 className="text-xl sm:text-2xl font-black text-blue-900">Generar Cartas de Invitación</h2>
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Configurar evento y descargar cartas para los nuevos socios aprobados</p>
+            </div>
+
+            <div className="space-y-6">
+              {/* Event Settings */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">
+                    Fecha de la Charla *
+                  </label>
+                  <input
+                    type="date"
+                    value={charlaDate}
+                    onChange={e => setCharlaDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700"
+                  />
+                  <input
+                    type="text"
+                    value={charlaDateText}
+                    onChange={e => setCharlaDateText(e.target.value)}
+                    placeholder="Ej. jueves 25 de julio de 2024"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700 mt-1.5"
+                  />
+                  <p className="text-[10px] text-slate-400 font-medium">Formato largo de la fecha que se imprimirá en la carta.</p>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">
+                    Fecha Límite de Confirmación *
+                  </label>
+                  <input
+                    type="date"
+                    value={limiteDate}
+                    onChange={e => setLimiteDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700"
+                  />
+                  <input
+                    type="text"
+                    value={limiteDateText}
+                    onChange={e => setLimiteDateText(e.target.value)}
+                    placeholder="Ej. 22 de julio de 2024"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700 mt-1.5"
+                  />
+                  <p className="text-[10px] text-slate-400 font-medium">Fecha límite para confirmar asistencia.</p>
+                </div>
+              </div>
+
+              {/* Candidates List */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">
+                  Listado de Socios Aprobados
+                </h3>
+                <div className="space-y-2.5 max-h-[30vh] overflow-y-auto pr-1">
+                  {propuestas.filter(p => p.estado === 'Aprobado').map(p => (
+                    <div 
+                      key={p.id}
+                      className="bg-slate-50 rounded-2xl p-4 border border-slate-150 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-slate-350 transition-all shadow-sm"
+                    >
+                      <div className="flex items-center space-x-3.5 min-w-0">
+                        <img
+                          src={p.fotoCandidato || `https://picsum.photos/seed/${p.id}/100/100`}
+                          alt={p.nombreCandidato}
+                          className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <h4 className="font-black text-sm text-slate-900 truncate">
+                            {p.nombreCandidato}
+                          </h4>
+                          <p className="text-[11px] text-slate-500 truncate font-semibold">
+                            {p.profesionCandidato}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Gender Selector Toggle */}
+                      <div className="flex items-center space-x-2 w-full sm:w-auto justify-between sm:justify-start">
+                        <div className="flex rounded-xl bg-slate-250 p-0.5 border border-slate-200">
+                          <button
+                            type="button"
+                            onClick={() => setCandidateGenders({ ...candidateGenders, [p.id]: 'Masculino' })}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                              candidateGenders[p.id] === 'Masculino'
+                                ? 'bg-blue-900 text-white shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                            }`}
+                          >
+                            Estimado
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCandidateGenders({ ...candidateGenders, [p.id]: 'Femenino' })}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                              candidateGenders[p.id] === 'Femenino'
+                                ? 'bg-blue-900 text-white shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                            }`}
+                          >
+                            Estimada
+                          </button>
+                        </div>
+
+                        {/* Individual Download */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!charlaDateText || !limiteDateText) {
+                              alert('Por favor complete las fechas.');
+                              return;
+                            }
+                            generateCartasInvitacionPDF(
+                              [{ nombreCandidato: p.nombreCandidato, generoCandidato: candidateGenders[p.id] || 'Masculino' }],
+                              charlaDateText,
+                              limiteDateText,
+                              'download'
+                            );
+                          }}
+                          className="p-2.5 bg-white border border-slate-200 rounded-xl text-emerald-600 hover:bg-emerald-550 hover:bg-emerald-50 hover:border-emerald-200 transition-all shadow-sm flex items-center justify-center shrink-0 animate-pulse hover:animate-none"
+                          title="Descargar carta individual"
+                        >
+                          <Mail size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsOpenLettersModal(false)}
+                className="px-5 py-3 border border-slate-250 hover:bg-slate-50 text-slate-700 font-bold rounded-xl transition-all text-xs order-last sm:order-first"
+              >
+                Cerrar Ventana
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!charlaDateText || !limiteDateText) {
+                    alert('Por favor complete las fechas.');
+                    return;
+                  }
+                  const approvedList = propuestas.filter(p => p.estado === 'Aprobado');
+                  if (approvedList.length === 0) return;
+                  const inputs = approvedList.map(p => ({
+                    nombreCandidato: p.nombreCandidato,
+                    generoCandidato: candidateGenders[p.id] || 'Masculino'
+                  }));
+                  generateCartasInvitacionPDF(inputs, charlaDateText, limiteDateText, 'download');
+                }}
+                className="px-5 py-3 bg-emerald-600 hover:bg-emerald-750 text-white font-black rounded-xl transition-all text-xs flex items-center justify-center space-x-1.5 shadow-lg shadow-emerald-600/15 active:scale-95"
+              >
+                <Mail size={14} />
+                <span>Descargar Todas las Cartas (PDF)</span>
               </button>
             </div>
           </div>

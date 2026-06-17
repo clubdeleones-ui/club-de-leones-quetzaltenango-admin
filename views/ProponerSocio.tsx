@@ -58,6 +58,7 @@ const ProponerSocio: React.FC = () => {
   const [estadoCivil, setEstadoCivil] = useState('');
   const [hijos, setHijos] = useState('');
   const [nombreEsposa, setNombreEsposa] = useState('');
+  const [generoCandidato, setGeneroCandidato] = useState<'Masculino' | 'Femenino' | ''>('');
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [compressing, setCompressing] = useState(false);
@@ -94,7 +95,7 @@ const ProponerSocio: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!proponente || !nombreCandidato || !profesionCandidato || !motivoPropuesta || !porQueBuenLeon || !estadoCivil || !hijos) {
+    if (!proponente || !nombreCandidato || !profesionCandidato || !motivoPropuesta || !porQueBuenLeon || !estadoCivil || !hijos || !generoCandidato) {
       alert('Por favor complete todos los campos requeridos.');
       return;
     }
@@ -121,6 +122,7 @@ const ProponerSocio: React.FC = () => {
         porQueBuenLeon,
         fechaPropuesta: new Date().toISOString().split('T')[0],
         estado: 'Pendiente',
+        generoCandidato: generoCandidato as 'Masculino' | 'Femenino',
         estadoCivil,
         hijos,
         nombreEsposa: estadoCivil === 'Casado' ? nombreEsposa : undefined,
@@ -172,6 +174,7 @@ const ProponerSocio: React.FC = () => {
     setEstadoCivil('');
     setHijos('');
     setNombreEsposa('');
+    setGeneroCandidato('');
     setSubmitted(false);
     setMostrarCamposPropuesta(false);
   };
@@ -275,8 +278,8 @@ const ProponerSocio: React.FC = () => {
                 2. Datos de la Persona Propuesta
               </h3>
 
-              {/* Candidato Name and Profession */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+              {/* Candidato Name, Profession and Gender */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Nombre Completo del Candidato *</label>
                   <input 
@@ -298,6 +301,24 @@ const ProponerSocio: React.FC = () => {
                     placeholder="Ej. Médico Pediatra, Abogado, Empresario"
                     className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all font-semibold"
                   />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Género del Candidato *</label>
+                  <div className="relative">
+                    <select 
+                      required
+                      value={generoCandidato}
+                      onChange={e => setGeneroCandidato(e.target.value as 'Masculino' | 'Femenino')}
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all font-semibold appearance-none bg-white cursor-pointer"
+                    >
+                      <option value="">Seleccione género</option>
+                      <option value="Masculino">Masculino</option>
+                      <option value="Femenino">Femenino</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    </div>
+                  </div>
                 </div>
               </div>
 
