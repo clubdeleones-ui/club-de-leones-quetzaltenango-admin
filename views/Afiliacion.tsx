@@ -25,7 +25,8 @@ import {
   Check,
   MessageSquare,
   User,
-  ChevronDown
+  ChevronDown,
+  FolderOpen
 } from 'lucide-react';
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage = "Timeout exceeded"): Promise<T> {
@@ -1487,85 +1488,86 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
 
             <div className="space-y-6">
               {/* Event Settings */}
-              {/* Event Settings */}
-              <div className="bg-slate-50 p-5 rounded-2xl border border-slate-150 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Columna 1: Datos de la Charla */}
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">
-                        Fecha de la Charla *
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="date"
-                          value={charlaDate}
-                          onChange={e => setCharlaDate(e.target.value)}
-                          className="px-3 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700 shrink-0 w-[120px]"
-                        />
-                        <input
-                          type="text"
-                          value={charlaDateText}
-                          onChange={e => setCharlaDateText(e.target.value)}
-                          placeholder="Ej. jueves 25 de julio de 2024"
-                          className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700"
-                        />
-                      </div>
-                      <p className="text-[10px] text-slate-400 font-medium">Fecha en formato largo que irá en la carta.</p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">
-                        Hora de la Charla *
-                      </label>
-                      <input
-                        type="text"
-                        value={charlaHoraText}
-                        onChange={e => setCharlaHoraText(e.target.value)}
-                        placeholder="Ej. 20:00 horas"
-                        className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700"
-                      />
-                      <p className="text-[10px] text-slate-400 font-medium">Hora de inicio de la charla informativa.</p>
-                    </div>
+              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-150 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                  {/* Fila 1: Calendarios */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-slate-550 uppercase tracking-wide">
+                      Fecha de la Charla (Calendario) *
+                    </label>
+                    <input
+                      type="date"
+                      value={charlaDate}
+                      onChange={e => setCharlaDate(e.target.value)}
+                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700 shadow-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-slate-550 uppercase tracking-wide">
+                      Límite de Confirmación (Calendario) *
+                    </label>
+                    <input
+                      type="date"
+                      value={limiteDate}
+                      onChange={e => setLimiteDate(e.target.value)}
+                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700 shadow-sm"
+                    />
                   </div>
 
-                  {/* Columna 2: Confirmación */}
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">
-                        Fecha Límite de Confirmación *
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="date"
-                          value={limiteDate}
-                          onChange={e => setLimiteDate(e.target.value)}
-                          className="px-3 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700 shrink-0 w-[120px]"
-                        />
-                        <input
-                          type="text"
-                          value={limiteDateText}
-                          onChange={e => setLimiteDateText(e.target.value)}
-                          placeholder="Ej. 22 de julio de 2024"
-                          className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700"
-                        />
-                      </div>
-                      <p className="text-[10px] text-slate-400 font-medium">Fecha límite para confirmar asistencia.</p>
-                    </div>
+                  {/* Fila 2: Formatos de Texto de Fecha */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-slate-550 uppercase tracking-wide">
+                      Fecha en la Carta (Texto Largo) *
+                    </label>
+                    <input
+                      type="text"
+                      value={charlaDateText}
+                      onChange={e => setCharlaDateText(e.target.value)}
+                      placeholder="Ej. jueves 25 de julio de 2024"
+                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700 shadow-sm"
+                    />
+                    <p className="text-[10px] text-slate-400 font-medium">Formato largo de fecha para la carta.</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-slate-550 uppercase tracking-wide">
+                      Fecha Límite en la Carta (Texto Corto) *
+                    </label>
+                    <input
+                      type="text"
+                      value={limiteDateText}
+                      onChange={e => setLimiteDateText(e.target.value)}
+                      placeholder="Ej. 22 de julio de 2024"
+                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700 shadow-sm"
+                    />
+                    <p className="text-[10px] text-slate-400 font-medium">Límite impreso de confirmación.</p>
+                  </div>
 
-                    <div className="space-y-2">
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide">
-                        Teléfono de Confirmación *
-                      </label>
-                      <input
-                        type="text"
-                        value={telefonoConfirmacion}
-                        onChange={e => setTelefonoConfirmacion(e.target.value)}
-                        placeholder="Ej. 5691 1935"
-                        className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700"
-                      />
-                      <p className="text-[10px] text-slate-400 font-medium">Número impreso para contacto y WhatsApp.</p>
-                    </div>
+                  {/* Fila 3: Hora y Teléfono */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-slate-550 uppercase tracking-wide">
+                      Hora de la Charla *
+                    </label>
+                    <input
+                      type="text"
+                      value={charlaHoraText}
+                      onChange={e => setCharlaHoraText(e.target.value)}
+                      placeholder="Ej. 20:00 horas"
+                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700 shadow-sm"
+                    />
+                    <p className="text-[10px] text-slate-400 font-medium">Hora de inicio de la charla.</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-slate-550 uppercase tracking-wide">
+                      Teléfono de Confirmación *
+                    </label>
+                    <input
+                      type="text"
+                      value={telefonoConfirmacion}
+                      onChange={e => setTelefonoConfirmacion(e.target.value)}
+                      placeholder="Ej. 5691 1935"
+                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700 shadow-sm"
+                    />
+                    <p className="text-[10px] text-slate-400 font-medium">Número impreso para contacto y RSVP.</p>
                   </div>
                 </div>
               </div>
@@ -1654,7 +1656,7 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
             </div>
 
             {/* Actions */}
-            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-slate-100">
+            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-slate-150">
               <button
                 type="button"
                 onClick={() => setIsOpenLettersModal(false)}
@@ -1662,6 +1664,75 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
               >
                 Cerrar Ventana
               </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!charlaDateText || !charlaHoraText || !limiteDateText) {
+                    alert('Por favor complete todos los campos requeridos.');
+                    return;
+                  }
+                  const approvedList = propuestas.filter(p => p.estado === 'Aprobado');
+                  if (approvedList.length === 0) {
+                    alert('No hay socios aprobados para generar cartas.');
+                    return;
+                  }
+
+                  if (!('showDirectoryPicker' in window)) {
+                    alert('Tu navegador no soporta la selección directa de carpetas. Se descargarán uno a uno en tu carpeta de descargas predeterminada.');
+                    for (let i = 0; i < approvedList.length; i++) {
+                      const p = approvedList[i];
+                      await generateCartasInvitacionPDF(
+                        [{ id: p.id, nombreCandidato: p.nombreCandidato, generoCandidato: candidateGenders[p.id] || 'Masculino' }],
+                        charlaDateText,
+                        charlaHoraText,
+                        limiteDateText,
+                        telefonoConfirmacion,
+                        'download'
+                      );
+                      await new Promise(r => setTimeout(r, 450));
+                    }
+                    return;
+                  }
+
+                  try {
+                    const dirHandle = await (window as any).showDirectoryPicker({
+                      mode: 'readwrite'
+                    });
+                    
+                    for (let i = 0; i < approvedList.length; i++) {
+                      const p = approvedList[i];
+                      const pdfBlob = await generateCartasInvitacionPDF(
+                        [{ id: p.id, nombreCandidato: p.nombreCandidato, generoCandidato: candidateGenders[p.id] || 'Masculino' }],
+                        charlaDateText,
+                        charlaHoraText,
+                        limiteDateText,
+                        telefonoConfirmacion,
+                        'blob'
+                      );
+
+                      if (pdfBlob instanceof Blob) {
+                        const cleanName = p.nombreCandidato.toLowerCase().trim().replace(/[^a-z0-9áéíóúñ]+/g, '-');
+                        const fileHandle = await dirHandle.getFileHandle(`invitacion-${cleanName}.pdf`, { create: true });
+                        const writable = await fileHandle.createWritable();
+                        await writable.write(pdfBlob);
+                        await writable.close();
+                      }
+                    }
+                    alert('¡Todas las cartas individuales fueron guardadas exitosamente en la carpeta seleccionada!');
+                  } catch (err: any) {
+                    if (err.name !== 'AbortError') {
+                      console.error("Error saving to directory:", err);
+                      alert('Ocurrió un error al guardar en la carpeta.');
+                    }
+                  }
+                }}
+                className="px-5 py-3 bg-blue-900 hover:bg-blue-800 text-white font-black rounded-xl transition-all text-xs flex items-center justify-center space-x-1.5 shadow-lg shadow-blue-900/15 active:scale-95"
+              >
+                <FolderOpen size={14} />
+                <span>Guardar Individuales en Carpeta...</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => {
@@ -1678,10 +1749,10 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                   }));
                   generateCartasInvitacionPDF(inputs, charlaDateText, charlaHoraText, limiteDateText, telefonoConfirmacion, 'download');
                 }}
-                className="px-5 py-3 bg-emerald-600 hover:bg-emerald-750 text-white font-black rounded-xl transition-all text-xs flex items-center justify-center space-x-1.5 shadow-lg shadow-emerald-600/15 active:scale-95"
+                className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl transition-all text-xs flex items-center justify-center space-x-1.5 shadow-lg shadow-emerald-600/15 active:scale-95"
               >
                 <Mail size={14} />
-                <span>Descargar Todas las Cartas (PDF)</span>
+                <span>Descargar Todas (PDF Único)</span>
               </button>
             </div>
           </div>

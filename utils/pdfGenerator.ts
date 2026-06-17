@@ -841,8 +841,8 @@ export const generateCartasInvitacionPDF = async (
   horaCharla: string,
   fechaLimite: string,
   telefonoConfirmacion: string,
-  action: 'download' | 'open' = 'download'
-) => {
+  action: 'download' | 'open' | 'blob' = 'download'
+): Promise<Blob | void> => {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -1105,8 +1105,15 @@ export const generateCartasInvitacionPDF = async (
     const blob = doc.output('blob');
     const blobUrl = URL.createObjectURL(blob);
     window.open(blobUrl, '_blank');
+  } else if (action === 'blob') {
+    return doc.output('blob');
   } else {
-    doc.save(`cartas-invitacion.pdf`);
+    if (candidatos.length === 1) {
+      const cleanName = candidatos[0].nombreCandidato.toLowerCase().trim().replace(/[^a-z0-9áéíóúñ]+/g, '-');
+      doc.save(`invitacion-${cleanName}.pdf`);
+    } else {
+      doc.save(`cartas-invitacion.pdf`);
+    }
   }
 };
 
