@@ -123,6 +123,9 @@ export interface PropuestaSocio {
   habilitarOpinion?: boolean;
   fechaLimiteOpinion?: string;
   presidenteComision?: string;
+  invitacionConfirmada?: boolean;
+  telefonoConfirmacionCandidato?: string;
+  fechaConfirmacionInvitacion?: string;
   opiniones?: { 
     id: string; 
     fecha: string; 

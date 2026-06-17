@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import QRCode from 'qrcode';
 import { Acta, MinutaComision, Socio } from '../types';
 
 export const generateActaCode = (
@@ -829,6 +830,7 @@ const loadImage = (url: string): Promise<HTMLImageElement> => {
 };
 
 export interface CartaInvitacionInput {
+  id: string;
   nombreCandidato: string;
   generoCandidato: 'Masculino' | 'Femenino';
 }
@@ -1004,7 +1006,7 @@ export const generateCartasInvitacionPDF = async (
 
     // Body Paragraph 3
     y += 2;
-    const p3 = `Por favor confirmar tu asistencia antes del ${fechaLimite}. Puedes comunicarte con nosotros llamando o al WhatsApp al número de teléfono ${telefonoConfirmacion}.`;
+    const p3 = `Por favor confirmar tu asistencia antes del ${fechaLimite}. Puedes escanear el código QR adjunto para confirmar digitalmente tu participación, o bien comunicarte con nosotros llamando o al WhatsApp al número de teléfono ${telefonoConfirmacion}.`;
     const splitP3 = doc.splitTextToSize(p3, contentWidth);
     splitP3.forEach((line: string) => {
       doc.text(line, margin, y);
@@ -1046,6 +1048,26 @@ export const generateCartasInvitacionPDF = async (
     doc.setFontSize(6.5);
     doc.setTextColor(217, 119, 6);
     doc.text('INVITACIÓN OFICIAL - COMITÉ DE AFILIACIÓN', stampX + 30, stampY + 4.8, { align: 'center' });
+
+    // Draw QR Code on the right
+    try {
+      const baseConfirm = window.location.pathname.endsWith('/') 
+        ? window.location.pathname 
+        : window.location.pathname + '/';
+      const confirmUrl = `${window.location.origin}${baseConfirm}#/confirmar-invitacion/${candidatos[i].id}`;
+      const qrDataUrl = await QRCode.toDataURL(confirmUrl, { margin: 1, width: 150 });
+      const qrSize = 22;
+      const qrX = pageWidth - margin - qrSize;
+      const qrY = y + 5; // aligned below the stamp
+      doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6);
+      doc.setTextColor(71, 85, 105);
+      doc.text('Escanear para confirmar', qrX + (qrSize / 2), qrY + qrSize + 3, { align: 'center' });
+    } catch (qrErr) {
+      console.error("Error generating QR code in PDF:", qrErr);
+    }
 
     // Footer decoration
     doc.setDrawColor(234, 179, 8);

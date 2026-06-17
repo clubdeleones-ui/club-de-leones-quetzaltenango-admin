@@ -483,6 +483,56 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                     </div>
                   )}
 
+                  {/* Banner de RSVP Digital para Candidatos Aprobados */}
+                  {propuesta.estado === 'Aprobado' && (
+                    <div className="mt-4 bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+                      <div className="flex items-center space-x-3">
+                        <div className={`p-2 rounded-xl shrink-0 ${propuesta.invitacionConfirmada ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                          {propuesta.invitacionConfirmada ? <CheckCircle size={16} /> : <Clock size={16} />}
+                        </div>
+                        <div>
+                          <h5 className="font-black text-slate-800 text-xs leading-none">Invitación Oficial</h5>
+                          <p className="text-[10px] text-slate-550 font-bold mt-1.5">
+                            {propuesta.invitacionConfirmada 
+                              ? `Confirmado: ${propuesta.telefonoConfirmacionCandidato || 'Sin teléfono'}` 
+                              : 'Pendiente de Confirmación'}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2 self-end sm:self-auto">
+                        <button
+                          onClick={async () => {
+                            const nextConfirmState = !propuesta.invitacionConfirmada;
+                            let phone = propuesta.telefonoConfirmacionCandidato || '';
+                            if (nextConfirmState && !phone) {
+                              const inputPhone = window.prompt("Ingrese el teléfono del candidato para la confirmación (opcional):", "");
+                              if (inputPhone === null) return;
+                              phone = inputPhone;
+                            }
+                            const updated = { 
+                              ...propuesta, 
+                              invitacionConfirmada: nextConfirmState,
+                              telefonoConfirmacionCandidato: phone
+                            };
+                            setPropuestas(propuestas.map(p => p.id === propuesta.id ? updated : p));
+                            try {
+                              await firebaseService.updateProposal(propuesta.id, { 
+                                invitacionConfirmada: nextConfirmState,
+                                telefonoConfirmacionCandidato: phone
+                              });
+                            } catch (err) {
+                              console.error("Error updating proposal confirmation:", err);
+                            }
+                          }}
+                          className="text-[10px] font-black bg-blue-900 hover:bg-blue-800 text-white px-3 py-1.5 rounded-xl transition-all shadow-md shadow-blue-900/10 active:scale-95 uppercase tracking-wider shrink-0"
+                        >
+                          {propuesta.invitacionConfirmada ? 'Marcar Pendiente' : 'Confirmar'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Qualities / characteristics tags */}
                   <div className="space-y-2 mt-4">
                     <h4 className="font-bold text-xs text-slate-555 uppercase tracking-wider flex items-center">
@@ -831,6 +881,41 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                     placeholder="Ej. María Fernanda López"
                     className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all font-semibold"
                   />
+                </div>
+              )}
+
+              {/* Confirmación de Invitación (Visible si el candidato está aprobado) */}
+              {editingPropuesta.estado === 'Aprobado' && (
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4 animate-in fade-in duration-300">
+                  <h4 className="font-bold text-xs text-slate-700 uppercase tracking-wider">
+                    Asistencia e Invitación Oficial
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex items-center space-x-2 pt-2">
+                      <input 
+                        type="checkbox"
+                        id="edit-invitacion-confirmada"
+                        checked={editingPropuesta.invitacionConfirmada || false}
+                        onChange={e => setEditingPropuesta({ ...editingPropuesta, invitacionConfirmada: e.target.checked })}
+                        className="w-4 h-4 text-blue-900 border-slate-350 rounded focus:ring-blue-900 focus:ring-2 cursor-pointer"
+                      />
+                      <label htmlFor="edit-invitacion-confirmada" className="text-xs font-bold text-slate-600 cursor-pointer select-none">
+                        ¿Invitación Confirmada?
+                      </label>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">
+                        Teléfono de Confirmación del Candidato
+                      </label>
+                      <input 
+                        type="text"
+                        value={editingPropuesta.telefonoConfirmacionCandidato || ''}
+                        onChange={e => setEditingPropuesta({ ...editingPropuesta, telefonoConfirmacionCandidato: e.target.value })}
+                        placeholder="Ej. 5691 1935"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-xs font-semibold text-slate-700 bg-white"
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -1494,7 +1579,7 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                               return;
                             }
                             generateCartasInvitacionPDF(
-                              [{ nombreCandidato: p.nombreCandidato, generoCandidato: candidateGenders[p.id] || 'Masculino' }],
+                              [{ id: p.id, nombreCandidato: p.nombreCandidato, generoCandidato: candidateGenders[p.id] || 'Masculino' }],
                               charlaDateText,
                               limiteDateText,
                               telefonoConfirmacion,
@@ -1532,6 +1617,7 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                   const approvedList = propuestas.filter(p => p.estado === 'Aprobado');
                   if (approvedList.length === 0) return;
                   const inputs = approvedList.map(p => ({
+                    id: p.id,
                     nombreCandidato: p.nombreCandidato,
                     generoCandidato: candidateGenders[p.id] || 'Masculino'
                   }));
