@@ -818,15 +818,26 @@ export const generateMinutaPDF = (
   }
 };
 
+const loadImage = (url: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = url;
+    img.onload = () => resolve(img);
+    img.onerror = (e) => reject(e);
+  });
+};
+
 export interface CartaInvitacionInput {
   nombreCandidato: string;
   generoCandidato: 'Masculino' | 'Femenino';
 }
 
-export const generateCartasInvitacionPDF = (
+export const generateCartasInvitacionPDF = async (
   candidatos: CartaInvitacionInput[],
   fechaCharla: string,
   fechaLimite: string,
+  telefonoConfirmacion: string,
   action: 'download' | 'open' = 'download'
 ) => {
   const doc = new jsPDF({
@@ -844,6 +855,18 @@ export const generateCartasInvitacionPDF = (
       if (president) presidentName = president.nombre;
     }
   } catch (e) {}
+
+  const base = window.location.pathname.endsWith('/') 
+    ? window.location.pathname 
+    : window.location.pathname + '/';
+  const logoUrl = `${window.location.origin}${base}images/logo.png`;
+
+  let logoImg: HTMLImageElement | null = null;
+  try {
+    logoImg = await loadImage(logoUrl);
+  } catch (err) {
+    console.error("Failed to load logo image, falling back to vector logo", err);
+  }
 
   const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
   const today = new Date();
@@ -867,19 +890,25 @@ export const generateCartasInvitacionPDF = (
     doc.setFillColor(234, 179, 8); // Yellow-500
     doc.rect(0, 15, pageWidth, 2, 'F');
 
-    // Draw Vector Logo
+    // Draw Logo
     const logoX = margin;
     const logoY = 22;
     const logoRadius = 7;
-    doc.setFillColor(27, 54, 93);
-    doc.circle(logoX + logoRadius, logoY + logoRadius, logoRadius, 'F');
-    doc.setDrawColor(234, 179, 8);
-    doc.setLineWidth(0.5);
-    doc.circle(logoX + logoRadius, logoY + logoRadius, logoRadius - 0.5, 'S');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.setTextColor(234, 179, 8);
-    doc.text('L', logoX + logoRadius, logoY + logoRadius + 4.5, { align: 'center' });
+
+    if (logoImg) {
+      doc.addImage(logoImg, 'PNG', logoX, logoY - 1, 14, 14);
+    } else {
+      // Draw Vector Logo (Fallback)
+      doc.setFillColor(27, 54, 93);
+      doc.circle(logoX + logoRadius, logoY + logoRadius, logoRadius, 'F');
+      doc.setDrawColor(234, 179, 8);
+      doc.setLineWidth(0.5);
+      doc.circle(logoX + logoRadius, logoY + logoRadius, logoRadius - 0.5, 'S');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(234, 179, 8);
+      doc.text('L', logoX + logoRadius, logoY + logoRadius + 4.5, { align: 'center' });
+    }
 
     // Title Branding
     doc.setFont('helvetica', 'bold');
@@ -975,7 +1004,7 @@ export const generateCartasInvitacionPDF = (
 
     // Body Paragraph 3
     y += 2;
-    const p3 = `Por favor confirmar tu asistencia antes del ${fechaLimite}. Puedes comunicarte con nosotros llamando o al WhatsApp al número de teléfono 5691 1935.`;
+    const p3 = `Por favor confirmar tu asistencia antes del ${fechaLimite}. Puedes comunicarte con nosotros llamando o al WhatsApp al número de teléfono ${telefonoConfirmacion}.`;
     const splitP3 = doc.splitTextToSize(p3, contentWidth);
     splitP3.forEach((line: string) => {
       doc.text(line, margin, y);
