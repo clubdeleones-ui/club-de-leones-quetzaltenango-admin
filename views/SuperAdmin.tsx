@@ -52,7 +52,8 @@ import {
   AlertCircle,
   Hash,
   ChevronDown,
-  Car
+  Car,
+  Archive
 } from 'lucide-react';
 import { generateActaPDF, generateActaCode, generateReciboPagoPDF } from '../utils/pdfGenerator';
 import { FormattedActa } from '../components/FormattedActa';
@@ -62,6 +63,7 @@ import { Presupuestos } from './Presupuestos';
 import { Comisiones } from './Comisiones';
 import { MinutasComisiones } from './MinutasComisiones';
 import { Afiliacion } from './Afiliacion';
+import { Inventario } from './Inventario';
 
 const PUESTOS_PREDEFINIDOS = [
   'Presidente del Club',
@@ -105,16 +107,16 @@ interface SuperAdminProps {
   onUpdateUser?: (user: Socio) => void;
 }
 
-type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas' | 'afiliacion';
+type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas' | 'afiliacion' | 'inventario';
 
 const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   // Dynamic Tab Access based on Role
   const allowedTabs = useMemo(() => {
     switch (user.rol) {
       case UserRole.SUPER_ADMIN:
-        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion'];
+        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario'];
       case UserRole.TESORERO:
-        return ['resumen', 'socios', 'cuotas', 'donaciones', 'parqueo', 'presupuestos'];
+        return ['resumen', 'socios', 'cuotas', 'donaciones', 'parqueo', 'presupuestos', 'inventario'];
       case UserRole.SECRETARIO:
         return ['resumen', 'socios', 'calendario', 'actas', 'comisiones', 'minutas'];
       case UserRole.ASESOR_SERVICIOS:
@@ -138,6 +140,23 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   }, [activeTab]);
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>('Principal');
+
+  // Auto-expand category based on activeTab
+  useEffect(() => {
+    const groups = [
+      { category: 'Principal', items: ['resumen'] },
+      { category: 'Secretaría', items: ['actas', 'beneficios', 'calendario', 'comisiones'] },
+      { category: 'Tesorería', items: ['cuotas', 'parqueo', 'donaciones', 'presupuestos'] },
+      { category: 'Comité de Afiliación', items: ['socios', 'afiliacion'] },
+      { category: 'Comité de Servicio', items: ['minutas'] },
+      { category: 'Comité de Inventario', items: ['inventario'] }
+    ];
+    const currentGroup = groups.find(g => g.items.includes(activeTab));
+    if (currentGroup) {
+      setExpandedCategory(currentGroup.category);
+    }
+  }, [activeTab]);
 
   const getTabStyles = (tabId: string, active: boolean) => {
     if (!active) return 'text-slate-600 hover:bg-slate-50 hover:text-blue-900 hover:shadow-sm';
@@ -1441,8 +1460,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Navigation Sidebar */}
         <aside className="hidden lg:block w-[19rem] flex-shrink-0">
-          <nav className="bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-[2.5rem] p-7 shadow-sm space-y-3 sticky top-28">
-            <div className="text-sm font-black text-slate-400 uppercase tracking-wider px-4 mb-6 flex items-center">
+          <nav className="bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-[2.5rem] p-5 shadow-sm space-y-2 sticky top-28 max-h-[85vh] overflow-y-auto custom-scrollbar">
+            <div className="text-sm font-black text-slate-400 uppercase tracking-wider px-4 mb-4 flex items-center">
               <span className="w-2 h-2 rounded-full bg-yellow-500 mr-2"></span>
               Navegación Módulos
             </div>
@@ -1483,40 +1502,61 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 items: [
                   { id: 'minutas', label: 'Minutas de Comisiones', icon: FileText }
                 ]
+              },
+              {
+                category: 'Comité de Inventario',
+                items: [
+                  { id: 'inventario', label: 'Inventario y Patrimonio', icon: Archive }
+                ]
               }
             ].map(group => {
               const visibleItems = group.items.filter(tab => allowedTabs.includes(tab.id));
               if (visibleItems.length === 0) return null;
               
+              const isExpanded = expandedCategory === group.category;
+              
               return (
-                <div key={group.category} className="space-y-2 mb-4 last:mb-0">
-                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 mb-2 flex items-center">
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-300 mr-2"></span>
-                    {group.category}
+                <div key={group.category} className="mb-2 border border-slate-100/50 rounded-2xl overflow-hidden shadow-sm bg-white">
+                  <button
+                    onClick={() => setExpandedCategory(isExpanded ? null : group.category)}
+                    className={`w-full flex items-center justify-between px-4 py-3.5 transition-colors ${
+                      isExpanded ? 'bg-blue-50/50' : 'bg-white hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center">
+                      <span className={`w-1.5 h-1.5 rounded-full mr-2 transition-colors ${isExpanded ? 'bg-blue-500' : 'bg-slate-300'}`}></span>
+                      {group.category}
+                    </div>
+                    <ChevronDown size={14} className={`text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                  </button>
+                  
+                  <div className={`transition-all duration-300 overflow-hidden ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                    <div className="p-2 space-y-1 bg-slate-50/30">
+                      {visibleItems.map(tab => {
+                        const Icon = tab.icon;
+                        const active = activeTab === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id as TabType)}
+                            className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold transition-all duration-200 ${
+                              getTabStyles(tab.id, active)
+                            }`}
+                          >
+                            <Icon 
+                              size={16} 
+                              className={`transition-colors ${
+                                active 
+                                  ? 'text-white' 
+                                  : 'text-slate-400 group-hover:text-blue-600'
+                              }`} 
+                            />
+                            <span className="text-sm">{tab.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  {visibleItems.map(tab => {
-                    const Icon = tab.icon;
-                    const active = activeTab === tab.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id as TabType)}
-                        className={`w-full flex items-center space-x-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 ${
-                          getTabStyles(tab.id, active)
-                        }`}
-                      >
-                        <Icon 
-                          size={18} 
-                          className={`transition-colors ${
-                            active 
-                              ? 'text-white' 
-                              : 'text-slate-400 group-hover:text-blue-600'
-                          }`} 
-                        />
-                        <span className="text-sm">{tab.label}</span>
-                      </button>
-                    );
-                  })}
                 </div>
               );
             })}
@@ -1570,6 +1610,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     { id: 'comisiones', label: 'Gestión de Comisiones' },
                     { id: 'minutas', label: 'Minutas de Comisiones' },
                     { id: 'afiliacion', label: 'Comité de Afiliación' },
+                    { id: 'inventario', label: 'Inventario y Patrimonio' },
                   ].find(t => t.id === activeTab)?.label}
                 </span>
               </div>
@@ -1614,6 +1655,12 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     category: 'Comité de Servicio',
                     items: [
                       { id: 'minutas', label: 'Minutas de Comisiones', icon: FileText }
+                    ]
+                  },
+                  {
+                    category: 'Comité de Inventario',
+                    items: [
+                      { id: 'inventario', label: 'Inventario y Patrimonio', icon: Archive }
                     ]
                   }
                 ].map(group => {
@@ -4512,6 +4559,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           )}
           {activeTab === 'afiliacion' && (
             <Afiliacion user={user} />
+          )}
+          {activeTab === 'inventario' && (
+            <Inventario />
           )}
         </main>
       </div>
