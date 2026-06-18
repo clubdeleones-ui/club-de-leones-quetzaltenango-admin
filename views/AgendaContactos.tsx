@@ -207,22 +207,22 @@ export const AgendaContactos: React.FC = () => {
                   </div>
                   
                   {/* Action Buttons - Mobile Optimized */}
-                  <div className="flex flex-col sm:flex-row gap-2 mt-auto">
+                  <div className="grid grid-cols-2 gap-2 mt-auto w-full">
                     <a 
                       href={`tel:${contacto.telefono.replace(/\D/g, '')}`}
-                      className="flex-1 flex items-center justify-center py-3 px-4 bg-blue-50 text-blue-700 rounded-xl font-bold hover:bg-blue-100 transition-colors active:scale-95"
+                      className="flex items-center justify-center py-2.5 px-2 bg-blue-50 text-blue-700 rounded-xl font-bold hover:bg-blue-100 transition-colors active:scale-95 text-[11px] sm:text-xs md:text-sm"
                     >
-                      <Phone size={18} className="mr-2" />
-                      Llamar
+                      <Phone size={16} className="mr-1.5 flex-shrink-0" />
+                      <span className="truncate">Llamar</span>
                     </a>
                     <a 
                       href={`https://wa.me/${contacto.telefono.replace(/\D/g, '')}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 flex items-center justify-center py-3 px-4 bg-emerald-50 text-emerald-700 rounded-xl font-bold hover:bg-emerald-100 transition-colors active:scale-95"
+                      className="flex items-center justify-center py-2.5 px-2 bg-emerald-50 text-emerald-700 rounded-xl font-bold hover:bg-emerald-100 transition-colors active:scale-95 text-[11px] sm:text-xs md:text-sm"
                     >
-                      <MessageCircle size={18} className="mr-2" />
-                      WhatsApp
+                      <MessageCircle size={16} className="mr-1.5 flex-shrink-0" />
+                      <span className="truncate">WhatsApp</span>
                     </a>
                   </div>
                 </div>
