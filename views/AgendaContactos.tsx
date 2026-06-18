@@ -197,47 +197,33 @@ export const AgendaContactos: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="mt-auto pt-6">
-                  <div className="bg-slate-50 rounded-2xl p-4 flex items-center justify-between border border-slate-100">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Teléfono Directo</span>
-                      <div className="flex items-center text-slate-700 font-black text-lg tracking-tight">
-                        <Smartphone size={18} className="mr-2 text-emerald-600" />
-                        {contacto.telefono}
-                      </div>
+                <div className="mt-6 pt-4 border-t border-slate-100 relative">
+                  <div className="mb-4">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Teléfono Directo</span>
+                    <div className="flex items-center text-slate-700 font-black text-lg tracking-tight">
+                      <Smartphone size={18} className="mr-2 text-emerald-600" />
+                      {contacto.telefono}
                     </div>
-                    <div className="relative">
-                      <button 
-                        onClick={() => setOpenDropdownId(openDropdownId === contacto.id ? null : contacto.id)}
-                        className={`flex items-center justify-center w-12 h-12 rounded-xl transition-all shadow-sm ${
-                          openDropdownId === contacto.id ? 'bg-emerald-600 text-white shadow-emerald-200' : 'bg-white text-emerald-600 border border-emerald-100 hover:bg-emerald-50 hover:scale-105'
-                        }`}
-                        title="Contactar"
-                      >
-                        <MessageCircle size={22} />
-                      </button>
-
-                      {openDropdownId === contacto.id && (
-                        <div className="absolute right-0 bottom-full mb-3 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-10 animate-in slide-in-from-bottom-2 fade-in">
-                          <a 
-                            href={`https://wa.me/${contacto.telefono.replace(/\D/g, '')}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center px-4 py-3 hover:bg-emerald-50 text-emerald-700 font-bold transition-colors border-b border-slate-50"
-                          >
-                            <MessageCircle size={18} className="mr-3" />
-                            WhatsApp
-                          </a>
-                          <a 
-                            href={`tel:${contacto.telefono.replace(/\D/g, '')}`}
-                            className="flex items-center px-4 py-3 hover:bg-blue-50 text-blue-700 font-bold transition-colors"
-                          >
-                            <Phone size={18} className="mr-3" />
-                            Llamar
-                          </a>
-                        </div>
-                      )}
-                    </div>
+                  </div>
+                  
+                  {/* Action Buttons - Mobile Optimized */}
+                  <div className="flex flex-col sm:flex-row gap-2 mt-auto">
+                    <a 
+                      href={`tel:${contacto.telefono.replace(/\D/g, '')}`}
+                      className="flex-1 flex items-center justify-center py-3 px-4 bg-blue-50 text-blue-700 rounded-xl font-bold hover:bg-blue-100 transition-colors active:scale-95"
+                    >
+                      <Phone size={18} className="mr-2" />
+                      Llamar
+                    </a>
+                    <a 
+                      href={`https://wa.me/${contacto.telefono.replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 flex items-center justify-center py-3 px-4 bg-emerald-50 text-emerald-700 rounded-xl font-bold hover:bg-emerald-100 transition-colors active:scale-95"
+                    >
+                      <MessageCircle size={18} className="mr-2" />
+                      WhatsApp
+                    </a>
                   </div>
                 </div>
               </div>

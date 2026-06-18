@@ -1535,7 +1535,10 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                       isExpanded ? 'bg-blue-50/50' : 'bg-white hover:bg-slate-50'
                     }`}
                   >
-                    <div className="text-[11px] font-black text-slate-500 uppercase tracking-normal flex items-center whitespace-nowrap overflow-hidden text-ellipsis flex-1 pr-2">
+                    <div 
+                      className="text-sm font-black text-slate-500 uppercase tracking-tight flex items-center whitespace-nowrap overflow-hidden text-ellipsis flex-1 pr-1"
+                      title={group.category}
+                    >
                       <span className={`flex-shrink-0 w-1.5 h-1.5 rounded-full mr-2 transition-colors ${isExpanded ? 'bg-blue-500' : 'bg-slate-300'}`}></span>
                       {group.category}
                     </div>
