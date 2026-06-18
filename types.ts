@@ -101,6 +101,15 @@ export interface GaleriaItem {
   contextoPremium?: string;
 }
 
+export interface ContactoAgenda {
+  id: string;
+  nombre: string;
+  telefono: string;
+  organizacion: string;
+  referencia: string;
+  campoTrabajo: string;
+}
+
 export interface AuthState {
   user: Socio | null;
   isAuthenticated: boolean;

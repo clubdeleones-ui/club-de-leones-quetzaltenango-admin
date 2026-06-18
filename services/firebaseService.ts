@@ -12,7 +12,7 @@ import {
   limit
 } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem } from "../types";
+import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda } from "../types";
 
 export const firebaseService = {
   // Upload candidate photo to Firebase Storage (Supports Base64 data_url format)
@@ -486,6 +486,49 @@ export const firebaseService = {
       await deleteDoc(docRef);
     } catch (error) {
       console.error("Error deleting minuta:", error);
+      throw error;
+    }
+  },
+
+  // ================= AGENDA DE CONTACTOS =================
+  getAgendaContactos: async (): Promise<ContactoAgenda[]> => {
+    try {
+      const colRef = collection(db, "agenda");
+      const snapshot = await getDocs(colRef);
+      const list: ContactoAgenda[] = [];
+      snapshot.forEach(doc => {
+        list.push({ id: doc.id, ...doc.data() } as ContactoAgenda);
+      });
+      // Sort alphabetically by nombre
+      return list.sort((a, b) => a.nombre.localeCompare(b.nombre));
+    } catch (error) {
+      console.error("Error fetching agenda:", error);
+      throw error;
+    }
+  },
+
+  saveAgendaContacto: async (contacto: ContactoAgenda): Promise<void> => {
+    try {
+      const { id, ...data } = contacto;
+      if (id) {
+        const docRef = doc(db, "agenda", id);
+        await setDoc(docRef, data, { merge: true });
+      } else {
+        const newDocRef = doc(collection(db, "agenda"));
+        await setDoc(newDocRef, data);
+      }
+    } catch (error) {
+      console.error("Error saving contacto:", error);
+      throw error;
+    }
+  },
+
+  deleteAgendaContacto: async (id: string): Promise<void> => {
+    try {
+      const docRef = doc(db, "agenda", id);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting contacto:", error);
       throw error;
     }
   },

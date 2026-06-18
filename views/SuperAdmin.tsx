@@ -54,7 +54,8 @@ import {
   ChevronDown,
   Car,
   Archive,
-  Camera
+  Camera,
+  BookUser
 } from 'lucide-react';
 import { generateActaPDF, generateActaCode, generateReciboPagoPDF } from '../utils/pdfGenerator';
 import { FormattedActa } from '../components/FormattedActa';
@@ -66,6 +67,7 @@ import { MinutasComisiones } from './MinutasComisiones';
 import { Afiliacion } from './Afiliacion';
 import { Inventario } from './Inventario';
 import { GaleriaAdmin } from './GaleriaAdmin';
+import { AgendaContactos } from './AgendaContactos';
 
 const PUESTOS_PREDEFINIDOS = [
   'Presidente del Club',
@@ -109,22 +111,22 @@ interface SuperAdminProps {
   onUpdateUser?: (user: Socio) => void;
 }
 
-type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas' | 'afiliacion' | 'inventario' | 'galeria_admin';
+type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas' | 'afiliacion' | 'inventario' | 'galeria_admin' | 'agenda_contactos';
 
 const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   // Dynamic Tab Access based on Role
   const allowedTabs = useMemo(() => {
     switch (user.rol) {
       case UserRole.SUPER_ADMIN:
-        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario', 'galeria_admin'];
+        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario', 'galeria_admin', 'agenda_contactos'];
       case UserRole.TESORERO:
         return ['resumen', 'socios', 'cuotas', 'donaciones', 'parqueo', 'presupuestos', 'inventario', 'galeria_admin'];
       case UserRole.SECRETARIO:
-        return ['resumen', 'socios', 'calendario', 'actas', 'comisiones', 'minutas'];
+        return ['resumen', 'socios', 'calendario', 'actas', 'comisiones', 'minutas', 'agenda_contactos'];
       case UserRole.ASESOR_SERVICIOS:
         return ['socios', 'calendario', 'beneficios', 'minutas'];
       case UserRole.PRESIDENTE_AFILIACION:
-        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion'];
+        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'agenda_contactos'];
       default:
         return [];
     }
@@ -152,7 +154,8 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
       { category: 'Tesorería', items: ['cuotas', 'parqueo', 'donaciones', 'presupuestos'] },
       { category: 'Comité de Afiliación', items: ['socios', 'afiliacion'] },
       { category: 'Comité de Servicio', items: ['minutas'] },
-      { category: 'Comité de Patrimonio', items: ['inventario', 'galeria_admin'] }
+      { category: 'Comité de Patrimonio', items: ['inventario', 'galeria_admin'] },
+      { category: 'Comité de Gestión', items: ['agenda_contactos'] }
     ];
     const currentGroup = groups.find(g => g.items.includes(activeTab));
     if (currentGroup) {
@@ -1511,6 +1514,12 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   { id: 'inventario', label: 'Inventario', icon: Archive },
                   { id: 'galeria_admin', label: 'Gestión de Galería', icon: Camera }
                 ]
+              },
+              {
+                category: 'Comité de Gestión',
+                items: [
+                  { id: 'agenda_contactos', label: 'Agenda de Contactos', icon: BookUser }
+                ]
               }
             ].map(group => {
               const visibleItems = group.items.filter(tab => allowedTabs.includes(tab.id));
@@ -1526,8 +1535,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                       isExpanded ? 'bg-blue-50/50' : 'bg-white hover:bg-slate-50'
                     }`}
                   >
-                    <div className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center">
-                      <span className={`w-1.5 h-1.5 rounded-full mr-2 transition-colors ${isExpanded ? 'bg-blue-500' : 'bg-slate-300'}`}></span>
+                    <div className="text-[10px] font-black text-slate-500 uppercase tracking-wider flex items-center whitespace-nowrap overflow-hidden text-ellipsis flex-1 pr-2">
+                      <span className={`flex-shrink-0 w-1.5 h-1.5 rounded-full mr-2 transition-colors ${isExpanded ? 'bg-blue-500' : 'bg-slate-300'}`}></span>
                       {group.category}
                     </div>
                     <ChevronDown size={14} className={`text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
@@ -1615,6 +1624,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     { id: 'afiliacion', label: 'Comité de Afiliación' },
                     { id: 'inventario', label: 'Inventario' },
                     { id: 'galeria_admin', label: 'Gestión de Galería' },
+                    { id: 'agenda_contactos', label: 'Agenda de Contactos' },
                   ].find(t => t.id === activeTab)?.label}
                 </span>
               </div>
@@ -1666,6 +1676,12 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     items: [
                       { id: 'inventario', label: 'Inventario', icon: Archive },
                       { id: 'galeria_admin', label: 'Gestión de Galería', icon: Camera }
+                    ]
+                  },
+                  {
+                    category: 'Comité de Gestión',
+                    items: [
+                      { id: 'agenda_contactos', label: 'Agenda de Contactos', icon: BookUser }
                     ]
                   }
                 ].map(group => {
@@ -4570,6 +4586,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           )}
           {activeTab === 'galeria_admin' && (
             <GaleriaAdmin />
+          )}
+          {activeTab === 'agenda_contactos' && (
+            <AgendaContactos />
           )}
         </main>
       </div>
