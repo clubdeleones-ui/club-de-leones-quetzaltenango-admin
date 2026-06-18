@@ -197,40 +197,43 @@ export const AgendaContactos: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-slate-100 relative">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center text-slate-600 font-bold">
-                      <Smartphone size={18} className="mr-2 text-slate-400" />
-                      {contacto.telefono}
+                <div className="mt-auto pt-6">
+                  <div className="bg-slate-50 rounded-2xl p-4 flex items-center justify-between border border-slate-100">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Teléfono Directo</span>
+                      <div className="flex items-center text-slate-700 font-black text-lg tracking-tight">
+                        <Smartphone size={18} className="mr-2 text-emerald-600" />
+                        {contacto.telefono}
+                      </div>
                     </div>
                     <div className="relative">
                       <button 
                         onClick={() => setOpenDropdownId(openDropdownId === contacto.id ? null : contacto.id)}
-                        className={`flex items-center space-x-1 px-3 py-2 rounded-xl text-sm font-bold transition-colors ${
-                          openDropdownId === contacto.id ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        className={`flex items-center justify-center w-12 h-12 rounded-xl transition-all shadow-sm ${
+                          openDropdownId === contacto.id ? 'bg-emerald-600 text-white shadow-emerald-200' : 'bg-white text-emerald-600 border border-emerald-100 hover:bg-emerald-50 hover:scale-105'
                         }`}
+                        title="Contactar"
                       >
-                        <span>Contactar</span>
-                        <ChevronDown size={14} className={`transition-transform ${openDropdownId === contacto.id ? 'rotate-180' : ''}`} />
+                        <MessageCircle size={22} />
                       </button>
 
                       {openDropdownId === contacto.id && (
-                        <div className="absolute right-0 bottom-full mb-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-10 animate-in slide-in-from-bottom-2 fade-in">
+                        <div className="absolute right-0 bottom-full mb-3 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-10 animate-in slide-in-from-bottom-2 fade-in">
                           <a 
                             href={`https://wa.me/${contacto.telefono.replace(/\D/g, '')}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center px-4 py-3 hover:bg-emerald-50 text-emerald-700 font-semibold transition-colors border-b border-slate-50"
+                            className="flex items-center px-4 py-3 hover:bg-emerald-50 text-emerald-700 font-bold transition-colors border-b border-slate-50"
                           >
                             <MessageCircle size={18} className="mr-3" />
-                            Mensaje de WhatsApp
+                            WhatsApp
                           </a>
                           <a 
                             href={`tel:${contacto.telefono.replace(/\D/g, '')}`}
-                            className="flex items-center px-4 py-3 hover:bg-blue-50 text-blue-700 font-semibold transition-colors"
+                            className="flex items-center px-4 py-3 hover:bg-blue-50 text-blue-700 font-bold transition-colors"
                           >
                             <Phone size={18} className="mr-3" />
-                            Llamada Directa
+                            Llamar
                           </a>
                         </div>
                       )}
