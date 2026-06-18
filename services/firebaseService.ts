@@ -12,7 +12,7 @@ import {
   limit
 } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision } from "../types";
+import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem } from "../types";
 
 export const firebaseService = {
   // Upload candidate photo to Firebase Storage (Supports Base64 data_url format)
@@ -487,6 +487,85 @@ export const firebaseService = {
     } catch (error) {
       console.error("Error deleting minuta:", error);
       throw error;
+    }
+  },
+
+  // ================= GALERIA =================
+  uploadGaleriaImage: async (base64Data: string, filePrefix: string): Promise<string> => {
+    try {
+      if (!base64Data.startsWith('data:image')) {
+        return base64Data;
+      }
+      const uniqueName = `${filePrefix}_${Date.now()}`;
+      const storageRef = ref(storage, `galeria/${uniqueName}`);
+      await uploadString(storageRef, base64Data, 'data_url');
+      return await getDownloadURL(storageRef);
+    } catch (error) {
+      console.error("Error al subir foto de galeria a Firebase Storage:", error);
+      return base64Data;
+    }
+  },
+
+  getGaleriaItems: async (): Promise<GaleriaItem[]> => {
+    try {
+      const colRef = collection(db, "galeria");
+      const snapshot = await getDocs(colRef);
+      const list: GaleriaItem[] = [];
+      snapshot.forEach(doc => {
+        list.push({ id: doc.id, ...doc.data() } as GaleriaItem);
+      });
+      // Sort by descending date
+      return list.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+    } catch (error) {
+      console.error("Error fetching galeria:", error);
+      throw error;
+    }
+  },
+
+  saveGaleriaItem: async (item: GaleriaItem): Promise<void> => {
+    try {
+      const { id, ...data } = item;
+      if (id) {
+        const docRef = doc(db, "galeria", id);
+        await setDoc(docRef, data, { merge: true });
+      } else {
+        const newDocRef = doc(collection(db, "galeria"));
+        await setDoc(newDocRef, data);
+      }
+    } catch (error) {
+      console.error("Error saving galeria item:", error);
+      throw error;
+    }
+  },
+
+  deleteGaleriaItem: async (id: string): Promise<void> => {
+    try {
+      const docRef = doc(db, "galeria", id);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting galeria item:", error);
+      throw error;
+    }
+  },
+
+  syncInitialGaleria: async (initialItems: GaleriaItem[]): Promise<void> => {
+    try {
+      const colRef = collection(db, "galeria");
+      const snapshot = await getDocs(colRef);
+      const existingIds = new Set(snapshot.docs.map(doc => doc.id));
+      
+      let syncedCount = 0;
+      for (const item of initialItems) {
+        if (!existingIds.has(item.id)) {
+          await setDoc(doc(db, "galeria", item.id), item);
+          syncedCount++;
+        }
+      }
+      if (syncedCount > 0) {
+        console.log(`Sincronizadas ${syncedCount} fotos de galería en Firestore.`);
+      }
+    } catch (error) {
+      console.error("Error syncing initial galeria:", error);
     }
   },
 };

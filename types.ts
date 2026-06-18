@@ -97,6 +97,8 @@ export interface GaleriaItem {
   fecha: string;
   url: string;
   descripcion: string;
+  categoria?: string;
+  contextoPremium?: string;
 }
 
 export interface AuthState {

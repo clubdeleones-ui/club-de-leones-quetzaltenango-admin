@@ -53,7 +53,8 @@ import {
   Hash,
   ChevronDown,
   Car,
-  Archive
+  Archive,
+  Camera
 } from 'lucide-react';
 import { generateActaPDF, generateActaCode, generateReciboPagoPDF } from '../utils/pdfGenerator';
 import { FormattedActa } from '../components/FormattedActa';
@@ -64,6 +65,7 @@ import { Comisiones } from './Comisiones';
 import { MinutasComisiones } from './MinutasComisiones';
 import { Afiliacion } from './Afiliacion';
 import { Inventario } from './Inventario';
+import { GaleriaAdmin } from './GaleriaAdmin';
 
 const PUESTOS_PREDEFINIDOS = [
   'Presidente del Club',
@@ -107,16 +109,16 @@ interface SuperAdminProps {
   onUpdateUser?: (user: Socio) => void;
 }
 
-type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas' | 'afiliacion' | 'inventario';
+type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas' | 'afiliacion' | 'inventario' | 'galeria_admin';
 
 const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   // Dynamic Tab Access based on Role
   const allowedTabs = useMemo(() => {
     switch (user.rol) {
       case UserRole.SUPER_ADMIN:
-        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario'];
+        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario', 'galeria_admin'];
       case UserRole.TESORERO:
-        return ['resumen', 'socios', 'cuotas', 'donaciones', 'parqueo', 'presupuestos', 'inventario'];
+        return ['resumen', 'socios', 'cuotas', 'donaciones', 'parqueo', 'presupuestos', 'inventario', 'galeria_admin'];
       case UserRole.SECRETARIO:
         return ['resumen', 'socios', 'calendario', 'actas', 'comisiones', 'minutas'];
       case UserRole.ASESOR_SERVICIOS:
@@ -150,7 +152,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
       { category: 'Tesorería', items: ['cuotas', 'parqueo', 'donaciones', 'presupuestos'] },
       { category: 'Comité de Afiliación', items: ['socios', 'afiliacion'] },
       { category: 'Comité de Servicio', items: ['minutas'] },
-      { category: 'Comité de Inventario', items: ['inventario'] }
+      { category: 'Comité de Patrimonio', items: ['inventario', 'galeria_admin'] }
     ];
     const currentGroup = groups.find(g => g.items.includes(activeTab));
     if (currentGroup) {
@@ -1504,9 +1506,10 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 ]
               },
               {
-                category: 'Comité de Inventario',
+                category: 'Comité de Patrimonio',
                 items: [
-                  { id: 'inventario', label: 'Inventario y Patrimonio', icon: Archive }
+                  { id: 'inventario', label: 'Inventario', icon: Archive },
+                  { id: 'galeria_admin', label: 'Gestión de Galería', icon: Camera }
                 ]
               }
             ].map(group => {
@@ -1610,7 +1613,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     { id: 'comisiones', label: 'Gestión de Comisiones' },
                     { id: 'minutas', label: 'Minutas de Comisiones' },
                     { id: 'afiliacion', label: 'Comité de Afiliación' },
-                    { id: 'inventario', label: 'Inventario y Patrimonio' },
+                    { id: 'inventario', label: 'Inventario' },
+                    { id: 'galeria_admin', label: 'Gestión de Galería' },
                   ].find(t => t.id === activeTab)?.label}
                 </span>
               </div>
@@ -1658,9 +1662,10 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     ]
                   },
                   {
-                    category: 'Comité de Inventario',
+                    category: 'Comité de Patrimonio',
                     items: [
-                      { id: 'inventario', label: 'Inventario y Patrimonio', icon: Archive }
+                      { id: 'inventario', label: 'Inventario', icon: Archive },
+                      { id: 'galeria_admin', label: 'Gestión de Galería', icon: Camera }
                     ]
                   }
                 ].map(group => {
@@ -4562,6 +4567,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           )}
           {activeTab === 'inventario' && (
             <Inventario />
+          )}
+          {activeTab === 'galeria_admin' && (
+            <GaleriaAdmin />
           )}
         </main>
       </div>
