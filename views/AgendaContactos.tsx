@@ -2,8 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BookUser, Plus, Phone, MessageCircle, Edit2, Trash2, Search, Building2, Briefcase, X, ChevronDown, CheckCircle, Smartphone } from 'lucide-react';
 import { ContactoAgenda } from '../types';
 import { firebaseService } from '../services/firebaseService';
+import { useModal } from '../context/ModalContext';
 
 export const AgendaContactos: React.FC = () => {
+  const { showAlert, showConfirm } = useModal();
+  const alert = (msg: string) => {
+    showAlert("Notificación", msg);
+  };
+
   const [contactos, setContactos] = useState<ContactoAgenda[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -93,7 +99,7 @@ export const AgendaContactos: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm("¿Estás seguro de eliminar este contacto?")) {
+    if (await showConfirm("Eliminar Contacto", "¿Estás seguro de eliminar este contacto?", { type: 'danger', confirmText: 'Eliminar', cancelText: 'Cancelar' })) {
       try {
         await firebaseService.deleteAgendaContacto(id);
         setContactos(contactos.filter(c => c.id !== id));

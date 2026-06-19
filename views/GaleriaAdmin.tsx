@@ -3,6 +3,7 @@ import { Camera, Plus, Edit2, Trash2, X, UploadCloud, Save, ImageIcon, Calendar,
 import { GaleriaItem } from '../types';
 import { firebaseService } from '../services/firebaseService';
 import { compressImageFile } from '../utils/imageCompressor';
+import { useModal } from '../context/ModalContext';
 
 const CATEGORIAS_GALERIA = [
   'Inauguraciones',
@@ -14,6 +15,11 @@ const CATEGORIAS_GALERIA = [
 ];
 
 export const GaleriaAdmin: React.FC = () => {
+  const { showAlert, showConfirm } = useModal();
+  const alert = (msg: string) => {
+    showAlert("Notificación", msg);
+  };
+
   const [items, setItems] = useState<GaleriaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -126,7 +132,7 @@ export const GaleriaAdmin: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm("¿Estás seguro de eliminar esta foto? Esta acción no se puede deshacer.")) {
+    if (await showConfirm("Eliminar Foto", "¿Estás seguro de eliminar esta foto? Esta acción no se puede deshacer.", { type: 'danger', confirmText: 'Eliminar', cancelText: 'Cancelar' })) {
       try {
         await firebaseService.deleteGaleriaItem(id);
         setItems(items.filter(item => item.id !== id));

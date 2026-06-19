@@ -5,6 +5,7 @@ import Layout from './components/Layout';
 import { AuthState, Socio, UserRole } from './types';
 import { firebaseService } from './services/firebaseService';
 import { ToastProvider } from './context/ToastContext';
+import { ModalProvider } from './context/ModalContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import { env } from './config/env';
 
@@ -94,9 +95,10 @@ const App: React.FC = () => {
 
   return (
     <GoogleOAuthProvider clientId={env.googleClientId}>
-      <ToastProvider>
-        <ErrorBoundary>
-          <Router>
+      <ModalProvider>
+        <ToastProvider>
+          <ErrorBoundary>
+            <Router>
             <Layout auth={auth} onLogout={handleLogout}>
               <Suspense fallback={
                 <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50/50">
@@ -165,6 +167,7 @@ const App: React.FC = () => {
           </Router>
         </ErrorBoundary>
       </ToastProvider>
+      </ModalProvider>
     </GoogleOAuthProvider>
   );
 };

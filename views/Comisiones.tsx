@@ -8,6 +8,7 @@ import { MOCK_ACTAS } from '../constants';
 import { FormattedActa } from '../components/FormattedActa';
 import { generateActaPDF } from '../utils/pdfGenerator';
 import { Phone, Mail } from 'lucide-react';
+import { useModal } from '../context/ModalContext';
 
 const cleanString = (str: string) => 
   str ? str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
@@ -16,6 +17,11 @@ const isMatch = (val1: string, val2: string) =>
   cleanString(val1) === cleanString(val2);
 
 export const Comisiones: React.FC = () => {
+  const { showAlert, showConfirm } = useModal();
+  const alert = (msg: string) => {
+    showAlert("Notificación", msg);
+  };
+
   const [comisiones, setComisiones] = useState<Comision[]>([]);
   const [socios, setSocios] = useState<Socio[]>(() => {
     const local = localStorage.getItem('club_leones_socios_v3');
@@ -144,7 +150,7 @@ export const Comisiones: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('¿Estás seguro de eliminar esta comisión permanentemente?')) {
+    if (await showConfirm("Eliminar Comisión", "¿Estás seguro de eliminar esta comisión permanentemente?", { type: 'danger', confirmText: 'Eliminar', cancelText: 'Cancelar' })) {
       await firebaseService.deleteComision(id);
       if (selectedComisionId === id) {
         const remaining = comisiones.filter(c => c.id !== id);

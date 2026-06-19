@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MOCK_PROPUESTAS } from '../constants';
 import { Socio, PropuestaSocio, UserRole } from '../types';
 import { firebaseService } from '../services/firebaseService';
+import { useModal } from '../context/ModalContext';
 import { compressImageFile } from '../utils/imageCompressor';
 import { generateCartasInvitacionPDF } from '../utils/pdfGenerator';
 import { 
@@ -85,6 +86,11 @@ interface AfiliacionProps {
 }
 
 export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
+  const { showAlert, showConfirm } = useModal();
+  const alert = (msg: string) => {
+    showAlert("Notificación", msg);
+  };
+
   // Load proposals from localStorage or fallback to mock
   const [propuestas, setPropuestas] = useState<PropuestaSocio[]>(() => {
     const local = localStorage.getItem('club_leones_propuestas');
@@ -268,7 +274,7 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
 
   const handleDeletePropuesta = async (propuestaId: string) => {
     if (!canEditPropuestas) return;
-    if (!window.confirm("¿Está seguro de eliminar esta propuesta permanentemente? Esta acción no se puede deshacer.")) return;
+    if (!(await showConfirm("Eliminar Propuesta", "¿Está seguro de eliminar esta propuesta permanentemente? Esta acción no se puede deshacer.", { type: 'danger', confirmText: 'Eliminar', cancelText: 'Cancelar' }))) return;
     setPropuestas(propuestas.filter(p => p.id !== propuestaId));
     try {
       await firebaseService.deleteProposal(propuestaId);
@@ -1231,7 +1237,7 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                     <button
                       type="button"
                       onClick={async () => {
-                        if (!window.confirm("¿Está seguro de eliminar esta opinión permanentemente?")) return;
+                        if (!(await showConfirm("Eliminar Opinión", "¿Está seguro de eliminar esta opinión permanentemente?", { type: 'danger', confirmText: 'Eliminar', cancelText: 'Cancelar' }))) return;
                         const filtered = (viewingOpinionsPropuesta.opiniones || []).filter(o => o.id !== op.id);
                         const updated = { ...viewingOpinionsPropuesta, opiniones: filtered };
                         setPropuestas(propuestas.map(p => p.id === updated.id ? updated : p));

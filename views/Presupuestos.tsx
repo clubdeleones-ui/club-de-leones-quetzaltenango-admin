@@ -15,8 +15,14 @@ import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { firebaseService } from '../services/firebaseService';
 import { RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision } from '../types';
+import { useModal } from '../context/ModalContext';
 
 export const Presupuestos: React.FC = () => {
+  const { showAlert, showConfirm } = useModal();
+  const alert = (msg: string) => {
+    showAlert("Notificación", msg);
+  };
+
   const [activeTab, setActiveTab] = useState<'fondos' | 'asignaciones' | 'rubros'>('fondos');
   
   const [rubros, setRubros] = useState<RubroPresupuesto[]>([]);
@@ -76,7 +82,7 @@ export const Presupuestos: React.FC = () => {
   };
 
   const handleDeleteRubro = async (id: string) => {
-    if (confirm('¿Eliminar este rubro permanentemente?')) {
+    if (await showConfirm("Eliminar Rubro", "¿Eliminar este rubro permanentemente?", { type: 'danger', confirmText: 'Eliminar', cancelText: 'Cancelar' })) {
       await firebaseService.deleteRubroPresupuesto(id);
     }
   };
@@ -98,7 +104,7 @@ export const Presupuestos: React.FC = () => {
   };
 
   const handleDeleteFondo = async (id: string) => {
-    if (confirm('¿Eliminar este ingreso permanentemente?')) {
+    if (await showConfirm("Eliminar Ingreso", "¿Eliminar este ingreso permanentemente?", { type: 'danger', confirmText: 'Eliminar', cancelText: 'Cancelar' })) {
       await firebaseService.deleteFondoPresupuesto(id);
     }
   };
@@ -119,7 +125,7 @@ export const Presupuestos: React.FC = () => {
   };
 
   const handleDeleteAsignacion = async (id: string) => {
-    if (confirm('¿Eliminar esta asignación permanentemente?')) {
+    if (await showConfirm("Eliminar Asignación", "¿Eliminar esta asignación permanentemente?", { type: 'danger', confirmText: 'Eliminar', cancelText: 'Cancelar' })) {
       await firebaseService.deleteAsignacionComision(id);
     }
   };

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserRole, PropuestaSocio } from '../types';
 import { firebaseService } from '../services/firebaseService';
+import { useModal } from '../context/ModalContext';
 import { compressImageFile } from '../utils/imageCompressor';
 import { 
   UserPlus, 
@@ -45,6 +46,10 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage = "
 
 const ProponerSocio: React.FC = () => {
   const navigate = useNavigate();
+  const { showAlert } = useModal();
+  const alert = (msg: string) => {
+    showAlert("Notificación", msg);
+  };
   
   // Form states
   const [proponente, setProponente] = useState('');

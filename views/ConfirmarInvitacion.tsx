@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { firebaseService } from '../services/firebaseService';
 import { PropuestaSocio } from '../types';
+import { useModal } from '../context/ModalContext';
 import { 
   CheckCircle2, 
   Phone, 
@@ -15,6 +16,11 @@ import {
 } from 'lucide-react';
 
 export default function ConfirmarInvitacion() {
+  const { showAlert } = useModal();
+  const alert = (msg: string) => {
+    showAlert("Notificación", msg);
+  };
+
   const { id } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

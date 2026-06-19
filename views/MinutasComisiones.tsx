@@ -4,6 +4,7 @@ import { db } from '../services/firebase';
 import { firebaseService } from '../services/firebaseService';
 import { Comision, Socio, MinutaComision, MinutaPunto, Solicitud, Responsable } from '../types';
 import { generateMinutaPDF } from '../utils/pdfGenerator';
+import { useModal } from '../context/ModalContext';
 import { 
   Plus, 
   Search, 
@@ -38,6 +39,11 @@ const TEMAS_SOLICITUD = [
 ];
 
 export const MinutasComisiones: React.FC = () => {
+  const { showAlert, showConfirm } = useModal();
+  const alert = (msg: string) => {
+    showAlert("Notificación", msg);
+  };
+
   const [minutas, setMinutas] = useState<MinutaComision[]>([]);
   const [comisiones, setComisiones] = useState<Comision[]>([]);
   const [socios, setSocios] = useState<Socio[]>([]);
@@ -387,7 +393,12 @@ export const MinutasComisiones: React.FC = () => {
 
   // Permanent Delete
   const handleDelete = async (id: string) => {
-    if (window.confirm('¿Estás seguro de eliminar esta minuta permanentemente?')) {
+    const confirmed = await showConfirm(
+      'Confirmar Eliminación',
+      '¿Estás seguro de eliminar esta minuta permanentemente?',
+      { type: 'danger', confirmText: 'Eliminar', cancelText: 'Cancelar' }
+    );
+    if (confirmed) {
       try {
         await firebaseService.deleteMinuta(id);
         if (selectedMinutaId === id) {

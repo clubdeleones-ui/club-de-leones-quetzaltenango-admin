@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Socio, UserRole, Solicitud, Responsable } from '../types';
 import { firebaseService } from '../services/firebaseService';
+import { useModal } from '../context/ModalContext';
 import { 
   Plus, 
   Trash2, 
@@ -53,6 +54,11 @@ const TEMA_COLORS: { [key: string]: string } = {
 };
 
 const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
+  const { showAlert, showConfirm } = useModal();
+  const alert = (msg: string) => {
+    showAlert("Notificación", msg);
+  };
+
   const [activeTab, setActiveTab] = useState<'abiertas' | 'internas' | 'sillas'>(() => {
     const saved = sessionStorage.getItem('solicitudes_active_tab');
     if (saved) return saved as 'abiertas' | 'internas' | 'sillas';
@@ -307,9 +313,8 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     }
   };
 
-  // Delete request
   const handleDeleteSolicitud = async (solicitudId: string) => {
-    if (!window.confirm("¿Está seguro de eliminar esta solicitud permanentemente? Esta acción no se puede deshacer.")) {
+    if (!(await showConfirm("Eliminar Solicitud", "¿Está seguro de eliminar esta solicitud permanentemente? Esta acción no se puede deshacer.", { type: 'danger', confirmText: 'Eliminar', cancelText: 'Cancelar' }))) {
       return;
     }
 

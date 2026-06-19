@@ -26,6 +26,7 @@ import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { firebaseService } from '../services/firebaseService';
 import { VehiculoParqueo } from '../types';
+import { useModal } from '../context/ModalContext';
 
 
 const PALETA_COLORES = [
@@ -52,6 +53,11 @@ const TIPOS_PLACA = [
 ];
 
 export const ParqueoManager: React.FC = () => {
+  const { showAlert, showConfirm } = useModal();
+  const alert = (msg: string) => {
+    showAlert("Notificación", msg);
+  };
+
   // Persistence with Firestore real-time
   const [vehiculos, setVehiculos] = useState<VehiculoParqueo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -312,12 +318,19 @@ export const ParqueoManager: React.FC = () => {
     }
   };
 
-  const handleDeleteHistory = (id: string) => {
-    if (confirm('¿Desea eliminar este registro del historial permanentemente?')) {
-      firebaseService.deleteVehiculoParqueo(id).catch(e => {
+  const handleDeleteHistory = async (id: string) => {
+    const confirmed = await showConfirm(
+      'Confirmar Eliminación',
+      '¿Desea eliminar este registro del historial permanentemente?',
+      { type: 'danger', confirmText: 'Eliminar', cancelText: 'Cancelar' }
+    );
+    if (confirmed) {
+      try {
+        await firebaseService.deleteVehiculoParqueo(id);
+      } catch (e) {
         console.error(e);
         alert("Error al eliminar el vehículo.");
-      });
+      }
     }
   };
 

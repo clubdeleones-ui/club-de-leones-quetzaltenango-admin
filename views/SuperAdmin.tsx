@@ -18,6 +18,7 @@ import {
   Solicitud
 } from '../types';
 import { firebaseService } from '../services/firebaseService';
+import { useModal } from '../context/ModalContext';
 import { getWrittenDateTimeSpanish } from '../utils/dateSpanishFormatter';
 import { 
   TrendingUp, 
@@ -114,6 +115,11 @@ interface SuperAdminProps {
 type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas' | 'afiliacion' | 'inventario' | 'galeria_admin' | 'agenda_contactos';
 
 const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
+  const { showAlert, showConfirm } = useModal();
+  const alert = (msg: string) => {
+    showAlert("Notificación", msg);
+  };
+
   // Dynamic Tab Access based on Role
   const allowedTabs = useMemo(() => {
     switch (user.rol) {
@@ -747,7 +753,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   };
 
   const handleDeletePropuesta = async (propuestaId: string) => {
-    if (!window.confirm("¿Está seguro de eliminar esta propuesta permanentemente? Esta acción no se puede deshacer.")) return;
+    if (!(await showConfirm("Eliminar Propuesta", "¿Está seguro de eliminar esta propuesta permanentemente? Esta acción no se puede deshacer.", { type: 'danger' }))) return;
     
     setPropuestas(propuestas.filter(p => p.id !== propuestaId));
     try {
@@ -1254,7 +1260,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     const socio = socios.find(s => s.id === socioId);
     if (!socio) return;
 
-    const confirmed = window.confirm("¿Está seguro de regenerar el código QR? El código QR anterior dejará de funcionar inmediatamente para iniciar sesión.");
+    const confirmed = await showConfirm("Regenerar Código QR", "¿Está seguro de regenerar el código QR? El código QR anterior dejará de funcionar inmediatamente para iniciar sesión.", { type: 'warning', confirmText: 'Regenerar', cancelText: 'Cancelar' });
     if (!confirmed) return;
 
     setIsGeneratingQr(true);
@@ -1343,7 +1349,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       alert("No puedes eliminar tu propia ficha desde el panel administrativo.");
       return;
     }
-    const confirmed = window.confirm(`¿Está completamente seguro de que desea eliminar permanentemente la ficha de ${socio.nombre}? Esta acción no se puede deshacer y borrará al socio de Firestore y del Directorio público.`);
+    const confirmed = await showConfirm("Eliminar Socio", `¿Está completamente seguro de que desea eliminar permanentemente la ficha de ${socio.nombre}? Esta acción no se puede deshacer y borrará al socio de Firestore y del Directorio público.`, { type: 'danger', confirmText: 'Eliminar', cancelText: 'Cancelar' });
     if (!confirmed) return;
 
     try {
@@ -1423,7 +1429,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
   };
 
   const handleDeleteActividad = async (id: string) => {
-    if (!window.confirm("¿Está seguro de que desea eliminar esta actividad?")) return;
+    if (!(await showConfirm("Eliminar Actividad", "¿Está seguro de que desea eliminar esta actividad?", { type: 'danger', confirmText: 'Eliminar', cancelText: 'Cancelar' }))) return;
     try {
       await firebaseService.deleteActividad(id);
       setActividades(actividades.filter(a => a.id !== id));
