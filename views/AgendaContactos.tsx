@@ -146,7 +146,7 @@ export const AgendaContactos: React.FC = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-700"></div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6" ref={dropdownRef}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6" ref={dropdownRef}>
           {filteredContactos.length === 0 ? (
             <div className="col-span-full text-center py-12 bg-white rounded-3xl border border-dashed border-slate-300">
               <BookUser size={48} className="mx-auto text-slate-300 mb-4" />

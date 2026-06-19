@@ -431,7 +431,7 @@ const ProponerSocio: React.FC = () => {
                   <span className="text-yellow-500 mr-2">📋</span>
                   3. Datos Complementarios
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Estado Civil *</label>
                     <div className="relative">

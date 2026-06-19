@@ -511,7 +511,7 @@ export const MinutasComisiones: React.FC = () => {
                 <span className="bg-blue-100 text-blue-800 text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">1</span>
                 <span>Datos Generales de la Reunión</span>
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Tema Principal / Título</label>
                   <input
@@ -548,7 +548,7 @@ export const MinutasComisiones: React.FC = () => {
                   <span>Control de Asistencia e Invitados</span>
                 </h4>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   {/* Columna Izquierda: Miembros de la Comisión */}
                   <div className="space-y-4">
                     <h5 className="font-extrabold text-slate-700 text-sm flex items-center justify-between">
@@ -758,7 +758,7 @@ export const MinutasComisiones: React.FC = () => {
               </div>
 
               {form.crearSolicitud && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-amber-200/50 animate-in fade-in duration-300">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4 border-t border-amber-200/50 animate-in fade-in duration-300">
                   <div className="space-y-4">
                     <div>
                       <label className="text-[9px] font-black text-amber-800 uppercase tracking-wider ml-1 mb-1 block">Título de la Solicitud</label>
@@ -1007,7 +1007,7 @@ export const MinutasComisiones: React.FC = () => {
                   <span>Registro de Asistencia</span>
                 </h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
                   {/* Miembros */}
                   <div className="space-y-3">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
@@ -1193,7 +1193,7 @@ export const MinutasComisiones: React.FC = () => {
                   No se encontraron minutas con los filtros seleccionados.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   {paginatedMinutas.map(m => {
                     const comm = comisiones.find(c => c.id === m.comisionId);
                     const dateStr = new Date(m.fechaHora).toLocaleDateString('es-GT', {

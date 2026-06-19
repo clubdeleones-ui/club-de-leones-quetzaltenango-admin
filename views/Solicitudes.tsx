@@ -548,7 +548,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-8">
                 {filteredSolicitudes.map((sol) => {
                   const statusBorderColor = 
                     sol.estado === 'Aprobada' ? 'border-l-4 border-l-emerald-500' :

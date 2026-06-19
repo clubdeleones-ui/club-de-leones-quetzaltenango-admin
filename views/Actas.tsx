@@ -310,7 +310,7 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
         </div>
 
         {/* Actas List Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {loadingActas ? (
             <div className="col-span-full flex flex-col items-center justify-center py-20 bg-white rounded-[2rem] border-2 border-dashed border-slate-100">
               <Loader2 className="animate-spin text-blue-900 mb-4" size={48} />

@@ -163,7 +163,7 @@ export const GaleriaAdmin: React.FC = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-900"></div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
           {items.length === 0 ? (
             <div className="col-span-full text-center py-12 bg-white rounded-3xl border border-dashed border-slate-300">
               <Camera size={48} className="mx-auto text-slate-300 mb-4" />
@@ -233,7 +233,7 @@ export const GaleriaAdmin: React.FC = () => {
             </header>
 
             <form onSubmit={handleSubmit} className="p-8 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="md:col-span-2">
                   <label className="block text-sm font-bold text-slate-700 mb-2">Fotografía *</label>
                   <div className="relative border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors group overflow-hidden">

@@ -76,7 +76,7 @@ const Galeria: React.FC = () => {
               </div>
 
               {/* Gallery Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-8">
                 {galeriaItems.map((item) => (
                   <div key={item.id} className="group perspective-[1000px] h-[400px] w-full cursor-pointer">
                     <div 

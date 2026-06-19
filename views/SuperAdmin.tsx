@@ -2093,7 +2093,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           {activeTab === 'resumen' && (
             <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
               {/* KPIs */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
                 
                 {/* Socios Activos */}
                 <div className="bg-gradient-to-br from-blue-900 to-indigo-950 p-8 rounded-[2rem] text-white shadow-xl relative overflow-hidden animate-in zoom-in-95 duration-300">
@@ -2595,7 +2595,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     <p className="text-slate-500 font-medium">No se encontraron actividades que coincidan con la búsqueda.</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
                     {filteredAndSortedActividades.map(act => (
                       <div key={act.id} className="bg-white rounded-[2rem] overflow-hidden border border-slate-200/80 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col group">
                         <div className="relative h-48 overflow-hidden bg-slate-100 shrink-0">
@@ -3438,7 +3438,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                           </div>
 
                           {/* Search and Columns */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             
                             {/* Absent Column (Search & Add) */}
                             <div className="space-y-4">
@@ -4527,7 +4527,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               )}
 
               {/* Beneficios List */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {beneficios.map(ben => (
                   <div key={ben.id} className="bg-white p-8 md:p-9 rounded-[2.5rem] border border-slate-200/80 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow group">
                     <div className="space-y-4">

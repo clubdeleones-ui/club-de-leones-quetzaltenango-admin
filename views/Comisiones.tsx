@@ -224,7 +224,7 @@ export const Comisiones: React.FC = () => {
             {/* Datos Generales */}
             <div className="space-y-6">
               <h4 className="font-extrabold text-blue-900 border-b border-slate-100 pb-2">1. Datos Generales</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Nombre de la Comisión</label>
                   <input
@@ -265,7 +265,7 @@ export const Comisiones: React.FC = () => {
             {/* Asignación de Miembros */}
             <div className="space-y-4">
               <h4 className="font-extrabold text-blue-900 border-b border-slate-100 pb-2">2. Asignación de Miembros</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Columna Izquierda: Buscar */}
                 <div className="space-y-4">
                   <h5 className="font-extrabold text-slate-700 text-sm flex items-center justify-between">
@@ -383,7 +383,7 @@ export const Comisiones: React.FC = () => {
               <h4 className="font-extrabold text-blue-900 border-b border-slate-100 pb-2">3. Vincular Actas de Sesión (Opcional)</h4>
               <p className="text-xs text-slate-500 font-medium">Vincula actas donde se haya discutido la creación o presupuesto de esta comisión.</p>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Columna Izquierda: Buscar Actas */}
                 <div className="space-y-4">
                   <div className="relative">
