@@ -543,9 +543,12 @@ export const firebaseService = {
       const storageRef = ref(storage, `galeria/${uniqueName}`);
       await uploadString(storageRef, base64Data, 'data_url');
       return await getDownloadURL(storageRef);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al subir foto de galeria a Firebase Storage:", error);
-      return base64Data;
+      if (error.status === 404 || error.code === 'storage/unknown') {
+        throw new Error("No se pudo subir la imagen a Firebase Storage. Por favor, asegúrate de activar y configurar Firebase Storage en tu consola de Firebase (proyecto 'parqueo-cueva').");
+      }
+      throw new Error(`Error de subida de imagen: ${error.message || error}`);
     }
   },
 

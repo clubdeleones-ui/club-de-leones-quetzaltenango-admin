@@ -125,7 +125,7 @@ export const GaleriaAdmin: React.FC = () => {
       fetchItems();
     } catch (error) {
       console.error("Error saving galeria item:", error);
-      alert("Hubo un error al guardar la foto.");
+      alert(error instanceof Error ? error.message : "Hubo un error al guardar la foto.");
     } finally {
       setIsUploading(false);
     }
