@@ -16,12 +16,11 @@ export const Historia: React.FC = () => {
         // Filtrar solo los publicados
         const publishedData = data.filter(item => item.estado === 'Publicado');
         
-        // Función auxiliar para extraer el año o hacer un sort rudimentario
-        // Para una línea de tiempo científica, un buen sort asume años o fechas YYYY-MM-DD
+        // Ordenar de forma segura asumiendo años o fechas YYYY-MM-DD
         const sorted = publishedData.sort((a, b) => {
-          // Intentar parsear las fechas si tienen formato estructurado, 
-          // de lo contrario, ordenar alfabéticamente/numéricamente.
-          return a.fecha.localeCompare(b.fecha);
+          const dateA = a.fecha || '';
+          const dateB = b.fecha || '';
+          return dateA.localeCompare(dateB);
         });
         
         setHitos(sorted);

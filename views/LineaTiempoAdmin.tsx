@@ -43,8 +43,12 @@ export const LineaTiempoAdmin: React.FC = () => {
     setLoading(true);
     try {
       const data = await firebaseService.getHitosHistoricos();
-      // Sort by date descending (or just let it be if it's strings, string compare works ok for YYYY-MM-DD or YYYY)
-      const sorted = data.sort((a, b) => b.fecha.localeCompare(a.fecha));
+      // Sort by date descending safely (handles missing or non-string dates)
+      const sorted = data.sort((a, b) => {
+        const dateA = a.fecha || '';
+        const dateB = b.fecha || '';
+        return dateB.localeCompare(dateA);
+      });
       setItems(sorted);
     } catch (error) {
       console.error("Error fetching hitos:", error);
@@ -104,9 +108,15 @@ export const LineaTiempoAdmin: React.FC = () => {
     try {
       let finalImageUrl = formData.imagenUrl;
       if (imageFile) {
-        const compressedBase64 = await compressImageFile(imageFile, 1200);
-        const fileName = `hitos/${Date.now()}_${imageFile.name}`;
-        finalImageUrl = await firebaseService.uploadGaleriaImage(compressedBase64, fileName);
+        // Compress to 1200 max size and 0.8 quality
+        const compressedBase64 = await compressImageFile(imageFile, 1200, 1200, 0.8);
+        // Use 'hito' as the prefix to write to the root of the galeria folder (avoids storage rules subfolder issues)
+        finalImageUrl = await firebaseService.uploadGaleriaImage(compressedBase64, 'hito');
+        
+        // If upload fallback returned the huge base64 data URL, throw an error to prevent Firestore document size limit issues
+        if (finalImageUrl.startsWith('data:image')) {
+          throw new Error('La subida de imagen falló. Por favor, verifica las reglas de almacenamiento de Firebase.');
+        }
       }
 
       const hitoId = editingItem ? editingItem.id : undefined;
@@ -121,7 +131,7 @@ export const LineaTiempoAdmin: React.FC = () => {
       showAlert("Éxito", "El hito histórico se guardó correctamente.");
     } catch (error) {
       console.error("Error saving hito:", error);
-      alert("Hubo un error al guardar el hito. Inténtalo de nuevo.");
+      alert(error instanceof Error ? error.message : "Hubo un error al guardar el hito. Inténtalo de nuevo.");
     } finally {
       setIsUploading(false);
     }
