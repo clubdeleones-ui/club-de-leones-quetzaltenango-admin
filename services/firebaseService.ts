@@ -12,7 +12,7 @@ import {
   limit
 } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda, Acta } from "../types";
+import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda, Acta, HitoHistorico } from "../types";
 
 export const firebaseService = {
   // Upload candidate photo to Firebase Storage (Supports Base64 data_url format)
@@ -675,6 +675,51 @@ export const firebaseService = {
       }
     } catch (error) {
       console.error("Error syncing initial actas:", error);
+    }
+  },
+
+  // ================= LINEA DE TIEMPO =================
+  getHitosHistoricos: async (): Promise<HitoHistorico[]> => {
+    try {
+      const colRef = collection(db, "linea_tiempo");
+      const snapshot = await getDocs(colRef);
+      const list: HitoHistorico[] = [];
+      snapshot.forEach(doc => {
+        list.push({ id: doc.id, ...doc.data() } as HitoHistorico);
+      });
+      // Ordenar por fecha o ID; como las fechas pueden ser años antiguos, ordenamos alfanuméricamente o dejaremos el frontend que ordene
+      return list;
+    } catch (error) {
+      console.error("Error fetching hitos from Firestore:", error);
+      throw error;
+    }
+  },
+
+  saveHitoHistorico: async (hito: HitoHistorico): Promise<void> => {
+    try {
+      const { id, ...data } = hito;
+      if (id) {
+        const docRef = doc(db, "linea_tiempo", id);
+        const cleanData = JSON.parse(JSON.stringify(data));
+        await setDoc(docRef, cleanData, { merge: true });
+      } else {
+        const newDocRef = doc(collection(db, "linea_tiempo"));
+        const cleanData = JSON.parse(JSON.stringify({ ...data, id: newDocRef.id }));
+        await setDoc(newDocRef, cleanData);
+      }
+    } catch (error) {
+      console.error("Error saving hito in Firestore:", error);
+      throw error;
+    }
+  },
+
+  deleteHitoHistorico: async (id: string): Promise<void> => {
+    try {
+      const docRef = doc(db, "linea_tiempo", id);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting hito from Firestore:", error);
+      throw error;
     }
   },
 };

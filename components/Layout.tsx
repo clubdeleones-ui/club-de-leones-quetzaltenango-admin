@@ -15,7 +15,8 @@ import {
   ChevronDown,
   Info,
   Gift,
-  DollarSign
+  DollarSign,
+  Clock
 } from 'lucide-react';
 import { AuthState, UserRole } from '../types';
 import { googleService } from '../services/googleService';
@@ -74,6 +75,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
     { label: 'Inicio', path: '/', icon: Home, public: true },
     { label: 'Actividades', path: '/actividades', icon: Calendar, public: true },
     { label: 'Galería', path: '/galeria', icon: Image, public: true },
+    { label: 'Historia', path: '/historia', icon: Clock, public: true },
     { label: 'Directorio', path: '/socios', icon: Users, public: true },
     { label: 'Solicitudes', path: '/solicitudes', icon: FileText, public: true },
   ];
@@ -409,7 +411,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
               <ul className="space-y-3 text-sm font-semibold">
                 <li><Link to="/estatutos" className="hover:text-yellow-400 transition-colors">Estatutos Oficiales</Link></li>
                 <li><Link to="/actividades" className="hover:text-yellow-400 transition-colors">Calendario de Actividades</Link></li>
-                <li><Link to="/galeria" className="hover:text-yellow-400 transition-colors">Galería Histórica</Link></li>
+                <li><Link to="/galeria" className="hover:text-yellow-400 transition-colors">Galería Interactiva</Link></li>
                 <li>
                   <Link to="/proponer-socio" className="text-yellow-400 hover:text-yellow-500 font-bold flex items-center transition-colors">
                     <Info size={14} className="mr-2" />

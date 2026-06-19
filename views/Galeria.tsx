@@ -49,7 +49,7 @@ const Galeria: React.FC = () => {
         <div className="bg-yellow-100/50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
           <Camera className="text-blue-900 w-10 h-10" />
         </div>
-        <h1 className="text-5xl font-extrabold text-blue-900 tracking-tight">Galería Histórica</h1>
+        <h1 className="text-5xl font-extrabold text-blue-900 tracking-tight">Galería Interactiva</h1>
         <p className="text-xl text-slate-500 mt-5 leading-relaxed italic">
           Preservando el legado de servicio y hermandad del <span className="font-bold text-blue-900">Club de Leones Quetzaltenango</span> a través del tiempo.
         </p>

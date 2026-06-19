@@ -101,6 +101,16 @@ export interface GaleriaItem {
   contextoPremium?: string;
 }
 
+export interface HitoHistorico {
+  id: string;
+  titulo: string;
+  fecha: string;
+  descripcion: string;
+  imagenUrl?: string;
+  categoria: 'Club de Leones' | 'Ciudad de Quetzaltenango';
+  estado: 'Borrador' | 'Publicado';
+}
+
 export interface ContactoAgenda {
   id: string;
   nombre: string;

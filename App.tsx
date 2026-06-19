@@ -16,6 +16,7 @@ const Dashboard = lazy(() => import('./views/Dashboard'));
 const Actas = lazy(() => import('./views/Actas'));
 const Socios = lazy(() => import('./views/Socios'));
 const Galeria = lazy(() => import('./views/Galeria'));
+const Historia = lazy(() => import('./views/Historia'));
 const Estatutos = lazy(() => import('./views/Estatutos'));
 const Calendario = lazy(() => import('./views/Calendario'));
 const SuperAdmin = lazy(() => import('./views/SuperAdmin'));
@@ -111,6 +112,7 @@ const App: React.FC = () => {
             <Route path="/" element={<Home />} />
             <Route path="/actividades" element={<Calendario accessToken={auth.accessToken} isAuthenticated={auth.isAuthenticated} />} />
             <Route path="/galeria" element={<Galeria />} />
+            <Route path="/historia" element={<Historia />} />
             <Route path="/socios" element={<Socios user={auth.user} />} />
             <Route path="/proponer-socio" element={<ProponerSocio />} />
             <Route path="/donar" element={<Donar />} />

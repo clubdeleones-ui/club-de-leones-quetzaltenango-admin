@@ -69,6 +69,7 @@ import { Afiliacion } from './Afiliacion';
 import { Inventario } from './Inventario';
 import { GaleriaAdmin } from './GaleriaAdmin';
 import { AgendaContactos } from './AgendaContactos';
+import { LineaTiempoAdmin } from './LineaTiempoAdmin';
 
 const PUESTOS_PREDEFINIDOS = [
   'Presidente del Club',
@@ -160,7 +161,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
       { category: 'Tesorería', items: ['cuotas', 'parqueo', 'donaciones', 'presupuestos'] },
       { category: 'Comité de Afiliación', items: ['socios', 'afiliacion'] },
       { category: 'Comité de Servicio', items: ['minutas'] },
-      { category: 'Comité de Patrimonio', items: ['inventario', 'galeria_admin'] },
+      { category: 'Comité de Patrimonio', items: ['inventario', 'galeria_admin', 'linea_tiempo_admin'] },
       { category: 'Comité de Gestión', items: ['agenda_contactos'] }
     ];
     const currentGroup = groups.find(g => g.items.includes(activeTab));
@@ -1574,7 +1575,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 category: 'Comité de Patrimonio',
                 items: [
                   { id: 'inventario', label: 'Inventario', icon: Archive },
-                  { id: 'galeria_admin', label: 'Gestión de Galería', icon: Camera }
+                  { id: 'galeria_admin', label: 'Gestión de Galería', icon: Camera },
+                  { id: 'linea_tiempo_admin', label: 'Línea de Tiempo', icon: Clock }
                 ]
               },
               {
@@ -1740,7 +1742,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     category: 'Comité de Patrimonio',
                     items: [
                       { id: 'inventario', label: 'Inventario', icon: Archive },
-                      { id: 'galeria_admin', label: 'Gestión de Galería', icon: Camera }
+                      { id: 'galeria_admin', label: 'Gestión de Galería', icon: Camera },
+                      { id: 'linea_tiempo_admin', label: 'Línea de Tiempo', icon: Clock }
                     ]
                   },
                   {
@@ -4651,6 +4654,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           )}
           {activeTab === 'galeria_admin' && (
             <GaleriaAdmin />
+          )}
+          {activeTab === 'linea_tiempo_admin' && (
+            <LineaTiempoAdmin />
           )}
           {activeTab === 'agenda_contactos' && (
             <AgendaContactos />
