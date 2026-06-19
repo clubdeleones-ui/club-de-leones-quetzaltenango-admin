@@ -3,6 +3,7 @@ import { MOCK_ACTAS } from '../constants';
 import { Search, FileText, Download, Eye, Sparkles, MessageCircle, X, Loader2, Calendar, User, HelpCircle } from 'lucide-react';
 import { googleService } from '../services/googleService';
 import { geminiService } from '../services/geminiService';
+import { firebaseService } from '../services/firebaseService';
 import { Acta } from '../types';
 import { generateActaPDF, generateActaCode } from '../utils/pdfGenerator';
 import { FormattedActa } from '../components/FormattedActa';
@@ -51,6 +52,36 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
   const [loadingAi, setLoadingAi] = useState(false);
   const [loadingActas, setLoadingActas] = useState(false);
   const [selectedActa, setSelectedActa] = useState<Acta | null>(null);
+
+  // Sincronizar y cargar actas desde Firestore
+  React.useEffect(() => {
+    const syncFirestoreActas = async () => {
+      try {
+        const fetched = await firebaseService.getActas();
+        if (fetched && fetched.length > 0) {
+          const localActasStr = localStorage.getItem('club_leones_actas');
+          const localActas: Acta[] = localActasStr ? JSON.parse(localActasStr) : MOCK_ACTAS;
+          
+          const mergedMap = new Map<string, Acta>();
+          fetched.forEach(a => mergedMap.set(a.id, a));
+          
+          // Mantener locales que no existan en Firestore
+          localActas.forEach(a => {
+            if (!mergedMap.has(a.id)) {
+              mergedMap.set(a.id, a);
+            }
+          });
+          
+          const mergedList = Array.from(mergedMap.values()).sort((a, b) => b.fecha.localeCompare(a.fecha));
+          setActas(mergedList);
+          localStorage.setItem('club_leones_actas', JSON.stringify(mergedList));
+        }
+      } catch (err) {
+        console.error("Error al obtener actas de Firestore en vista socios:", err);
+      }
+    };
+    syncFirestoreActas();
+  }, []);
 
   // Sync Google Drive files if logged in
   React.useEffect(() => {

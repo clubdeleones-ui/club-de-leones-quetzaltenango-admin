@@ -280,6 +280,41 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
       } catch (err) {
         console.error("Error syncing/fetching activities from Firestore:", err);
       }
+
+      // Sync and load actas from Firestore with merge logic
+      try {
+        const fetchedActas = await firebaseService.getActas();
+        const localActasStr = localStorage.getItem('club_leones_actas');
+        const localActas: Acta[] = localActasStr ? JSON.parse(localActasStr) : MOCK_ACTAS;
+        
+        const mergedMap = new Map<string, Acta>();
+        // Primero, agregamos todas las remotas
+        fetchedActas.forEach(a => mergedMap.set(a.id, a));
+        
+        // Luego, agregamos las locales que no existan en la nube para subirlas
+        const toUpload: Acta[] = [];
+        localActas.forEach(a => {
+          if (!mergedMap.has(a.id)) {
+            mergedMap.set(a.id, a);
+            toUpload.push(a);
+          }
+        });
+        
+        // Subir las locales faltantes a Firestore
+        for (const acta of toUpload) {
+          try {
+            await firebaseService.saveActa(acta);
+          } catch (uploadErr) {
+            console.error("Error al subir acta local a Firestore:", acta.id, uploadErr);
+          }
+        }
+        
+        const finalMergedList = Array.from(mergedMap.values()).sort((a, b) => b.fecha.localeCompare(a.fecha));
+        setActas(finalMergedList);
+        localStorage.setItem('club_leones_actas', JSON.stringify(finalMergedList));
+      } catch (err) {
+        console.error("Error syncing/fetching actas from Firestore:", err);
+      }
     };
 
     syncAndLoad();
@@ -948,7 +983,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     if (editingActaId) {
       newActas = actas.map(a => {
         if (a.id === editingActaId) {
-          return {
+          const updatedItem = {
             ...a,
             titulo: finalTitulo,
             categoria: actaWizardData.categoria,
@@ -962,6 +997,11 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               numeroActa: numActa
             }
           } as any;
+          // Guardar en Firestore en segundo plano/asíncrono
+          firebaseService.saveActa(updatedItem).catch(err => {
+            console.error("Error al actualizar acta en Firestore:", err);
+          });
+          return updatedItem;
         }
         return a;
       });
@@ -987,6 +1027,10 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       } as any;
 
       newActas = [created, ...actas];
+      // Guardar en Firestore en segundo plano/asíncrono
+      firebaseService.saveActa(created).catch(err => {
+        console.error("Error al guardar nueva acta en Firestore:", err);
+      });
       alert("¡Acta de sesión guardada y solicitudes actualizadas con éxito!");
     }
 
@@ -1388,7 +1432,12 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     }
   };
 
-  const handleDeleteActa = (id: string) => {
+  const handleDeleteActa = async (id: string) => {
+    try {
+      await firebaseService.deleteActa(id);
+    } catch (err) {
+      console.error("Error al eliminar acta de Firestore:", err);
+    }
     const updated = actas.filter(a => a.id !== id);
     setActas(updated);
     localStorage.setItem('club_leones_actas', JSON.stringify(updated));
@@ -5267,7 +5316,6 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               {selectedPhoto.title}
             </p>
           </div>
-        </div>
         </div>
       )}
 

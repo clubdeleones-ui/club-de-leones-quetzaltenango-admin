@@ -11,6 +11,10 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    match /actas/{document} {
+      allow read, write: if true;
+    }
+
     // Regla de compatibilidad para otros desarrollos en el proyecto parqueo-cueva (Válido hasta finales de 2027)
     match /{document=**} {
       allow read, write: if request.time < timestamp.date(2027, 12, 31);

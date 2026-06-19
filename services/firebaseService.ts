@@ -12,7 +12,7 @@ import {
   limit
 } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda } from "../types";
+import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda, Acta } from "../types";
 
 export const firebaseService = {
   // Upload candidate photo to Firebase Storage (Supports Base64 data_url format)
@@ -609,6 +609,72 @@ export const firebaseService = {
       }
     } catch (error) {
       console.error("Error syncing initial galeria:", error);
+    }
+  },
+
+  // ================= LIBRO DE ACTAS =================
+  getActas: async (): Promise<Acta[]> => {
+    try {
+      const colRef = collection(db, "actas");
+      const snapshot = await getDocs(colRef);
+      const list: Acta[] = [];
+      snapshot.forEach(doc => {
+        list.push({ id: doc.id, ...doc.data() } as Acta);
+      });
+      // Ordenar por fecha descendente
+      return list.sort((a, b) => b.fecha.localeCompare(a.fecha));
+    } catch (error) {
+      console.error("Error fetching actas from Firestore:", error);
+      throw error;
+    }
+  },
+
+  saveActa: async (acta: Acta): Promise<void> => {
+    try {
+      const { id, ...data } = acta;
+      if (id) {
+        const docRef = doc(db, "actas", id);
+        const cleanData = JSON.parse(JSON.stringify(data));
+        await setDoc(docRef, cleanData, { merge: true });
+      } else {
+        const newDocRef = doc(collection(db, "actas"));
+        const cleanData = JSON.parse(JSON.stringify({ ...data, id: newDocRef.id }));
+        await setDoc(newDocRef, cleanData);
+      }
+    } catch (error) {
+      console.error("Error saving acta in Firestore:", error);
+      throw error;
+    }
+  },
+
+  deleteActa: async (id: string): Promise<void> => {
+    try {
+      const docRef = doc(db, "actas", id);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting acta from Firestore:", error);
+      throw error;
+    }
+  },
+
+  syncInitialActas: async (initialActas: Acta[]): Promise<void> => {
+    try {
+      const colRef = collection(db, "actas");
+      const snapshot = await getDocs(colRef);
+      const existingIds = new Set(snapshot.docs.map(doc => doc.id));
+      
+      let syncedCount = 0;
+      for (const acta of initialActas) {
+        if (!existingIds.has(acta.id)) {
+          await setDoc(doc(db, "actas", acta.id), acta);
+          syncedCount++;
+        }
+      }
+      if (syncedCount > 0) {
+        console.log(`Sincronizadas ${syncedCount} actas iniciales en Firestore.`);
+      }
+    } catch (error) {
+      console.error("Error syncing initial actas:", error);
     }
   },
 };
