@@ -404,6 +404,9 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   }, [editingSocio, user.id]);
 
   const [actaSearch, setActaSearch] = useState('');
+  const [deleteActaConfirmId, setDeleteActaConfirmId] = useState<string | null>(null);
+  const [deleteActaConfirmText, setDeleteActaConfirmText] = useState('');
+
   const [donacionSearch, setDonacionSearch] = useState('');
   const [actaFilterCategory, setActaFilterCategory] = useState('Todas');
   
@@ -1386,7 +1389,11 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
   };
 
   const handleDeleteActa = (id: string) => {
-    setActas(actas.filter(a => a.id !== id));
+    const updated = actas.filter(a => a.id !== id);
+    setActas(updated);
+    localStorage.setItem('club_leones_actas', JSON.stringify(updated));
+    setDeleteActaConfirmId(null);
+    setDeleteActaConfirmText('');
   };
 
   // Filtered views
@@ -4239,7 +4246,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                               <Download size={16} />
                             </button>
                             <button 
-                              onClick={() => handleDeleteActa(acta.id)}
+                              onClick={() => setDeleteActaConfirmId(acta.id)}
                               className="p-2.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all border border-slate-150 bg-slate-50/50 active:scale-95"
                               title="Eliminar acta"
                             >
@@ -5259,6 +5266,58 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
             <p className="text-white text-base font-bold mt-4 bg-slate-900/80 px-4 py-2 rounded-xl shadow-lg border border-white/5">
               {selectedPhoto.title}
             </p>
+          </div>
+        </div>
+        </div>
+      )}
+
+      {/* Delete Acta Confirmation Modal */}
+      {deleteActaConfirmId && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl border border-red-100 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center space-x-4 mb-6 text-red-600">
+              <div className="bg-red-50 p-3 rounded-full border border-red-100">
+                <Trash2 size={24} />
+              </div>
+              <h3 className="text-xl font-black">Eliminar Acta</h3>
+            </div>
+            <p className="text-slate-600 mb-6 text-sm leading-relaxed">
+              Estás a punto de eliminar esta acta de forma permanente. 
+              <br/><br/>
+              Para evitar eliminaciones por error, por favor escribe la palabra <strong className="font-bold text-slate-900">ELIMINAR</strong> en el recuadro de abajo.
+            </p>
+            <div className="mb-6">
+              <input
+                type="text"
+                value={deleteActaConfirmText}
+                onChange={(e) => setDeleteActaConfirmText(e.target.value)}
+                placeholder="ELIMINAR"
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all font-mono uppercase text-center text-sm"
+              />
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setDeleteActaConfirmId(null);
+                  setDeleteActaConfirmText('');
+                }}
+                className="flex-1 py-3 text-slate-600 font-bold hover:bg-slate-50 border border-slate-200 rounded-xl transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  if (deleteActaConfirmText === 'ELIMINAR') {
+                    handleDeleteActa(deleteActaConfirmId);
+                  }
+                }}
+                disabled={deleteActaConfirmText !== 'ELIMINAR'}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-600/20 active:scale-95 flex items-center justify-center space-x-2"
+              >
+                <Trash2 size={16} />
+                <span>Eliminar</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
