@@ -2,15 +2,15 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
-// Configuración de Firebase para el proyecto 'parqueo-cueva'
+// Configuración de Firebase para el proyecto 'club-leones-quetzaltenango'
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyCw7TDB7dX1zKHgv_aRwW6a0oeEhzuVgwo",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "parqueo-cueva.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "parqueo-cueva",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "parqueo-cueva.firebasestorage.app",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "1068918179614",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:1068918179614:web:9fc85b670023058c3fab0f",
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-378VBWF19W"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyC08B_CEENQfWsAqIw8E15OKc61gA_6e68",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "club-leones-quetzaltenango.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "club-leones-quetzaltenango",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "club-leones-quetzaltenango.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "373834259776",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:373834259776:web:7c2ac8c45998abe9b12ea5",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-5T39KX2E3M"
 };
 
 // Inicializamos Firebase
