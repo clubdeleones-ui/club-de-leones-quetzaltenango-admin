@@ -501,7 +501,8 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       audience: 'Directiva',
       pendingCount: 0,
       registeredCount: 0,
-      showAction: false
+      showAction: true,
+      actionText: 'Redactar Carta'
     },
     {
       id: 'agenda',
@@ -875,9 +876,9 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
 
   const renderCartasForm = () => {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start w-full">
+      <div className="space-y-8 w-full text-left">
         {/* Formulario */}
-        <div className="lg:col-span-5 bg-white rounded-3xl border border-slate-200/80 shadow-md p-6 sm:p-8 space-y-6">
+        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-md p-6 sm:p-8 space-y-6 w-full">
           <div className="border-b border-slate-100 pb-4">
             <h2 className="text-xl font-bold text-blue-900 flex items-center gap-2">
               <Mail size={20} className="text-blue-900" />
@@ -1195,7 +1196,7 @@ Club de Leones de Quetzaltenango`;
         </div>
 
         {/* Vista Previa En Vivo (Live Preview) */}
-        <div className="lg:col-span-7 bg-slate-100/50 rounded-3xl border border-slate-200/60 p-4 sm:p-6 space-y-4 w-full overflow-hidden">
+        <div className="bg-slate-100/50 rounded-3xl border border-slate-200/60 p-4 sm:p-6 space-y-4 w-full overflow-hidden">
           <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">
             Vista Previa en Tiempo Real
           </h3>
@@ -1435,7 +1436,26 @@ Club de Leones de Quetzaltenango`;
                     {/* Columna Derecha (70%): Listado o Formulario */}
                     <div className="flex-grow w-2/3 overflow-hidden">
                       {cfg.id === 'cartas' ? (
-                        renderCartasForm()
+                        <div className="bg-white rounded-[2rem] border border-slate-200/80 shadow-md p-10 sm:p-16 text-center max-w-2xl mx-auto space-y-6 w-full">
+                          <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto text-blue-900 border border-blue-100">
+                            <Mail size={28} />
+                          </div>
+                          <h3 className="text-2xl font-black text-slate-900">Redactor de Cartas Oficiales</h3>
+                          <p className="text-slate-655 text-sm leading-relaxed max-w-md mx-auto font-medium">
+                            Utilice el editor oficial para generar correspondencia membretada en PDF para terceras instituciones con firma digital y sello.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveTab('cartas');
+                              setIsModalOpen(true);
+                            }}
+                            className="px-6 py-3 bg-blue-900 hover:bg-blue-800 text-white font-extrabold rounded-xl text-sm shadow-md transition-all inline-flex items-center space-x-2"
+                          >
+                            <Plus size={16} />
+                            <span>Redactar Nueva Carta</span>
+                          </button>
+                        </div>
                       ) : (
                         renderSolicitudesList(cfg.id as 'abiertas' | 'sillas' | 'internas' | 'agenda')
                       )}
@@ -1464,7 +1484,11 @@ Club de Leones de Quetzaltenango`;
 
                     <div className="pt-2 w-full overflow-hidden">
                       {cfg.id === 'cartas' ? (
-                        renderCartasForm()
+                        <div className="bg-white rounded-2xl border border-slate-100 p-6 text-center shadow-sm">
+                          <p className="text-xs text-slate-500 font-semibold">
+                            Redacte la correspondencia oficial usando el botón emergente superior.
+                          </p>
+                        </div>
                       ) : (
                         renderSolicitudesList(cfg.id as 'abiertas' | 'sillas' | 'internas' | 'agenda')
                       )}
@@ -1479,7 +1503,7 @@ Club de Leones de Quetzaltenango`;
       {/* FORM MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 sm:p-10 space-y-6 relative animate-in zoom-in-95 duration-300">
+          <div className={`bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full ${activeTab === 'cartas' ? 'max-w-4xl' : 'max-w-2xl'} max-h-[90vh] overflow-y-auto p-6 sm:p-10 space-y-6 relative animate-in zoom-in-95 duration-300`}>
             <button
               onClick={() => setIsModalOpen(false)}
               className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors"
@@ -1520,7 +1544,9 @@ Club de Leones de Quetzaltenango`;
               </div>
             )}
 
-            {activeTab === 'sillas' ? (
+            {activeTab === 'cartas' ? (
+              renderCartasForm()
+            ) : activeTab === 'sillas' ? (
               <form onSubmit={handleSubmit} className="space-y-5 text-left animate-in fade-in duration-300">
                 {/* Solidarity Note */}
                 <div className="bg-blue-50 border border-blue-200/80 rounded-2xl p-5 flex items-start space-x-3 text-blue-900 text-xs md:text-sm shadow-sm">
