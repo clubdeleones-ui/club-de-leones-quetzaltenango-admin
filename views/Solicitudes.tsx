@@ -878,17 +878,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     return (
       <div className="space-y-8 w-full text-left">
         {/* Formulario */}
-        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-md p-6 sm:p-8 space-y-6 w-full">
-          <div className="border-b border-slate-100 pb-4">
-            <h2 className="text-xl font-bold text-blue-900 flex items-center gap-2">
-              <Mail size={20} className="text-blue-900" />
-              Redactar Carta Oficial
-            </h2>
-            <p className="text-xs text-slate-550 font-medium mt-1">
-              Complete los campos para generar la correspondencia membretada en formato PDF.
-            </p>
-          </div>
-
+        <div className="space-y-6 w-full">
           <div className="space-y-4">
             {/* Fecha */}
             <div>
