@@ -438,10 +438,1099 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     }
   };
 
-  // Filter requests by tab type
-  const filteredSolicitudes = useMemo(() => {
-    return solicitudes.filter(s => s.tipo === activeTab);
-  }, [solicitudes, activeTab]);
+  // State for mobile accordion expansion
+  const [mobileExpandedTab, setMobileExpandedTab] = useState<'abiertas' | 'sillas' | 'internas' | 'cartas' | 'agenda' | null>('abiertas');
+
+  const toggleMobileTab = (tab: 'abiertas' | 'sillas' | 'internas' | 'cartas' | 'agenda') => {
+    if (mobileExpandedTab === tab) {
+      setMobileExpandedTab(null);
+    } else {
+      setMobileExpandedTab(tab);
+      setActiveTab(tab);
+    }
+  };
+
+  const renderRestrictedAccess = () => {
+    return (
+      <div className="bg-white rounded-[2rem] border border-slate-200/80 shadow-md p-10 sm:p-16 text-center max-w-2xl mx-auto space-y-6 w-full">
+        <div className="bg-red-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto text-red-600 border border-red-100 animate-pulse">
+          <Lock size={28} />
+        </div>
+        <h3 className="text-2xl font-black text-slate-900">Acceso Restringido</h3>
+        <p className="text-slate-655 text-sm leading-relaxed max-w-md mx-auto font-medium">
+          Las solicitudes internas son de carácter privado y están reservadas exclusivamente para socios activos y la junta directiva del club.
+        </p>
+        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs text-slate-500 font-semibold max-w-xs mx-auto">
+          🔑 Requiere rol administrativo o socio regular.
+        </div>
+      </div>
+    );
+  };
+
+  const renderSolicitudesList = (tipo: 'abiertas' | 'sillas' | 'internas' | 'agenda') => {
+    const list = solicitudes.filter(s => s.tipo === tipo);
+    if (isLoading) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 space-y-4 w-full">
+          <div className="animate-spin text-blue-900"><Users size={36} /></div>
+          <p className="text-slate-500 font-bold text-sm">Cargando solicitudes...</p>
+        </div>
+      );
+    }
+    if (list.length === 0) {
+      return (
+        <div className="bg-white rounded-[2rem] border border-slate-100 p-16 text-center max-w-2xl mx-auto w-full">
+          <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-400">
+            <FileText size={28} />
+          </div>
+          <h3 className="text-xl font-bold text-slate-800">No hay solicitudes</h3>
+          <p className="text-slate-600 mt-2 text-sm font-medium">
+            Aún no se han registrado solicitudes en esta categoría. ¡Sé el primero en crear una!
+          </p>
+        </div>
+      );
+    }
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-8 w-full">
+        {list.map((sol) => {
+          const statusBorderColor = 
+            sol.estado === 'Aprobada' ? 'border-l-4 border-l-emerald-500' :
+            sol.estado === 'Rechazada' ? 'border-l-4 border-l-rose-500' :
+            'border-l-4 border-l-yellow-500';
+
+          if (sol.tipo === 'sillas') {
+            return (
+              <div 
+                key={sol.id}
+                className={`bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-xl border border-slate-100 transition-all duration-300 flex flex-col justify-between ${statusBorderColor}`}
+              >
+                <div className="p-6 space-y-4 flex-grow">
+                  {/* Tags and Status */}
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border bg-blue-50 text-blue-700 border-blue-200 flex items-center space-x-1">
+                      <Accessibility size={12} className="mr-0.5" />
+                      <span>Silla de Ruedas</span>
+                    </span>
+                    
+                    <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center space-x-1 ${
+                      sol.estado === 'Aprobada' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                      sol.estado === 'Rechazada' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+                      'bg-yellow-50 text-yellow-700 border border-yellow-100'
+                    }`}>
+                      {sol.estado === 'Aprobada' && <CheckCircle size={10} className="mr-1" />}
+                      {sol.estado === 'Rechazada' && <XOctagon size={10} className="mr-1" />}
+                      {sol.estado === 'Pendiente' && <Clock size={10} className="mr-1" />}
+                      <span>{sol.estado}</span>
+                    </span>
+                  </div>
+
+                  {/* Info details */}
+                  <div className="space-y-1">
+                    <h3 className="font-extrabold text-lg text-slate-900 leading-snug break-words">
+                      Para: {sol.nombreBeneficiario}
+                    </h3>
+                    <div className="flex items-center text-xs font-semibold text-slate-400">
+                      <Calendar size={12} className="mr-1 text-slate-400 flex-shrink-0" />
+                      <span>Edad: {sol.edadBeneficiario} años • Registro: {sol.fechaCreacion}</span>
+                    </div>
+                  </div>
+
+                  {/* Wheelchair specific details */}
+                  <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50 space-y-2.5 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400 font-bold">Solicitante:</span>
+                      <span className="font-extrabold text-slate-800">{sol.nombreSolicitante}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400 font-bold">DPI:</span>
+                      <span className="font-mono text-slate-700">{sol.dpiSolicitante}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400 font-bold">Teléfono:</span>
+                      <a href={`tel:${sol.telefonoSolicitante}`} className="text-blue-900 hover:underline font-extrabold flex items-center space-x-1">
+                        <Phone size={10} className="mr-0.5" />
+                        <span>{sol.telefonoSolicitante}</span>
+                      </a>
+                    </div>
+                    <div className="flex justify-between pt-1.5 border-t border-slate-200/50">
+                      <span className="text-slate-400 font-bold">Tiempo de Uso:</span>
+                      <span className="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">{sol.tiempoUso}</span>
+                    </div>
+                  </div>
+
+                  {/* Return Note/Indicator */}
+                  <div className="bg-blue-50/50 border border-blue-100/70 p-3 rounded-xl flex items-start space-x-2 text-[10px] text-blue-800 font-medium leading-relaxed">
+                    <RefreshCw size={12} className="flex-shrink-0 mt-0.5 text-blue-600 animate-pulse" />
+                    <span>Compromiso de devolver la silla al finalizar su uso para beneficiar a otros.</span>
+                  </div>
+                </div>
+
+                {/* Footer actions for Admin */}
+                <div className="bg-slate-50/80 px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row gap-2 justify-between items-center text-[10px] font-bold text-slate-400">
+                  <span className="truncate max-w-[130px]" title={sol.usuarioCreador}>Por: {sol.usuarioCreador || 'Público'}</span>
+                  
+                  {(isAdministrative || (user && sol.usuarioCreador?.includes(user.correo))) && (
+                    <div className="flex items-center space-x-1 flex-shrink-0 mt-2 sm:mt-0">
+                      {isAdministrative && sol.estado === 'Pendiente' && (
+                        <>
+                          <button
+                            onClick={() => handleUpdateStatus(sol.id, 'Aprobada')}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white p-1.5 rounded-lg shadow-sm"
+                            title="Aprobar Solicitud"
+                          >
+                            <Check size={12} />
+                          </button>
+                          <button
+                            onClick={() => handleUpdateStatus(sol.id, 'Rechazada')}
+                            className="bg-rose-500 hover:bg-rose-600 text-white p-1.5 rounded-lg shadow-sm"
+                            title="Rechazar Solicitud"
+                          >
+                            <X size={12} />
+                          </button>
+                        </>
+                      )}
+                      <button
+                        onClick={() => handleDeleteSolicitud(sol.id)}
+                        className="bg-slate-200 hover:bg-red-50 text-slate-500 hover:text-red-600 p-1.5 rounded-lg border border-slate-300/30 transition-colors"
+                        title="Eliminar Solicitud"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          if (sol.tipo === 'agenda') {
+            return (
+              <div 
+                key={sol.id}
+                className={`bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-xl border border-slate-100 transition-all duration-300 flex flex-col justify-between ${statusBorderColor}`}
+              >
+                <div className="p-6 space-y-4 flex-grow">
+                  {/* Tags and Status */}
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border bg-yellow-50 text-yellow-750 border-yellow-200 flex items-center space-x-1">
+                      <Calendar size={12} className="mr-0.5 text-yellow-600" />
+                      <span>Punto de Agenda</span>
+                    </span>
+                    
+                    <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center space-x-1 ${
+                      sol.estado === 'Aprobada' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                      sol.estado === 'Rechazada' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+                      'bg-yellow-50 text-yellow-700 border border-yellow-100'
+                    }`}>
+                      {sol.estado === 'Aprobada' && <CheckCircle size={10} className="mr-1" />}
+                      {sol.estado === 'Rechazada' && <XOctagon size={10} className="mr-1" />}
+                      {sol.estado === 'Pendiente' && <Clock size={10} className="mr-1" />}
+                      <span>{sol.estado}</span>
+                    </span>
+                  </div>
+
+                  {/* Info details */}
+                  <div className="space-y-1">
+                    <h3 className="font-extrabold text-lg text-slate-900 leading-snug break-words">
+                      {sol.agendaNombrePunto}
+                    </h3>
+                    <div className="flex items-center text-xs font-semibold text-slate-400">
+                      <User size={12} className="mr-1 text-slate-400 flex-shrink-0" />
+                      <span>Solicitado por: <strong className="text-slate-655 font-extrabold">{sol.agendaSocioNombre}</strong> • {sol.fechaCreacion}</span>
+                    </div>
+                  </div>
+
+                  {/* Contenido / Detalle */}
+                  <div className="space-y-1 bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50">
+                    <div className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">
+                      Contenido / Detalle:
+                    </div>
+                    <p className="text-slate-705 text-xs leading-relaxed font-medium break-words">
+                      {sol.agendaContenido}
+                    </p>
+                  </div>
+
+                  {/* Razón */}
+                  <div className="space-y-1 bg-blue-50/20 p-4 rounded-2xl border border-blue-50/50">
+                    <div className="text-xs font-black text-blue-900/60 uppercase tracking-widest mb-1">
+                      Razón / Justificación:
+                    </div>
+                    <p className="text-slate-705 text-xs leading-relaxed font-medium break-words">
+                      {sol.agendaRazon}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Footer actions for Admin/Creator */}
+                <div className="bg-slate-50/80 px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row gap-2 justify-between items-center text-[10px] font-bold text-slate-400">
+                  <span className="truncate max-w-[130px]" title={sol.usuarioCreador}>Por: {sol.usuarioCreador || 'Socio'}</span>
+                  
+                  {(isAdministrative || (user && sol.usuarioCreador?.includes(user.correo))) && (
+                    <div className="flex items-center space-x-1 flex-shrink-0 mt-2 sm:mt-0">
+                      {isAdministrative && sol.estado === 'Pendiente' && (
+                        <>
+                          <button
+                            onClick={() => handleUpdateStatus(sol.id, 'Aprobada')}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white p-1.5 rounded-lg shadow-sm transition-colors"
+                            title="Aprobar Punto"
+                          >
+                            <Check size={12} />
+                          </button>
+                          <button
+                            onClick={() => handleUpdateStatus(sol.id, 'Rechazada')}
+                            className="bg-rose-500 hover:bg-rose-600 text-white p-1.5 rounded-lg shadow-sm transition-colors"
+                            title="Rechazar Punto"
+                          >
+                            <X size={12} />
+                          </button>
+                        </>
+                      )}
+                      <button
+                        onClick={() => handleDeleteSolicitud(sol.id)}
+                        className="bg-slate-200 hover:bg-red-50 text-slate-500 hover:text-red-600 p-1.5 rounded-lg border border-slate-300/30 transition-colors"
+                        title="Eliminar Punto"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div 
+              key={sol.id}
+              className={`bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-xl border border-slate-100 transition-all duration-300 flex flex-col justify-between ${statusBorderColor}`}
+            >
+              <div className="p-6 space-y-4 flex-grow">
+                {/* Tags and Status */}
+                <div className="flex justify-between items-start gap-2">
+                  <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border ${
+                    (sol.tema && TEMA_COLORS[sol.tema]) || TEMA_COLORS['Otra']
+                  }`}>
+                    {sol.tema === 'Otra' ? (sol.otroTemaDescripcion || 'Otra') : sol.tema}
+                  </span>
+                  
+                  <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center space-x-1 ${
+                    sol.estado === 'Aprobada' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                    sol.estado === 'Rechazada' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+                    'bg-yellow-50 text-yellow-700 border border-yellow-100'
+                  }`}>
+                    {sol.estado === 'Aprobada' && <CheckCircle size={10} className="mr-1" />}
+                    {sol.estado === 'Rechazada' && <XOctagon size={10} className="mr-1" />}
+                    {sol.estado === 'Pendiente' && <Clock size={10} className="mr-1" />}
+                    <span>{sol.estado}</span>
+                  </span>
+                </div>
+
+                {/* Info details */}
+                <div className="space-y-1">
+                  <h3 className="font-extrabold text-lg text-slate-900 leading-snug break-words">
+                    {sol.nombre}
+                  </h3>
+                  <div className="flex items-center text-xs font-semibold text-slate-405">
+                    <Calendar size={12} className="mr-1 text-slate-400 flex-shrink-0" />
+                    <span>Fecha: {sol.fecha}</span>
+                  </div>
+                </div>
+
+                {/* Description */}
+                <p className="text-slate-655 text-xs leading-relaxed font-medium break-words bg-slate-50/50 p-3 rounded-xl border border-slate-100/50">
+                  {sol.descripcion}
+                </p>
+
+                {/* Responsibles Section */}
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center">
+                    <Users size={10} className="mr-1 text-slate-400" />
+                    Responsables ({sol.responsables?.length || 0})
+                  </h4>
+                  <div className="space-y-1.5">
+                    {sol.responsables?.map((resp, i) => (
+                      <div key={i} className="flex flex-col sm:flex-row justify-between sm:items-center text-xs bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100 gap-1">
+                        <span className="font-bold text-slate-700 truncate max-w-[150px]">{resp.nombre}</span>
+                        <a 
+                          href={`tel:${resp.telefono}`} 
+                          className="text-blue-900 hover:text-blue-700 font-bold flex items-center space-x-1"
+                        >
+                          <Phone size={10} className="flex-shrink-0" />
+                          <span>{resp.telefono}</span>
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer actions for Admin */}
+              <div className="bg-slate-50/80 px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row gap-2 justify-between items-center text-[10px] font-bold text-slate-400">
+                <span className="truncate max-w-[130px]" title={sol.usuarioCreador}>Por: {sol.usuarioCreador || 'Público'}</span>
+                
+                {(isAdministrative || (user && sol.usuarioCreador?.includes(user.correo))) && (
+                  <div className="flex items-center space-x-1 flex-shrink-0 mt-2 sm:mt-0">
+                    {isAdministrative && sol.estado === 'Pendiente' && (
+                      <>
+                        <button
+                          onClick={() => handleUpdateStatus(sol.id, 'Aprobada')}
+                          className="bg-emerald-500 hover:bg-emerald-600 text-white p-1.5 rounded-lg shadow-sm"
+                          title="Aprobar Solicitud"
+                        >
+                          <Check size={12} />
+                        </button>
+                        <button
+                          onClick={() => handleUpdateStatus(sol.id, 'Rechazada')}
+                          className="bg-rose-500 hover:bg-rose-600 text-white p-1.5 rounded-lg shadow-sm"
+                          title="Rechazar Solicitud"
+                        >
+                          <X size={12} />
+                        </button>
+                      </>
+                    )}
+                    <button
+                      onClick={() => handleDeleteSolicitud(sol.id)}
+                      className="bg-slate-200 hover:bg-red-50 text-slate-500 hover:text-red-600 p-1.5 rounded-lg border border-slate-300/30 transition-colors"
+                      title="Eliminar Solicitud"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderCartasForm = () => {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start w-full">
+        {/* Formulario */}
+        <div className="lg:col-span-5 bg-white rounded-3xl border border-slate-200/80 shadow-md p-6 sm:p-8 space-y-6">
+          <div className="border-b border-slate-100 pb-4">
+            <h2 className="text-xl font-bold text-blue-900 flex items-center gap-2">
+              <Mail size={20} className="text-blue-900" />
+              Redactar Carta Oficial
+            </h2>
+            <p className="text-xs text-slate-550 font-medium mt-1">
+              Complete los campos para generar la correspondencia membretada en formato PDF.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {/* Fecha */}
+            <div>
+              <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">
+                Fecha de la Carta
+              </label>
+              <input
+                type="date"
+                value={cartaFecha}
+                onChange={(e) => setCartaFecha(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
+              />
+            </div>
+
+            {/* Destinatario Details */}
+            <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 space-y-4">
+              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                Información del Destinatario
+              </h3>
+              
+              <div>
+                <label className="block text-[10px] font-black text-slate-655 uppercase tracking-wider mb-1">
+                  Nombre de la Persona
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej. Lic. Carlos Mérida"
+                  value={cartaDestinatario}
+                  onChange={(e) => setCartaDestinatario(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black text-slate-655 uppercase tracking-wider mb-1">
+                  Cargo / Puesto
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej. Director Ejecutivo"
+                  value={cartaCargo}
+                  onChange={(e) => setCartaCargo(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black text-slate-655 uppercase tracking-wider mb-1">
+                  Institución / Organización
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej. Municipalidad de Quetzaltenango"
+                  value={cartaInstitucion}
+                  onChange={(e) => setCartaInstitucion(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Asunto */}
+            <div>
+              <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">
+                Asunto de la Carta
+              </label>
+              <input
+                type="text"
+                placeholder="Ej. Solicitud de colaboración para jornada oftalmológica"
+                value={cartaAsunto}
+                onChange={(e) => setCartaAsunto(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
+              />
+            </div>
+
+            {/* Saludo */}
+            <div>
+              <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">
+                Saludo Inicial
+              </label>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <select
+                  value={cartaSaludo.startsWith('Estimado') || cartaSaludo.startsWith('Respetable') ? cartaSaludo : 'personalizado'}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val !== 'personalizado') {
+                      setCartaSaludo(val);
+                    } else {
+                      setCartaSaludo('');
+                    }
+                  }}
+                  className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none w-full sm:w-auto"
+                >
+                  <option value="Estimados señores:">Estimados señores:</option>
+                  <option value="Estimado señor director:">Estimado señor director:</option>
+                  <option value="Estimado/a señor/a:">Estimado/a señor/a:</option>
+                  <option value="Respetables miembros de la Junta Directiva:">Respetables miembros:</option>
+                  <option value="personalizado">Personalizado...</option>
+                </select>
+                <input
+                  type="text"
+                  placeholder="Redacte saludo personalizado..."
+                  value={cartaSaludo}
+                  onChange={(e) => setCartaSaludo(e.target.value)}
+                  className="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all w-full"
+                />
+              </div>
+            </div>
+
+            {/* Cuerpo de la Carta */}
+            <div>
+              <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5 flex justify-between">
+                <span>Cuerpo de la Carta</span>
+                <span className="text-[10px] text-slate-400 font-normal">Use Enter para separar párrafos</span>
+              </label>
+              <textarea
+                rows={8}
+                placeholder="Redacte aquí el contenido principal de la carta..."
+                value={cartaCuerpo}
+                onChange={(e) => setCartaCuerpo(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all resize-y"
+              />
+            </div>
+
+            {/* Firmas, Sellos y Firma Digital PNG */}
+            <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 space-y-4">
+              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                Bloque de Firma y Autoría
+              </h3>
+
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFirmanteSelector('presidente')}
+                  className={`text-[10px] font-black uppercase tracking-wider py-2 rounded-xl border transition-all truncate px-1 ${
+                    firmanteSelector === 'presidente'
+                      ? 'bg-blue-900 border-blue-900 text-white'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  Presidente
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFirmanteSelector('secretario')}
+                  className={`text-[10px] font-black uppercase tracking-wider py-2 rounded-xl border transition-all truncate px-1 ${
+                    firmanteSelector === 'secretario'
+                      ? 'bg-blue-900 border-blue-900 text-white'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  Secretario
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFirmanteSelector('personalizado')}
+                  className={`text-[10px] font-black uppercase tracking-wider py-2 rounded-xl border transition-all truncate px-1 ${
+                    firmanteSelector === 'personalizado'
+                      ? 'bg-blue-900 border-blue-900 text-white'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  Personalizado
+                </button>
+              </div>
+
+              {firmanteSelector === 'personalizado' && (
+                <div className="space-y-3 pt-2 animate-in slide-in-from-top-1 duration-200">
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1">
+                      Nombre del Firmante
+                    </label>
+                    <input
+                      type="text"
+                      value={cartaFirmaNombre}
+                      onChange={(e) => setCartaFirmaNombre(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1">
+                      Puesto del Firmante
+                    </label>
+                    <input
+                      type="text"
+                      value={cartaFirmaPuesto}
+                      onChange={(e) => setCartaFirmaPuesto(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Firma Digital PNG */}
+              <div className="pt-3 border-t border-slate-200">
+                <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1.5 flex justify-between items-center">
+                  <span>Firma Digital (.png transparente)</span>
+                  {cartaFirmaImg && (
+                    <button
+                      type="button"
+                      onClick={handleClearFirma}
+                      className="text-red-500 hover:text-red-700 font-extrabold text-[9px]"
+                    >
+                      Eliminar firma
+                    </button>
+                  )}
+                </label>
+                
+                {cartaFirmaImg ? (
+                  <div className="flex items-center space-x-3 bg-white p-2.5 rounded-xl border border-slate-200">
+                    <img src={cartaFirmaImg} alt="Firma cargada" className="h-10 w-24 object-contain bg-slate-50 rounded p-1 border border-slate-100" />
+                    <span className="text-xs text-slate-500 font-semibold truncate flex-grow">Firma cargada</span>
+                  </div>
+                ) : (
+                  <input
+                    type="file"
+                    accept="image/png"
+                    onChange={handleFirmaUpload}
+                    className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-blue-50 file:text-blue-900 hover:file:bg-blue-100 transition-all cursor-pointer"
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Botones de Acción del Formulario */}
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                generateCartaOficialPDF({
+                  fecha: cartaFecha,
+                  institucion: cartaInstitucion,
+                  destinatario: cartaDestinatario,
+                  cargo: cartaCargo,
+                  saludo: cartaSaludo,
+                  asunto: cartaAsunto,
+                  cuerpo: cartaCuerpo,
+                  firmaNombre: cartaFirmaNombre,
+                  firmaPuesto: cartaFirmaPuesto,
+                  firmaImg: cartaFirmaImg
+                }, 'download');
+              }}
+              disabled={!cartaDestinatario.trim() || !cartaCuerpo.trim()}
+              className="sm:col-span-6 bg-blue-900 hover:bg-blue-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-extrabold px-4 py-3 rounded-xl transition-all shadow-md shadow-blue-900/10 flex items-center justify-center space-x-2 text-sm active:scale-[0.98]"
+            >
+              <FileText size={16} />
+              <span>Descargar PDF</span>
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => {
+                generateCartaOficialPDF({
+                  fecha: cartaFecha,
+                  institucion: cartaInstitucion,
+                  destinatario: cartaDestinatario,
+                  cargo: cartaCargo,
+                  saludo: cartaSaludo,
+                  asunto: cartaAsunto,
+                  cuerpo: cartaCuerpo,
+                  firmaNombre: cartaFirmaNombre,
+                  firmaPuesto: cartaFirmaPuesto,
+                  firmaImg: cartaFirmaImg
+                }, 'open');
+              }}
+              disabled={!cartaDestinatario.trim() || !cartaCuerpo.trim()}
+              className="sm:col-span-4 bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:bg-slate-50 disabled:text-slate-350 disabled:cursor-not-allowed font-extrabold px-4 py-3 rounded-xl transition-all border border-slate-200 flex items-center justify-center space-x-2 text-sm active:scale-[0.98]"
+              title="Abrir Vista de Impresión"
+            >
+              <span>Previsualizar</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                const formattedDate = formatFechaCarta(cartaFecha);
+                const textToCopy = `${formattedDate}
+
+${cartaDestinatario}
+${cartaCargo}
+${cartaInstitucion}
+Presente.
+
+ASUNTO: ${cartaAsunto.toUpperCase()}
+
+${cartaSaludo}
+
+${cartaCuerpo}
+
+Atentamente,
+
+${cartaFirmaNombre}
+${cartaFirmaPuesto}
+Club de Leones de Quetzaltenango`;
+                navigator.clipboard.writeText(textToCopy);
+                alert("Texto copiado al portapapeles. Listo para pegar en Google Docs.");
+              }}
+              disabled={!cartaCuerpo.trim()}
+              className="sm:col-span-2 bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:bg-slate-50 disabled:text-slate-350 disabled:cursor-not-allowed font-extrabold px-3 py-3 rounded-xl transition-all border border-slate-200 flex items-center justify-center active:scale-[0.98]"
+              title="Copiar texto para pegar en Google Docs"
+            >
+              <Copy size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* Vista Previa En Vivo (Live Preview) */}
+        <div className="lg:col-span-7 bg-slate-100/50 rounded-3xl border border-slate-200/60 p-4 sm:p-6 space-y-4 w-full overflow-hidden">
+          <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">
+            Vista Previa en Tiempo Real
+          </h3>
+          
+          {/* Hoja de Papel Membretado simulada */}
+          <div className="bg-white shadow-xl rounded-2xl border border-slate-200 p-5 sm:p-12 min-h-[700px] flex flex-col justify-between font-serif text-slate-800 relative overflow-hidden text-[11px] sm:text-sm">
+            
+            {/* Cabecera oficial decorativa */}
+            <div className="absolute top-0 left-0 right-0">
+              <div className="bg-blue-900 h-3 w-full"></div>
+              <div className="bg-yellow-500 h-0.5 w-full"></div>
+            </div>
+
+            <div className="space-y-6">
+              {/* Membrete del Club */}
+              <div className="flex items-center space-x-3 pb-4 border-b border-slate-100 mt-2">
+                <img 
+                  src="/images/logo.png"
+                  alt="Logo Club de Leones"
+                  className="w-10 h-10 object-contain flex-shrink-0"
+                  onError={(e) => {
+                    e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%231b365d"/><circle cx="50" cy="50" r="41" fill="none" stroke="%23eab308" stroke-width="3"/><text x="50" y="65" font-family="Helvetica" font-weight="bold" font-size="45" fill="%23eab308" text-anchor="middle">L</text></svg>';
+                  }}
+                />
+                <div>
+                  <h4 className="text-blue-900 font-sans font-black text-xs sm:text-sm tracking-tight leading-none">
+                    CLUB DE LEONES DE QUETZALTENANGO
+                  </h4>
+                  <p className="text-amber-600 font-sans font-black text-[9px] tracking-wider mt-0.5">
+                    NOSOTROS SERVIMOS
+                  </p>
+                </div>
+              </div>
+
+              {/* Fecha */}
+              <div className="text-right text-slate-500 text-xs italic font-sans">
+                {cartaFecha ? formatFechaCarta(cartaFecha) : '...'}
+              </div>
+
+              {/* Destinatario */}
+              <div className="space-y-0.5 leading-snug">
+                <p className="font-bold text-blue-900">{cartaDestinatario || '[Nombre del Destinatario]'}</p>
+                <p className="text-slate-500 italic font-sans text-xs">{cartaCargo || '[Cargo/Puesto]'}</p>
+                <p className="font-bold text-slate-700">{cartaInstitucion || '[Institución/Empresa]'}</p>
+                <p className="text-slate-400">Presente.</p>
+              </div>
+
+              {/* Asunto */}
+              {cartaAsunto && (
+                <div className="font-sans font-black text-xs text-blue-950 bg-blue-50/50 p-2.5 rounded-lg border border-blue-100/50">
+                  ASUNTO: {cartaAsunto.toUpperCase()}
+                </div>
+              )}
+
+              {/* Saludo */}
+              <div className="text-slate-655 font-medium">
+                {cartaSaludo || '[Saludo Inicial]'}
+              </div>
+
+              {/* Cuerpo */}
+              <div className="text-slate-700 leading-relaxed space-y-3 font-normal whitespace-pre-line text-xs sm:text-[13px] text-justify">
+                {cartaCuerpo || (
+                  <span className="text-slate-350 italic">
+                    El cuerpo de la carta redactado en el formulario se previsualizará en esta área respetando los párrafos y alineaciones del formato oficial...
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Firma y Cierre */}
+            <div className="pt-8 space-y-8">
+              <div className="space-y-1">
+                <p className="text-slate-500 text-xs italic">Atentamente,</p>
+                {cartaFirmaImg && (
+                  <div className="my-2 relative group w-32 h-14">
+                    <img src={cartaFirmaImg} alt="Firma Digital" className="h-full object-contain" />
+                    <button
+                      type="button"
+                      onClick={handleClearFirma}
+                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Quitar firma"
+                    >
+                      <X size={8} />
+                    </button>
+                  </div>
+                )}
+                <div className="pt-2 border-t border-slate-100 max-w-[220px]">
+                  <p className="font-sans font-bold text-xs text-blue-900">{cartaFirmaNombre}</p>
+                  <p className="font-sans text-[10px] text-slate-400 font-semibold">{cartaFirmaPuesto}</p>
+                </div>
+              </div>
+
+              {/* Sello simulado */}
+              <div className="flex justify-center pt-2">
+                <div className="border border-dashed border-amber-600/60 rounded px-4 py-1 text-[8px] font-sans font-bold text-amber-600 tracking-wider bg-amber-50/10">
+                  SELLO OFICIAL - CLUB DE LEONES QX
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderMobileAccordion = () => {
+    return (
+      <div className="space-y-4">
+        {/* Accordion 1: Solicitudes Abiertas */}
+        <div className="border border-slate-200 rounded-3xl bg-white overflow-hidden shadow-sm">
+          <button
+            type="button"
+            onClick={() => toggleMobileTab('abiertas')}
+            className={`w-full px-5 py-4 flex items-center justify-between text-left transition-colors ${
+              mobileExpandedTab === 'abiertas' ? 'bg-blue-900 text-white' : 'text-slate-800 hover:bg-slate-50'
+            }`}
+          >
+            <div className="flex items-center space-x-3">
+              <div className={`p-2 rounded-xl ${
+                mobileExpandedTab === 'abiertas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900'
+              }`}>
+                <FileText size={20} />
+              </div>
+              <div>
+                <span className="font-extrabold text-sm tracking-tight block">Solicitudes Abiertas</span>
+                {counts.abiertasPendientes > 0 && (
+                  <span className={`inline-block text-[8px] font-black px-1.5 py-0.5 rounded-full mt-0.5 ${
+                    mobileExpandedTab === 'abiertas' ? 'bg-yellow-500 text-blue-900 animate-pulse' : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {counts.abiertasPendientes} Pnd
+                  </span>
+                )}
+              </div>
+            </div>
+            <ChevronDown 
+              size={18} 
+              className={`transform transition-transform duration-300 ${
+                mobileExpandedTab === 'abiertas' ? 'rotate-180 text-white' : 'text-slate-400'
+              }`} 
+            />
+          </button>
+          
+          {mobileExpandedTab === 'abiertas' && (
+            <div className="p-5 border-t border-slate-100 bg-slate-50/50 space-y-4">
+              <p className="text-xs text-slate-550 font-semibold leading-relaxed">
+                Cualquier persona puede generar una solicitud al club llenando el formulario que aparece en crear solicitud.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('abiertas');
+                  setIsModalOpen(true);
+                }}
+                className="w-full py-3 bg-blue-900 hover:bg-blue-800 text-white font-black rounded-2xl flex items-center justify-center space-x-2 text-xs shadow-md transition-all animate-pulse"
+              >
+                <Plus size={16} />
+                <span>Crear Solicitud</span>
+              </button>
+              <div className="pt-2">
+                {renderSolicitudesList('abiertas')}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Accordion 2: Sillas de Ruedas */}
+        <div className="border border-slate-200 rounded-3xl bg-white overflow-hidden shadow-sm">
+          <button
+            type="button"
+            onClick={() => toggleMobileTab('sillas')}
+            className={`w-full px-5 py-4 flex items-center justify-between text-left transition-colors ${
+              mobileExpandedTab === 'sillas' ? 'bg-blue-900 text-white' : 'text-slate-800 hover:bg-slate-50'
+            }`}
+          >
+            <div className="flex items-center space-x-3">
+              <div className={`p-2 rounded-xl ${
+                mobileExpandedTab === 'sillas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900'
+              }`}>
+                <Accessibility size={20} />
+              </div>
+              <div>
+                <span className="font-extrabold text-sm tracking-tight block">Sillas de Ruedas</span>
+                {counts.sillasPendientes > 0 && (
+                  <span className={`inline-block text-[8px] font-black px-1.5 py-0.5 rounded-full mt-0.5 ${
+                    mobileExpandedTab === 'sillas' ? 'bg-yellow-500 text-blue-900 animate-pulse' : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {counts.sillasPendientes} Pnd
+                  </span>
+                )}
+              </div>
+            </div>
+            <ChevronDown 
+              size={18} 
+              className={`transform transition-transform duration-300 ${
+                mobileExpandedTab === 'sillas' ? 'rotate-180 text-white' : 'text-slate-400'
+              }`} 
+            />
+          </button>
+          
+          {mobileExpandedTab === 'sillas' && (
+            <div className="p-5 border-t border-slate-100 bg-slate-50/50 space-y-4">
+              <p className="text-xs text-slate-550 font-semibold leading-relaxed">
+                Formulario de préstamo temporal gratuito de equipo de movilidad para personas con necesidades especiales en Quetzaltenango.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('sillas');
+                  setIsModalOpen(true);
+                }}
+                className="w-full py-3 bg-blue-900 hover:bg-blue-800 text-white font-black rounded-2xl flex items-center justify-center space-x-2 text-xs shadow-md transition-all animate-pulse"
+              >
+                <Plus size={16} />
+                <span>Solicitar Silla</span>
+              </button>
+              <div className="pt-2">
+                {renderSolicitudesList('sillas')}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Accordion 3: Solicitudes Internas */}
+        <div className="border border-slate-200 rounded-3xl bg-white overflow-hidden shadow-sm">
+          <button
+            type="button"
+            onClick={() => {
+              if (hasInternalAccess) {
+                toggleMobileTab('internas');
+              } else {
+                alert("Esta opción es reservada exclusivamente para socios activos del club.");
+              }
+            }}
+            className={`w-full px-5 py-4 flex items-center justify-between text-left transition-colors ${
+              !hasInternalAccess ? 'bg-slate-50 text-slate-400 cursor-not-allowed opacity-75' :
+              mobileExpandedTab === 'internas' ? 'bg-blue-900 text-white' : 'text-slate-800 hover:bg-slate-50'
+            }`}
+          >
+            <div className="flex items-center space-x-3">
+              <div className={`p-2 rounded-xl ${
+                !hasInternalAccess ? 'bg-slate-200 text-slate-400' :
+                mobileExpandedTab === 'internas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900'
+              }`}>
+                <Lock size={20} />
+              </div>
+              <div>
+                <span className="font-extrabold text-sm tracking-tight block">Solicitudes Internas</span>
+                {hasInternalAccess && counts.internasPendientes > 0 && (
+                  <span className={`inline-block text-[8px] font-black px-1.5 py-0.5 rounded-full mt-0.5 ${
+                    mobileExpandedTab === 'internas' ? 'bg-yellow-500 text-blue-900 animate-pulse' : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {counts.internasPendientes} Pnd
+                  </span>
+                )}
+              </div>
+            </div>
+            <ChevronDown 
+              size={18} 
+              className={`transform transition-transform duration-300 ${
+                mobileExpandedTab === 'internas' ? 'rotate-180 text-white' : 'text-slate-400'
+              }`} 
+            />
+          </button>
+          
+          {hasInternalAccess && mobileExpandedTab === 'internas' && (
+            <div className="p-5 border-t border-slate-100 bg-slate-50/50 space-y-4">
+              <p className="text-xs text-slate-555 font-semibold leading-relaxed">
+                Coordinación interna del club, minutas de comisiones, propuestas presupuestarias y peticiones privadas de los socios activos.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('internas');
+                  setIsModalOpen(true);
+                }}
+                className="w-full py-3 bg-blue-900 hover:bg-blue-800 text-white font-black rounded-2xl flex items-center justify-center space-x-2 text-xs shadow-md transition-all animate-pulse"
+              >
+                <Plus size={16} />
+                <span>Crear Solicitud</span>
+              </button>
+              <div className="pt-2">
+                {renderSolicitudesList('internas')}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Accordion 4: Cartas Oficiales */}
+        {isAdministrative ? (
+          <div className="border border-slate-200 rounded-3xl bg-white overflow-hidden shadow-sm">
+            <button
+              type="button"
+              onClick={() => toggleMobileTab('cartas')}
+              className={`w-full px-5 py-4 flex items-center justify-between text-left transition-colors ${
+                mobileExpandedTab === 'cartas' ? 'bg-blue-900 text-white' : 'text-slate-800 hover:bg-slate-50'
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <div className={`p-2 rounded-xl ${
+                  mobileExpandedTab === 'cartas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900'
+                }`}>
+                  <Mail size={20} />
+                </div>
+                <div>
+                  <span className="font-extrabold text-sm tracking-tight block">Cartas Oficiales</span>
+                </div>
+              </div>
+              <ChevronDown 
+                size={18} 
+                className={`transform transition-transform duration-300 ${
+                  mobileExpandedTab === 'cartas' ? 'rotate-180 text-white' : 'text-slate-400'
+                }`} 
+              />
+            </button>
+            
+            {mobileExpandedTab === 'cartas' && (
+              <div className="p-5 border-t border-slate-100 bg-slate-50/50 space-y-4">
+                <p className="text-xs text-slate-550 font-semibold leading-relaxed">
+                  Redacción, firma digital y generación en PDF de correspondencia membretada dirigida a terceras instituciones.
+                </p>
+                <div className="pt-2 w-full overflow-hidden">
+                  {renderCartasForm()}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="border border-slate-100 rounded-3xl bg-slate-50/50 text-slate-400 opacity-60 p-4 flex items-center justify-between select-none">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 rounded-xl bg-slate-100 text-slate-400">
+                <Lock size={20} />
+              </div>
+              <div>
+                <span className="font-extrabold text-sm tracking-tight block">Cartas Oficiales</span>
+                <span className="text-[10px] font-medium text-slate-400">Solo Directiva</span>
+              </div>
+            </div>
+            <Lock size={16} className="text-slate-350" />
+          </div>
+        )}
+
+        {/* Accordion 5: Puntos de Agenda */}
+        {isSocio && (
+          <div className="border border-slate-200 rounded-3xl bg-white overflow-hidden shadow-sm">
+            <button
+              type="button"
+              onClick={() => toggleMobileTab('agenda')}
+              className={`w-full px-5 py-4 flex items-center justify-between text-left transition-colors ${
+                mobileExpandedTab === 'agenda' ? 'bg-blue-900 text-white' : 'text-slate-800 hover:bg-slate-50'
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <div className={`p-2 rounded-xl ${
+                  mobileExpandedTab === 'agenda' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900'
+                }`}>
+                  <Calendar size={20} />
+                </div>
+                <div>
+                  <span className="font-extrabold text-sm tracking-tight block">Puntos de Agenda</span>
+                  {counts.agendaPendientes > 0 && (
+                    <span className={`inline-block text-[8px] font-black px-1.5 py-0.5 rounded-full mt-0.5 ${
+                      mobileExpandedTab === 'agenda' ? 'bg-yellow-500 text-blue-900 animate-pulse' : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {counts.agendaPendientes} Pnd
+                    </span>
+                  )}
+                </div>
+              </div>
+              <ChevronDown 
+                size={18} 
+                className={`transform transition-transform duration-300 ${
+                  mobileExpandedTab === 'agenda' ? 'rotate-180 text-white' : 'text-slate-400'
+                }`} 
+              />
+            </button>
+            
+            {mobileExpandedTab === 'agenda' && (
+              <div className="p-5 border-t border-slate-100 bg-slate-50/50 space-y-4">
+                <p className="text-xs text-slate-550 font-semibold leading-relaxed">
+                  Propuesta de temas, puntos a discutir y solicitudes para el orden del día de las reuniones generales de socios.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('agenda');
+                    setIsModalOpen(true);
+                  }}
+                  className="w-full py-3 bg-blue-900 hover:bg-blue-800 text-white font-black rounded-2xl flex items-center justify-center space-x-2 text-xs shadow-md transition-all animate-pulse"
+                >
+                  <Plus size={16} />
+                  <span>Proponer Punto</span>
+                </button>
+                <div className="pt-2">
+                  {renderSolicitudesList('agenda')}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-10 max-w-7xl mx-auto px-4 md:px-8 py-8 animate-in fade-in duration-700">
@@ -452,1002 +1541,351 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
             Administra y crea solicitudes de servicios, proyectos y donaciones alineadas a nuestras causas globales.
           </p>
         </div>
-        {activeTab !== 'cartas' && (activeTab === 'abiertas' || activeTab === 'sillas' || activeTab === 'agenda' || hasInternalAccess) && (
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="bg-blue-900 hover:bg-blue-800 text-white font-black px-6 py-3.5 rounded-2xl transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center space-x-2 w-full md:w-auto active:scale-95"
-          >
-            <Plus size={18} />
-            <span>{activeTab === 'agenda' ? 'Proponer Punto' : 'Crear Solicitud'}</span>
-          </button>
-        )}
       </header>
 
-      {/* Selector de Tipo de Solicitud (Moderno) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-6">
-        
-        {/* Tarjeta 1: Solicitudes Abiertas */}
-        <button
-          type="button"
-          onClick={() => setActiveTab('abiertas')}
-          className={`flex flex-col text-left p-6 rounded-3xl border-2 transition-all duration-300 relative group h-full justify-between ${
-            activeTab === 'abiertas'
-              ? 'bg-blue-900 border-blue-900 text-white shadow-xl shadow-blue-900/20 scale-[1.02]'
-              : 'bg-white hover:bg-slate-50/85 border-slate-200 text-slate-800 hover:-translate-y-1'
-          }`}
-        >
-          <div className="space-y-4">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
-              activeTab === 'abiertas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900 group-hover:bg-blue-100'
-            }`}>
-              <FileText size={24} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-base tracking-tight">Solicitudes Abiertas</h3>
-                {counts.abiertasPendientes > 0 && (
-                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse ${
-                    activeTab === 'abiertas' ? 'bg-yellow-500 text-blue-900' : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {counts.abiertasPendientes} Pnd
-                  </span>
-                )}
-              </div>
-              <p className={`text-xs mt-2 leading-relaxed ${
-                activeTab === 'abiertas' ? 'text-slate-200 font-medium' : 'text-slate-500 font-semibold'
-              }`}>
-                Cualquier persona puede generar una solicitud al club llenando el formulario que aparece en crear solicitud.
-              </p>
-            </div>
-          </div>
-          <div className="mt-6 pt-4 border-t border-dashed w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest opacity-80">
-            <span>Público & Socios</span>
-            <span>{counts.abiertas} registradas</span>
-          </div>
-        </button>
-
-        {/* Tarjeta 2: Sillas de Ruedas */}
-        <button
-          type="button"
-          onClick={() => setActiveTab('sillas')}
-          className={`flex flex-col text-left p-6 rounded-3xl border-2 transition-all duration-300 relative group h-full justify-between ${
-            activeTab === 'sillas'
-              ? 'bg-blue-900 border-blue-900 text-white shadow-xl shadow-blue-900/20 scale-[1.02]'
-              : 'bg-white hover:bg-slate-50/85 border-slate-200 text-slate-800 hover:-translate-y-1'
-          }`}
-        >
-          <div className="space-y-4">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
-              activeTab === 'sillas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900 group-hover:bg-blue-100'
-            }`}>
-              <Accessibility size={24} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-base tracking-tight">Sillas de Ruedas</h3>
-                {counts.sillasPendientes > 0 && (
-                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse ${
-                    activeTab === 'sillas' ? 'bg-yellow-500 text-blue-900' : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {counts.sillasPendientes} Pnd
-                  </span>
-                )}
-              </div>
-              <p className={`text-xs mt-2 leading-relaxed ${
-                activeTab === 'sillas' ? 'text-slate-200 font-medium' : 'text-slate-500 font-semibold'
-              }`}>
-                Formulario de préstamo temporal gratuito de equipo de movilidad para personas con necesidades especiales en Quetzaltenango.
-              </p>
-            </div>
-          </div>
-          <div className="mt-6 pt-4 border-t border-dashed w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest opacity-80">
-            <span>Servicio Social</span>
-            <span>{counts.sillas} registradas</span>
-          </div>
-        </button>
-
-        {/* Tarjeta 3: Solicitudes Internas */}
-        <button
-          type="button"
-          onClick={() => {
-            if (hasInternalAccess) {
-              setActiveTab('internas');
-            } else {
-              alert("Esta opción es reservada exclusivamente para socios activos del club.");
-            }
-          }}
-          className={`flex flex-col text-left p-6 rounded-3xl border-2 transition-all duration-300 relative group h-full justify-between ${
-            !hasInternalAccess 
-              ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed opacity-75' 
-              : activeTab === 'internas'
-              ? 'bg-blue-900 border-blue-900 text-white shadow-xl shadow-blue-900/20 scale-[1.02]'
-              : 'bg-white hover:bg-slate-50/85 border-slate-200 text-slate-800 hover:-translate-y-1'
-          }`}
-        >
-          <div className="space-y-4">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
-              !hasInternalAccess ? 'bg-slate-200 text-slate-400' : activeTab === 'internas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900 group-hover:bg-blue-100'
-            }`}>
-              <Lock size={24} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-base tracking-tight">Solicitudes Internas</h3>
-                {hasInternalAccess && counts.internasPendientes > 0 && (
-                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse ${
-                    activeTab === 'internas' ? 'bg-yellow-500 text-blue-900' : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {counts.internasPendientes} Pnd
-                  </span>
-                )}
-              </div>
-              <p className={`text-xs mt-2 leading-relaxed ${
-                activeTab === 'internas' ? 'text-slate-200 font-medium' : 'text-slate-500 font-semibold'
-              }`}>
-                Coordinación interna del club, minutas de comisiones, propuestas presupuestarias y peticiones privadas de los socios activos.
-              </p>
-            </div>
-          </div>
-          <div className="mt-6 pt-4 border-t border-dashed w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest opacity-80">
-            <span>Solo Socios</span>
-            <span>{hasInternalAccess ? `${counts.internas} registradas` : 'Privado'}</span>
-          </div>
-        </button>
-
-        {/* Tarjeta 4: Cartas Oficiales */}
-        {isAdministrative ? (
-          <button
-            type="button"
-            onClick={() => setActiveTab('cartas')}
-            className={`flex flex-col text-left p-6 rounded-3xl border-2 transition-all duration-300 relative group h-full justify-between ${
-              activeTab === 'cartas'
+      {/* VISTA DE ESCRITORIO (md en adelante) */}
+      <div className="hidden md:block space-y-10">
+        {/* Selector de Tipo de Solicitud (Tarjetas Modernas) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-6">
+          {/* Tarjeta 1: Solicitudes Abiertas */}
+          <div
+            onClick={() => setActiveTab('abiertas')}
+            className={`cursor-pointer flex flex-col text-left p-6 rounded-3xl border-2 transition-all duration-300 relative group h-full justify-between ${
+              activeTab === 'abiertas'
                 ? 'bg-blue-900 border-blue-900 text-white shadow-xl shadow-blue-900/20 scale-[1.02]'
                 : 'bg-white hover:bg-slate-50/85 border-slate-200 text-slate-800 hover:-translate-y-1'
             }`}
           >
             <div className="space-y-4">
               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
-                activeTab === 'cartas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900 group-hover:bg-blue-100'
+                activeTab === 'abiertas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900 group-hover:bg-blue-100'
               }`}>
-                <Mail size={24} />
-              </div>
-              <div>
-                <h3 className="font-extrabold text-base tracking-tight">Cartas Oficiales</h3>
-                <p className={`text-xs mt-2 leading-relaxed ${
-                  activeTab === 'cartas' ? 'text-slate-200 font-medium' : 'text-slate-500 font-semibold'
-                }`}>
-                  Redacción, firma digital y generación en PDF de correspondencia membretada dirigida a terceras instituciones.
-                </p>
-              </div>
-            </div>
-            <div className="mt-6 pt-4 border-t border-dashed w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest opacity-80">
-              <span>Solo Directiva</span>
-              <span>Herramienta PDF</span>
-            </div>
-          </button>
-        ) : (
-          <div className="flex flex-col text-left p-6 rounded-3xl border-2 border-slate-100 bg-slate-50/50 text-slate-400 opacity-60 h-full justify-between select-none">
-            <div className="space-y-4">
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-slate-100 text-slate-400">
-                <Lock size={24} />
-              </div>
-              <div>
-                <h3 className="font-extrabold text-base tracking-tight">Cartas Oficiales</h3>
-                <p className="text-xs mt-2 leading-relaxed text-slate-400 font-medium">
-                  Función restringida únicamente para directores autorizados y secretaría para la emisión de correspondencia oficial.
-                </p>
-              </div>
-            </div>
-            <div className="mt-6 pt-4 border-t border-slate-200 w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest">
-              <span>Solo Directiva</span>
-              <span>Bloqueado</span>
-            </div>
-          </div>
-        )}
-
-        {/* Tarjeta 5: Puntos de Agenda */}
-        {isSocio && (
-          <button
-            type="button"
-            onClick={() => setActiveTab('agenda')}
-            className={`flex flex-col text-left p-6 rounded-3xl border-2 transition-all duration-300 relative group h-full justify-between ${
-              activeTab === 'agenda'
-                ? 'bg-blue-900 border-blue-900 text-white shadow-xl shadow-blue-900/20 scale-[1.02]'
-                : 'bg-white hover:bg-slate-50/85 border-slate-200 text-slate-800 hover:-translate-y-1'
-            }`}
-          >
-            <div className="space-y-4">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
-                activeTab === 'agenda' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900 group-hover:bg-blue-100'
-              }`}>
-                <Calendar size={24} />
+                <FileText size={24} />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-extrabold text-base tracking-tight">Puntos de Agenda</h3>
-                  {counts.agendaPendientes > 0 && (
+                  <h3 className="font-extrabold text-base tracking-tight">Solicitudes Abiertas</h3>
+                  {counts.abiertasPendientes > 0 && (
                     <span className={`text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse ${
-                      activeTab === 'agenda' ? 'bg-yellow-500 text-blue-900' : 'bg-yellow-100 text-yellow-800'
+                      activeTab === 'abiertas' ? 'bg-yellow-500 text-blue-900' : 'bg-yellow-100 text-yellow-800'
                     }`}>
-                      {counts.agendaPendientes} Pnd
+                      {counts.abiertasPendientes} Pnd
                     </span>
                   )}
                 </div>
                 <p className={`text-xs mt-2 leading-relaxed ${
-                  activeTab === 'agenda' ? 'text-slate-200 font-medium' : 'text-slate-500 font-semibold'
+                  activeTab === 'abiertas' ? 'text-slate-200 font-medium' : 'text-slate-505 font-semibold'
                 }`}>
-                  Propuesta de temas, puntos a discutir y solicitudes para el orden del día de las reuniones generales de socios.
+                  Cualquier persona puede generar una solicitud al club llenando el formulario que aparece en crear solicitud.
                 </p>
               </div>
             </div>
-            <div className="mt-6 pt-4 border-t border-dashed w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest opacity-80">
-              <span>Reunión de Socios</span>
-              <span>{counts.agenda} propuestas</span>
+            
+            <div className="mt-5 space-y-4">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveTab('abiertas');
+                  setIsModalOpen(true);
+                }}
+                className={`w-full py-2.5 px-4 rounded-xl text-xs font-black tracking-wider uppercase transition-all duration-205 flex items-center justify-center space-x-1.5 active:scale-95 shadow-sm ${
+                  activeTab === 'abiertas'
+                    ? 'bg-yellow-500 hover:bg-yellow-400 text-blue-955'
+                    : 'bg-blue-900 hover:bg-blue-800 text-white'
+                }`}
+              >
+                <Plus size={14} />
+                <span>Crear Solicitud</span>
+              </button>
+
+              <div className={`pt-4 border-t border-dashed w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest opacity-80 ${
+                activeTab === 'abiertas' ? 'border-white/20' : 'border-slate-200'
+              }`}>
+                <span>Público & Socios</span>
+                <span>{counts.abiertas} registradas</span>
+              </div>
             </div>
-          </button>
-        )}
+          </div>
 
-      </div>
-
-      {/* TAB CONTENT */}
-      <div className="animate-in fade-in duration-300">
-        {activeTab === 'cartas' ? (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Formulario */}
-            <div className="lg:col-span-5 bg-white rounded-3xl border border-slate-200/80 shadow-md p-6 sm:p-8 space-y-6">
-              <div className="border-b border-slate-100 pb-4">
-                <h2 className="text-xl font-bold text-blue-900 flex items-center gap-2">
-                  <Mail size={20} className="text-blue-900" />
-                  Redactar Carta Oficial
-                </h2>
-                <p className="text-xs text-slate-500 font-medium mt-1">
-                  Complete los campos para generar la correspondencia membretada en formato PDF.
+          {/* Tarjeta 2: Sillas de Ruedas */}
+          <div
+            onClick={() => setActiveTab('sillas')}
+            className={`cursor-pointer flex flex-col text-left p-6 rounded-3xl border-2 transition-all duration-300 relative group h-full justify-between ${
+              activeTab === 'sillas'
+                ? 'bg-blue-900 border-blue-900 text-white shadow-xl shadow-blue-900/20 scale-[1.02]'
+                : 'bg-white hover:bg-slate-50/85 border-slate-200 text-slate-800 hover:-translate-y-1'
+            }`}
+          >
+            <div className="space-y-4">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                activeTab === 'sillas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900 group-hover:bg-blue-100'
+              }`}>
+                <Accessibility size={24} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-extrabold text-base tracking-tight">Sillas de Ruedas</h3>
+                  {counts.sillasPendientes > 0 && (
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse ${
+                      activeTab === 'sillas' ? 'bg-yellow-500 text-blue-900' : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {counts.sillasPendientes} Pnd
+                    </span>
+                  )}
+                </div>
+                <p className={`text-xs mt-2 leading-relaxed ${
+                  activeTab === 'sillas' ? 'text-slate-200 font-medium' : 'text-slate-500 font-semibold'
+                }`}>
+                  Formulario de préstamo temporal gratuito de equipo de movilidad para personas con necesidades especiales en Quetzaltenango.
                 </p>
               </div>
+            </div>
+            
+            <div className="mt-5 space-y-4">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveTab('sillas');
+                  setIsModalOpen(true);
+                }}
+                className={`w-full py-2.5 px-4 rounded-xl text-xs font-black tracking-wider uppercase transition-all duration-205 flex items-center justify-center space-x-1.5 active:scale-95 shadow-sm ${
+                  activeTab === 'sillas'
+                    ? 'bg-yellow-500 hover:bg-yellow-400 text-blue-955'
+                    : 'bg-blue-900 hover:bg-blue-800 text-white'
+                }`}
+              >
+                <Plus size={14} />
+                <span>Solicitar Silla</span>
+              </button>
 
+              <div className={`pt-4 border-t border-dashed w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest opacity-80 ${
+                activeTab === 'sillas' ? 'border-white/20' : 'border-slate-200'
+              }`}>
+                <span>Servicio Social</span>
+                <span>{counts.sillas} registradas</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Tarjeta 3: Solicitudes Internas */}
+          <div
+            onClick={() => {
+              if (hasInternalAccess) {
+                setActiveTab('internas');
+              } else {
+                alert("Esta opción es reservada exclusivamente para socios activos del club.");
+              }
+            }}
+            className={`cursor-pointer flex flex-col text-left p-6 rounded-3xl border-2 transition-all duration-300 relative group h-full justify-between ${
+              !hasInternalAccess 
+                ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed opacity-75' 
+                : activeTab === 'internas'
+                ? 'bg-blue-900 border-blue-900 text-white shadow-xl shadow-blue-900/20 scale-[1.02]'
+                : 'bg-white hover:bg-slate-50/85 border-slate-200 text-slate-800 hover:-translate-y-1'
+            }`}
+          >
+            <div className="space-y-4">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                !hasInternalAccess ? 'bg-slate-200 text-slate-400' : activeTab === 'internas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900 group-hover:bg-blue-100'
+              }`}>
+                <Lock size={24} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-extrabold text-base tracking-tight">Solicitudes Internas</h3>
+                  {hasInternalAccess && counts.internasPendientes > 0 && (
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse ${
+                      activeTab === 'internas' ? 'bg-yellow-500 text-blue-900' : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {counts.internasPendientes} Pnd
+                    </span>
+                  )}
+                </div>
+                <p className={`text-xs mt-2 leading-relaxed ${
+                  activeTab === 'internas' ? 'text-slate-200 font-medium' : 'text-slate-500 font-semibold'
+                }`}>
+                  Coordinación interna del club, minutas de comisiones, propuestas presupuestarias y peticiones privadas de los socios activos.
+                </p>
+              </div>
+            </div>
+            
+            <div className="mt-5 space-y-4">
+              {hasInternalAccess ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveTab('internas');
+                    setIsModalOpen(true);
+                  }}
+                  className={`w-full py-2.5 px-4 rounded-xl text-xs font-black tracking-wider uppercase transition-all duration-205 flex items-center justify-center space-x-1.5 active:scale-95 shadow-sm ${
+                    activeTab === 'internas'
+                      ? 'bg-yellow-500 hover:bg-yellow-400 text-blue-955'
+                      : 'bg-blue-900 hover:bg-blue-800 text-white'
+                  }`}
+                >
+                  <Plus size={14} />
+                  <span>Crear Solicitud</span>
+                </button>
+              ) : (
+                <div className="w-full py-2.5 text-center text-xs font-bold text-slate-400 bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-center space-x-1">
+                  <Lock size={12} />
+                  <span>No Autorizado</span>
+                </div>
+              )}
+
+              <div className={`pt-4 border-t border-dashed w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest opacity-80 ${
+                activeTab === 'internas' ? 'border-white/20' : 'border-slate-200'
+              }`}>
+                <span>Solo Socios</span>
+                <span>{hasInternalAccess ? `${counts.internas} registradas` : 'Privado'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Tarjeta 4: Cartas Oficiales */}
+          {isAdministrative ? (
+            <div
+              onClick={() => setActiveTab('cartas')}
+              className={`cursor-pointer flex flex-col text-left p-6 rounded-3xl border-2 transition-all duration-300 relative group h-full justify-between ${
+                activeTab === 'cartas'
+                  ? 'bg-blue-900 border-blue-900 text-white shadow-xl shadow-blue-900/20 scale-[1.02]'
+                  : 'bg-white hover:bg-slate-50/85 border-slate-200 text-slate-800 hover:-translate-y-1'
+              }`}
+            >
               <div className="space-y-4">
-                {/* Fecha */}
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                  activeTab === 'cartas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900 group-hover:bg-blue-100'
+                }`}>
+                  <Mail size={24} />
+                </div>
                 <div>
-                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">
-                    Fecha de la Carta
-                  </label>
-                  <input
-                    type="date"
-                    value={cartaFecha}
-                    onChange={(e) => setCartaFecha(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
-                  />
-                </div>
-
-                {/* Destinatario Details */}
-                <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 space-y-4">
-                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">
-                    Información del Destinatario
-                  </h3>
-                  
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1">
-                      Nombre de la Persona
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Ej. Lic. Carlos Mérida"
-                      value={cartaDestinatario}
-                      onChange={(e) => setCartaDestinatario(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1">
-                      Cargo / Puesto
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Ej. Director Ejecutivo"
-                      value={cartaCargo}
-                      onChange={(e) => setCartaCargo(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1">
-                      Institución / Organización
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Ej. Municipalidad de Quetzaltenango"
-                      value={cartaInstitucion}
-                      onChange={(e) => setCartaInstitucion(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
-                    />
-                  </div>
-                </div>
-
-                {/* Asunto */}
-                <div>
-                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">
-                    Asunto de la Carta
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Ej. Solicitud de colaboración para jornada oftalmológica"
-                    value={cartaAsunto}
-                    onChange={(e) => setCartaAsunto(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
-                  />
-                </div>
-
-                {/* Saludo */}
-                <div>
-                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">
-                    Saludo Inicial
-                  </label>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <select
-                      value={cartaSaludo.startsWith('Estimado') || cartaSaludo.startsWith('Respetable') ? cartaSaludo : 'personalizado'}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val !== 'personalizado') {
-                          setCartaSaludo(val);
-                        } else {
-                          setCartaSaludo('');
-                        }
-                      }}
-                      className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none w-full sm:w-auto"
-                    >
-                      <option value="Estimados señores:">Estimados señores:</option>
-                      <option value="Estimado señor director:">Estimado señor director:</option>
-                      <option value="Estimado/a señor/a:">Estimado/a señor/a:</option>
-                      <option value="Respetables miembros de la Junta Directiva:">Respetables miembros:</option>
-                      <option value="personalizado">Personalizado...</option>
-                    </select>
-                    <input
-                      type="text"
-                      placeholder="Redacte saludo personalizado..."
-                      value={cartaSaludo}
-                      onChange={(e) => setCartaSaludo(e.target.value)}
-                      className="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all w-full"
-                    />
-                  </div>
-                </div>
-
-                {/* Cuerpo de la Carta */}
-                <div>
-                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5 flex justify-between">
-                    <span>Cuerpo de la Carta</span>
-                    <span className="text-[10px] text-slate-400 font-normal">Use Enter para separar párrafos</span>
-                  </label>
-                  <textarea
-                    rows={8}
-                    placeholder="Redacte aquí el contenido principal de la carta..."
-                    value={cartaCuerpo}
-                    onChange={(e) => setCartaCuerpo(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all resize-y"
-                  />
-                </div>
-
-                {/* Firmas, Sellos y Firma Digital PNG */}
-                <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 space-y-4">
-                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">
-                    Bloque de Firma y Autoría
-                  </h3>
-
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setFirmanteSelector('presidente')}
-                      className={`text-[10px] font-black uppercase tracking-wider py-2 rounded-xl border transition-all truncate px-1 ${
-                        firmanteSelector === 'presidente'
-                          ? 'bg-blue-900 border-blue-900 text-white'
-                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      Presidente
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFirmanteSelector('secretario')}
-                      className={`text-[10px] font-black uppercase tracking-wider py-2 rounded-xl border transition-all truncate px-1 ${
-                        firmanteSelector === 'secretario'
-                          ? 'bg-blue-900 border-blue-900 text-white'
-                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      Secretario
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFirmanteSelector('personalizado')}
-                      className={`text-[10px] font-black uppercase tracking-wider py-2 rounded-xl border transition-all truncate px-1 ${
-                        firmanteSelector === 'personalizado'
-                          ? 'bg-blue-900 border-blue-900 text-white'
-                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      Personalizado
-                    </button>
-                  </div>
-
-                  {firmanteSelector === 'personalizado' && (
-                    <div className="space-y-3 pt-2 animate-in slide-in-from-top-1 duration-200">
-                      <div>
-                        <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1">
-                          Nombre del Firmante
-                        </label>
-                        <input
-                          type="text"
-                          value={cartaFirmaNombre}
-                          onChange={(e) => setCartaFirmaNombre(e.target.value)}
-                          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1">
-                          Puesto del Firmante
-                        </label>
-                        <input
-                          type="text"
-                          value={cartaFirmaPuesto}
-                          onChange={(e) => setCartaFirmaPuesto(e.target.value)}
-                          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Firma Digital PNG */}
-                  <div className="pt-3 border-t border-slate-200">
-                    <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1.5 flex justify-between items-center">
-                      <span>Firma Digital (.png transparente)</span>
-                      {cartaFirmaImg && (
-                        <button
-                          type="button"
-                          onClick={handleClearFirma}
-                          className="text-red-500 hover:text-red-700 font-extrabold text-[9px]"
-                        >
-                          Eliminar firma
-                        </button>
-                      )}
-                    </label>
-                    
-                    {cartaFirmaImg ? (
-                      <div className="flex items-center space-x-3 bg-white p-2.5 rounded-xl border border-slate-200">
-                        <img src={cartaFirmaImg} alt="Firma cargada" className="h-10 w-24 object-contain bg-slate-50 rounded p-1 border border-slate-100" />
-                        <span className="text-xs text-slate-500 font-semibold truncate flex-grow">Firma cargada</span>
-                      </div>
-                    ) : (
-                      <input
-                        type="file"
-                        accept="image/png"
-                        onChange={handleFirmaUpload}
-                        className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-blue-50 file:text-blue-900 hover:file:bg-blue-100 transition-all cursor-pointer"
-                      />
-                    )}
-                  </div>
+                  <h3 className="font-extrabold text-base tracking-tight">Cartas Oficiales</h3>
+                  <p className={`text-xs mt-2 leading-relaxed ${
+                    activeTab === 'cartas' ? 'text-slate-200 font-medium' : 'text-slate-500 font-semibold'
+                  }`}>
+                    Redacción, firma digital y generación en PDF de correspondencia membretada dirigida a terceras instituciones.
+                  </p>
                 </div>
               </div>
+              
+              <div className="mt-5 space-y-4">
+                <div className={`w-full py-2.5 text-center text-xs font-black tracking-wider uppercase rounded-xl border flex items-center justify-center space-x-1 ${
+                  activeTab === 'cartas' ? 'bg-white/10 border-white/20 text-yellow-400' : 'bg-blue-50 border-blue-100 text-blue-900'
+                }`}>
+                  <span>Editor Integrado</span>
+                </div>
 
-              {/* Botones de Acción del Formulario */}
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    generateCartaOficialPDF({
-                      fecha: cartaFecha,
-                      institucion: cartaInstitucion,
-                      destinatario: cartaDestinatario,
-                      cargo: cartaCargo,
-                      saludo: cartaSaludo,
-                      asunto: cartaAsunto,
-                      cuerpo: cartaCuerpo,
-                      firmaNombre: cartaFirmaNombre,
-                      firmaPuesto: cartaFirmaPuesto,
-                      firmaImg: cartaFirmaImg
-                    }, 'download');
-                  }}
-                  disabled={!cartaDestinatario.trim() || !cartaCuerpo.trim()}
-                  className="sm:col-span-6 bg-blue-900 hover:bg-blue-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-extrabold px-4 py-3 rounded-xl transition-all shadow-md shadow-blue-900/10 flex items-center justify-center space-x-2 text-sm active:scale-[0.98]"
-                >
-                  <FileText size={16} />
-                  <span>Descargar PDF</span>
-                </button>
-                
-                <button
-                  type="button"
-                  onClick={() => {
-                    generateCartaOficialPDF({
-                      fecha: cartaFecha,
-                      institucion: cartaInstitucion,
-                      destinatario: cartaDestinatario,
-                      cargo: cartaCargo,
-                      saludo: cartaSaludo,
-                      asunto: cartaAsunto,
-                      cuerpo: cartaCuerpo,
-                      firmaNombre: cartaFirmaNombre,
-                      firmaPuesto: cartaFirmaPuesto,
-                      firmaImg: cartaFirmaImg
-                    }, 'open');
-                  }}
-                  disabled={!cartaDestinatario.trim() || !cartaCuerpo.trim()}
-                  className="sm:col-span-4 bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:bg-slate-50 disabled:text-slate-350 disabled:cursor-not-allowed font-extrabold px-4 py-3 rounded-xl transition-all border border-slate-200 flex items-center justify-center space-x-2 text-sm active:scale-[0.98]"
-                  title="Abrir Vista de Impresión"
-                >
-                  <span>Previsualizar</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const formattedDate = formatFechaCarta(cartaFecha);
-                    const textToCopy = `${formattedDate}\n\n${cartaDestinatario}\n${cartaCargo}\n${cartaInstitucion}\nPresente.\n\nASUNTO: ${cartaAsunto.toUpperCase()}\n\n${cartaSaludo}\n\n${cartaCuerpo}\n\nAtentamente,\n\n${cartaFirmaNombre}\n${cartaFirmaPuesto}\nClub de Leones de Quetzaltenango`;
-                    navigator.clipboard.writeText(textToCopy);
-                    alert("Texto copiado al portapapeles. Listo para pegar en Google Docs.");
-                  }}
-                  disabled={!cartaCuerpo.trim()}
-                  className="sm:col-span-2 bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:bg-slate-50 disabled:text-slate-350 disabled:cursor-not-allowed font-extrabold px-3 py-3 rounded-xl transition-all border border-slate-200 flex items-center justify-center active:scale-[0.98]"
-                  title="Copiar texto para pegar en Google Docs"
-                >
-                  <Copy size={16} />
-                </button>
+                <div className={`pt-4 border-t border-dashed w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest opacity-80 ${
+                  activeTab === 'cartas' ? 'border-white/20' : 'border-slate-200'
+                }`}>
+                  <span>Solo Directiva</span>
+                  <span>Herramienta PDF</span>
+                </div>
               </div>
             </div>
-
-            {/* Vista Previa En Vivo (Live Preview) */}
-            <div className="lg:col-span-7 bg-slate-100/50 rounded-3xl border border-slate-200/60 p-4 sm:p-6 space-y-4 w-full overflow-hidden">
-              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">
-                Vista Previa en Tiempo Real
-              </h3>
-              
-              {/* Hoja de Papel Membretado simulada */}
-              <div className="bg-white shadow-xl rounded-2xl border border-slate-200 p-5 sm:p-12 min-h-[700px] flex flex-col justify-between font-serif text-slate-800 relative overflow-hidden text-[11px] sm:text-sm">
-                
-                {/* Cabecera oficial decorativa */}
-                <div className="absolute top-0 left-0 right-0">
-                  <div className="bg-blue-900 h-3 w-full"></div>
-                  <div className="bg-yellow-500 h-0.5 w-full"></div>
+          ) : (
+            <div className="flex flex-col text-left p-6 rounded-3xl border-2 border-slate-100 bg-slate-50/50 text-slate-400 opacity-60 h-full justify-between select-none">
+              <div className="space-y-4">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-slate-100 text-slate-400">
+                  <Lock size={24} />
                 </div>
+                <div>
+                  <h3 className="font-extrabold text-base tracking-tight">Cartas Oficiales</h3>
+                  <p className="text-xs mt-2 leading-relaxed text-slate-400 font-medium">
+                    Función restringida únicamente para directores autorizados y secretaría para la emisión de correspondencia oficial.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-6 pt-4 border-t border-slate-200 w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest">
+                <span>Solo Directiva</span>
+                <span>Bloqueado</span>
+              </div>
+            </div>
+          )}
 
-                <div className="space-y-6">
-                  {/* Membrete del Club */}
-                  <div className="flex items-center space-x-3 pb-4 border-b border-slate-100 mt-2">
-                    <img 
-                      src="/images/logo.png"
-                      alt="Logo Club de Leones"
-                      className="w-10 h-10 object-contain flex-shrink-0"
-                      onError={(e) => {
-                        e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%231b365d"/><circle cx="50" cy="50" r="41" fill="none" stroke="%23eab308" stroke-width="3"/><text x="50" y="65" font-family="Helvetica" font-weight="bold" font-size="45" fill="%23eab308" text-anchor="middle">L</text></svg>';
-                      }}
-                    />
-                    <div>
-                      <h4 className="text-blue-900 font-sans font-black text-xs sm:text-sm tracking-tight leading-none">
-                        CLUB DE LEONES DE QUETZALTENANGO
-                      </h4>
-                      <p className="text-amber-600 font-sans font-black text-[9px] tracking-wider mt-0.5">
-                        NOSOTROS SERVIMOS
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Fecha */}
-                  <div className="text-right text-slate-500 text-xs italic font-sans">
-                    {cartaFecha ? formatFechaCarta(cartaFecha) : '...'}
-                  </div>
-
-                  {/* Destinatario */}
-                  <div className="space-y-0.5 leading-snug">
-                    <p className="font-bold text-blue-900">{cartaDestinatario || '[Nombre del Destinatario]'}</p>
-                    <p className="text-slate-500 italic font-sans text-xs">{cartaCargo || '[Cargo/Puesto]'}</p>
-                    <p className="font-bold text-slate-700">{cartaInstitucion || '[Institución/Empresa]'}</p>
-                    <p className="text-slate-400">Presente.</p>
-                  </div>
-
-                  {/* Asunto */}
-                  {cartaAsunto && (
-                    <div className="font-sans font-black text-xs text-blue-950 bg-blue-50/50 p-2.5 rounded-lg border border-blue-100/50">
-                      ASUNTO: {cartaAsunto.toUpperCase()}
-                    </div>
-                  )}
-
-                  {/* Saludo */}
-                  <div className="text-slate-650 font-medium">
-                    {cartaSaludo || '[Saludo Inicial]'}
-                  </div>
-
-                  {/* Cuerpo */}
-                  <div className="text-slate-700 leading-relaxed space-y-3 font-normal whitespace-pre-line text-xs sm:text-[13px] text-justify">
-                    {cartaCuerpo || (
-                      <span className="text-slate-350 italic">
-                        El cuerpo de la carta redactado en el formulario se previsualizará en esta área respetando los párrafos y alineaciones del formato oficial...
+          {/* Tarjeta 5: Puntos de Agenda */}
+          {isSocio && (
+            <div
+              onClick={() => setActiveTab('agenda')}
+              className={`cursor-pointer flex flex-col text-left p-6 rounded-3xl border-2 transition-all duration-300 relative group h-full justify-between ${
+                activeTab === 'agenda'
+                  ? 'bg-blue-900 border-blue-900 text-white shadow-xl shadow-blue-900/20 scale-[1.02]'
+                  : 'bg-white hover:bg-slate-50/85 border-slate-200 text-slate-800 hover:-translate-y-1'
+              }`}
+            >
+              <div className="space-y-4">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                  activeTab === 'agenda' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900 group-hover:bg-blue-100'
+                }`}>
+                  <Calendar size={24} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-extrabold text-base tracking-tight">Puntos de Agenda</h3>
+                    {counts.agendaPendientes > 0 && (
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse ${
+                        activeTab === 'agenda' ? 'bg-yellow-500 text-blue-900' : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {counts.agendaPendientes} Pnd
                       </span>
                     )}
                   </div>
+                  <p className={`text-xs mt-2 leading-relaxed ${
+                    activeTab === 'agenda' ? 'text-slate-200 font-medium' : 'text-slate-550 font-semibold'
+                  }`}>
+                    Propuesta de temas, puntos a discutir y solicitudes para el orden del día de las reuniones generales de socios.
+                  </p>
                 </div>
+              </div>
+              
+              <div className="mt-5 space-y-4">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveTab('agenda');
+                    setIsModalOpen(true);
+                  }}
+                  className={`w-full py-2.5 px-4 rounded-xl text-xs font-black tracking-wider uppercase transition-all duration-205 flex items-center justify-center space-x-1.5 active:scale-95 shadow-sm ${
+                    activeTab === 'agenda'
+                      ? 'bg-yellow-500 hover:bg-yellow-400 text-blue-955'
+                      : 'bg-blue-900 hover:bg-blue-800 text-white'
+                  }`}
+                >
+                  <Plus size={14} />
+                  <span>Proponer Punto</span>
+                </button>
 
-                {/* Firma y Cierre */}
-                <div className="pt-8 space-y-8">
-                  <div className="space-y-1">
-                    <p className="text-slate-500 text-xs italic">Atentamente,</p>
-                    {cartaFirmaImg && (
-                      <div className="my-2 relative group w-32 h-14">
-                        <img src={cartaFirmaImg} alt="Firma Digital" className="h-full object-contain" />
-                        <button
-                          type="button"
-                          onClick={handleClearFirma}
-                          className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                          title="Quitar firma"
-                        >
-                          <X size={8} />
-                        </button>
-                      </div>
-                    )}
-                    <div className="pt-2 border-t border-slate-100 max-w-[220px]">
-                      <p className="font-sans font-bold text-xs text-blue-900">{cartaFirmaNombre}</p>
-                      <p className="font-sans text-[10px] text-slate-400 font-semibold">{cartaFirmaPuesto}</p>
-                    </div>
-                  </div>
-
-                  {/* Sello simulado */}
-                  <div className="flex justify-center pt-2">
-                    <div className="border border-dashed border-amber-600/60 rounded px-4 py-1 text-[8px] font-sans font-bold text-amber-600 tracking-wider bg-amber-50/10">
-                      SELLO OFICIAL - CLUB DE LEONES QX
-                    </div>
-                  </div>
+                <div className={`pt-4 border-t border-dashed w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest opacity-80 ${
+                  activeTab === 'agenda' ? 'border-white/20' : 'border-slate-200'
+                }`}>
+                  <span>Reunión de Socios</span>
+                  <span>{counts.agenda} propuestas</span>
                 </div>
-
               </div>
             </div>
-          </div>
-        ) : activeTab === 'internas' && !hasInternalAccess ? (
-          /* RESTRICTED ACCESS SCREEN */
-          <div className="bg-white rounded-[2rem] border border-slate-200/80 shadow-md p-10 sm:p-16 text-center max-w-2xl mx-auto space-y-6">
-            <div className="bg-red-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto text-red-600 border border-red-100 animate-pulse">
-              <Lock size={28} />
-            </div>
-            <h3 className="text-2xl font-black text-slate-900">Acceso Restringido</h3>
-            <p className="text-slate-600 text-sm leading-relaxed max-w-md mx-auto font-medium">
-              Las solicitudes internas son de carácter privado y están reservadas exclusivamente para socios activos y la junta directiva del club.
-            </p>
-            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs text-slate-500 font-semibold max-w-xs mx-auto">
-              🔑 Requiere rol administrativo o socio regular.
-            </div>
-          </div>
-        ) : (
-          /* REGULAR LIST DISPLAY */
-          <div className="space-y-6">
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-20 space-y-4">
-                <div className="animate-spin text-blue-900"><Users size={36} /></div>
-                <p className="text-slate-500 font-bold text-sm">Cargando solicitudes...</p>
-              </div>
-            ) : filteredSolicitudes.length === 0 ? (
-              <div className="bg-white rounded-[2rem] border border-slate-100 p-16 text-center max-w-2xl mx-auto">
-                <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-400">
-                  <FileText size={28} />
-                </div>
-                <h3 className="text-xl font-bold text-slate-800">No hay solicitudes</h3>
-                <p className="text-slate-600 mt-2 text-sm font-medium">
-                  Aún no se han registrado solicitudes en esta categoría. ¡Sé el primero en crear una!
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-8">
-                {filteredSolicitudes.map((sol) => {
-                  const statusBorderColor = 
-                    sol.estado === 'Aprobada' ? 'border-l-4 border-l-emerald-500' :
-                    sol.estado === 'Rechazada' ? 'border-l-4 border-l-rose-500' :
-                    'border-l-4 border-l-yellow-500';
+          )}
+        </div>
 
-                  if (sol.tipo === 'sillas') {
-                    return (
-                      <div 
-                        key={sol.id}
-                        className={`bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-xl border border-slate-100 transition-all duration-300 flex flex-col justify-between ${statusBorderColor}`}
-                      >
-                        <div className="p-6 space-y-4 flex-grow">
-                          {/* Tags and Status */}
-                          <div className="flex justify-between items-start gap-2">
-                            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border bg-blue-50 text-blue-700 border-blue-200 flex items-center space-x-1">
-                              <Accessibility size={12} className="mr-0.5" />
-                              <span>Silla de Ruedas</span>
-                            </span>
-                            
-                            <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center space-x-1 ${
-                              sol.estado === 'Aprobada' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                              sol.estado === 'Rechazada' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
-                              'bg-yellow-50 text-yellow-700 border border-yellow-100'
-                            }`}>
-                              {sol.estado === 'Aprobada' && <CheckCircle size={10} className="mr-1" />}
-                              {sol.estado === 'Rechazada' && <XOctagon size={10} className="mr-1" />}
-                              {sol.estado === 'Pendiente' && <Clock size={10} className="mr-1" />}
-                              <span>{sol.estado}</span>
-                            </span>
-                          </div>
-
-                          {/* Info details */}
-                          <div className="space-y-1">
-                            <h3 className="font-extrabold text-lg text-slate-900 leading-snug break-words">
-                              Para: {sol.nombreBeneficiario}
-                            </h3>
-                            <div className="flex items-center text-xs font-semibold text-slate-400">
-                              <Calendar size={12} className="mr-1 text-slate-400 flex-shrink-0" />
-                              <span>Edad: {sol.edadBeneficiario} años • Registro: {sol.fechaCreacion}</span>
-                            </div>
-                          </div>
-
-                          {/* Wheelchair specific details */}
-                          <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50 space-y-2.5 text-xs">
-                            <div className="flex justify-between">
-                              <span className="text-slate-400 font-bold">Solicitante:</span>
-                              <span className="font-extrabold text-slate-800">{sol.nombreSolicitante}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-slate-400 font-bold">DPI:</span>
-                              <span className="font-mono text-slate-700">{sol.dpiSolicitante}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-slate-400 font-bold">Teléfono:</span>
-                              <a href={`tel:${sol.telefonoSolicitante}`} className="text-blue-900 hover:underline font-extrabold flex items-center space-x-1">
-                                <Phone size={10} className="mr-0.5" />
-                                <span>{sol.telefonoSolicitante}</span>
-                              </a>
-                            </div>
-                            <div className="flex justify-between pt-1.5 border-t border-slate-200/50">
-                              <span className="text-slate-400 font-bold">Tiempo de Uso:</span>
-                              <span className="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">{sol.tiempoUso}</span>
-                            </div>
-                          </div>
-
-                          {/* Return Note/Indicator */}
-                          <div className="bg-blue-50/50 border border-blue-100/70 p-3 rounded-xl flex items-start space-x-2 text-[10px] text-blue-800 font-medium leading-relaxed">
-                            <RefreshCw size={12} className="flex-shrink-0 mt-0.5 text-blue-600 animate-pulse" />
-                            <span>Compromiso de devolver la silla al finalizar su uso para beneficiar a otros.</span>
-                          </div>
-                        </div>
-
-                        {/* Footer actions for Admin */}
-                        <div className="bg-slate-50/80 px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row gap-2 justify-between items-center text-[10px] font-bold text-slate-400">
-                          <span className="truncate max-w-[130px]" title={sol.usuarioCreador}>Por: {sol.usuarioCreador || 'Público'}</span>
-                          
-                          {(isAdministrative || (user && sol.usuarioCreador?.includes(user.correo))) && (
-                            <div className="flex items-center space-x-1 flex-shrink-0 mt-2 sm:mt-0">
-                              {isAdministrative && sol.estado === 'Pendiente' && (
-                                <>
-                                  <button
-                                    onClick={() => handleUpdateStatus(sol.id, 'Aprobada')}
-                                    className="bg-emerald-500 hover:bg-emerald-600 text-white p-1.5 rounded-lg shadow-sm"
-                                    title="Aprobar Solicitud"
-                                  >
-                                    <Check size={12} />
-                                  </button>
-                                  <button
-                                    onClick={() => handleUpdateStatus(sol.id, 'Rechazada')}
-                                    className="bg-rose-500 hover:bg-rose-600 text-white p-1.5 rounded-lg shadow-sm"
-                                    title="Rechazar Solicitud"
-                                  >
-                                    <X size={12} />
-                                  </button>
-                                </>
-                              )}
-                              <button
-                                onClick={() => handleDeleteSolicitud(sol.id)}
-                                className="bg-slate-200 hover:bg-red-50 text-slate-500 hover:text-red-600 p-1.5 rounded-lg border border-slate-300/30 transition-colors"
-                                title="Eliminar Solicitud"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  if (sol.tipo === 'agenda') {
-                    return (
-                      <div 
-                        key={sol.id}
-                        className={`bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-xl border border-slate-100 transition-all duration-300 flex flex-col justify-between ${statusBorderColor}`}
-                      >
-                        <div className="p-6 space-y-4 flex-grow">
-                          {/* Tags and Status */}
-                          <div className="flex justify-between items-start gap-2">
-                            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border bg-yellow-50 text-yellow-750 border-yellow-200 flex items-center space-x-1">
-                              <Calendar size={12} className="mr-0.5 text-yellow-600" />
-                              <span>Punto de Agenda</span>
-                            </span>
-                            
-                            <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center space-x-1 ${
-                              sol.estado === 'Aprobada' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                              sol.estado === 'Rechazada' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
-                              'bg-yellow-50 text-yellow-700 border border-yellow-100'
-                            }`}>
-                              {sol.estado === 'Aprobada' && <CheckCircle size={10} className="mr-1" />}
-                              {sol.estado === 'Rechazada' && <XOctagon size={10} className="mr-1" />}
-                              {sol.estado === 'Pendiente' && <Clock size={10} className="mr-1" />}
-                              <span>{sol.estado}</span>
-                            </span>
-                          </div>
-
-                          {/* Info details */}
-                          <div className="space-y-1">
-                            <h3 className="font-extrabold text-lg text-slate-900 leading-snug break-words">
-                              {sol.agendaNombrePunto}
-                            </h3>
-                            <div className="flex items-center text-xs font-semibold text-slate-400">
-                              <User size={12} className="mr-1 text-slate-400 flex-shrink-0" />
-                              <span>Solicitado por: <strong className="text-slate-600 font-extrabold">{sol.agendaSocioNombre}</strong> • {sol.fechaCreacion}</span>
-                            </div>
-                          </div>
-
-                          {/* Contenido / Detalle */}
-                          <div className="space-y-1 bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50">
-                            <div className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">
-                              Contenido / Detalle:
-                            </div>
-                            <p className="text-slate-705 text-xs leading-relaxed font-medium break-words">
-                              {sol.agendaContenido}
-                            </p>
-                          </div>
-
-                          {/* Razón */}
-                          <div className="space-y-1 bg-blue-50/20 p-4 rounded-2xl border border-blue-50/50">
-                            <div className="text-xs font-black text-blue-900/60 uppercase tracking-widest mb-1">
-                              Razón / Justificación:
-                            </div>
-                            <p className="text-slate-705 text-xs leading-relaxed font-medium break-words">
-                              {sol.agendaRazon}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Footer actions for Admin/Creator */}
-                        <div className="bg-slate-50/80 px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row gap-2 justify-between items-center text-[10px] font-bold text-slate-400">
-                          <span className="truncate max-w-[130px]" title={sol.usuarioCreador}>Por: {sol.usuarioCreador || 'Socio'}</span>
-                          
-                          {(isAdministrative || (user && sol.usuarioCreador?.includes(user.correo))) && (
-                            <div className="flex items-center space-x-1 flex-shrink-0 mt-2 sm:mt-0">
-                              {isAdministrative && sol.estado === 'Pendiente' && (
-                                <>
-                                  <button
-                                    onClick={() => handleUpdateStatus(sol.id, 'Aprobada')}
-                                    className="bg-emerald-500 hover:bg-emerald-600 text-white p-1.5 rounded-lg shadow-sm transition-colors"
-                                    title="Aprobar Punto"
-                                  >
-                                    <Check size={12} />
-                                  </button>
-                                  <button
-                                    onClick={() => handleUpdateStatus(sol.id, 'Rechazada')}
-                                    className="bg-rose-500 hover:bg-rose-600 text-white p-1.5 rounded-lg shadow-sm transition-colors"
-                                    title="Rechazar Punto"
-                                  >
-                                    <X size={12} />
-                                  </button>
-                                </>
-                              )}
-                              <button
-                                onClick={() => handleDeleteSolicitud(sol.id)}
-                                className="bg-slate-200 hover:bg-red-50 text-slate-500 hover:text-red-600 p-1.5 rounded-lg border border-slate-300/30 transition-colors"
-                                title="Eliminar Punto"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div 
-                      key={sol.id}
-                      className={`bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-xl border border-slate-100 transition-all duration-300 flex flex-col justify-between ${statusBorderColor}`}
-                    >
-                      <div className="p-6 space-y-4 flex-grow">
-                        {/* Tags and Status */}
-                        <div className="flex justify-between items-start gap-2">
-                          <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border ${
-                            (sol.tema && TEMA_COLORS[sol.tema]) || TEMA_COLORS['Otra']
-                          }`}>
-                            {sol.tema === 'Otra' ? (sol.otroTemaDescripcion || 'Otra') : sol.tema}
-                          </span>
-                          
-                          <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center space-x-1 ${
-                            sol.estado === 'Aprobada' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                            sol.estado === 'Rechazada' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
-                            'bg-yellow-50 text-yellow-700 border border-yellow-100'
-                          }`}>
-                            {sol.estado === 'Aprobada' && <CheckCircle size={10} className="mr-1" />}
-                            {sol.estado === 'Rechazada' && <XOctagon size={10} className="mr-1" />}
-                            {sol.estado === 'Pendiente' && <Clock size={10} className="mr-1" />}
-                            <span>{sol.estado}</span>
-                          </span>
-                        </div>
-
-                        {/* Info details */}
-                        <div className="space-y-1">
-                          <h3 className="font-extrabold text-lg text-slate-900 leading-snug break-words">
-                            {sol.nombre}
-                          </h3>
-                          <div className="flex items-center text-xs font-semibold text-slate-400">
-                            <Calendar size={12} className="mr-1 text-slate-400 flex-shrink-0" />
-                            <span>Fecha: {sol.fecha}</span>
-                          </div>
-                        </div>
-
-                        {/* Description */}
-                        <p className="text-slate-650 text-xs leading-relaxed font-medium break-words bg-slate-50/50 p-3 rounded-xl border border-slate-100/50">
-                          {sol.descripcion}
-                        </p>
-
-                        {/* Responsibles Section */}
-                        <div className="space-y-2 pt-2 border-t border-slate-100">
-                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center">
-                            <Users size={10} className="mr-1 text-slate-400" />
-                            Responsables ({sol.responsables?.length || 0})
-                          </h4>
-                          <div className="space-y-1.5">
-                            {sol.responsables?.map((resp, i) => (
-                              <div key={i} className="flex flex-col sm:flex-row justify-between sm:items-center text-xs bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100 gap-1">
-                                <span className="font-bold text-slate-700 truncate max-w-[150px]">{resp.nombre}</span>
-                                <a 
-                                  href={`tel:${resp.telefono}`} 
-                                  className="text-blue-900 hover:text-blue-700 font-bold flex items-center space-x-1"
-                                >
-                                  <Phone size={10} className="flex-shrink-0" />
-                                  <span>{resp.telefono}</span>
-                                </a>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Footer actions for Admin */}
-                      <div className="bg-slate-50/80 px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row gap-2 justify-between items-center text-[10px] font-bold text-slate-400">
-                        <span className="truncate max-w-[130px]" title={sol.usuarioCreador}>Por: {sol.usuarioCreador || 'Público'}</span>
-                        
-                        {(isAdministrative || (user && sol.usuarioCreador?.includes(user.correo))) && (
-                          <div className="flex items-center space-x-1 flex-shrink-0 mt-2 sm:mt-0">
-                            {isAdministrative && sol.estado === 'Pendiente' && (
-                              <>
-                                <button
-                                  onClick={() => handleUpdateStatus(sol.id, 'Aprobada')}
-                                  className="bg-emerald-500 hover:bg-emerald-600 text-white p-1.5 rounded-lg shadow-sm"
-                                  title="Aprobar Solicitud"
-                                >
-                                  <Check size={12} />
-                                </button>
-                                <button
-                                  onClick={() => handleUpdateStatus(sol.id, 'Rechazada')}
-                                  className="bg-rose-500 hover:bg-rose-600 text-white p-1.5 rounded-lg shadow-sm"
-                                  title="Rechazar Solicitud"
-                                >
-                                  <X size={12} />
-                                </button>
-                              </>
-                            )}
-                            <button
-                              onClick={() => handleDeleteSolicitud(sol.id)}
-                              className="bg-slate-200 hover:bg-red-50 text-slate-500 hover:text-red-600 p-1.5 rounded-lg border border-slate-300/30 transition-colors"
-                              title="Eliminar Solicitud"
-                            >
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
+        {/* CONTENIDO DE LA PESTAÑA ACTIVA EN ESCRITORIO */}
+        <div className="animate-in fade-in duration-300">
+          {activeTab === 'cartas' ? (
+            renderCartasForm()
+          ) : activeTab === 'internas' && !hasInternalAccess ? (
+            renderRestrictedAccess()
+          ) : (
+            renderSolicitudesList(activeTab)
+          )}
+        </div>
       </div>
 
+      {/* VISTA MÓVIL (de md hacia abajo) */}
+      <div className="block md:hidden">
+        {renderMobileAccordion()}
+      </div>
       {/* FORM MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300">
