@@ -414,198 +414,188 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
         )}
       </header>
 
-      {/* Tabs Navigation (Responsive Dropdown on Mobile, Tabs on Desktop) */}
-      <div className="md:hidden w-full max-w-sm relative z-30">
+      {/* Selector de Tipo de Solicitud (Moderno) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+        {/* Tarjeta 1: Solicitudes Abiertas */}
         <button
           type="button"
-          onClick={() => setIsMobileTabMenuOpen(!isMobileTabMenuOpen)}
-          className="w-full flex items-center justify-between px-5 py-3.5 bg-blue-900 text-white font-extrabold rounded-2xl shadow-lg border border-blue-800/60 transition-all hover:bg-blue-850 active:scale-[0.99] text-sm"
-        >
-          <div className="flex items-center space-x-2.5">
-            {activeTab === 'abiertas' && <FileText size={18} className="text-yellow-400" />}
-            {activeTab === 'internas' && <Lock size={18} className="text-yellow-400" />}
-            {activeTab === 'sillas' && <Accessibility size={18} className="text-yellow-400" />}
-            {activeTab === 'cartas' && <Mail size={18} className="text-yellow-400" />}
-            <span>
-              {activeTab === 'abiertas' ? 'Solicitudes Abiertas' : activeTab === 'internas' ? 'Solicitudes Internas' : activeTab === 'sillas' ? 'Sillas de Ruedas' : 'Cartas Oficiales'}
-            </span>
-            {activeTab === 'abiertas' && counts.abiertasPendientes > 0 && (
-              <span className="bg-yellow-500 text-blue-900 text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full animate-pulse ml-1.5">
-                {counts.abiertasPendientes}
-              </span>
-            )}
-            {activeTab === 'internas' && hasInternalAccess && counts.internasPendientes > 0 && (
-              <span className="bg-yellow-500 text-blue-900 text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full animate-pulse ml-1.5">
-                {counts.internasPendientes}
-              </span>
-            )}
-            {activeTab === 'sillas' && counts.sillasPendientes > 0 && (
-              <span className="bg-yellow-500 text-blue-900 text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full animate-pulse ml-1.5">
-                {counts.sillasPendientes}
-              </span>
-            )}
-          </div>
-          <ChevronDown size={18} className={`text-slate-300 transition-transform duration-300 ${isMobileTabMenuOpen ? 'rotate-180' : ''}`} />
-        </button>
-
-        {isMobileTabMenuOpen && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2.5 z-40 animate-in fade-in slide-in-from-top-1 duration-200">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('abiertas');
-                setIsMobileTabMenuOpen(false);
-              }}
-              className={`w-full flex items-center justify-between px-5 py-3 text-sm font-extrabold transition-colors text-left ${
-                activeTab === 'abiertas' ? 'bg-blue-50 text-blue-900' : 'text-slate-655 hover:bg-slate-50'
-              }`}
-            >
-              <div className="flex items-center space-x-3">
-                <FileText size={18} className={activeTab === 'abiertas' ? 'text-blue-900' : 'text-slate-400'} />
-                <span>Solicitudes Abiertas</span>
-              </div>
-              {counts.abiertas > 0 && (
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                  counts.abiertasPendientes > 0 ? 'bg-yellow-500 text-blue-900 animate-pulse' : 'bg-slate-100 text-slate-650'
-                }`}>
-                  {counts.abiertas}
-                </span>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('internas');
-                setIsMobileTabMenuOpen(false);
-              }}
-              className={`w-full flex items-center justify-between px-5 py-3 text-sm font-extrabold transition-colors text-left ${
-                activeTab === 'internas' ? 'bg-blue-50 text-blue-900' : 'text-slate-655 hover:bg-slate-50'
-              }`}
-            >
-              <div className="flex items-center space-x-3">
-                <Lock size={18} className={activeTab === 'internas' ? 'text-blue-900' : 'text-slate-400'} />
-                <span>Solicitudes Internas</span>
-              </div>
-              {hasInternalAccess && counts.internas > 0 && (
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                  counts.internasPendientes > 0 ? 'bg-yellow-500 text-blue-900 animate-pulse' : 'bg-slate-100 text-slate-650'
-                }`}>
-                  {counts.internas}
-                </span>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('sillas');
-                setIsMobileTabMenuOpen(false);
-              }}
-              className={`w-full flex items-center justify-between px-5 py-3 text-sm font-extrabold transition-colors text-left ${
-                activeTab === 'sillas' ? 'bg-blue-50 text-blue-900' : 'text-slate-655 hover:bg-slate-50'
-              }`}
-            >
-              <div className="flex items-center space-x-3">
-                <Accessibility size={18} className={activeTab === 'sillas' ? 'text-blue-900' : 'text-slate-400'} />
-                <span>Sillas de Ruedas</span>
-              </div>
-              {counts.sillas > 0 && (
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                  counts.sillasPendientes > 0 ? 'bg-yellow-500 text-blue-900 animate-pulse' : 'bg-slate-100 text-slate-650'
-                }`}>
-                  {counts.sillas}
-                </span>
-              )}
-            </button>
-            {isAdministrative && (
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('cartas');
-                  setIsMobileTabMenuOpen(false);
-                }}
-                className={`w-full flex items-center justify-between px-5 py-3 text-sm font-extrabold transition-colors text-left ${
-                  activeTab === 'cartas' ? 'bg-blue-50 text-blue-900' : 'text-slate-655 hover:bg-slate-50'
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <Mail size={18} className={activeTab === 'cartas' ? 'text-blue-900' : 'text-slate-400'} />
-                  <span>Cartas Oficiales</span>
-                </div>
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Desktop Tabs Navigation */}
-      <div className="hidden md:flex border-b border-slate-200">
-        <button
           onClick={() => setActiveTab('abiertas')}
-          className={`flex items-center space-x-3 px-6 py-3 font-semibold text-base border-b-4 transition-all ${
+          className={`flex flex-col text-left p-6 rounded-3xl border-2 transition-all duration-300 relative group h-full justify-between ${
             activeTab === 'abiertas'
-              ? 'border-blue-900 text-blue-900'
-              : 'border-transparent text-slate-600 hover:text-slate-800'
+              ? 'bg-blue-900 border-blue-900 text-white shadow-xl shadow-blue-900/20 scale-[1.02]'
+              : 'bg-white hover:bg-slate-50/85 border-slate-200 text-slate-800 hover:-translate-y-1'
           }`}
         >
-          <FileText size={18} />
-          <span>Solicitudes Abiertas</span>
-          {counts.abiertas > 0 && (
-            <span className={`ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-              counts.abiertasPendientes > 0 ? 'bg-yellow-500 text-blue-900 animate-pulse' : 'bg-slate-100 text-slate-600'
+          <div className="space-y-4">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+              activeTab === 'abiertas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900 group-hover:bg-blue-100'
             }`}>
-              {counts.abiertas}
-            </span>
-          )}
+              <FileText size={24} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-extrabold text-base tracking-tight">Solicitudes Abiertas</h3>
+                {counts.abiertasPendientes > 0 && (
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse ${
+                    activeTab === 'abiertas' ? 'bg-yellow-500 text-blue-900' : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {counts.abiertasPendientes} Pnd
+                  </span>
+                )}
+              </div>
+              <p className={`text-xs mt-2 leading-relaxed ${
+                activeTab === 'abiertas' ? 'text-slate-200 font-medium' : 'text-slate-500 font-semibold'
+              }`}>
+                Proyectos y servicios comunitarios alineados con nuestras causas globales (visión, diabetes, medio ambiente, mitigación del hambre, etc.).
+              </p>
+            </div>
+          </div>
+          <div className="mt-6 pt-4 border-t border-dashed w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest opacity-80">
+            <span>Público & Socios</span>
+            <span>{counts.abiertas} registradas</span>
+          </div>
         </button>
+
+        {/* Tarjeta 2: Solicitudes Internas */}
         <button
-          onClick={() => setActiveTab('internas')}
-          className={`flex items-center space-x-3 px-6 py-3 font-semibold text-base border-b-4 transition-all ${
-            activeTab === 'internas'
-              ? 'border-blue-900 text-blue-900'
-              : 'border-transparent text-slate-600 hover:text-slate-800'
+          type="button"
+          onClick={() => {
+            if (hasInternalAccess) {
+              setActiveTab('internas');
+            } else {
+              alert("Esta opción es reservada exclusivamente para socios activos del club.");
+            }
+          }}
+          className={`flex flex-col text-left p-6 rounded-3xl border-2 transition-all duration-300 relative group h-full justify-between ${
+            !hasInternalAccess 
+              ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed opacity-75' 
+              : activeTab === 'internas'
+              ? 'bg-blue-900 border-blue-900 text-white shadow-xl shadow-blue-900/20 scale-[1.02]'
+              : 'bg-white hover:bg-slate-50/85 border-slate-200 text-slate-800 hover:-translate-y-1'
           }`}
         >
-          <Lock size={18} />
-          <span>Solicitudes Internas</span>
-          {hasInternalAccess && counts.internas > 0 && (
-            <span className={`ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-              counts.internasPendientes > 0 ? 'bg-yellow-500 text-blue-900 animate-pulse' : 'bg-slate-100 text-slate-600'
+          <div className="space-y-4">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+              !hasInternalAccess ? 'bg-slate-200 text-slate-400' : activeTab === 'internas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900 group-hover:bg-blue-100'
             }`}>
-              {counts.internas}
-            </span>
-          )}
+              <Lock size={24} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-extrabold text-base tracking-tight">Solicitudes Internas</h3>
+                {hasInternalAccess && counts.internasPendientes > 0 && (
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse ${
+                    activeTab === 'internas' ? 'bg-yellow-500 text-blue-900' : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {counts.internasPendientes} Pnd
+                  </span>
+                )}
+              </div>
+              <p className={`text-xs mt-2 leading-relaxed ${
+                activeTab === 'internas' ? 'text-slate-200 font-medium' : 'text-slate-500 font-semibold'
+              }`}>
+                Coordinación interna del club, minutas de comisiones, propuestas presupuestarias y peticiones privadas de los socios activos.
+              </p>
+            </div>
+          </div>
+          <div className="mt-6 pt-4 border-t border-dashed w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest opacity-80">
+            <span>Solo Socios</span>
+            <span>{hasInternalAccess ? `${counts.internas} registradas` : 'Privado'}</span>
+          </div>
         </button>
+
+        {/* Tarjeta 3: Sillas de Ruedas */}
         <button
+          type="button"
           onClick={() => setActiveTab('sillas')}
-          className={`flex items-center space-x-3 px-6 py-3 font-semibold text-base border-b-4 transition-all ${
+          className={`flex flex-col text-left p-6 rounded-3xl border-2 transition-all duration-300 relative group h-full justify-between ${
             activeTab === 'sillas'
-              ? 'border-blue-900 text-blue-900'
-              : 'border-transparent text-slate-600 hover:text-slate-800'
+              ? 'bg-blue-900 border-blue-900 text-white shadow-xl shadow-blue-900/20 scale-[1.02]'
+              : 'bg-white hover:bg-slate-50/85 border-slate-200 text-slate-800 hover:-translate-y-1'
           }`}
         >
-          <Accessibility size={18} />
-          <span>Sillas de Ruedas</span>
-          {counts.sillas > 0 && (
-            <span className={`ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-              counts.sillasPendientes > 0 ? 'bg-yellow-500 text-blue-900 animate-pulse' : 'bg-slate-100 text-slate-600'
+          <div className="space-y-4">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+              activeTab === 'sillas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900 group-hover:bg-blue-100'
             }`}>
-              {counts.sillas}
-            </span>
-          )}
+              <Accessibility size={24} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-extrabold text-base tracking-tight">Sillas de Ruedas</h3>
+                {counts.sillasPendientes > 0 && (
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse ${
+                    activeTab === 'sillas' ? 'bg-yellow-500 text-blue-900' : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {counts.sillasPendientes} Pnd
+                  </span>
+                )}
+              </div>
+              <p className={`text-xs mt-2 leading-relaxed ${
+                activeTab === 'sillas' ? 'text-slate-200 font-medium' : 'text-slate-500 font-semibold'
+              }`}>
+                Formulario de préstamo temporal gratuito de equipo de movilidad para personas con necesidades especiales en Quetzaltenango.
+              </p>
+            </div>
+          </div>
+          <div className="mt-6 pt-4 border-t border-dashed w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest opacity-80">
+            <span>Servicio Social</span>
+            <span>{counts.sillas} registradas</span>
+          </div>
         </button>
-        {isAdministrative && (
+
+        {/* Tarjeta 4: Cartas Oficiales */}
+        {isAdministrative ? (
           <button
+            type="button"
             onClick={() => setActiveTab('cartas')}
-            className={`flex items-center space-x-3 px-6 py-3 font-semibold text-base border-b-4 transition-all ${
+            className={`flex flex-col text-left p-6 rounded-3xl border-2 transition-all duration-300 relative group h-full justify-between ${
               activeTab === 'cartas'
-                ? 'border-blue-900 text-blue-900'
-                : 'border-transparent text-slate-600 hover:text-slate-800'
+                ? 'bg-blue-900 border-blue-900 text-white shadow-xl shadow-blue-900/20 scale-[1.02]'
+                : 'bg-white hover:bg-slate-50/85 border-slate-200 text-slate-800 hover:-translate-y-1'
             }`}
           >
-            <Mail size={18} />
-            <span>Cartas Oficiales</span>
+            <div className="space-y-4">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                activeTab === 'cartas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900 group-hover:bg-blue-100'
+              }`}>
+                <Mail size={24} />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-base tracking-tight">Cartas Oficiales</h3>
+                <p className={`text-xs mt-2 leading-relaxed ${
+                  activeTab === 'cartas' ? 'text-slate-200 font-medium' : 'text-slate-500 font-semibold'
+                }`}>
+                  Redacción, firma digital y generación en PDF de correspondencia membretada dirigida a terceras instituciones.
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 pt-4 border-t border-dashed w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest opacity-80">
+              <span>Solo Directiva</span>
+              <span>Herramienta PDF</span>
+            </div>
           </button>
+        ) : (
+          <div className="flex flex-col text-left p-6 rounded-3xl border-2 border-slate-100 bg-slate-50/50 text-slate-400 opacity-60 h-full justify-between select-none">
+            <div className="space-y-4">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-slate-100 text-slate-400">
+                <Lock size={24} />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-base tracking-tight">Cartas Oficiales</h3>
+                <p className="text-xs mt-2 leading-relaxed text-slate-400 font-medium">
+                  Función restringida únicamente para directores autorizados y secretaría para la emisión de correspondencia oficial.
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 pt-4 border-t border-slate-200 w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest">
+              <span>Solo Directiva</span>
+              <span>Bloqueado</span>
+            </div>
+          </div>
         )}
+
       </div>
 
       {/* TAB CONTENT */}
