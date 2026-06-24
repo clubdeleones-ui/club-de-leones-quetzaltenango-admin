@@ -63,15 +63,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     showAlert("Notificación", msg);
   };
 
-  const [activeTab, setActiveTab] = useState<'abiertas' | 'sillas' | 'internas' | 'agenda' | 'cartas' | null>(() => {
-    const saved = sessionStorage.getItem('solicitudes_active_tab');
-    if (saved && saved !== 'null') return saved as 'abiertas' | 'sillas' | 'internas' | 'agenda' | 'cartas';
-    return 'abiertas';
-  });
-
-  useEffect(() => {
-    sessionStorage.setItem('solicitudes_active_tab', String(activeTab));
-  }, [activeTab]);
+  const [activeTab, setActiveTab] = useState<'abiertas' | 'sillas' | 'internas' | 'agenda' | 'cartas' | null>(null);
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -1316,7 +1308,7 @@ Club de Leones de Quetzaltenango`;
         <div>
           <h1 className="text-3xl font-extrabold text-blue-900 tracking-tight">Gestión de Solicitudes</h1>
           <p className="text-base text-slate-750 mt-1 font-medium">
-            Administra y crea solicitudes de servicios, proyectos y donaciones de forma organizada.
+            En esta sección puedes subir y hacer tus solicitudes al club como beneficiario, institución o socio.
           </p>
         </div>
       </header>
