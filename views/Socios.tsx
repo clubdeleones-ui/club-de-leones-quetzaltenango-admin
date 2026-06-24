@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useClubData } from '../context/ClubDataContext';
-import { Socio } from '../types';
+import { Socio, UserRole } from '../types';
 import { 
   Mail, 
   Calendar, 

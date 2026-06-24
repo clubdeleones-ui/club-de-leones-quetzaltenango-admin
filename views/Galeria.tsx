@@ -77,7 +77,7 @@ const Galeria: React.FC = () => {
 
               {/* Gallery Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-8">
-                {galeriaItems.map((item) => (
+                {(galeriaItems as GaleriaItem[]).map((item) => (
                   <div key={item.id} className="group perspective-[1000px] h-[400px] w-full cursor-pointer">
                     <div 
                       className="relative w-full h-full transition-transform duration-700 ease-in-out shadow-sm hover:shadow-2xl rounded-[2rem] group-hover:[transform:rotateY(180deg)]" 

@@ -650,7 +650,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                 {/* Botón Editar Ficha de Perfil */}
                 <button
                   type="button"
-                  onClick={() => handleEditSocioClick(user)}
+                  onClick={() => handleEditSocioClick()}
                   className="w-full mt-6 bg-blue-900 hover:bg-blue-800 text-white font-black py-3.5 rounded-2xl transition-all shadow-md hover:shadow-lg flex items-center justify-center space-x-2"
                 >
                   <Pencil size={16} />
