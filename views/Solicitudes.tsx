@@ -63,17 +63,15 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     showAlert("Notificación", msg);
   };
 
-  const [activeTab, setActiveTab] = useState<'abiertas' | 'sillas' | 'internas' | 'agenda' | 'cartas'>(() => {
+  const [activeTab, setActiveTab] = useState<'abiertas' | 'sillas' | 'internas' | 'agenda' | 'cartas' | null>(() => {
     const saved = sessionStorage.getItem('solicitudes_active_tab');
-    if (saved) return saved as 'abiertas' | 'sillas' | 'internas' | 'agenda' | 'cartas';
+    if (saved && saved !== 'null') return saved as 'abiertas' | 'sillas' | 'internas' | 'agenda' | 'cartas';
     return 'abiertas';
   });
 
   useEffect(() => {
-    sessionStorage.setItem('solicitudes_active_tab', activeTab);
+    sessionStorage.setItem('solicitudes_active_tab', String(activeTab));
   }, [activeTab]);
-
-  const [isMobileTabMenuOpen, setIsMobileTabMenuOpen] = useState(false);
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -261,6 +259,10 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   // Submit Request Form
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!activeTab || activeTab === 'cartas') {
+      setSaveError("Categoría de solicitud no válida.");
+      return;
+    }
     setSaveError(null);
     setSaveSuccess(false);
 
@@ -438,18 +440,92 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     }
   };
 
-  // State for mobile accordion expansion
-  const [mobileExpandedTab, setMobileExpandedTab] = useState<'abiertas' | 'sillas' | 'internas' | 'cartas' | 'agenda' | null>('abiertas');
+  interface TabConfig {
+    id: 'abiertas' | 'sillas' | 'internas' | 'cartas' | 'agenda';
+    title: string;
+    subtitle: string;
+    description: string;
+    icon: React.ReactNode;
+    audience: string;
+    registeredCount: number;
+    pendingCount: number;
+    actionText?: string;
+    showAction: boolean;
+    visible: boolean;
+    allowed: boolean;
+  }
 
-  const toggleMobileTab = (tab: 'abiertas' | 'sillas' | 'internas' | 'cartas' | 'agenda') => {
-    if (mobileExpandedTab === tab) {
-      setMobileExpandedTab(null);
-    } else {
-      setMobileExpandedTab(tab);
-      setActiveTab(tab);
+  const tabConfigs: TabConfig[] = [
+    {
+      id: 'abiertas',
+      title: 'Solicitudes Abiertas',
+      subtitle: 'Público y Socios',
+      description: 'Cualquier persona puede generar una solicitud al club llenando el formulario que aparece en crear solicitud.',
+      icon: <FileText size={20} />,
+      visible: true,
+      allowed: true,
+      audience: 'Público General',
+      pendingCount: counts.abiertasPendientes,
+      registeredCount: counts.abiertas,
+      showAction: true,
+      actionText: 'Crear Solicitud'
+    },
+    {
+      id: 'sillas',
+      title: 'Sillas de Ruedas',
+      subtitle: 'Préstamo Temporal',
+      description: 'Formulario de préstamo temporal gratuito de equipo de movilidad para personas con necesidades especiales en Quetzaltenango.',
+      icon: <Accessibility size={20} />,
+      visible: true,
+      allowed: true,
+      audience: 'Público General',
+      pendingCount: counts.sillasPendientes,
+      registeredCount: counts.sillas,
+      showAction: true,
+      actionText: 'Solicitar Silla'
+    },
+    {
+      id: 'internas',
+      title: 'Solicitudes Internas',
+      subtitle: 'Administración Club',
+      description: 'Coordinación interna del club, minutas de comisiones, propuestas presupuestarias y peticiones privadas de los socios activos.',
+      icon: <Lock size={20} />,
+      visible: true,
+      allowed: hasInternalAccess,
+      audience: 'Socios Activos',
+      pendingCount: counts.internasPendientes,
+      registeredCount: counts.internas,
+      showAction: true,
+      actionText: 'Crear Solicitud'
+    },
+    {
+      id: 'cartas',
+      title: 'Cartas Oficiales',
+      subtitle: 'Correspondencia',
+      description: 'Redacción, firma digital y generación en PDF de correspondencia membretada dirigida a terceras instituciones.',
+      icon: <Mail size={20} />,
+      visible: isAdministrative,
+      allowed: isAdministrative,
+      audience: 'Directiva',
+      pendingCount: 0,
+      registeredCount: 0,
+      showAction: false
+    },
+    {
+      id: 'agenda',
+      title: 'Puntos de Agenda',
+      subtitle: 'Reuniones de Socios',
+      description: 'Propuesta de temas, puntos a discutir y solicitudes para el orden del día de las reuniones generales de socios.',
+      icon: <Calendar size={20} />,
+      visible: isSocio,
+      allowed: isSocio,
+      audience: 'Socios',
+      pendingCount: counts.agendaPendientes,
+      registeredCount: counts.agenda,
+      showAction: true,
+      actionText: 'Proponer Punto'
     }
-  };
-
+  ];
   const renderRestrictedAccess = () => {
     return (
       <div className="bg-white rounded-[2rem] border border-slate-200/80 shadow-md p-10 sm:p-16 text-center max-w-2xl mx-auto space-y-6 w-full">
@@ -1234,657 +1310,179 @@ Club de Leones de Quetzaltenango`;
     );
   };
 
-  const renderMobileAccordion = () => {
-    return (
-      <div className="space-y-4">
-        {/* Accordion 1: Solicitudes Abiertas */}
-        <div className="border border-slate-200 rounded-3xl bg-white overflow-hidden shadow-sm">
-          <button
-            type="button"
-            onClick={() => toggleMobileTab('abiertas')}
-            className={`w-full px-5 py-4 flex items-center justify-between text-left transition-colors ${
-              mobileExpandedTab === 'abiertas' ? 'bg-blue-900 text-white' : 'text-slate-800 hover:bg-slate-50'
-            }`}
-          >
-            <div className="flex items-center space-x-3">
-              <div className={`p-2 rounded-xl ${
-                mobileExpandedTab === 'abiertas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900'
-              }`}>
-                <FileText size={20} />
-              </div>
-              <div>
-                <span className="font-extrabold text-sm tracking-tight block">Solicitudes Abiertas</span>
-                {counts.abiertasPendientes > 0 && (
-                  <span className={`inline-block text-[8px] font-black px-1.5 py-0.5 rounded-full mt-0.5 ${
-                    mobileExpandedTab === 'abiertas' ? 'bg-yellow-500 text-blue-900 animate-pulse' : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {counts.abiertasPendientes} Pnd
-                  </span>
-                )}
-              </div>
-            </div>
-            <ChevronDown 
-              size={18} 
-              className={`transform transition-transform duration-300 ${
-                mobileExpandedTab === 'abiertas' ? 'rotate-180 text-white' : 'text-slate-400'
-              }`} 
-            />
-          </button>
-          
-          {mobileExpandedTab === 'abiertas' && (
-            <div className="p-5 border-t border-slate-100 bg-slate-50/50 space-y-4">
-              <p className="text-xs text-slate-550 font-semibold leading-relaxed">
-                Cualquier persona puede generar una solicitud al club llenando el formulario que aparece en crear solicitud.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('abiertas');
-                  setIsModalOpen(true);
-                }}
-                className="w-full py-3 bg-blue-900 hover:bg-blue-800 text-white font-black rounded-2xl flex items-center justify-center space-x-2 text-xs shadow-md transition-all animate-pulse"
-              >
-                <Plus size={16} />
-                <span>Crear Solicitud</span>
-              </button>
-              <div className="pt-2">
-                {renderSolicitudesList('abiertas')}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Accordion 2: Sillas de Ruedas */}
-        <div className="border border-slate-200 rounded-3xl bg-white overflow-hidden shadow-sm">
-          <button
-            type="button"
-            onClick={() => toggleMobileTab('sillas')}
-            className={`w-full px-5 py-4 flex items-center justify-between text-left transition-colors ${
-              mobileExpandedTab === 'sillas' ? 'bg-blue-900 text-white' : 'text-slate-800 hover:bg-slate-50'
-            }`}
-          >
-            <div className="flex items-center space-x-3">
-              <div className={`p-2 rounded-xl ${
-                mobileExpandedTab === 'sillas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900'
-              }`}>
-                <Accessibility size={20} />
-              </div>
-              <div>
-                <span className="font-extrabold text-sm tracking-tight block">Sillas de Ruedas</span>
-                {counts.sillasPendientes > 0 && (
-                  <span className={`inline-block text-[8px] font-black px-1.5 py-0.5 rounded-full mt-0.5 ${
-                    mobileExpandedTab === 'sillas' ? 'bg-yellow-500 text-blue-900 animate-pulse' : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {counts.sillasPendientes} Pnd
-                  </span>
-                )}
-              </div>
-            </div>
-            <ChevronDown 
-              size={18} 
-              className={`transform transition-transform duration-300 ${
-                mobileExpandedTab === 'sillas' ? 'rotate-180 text-white' : 'text-slate-400'
-              }`} 
-            />
-          </button>
-          
-          {mobileExpandedTab === 'sillas' && (
-            <div className="p-5 border-t border-slate-100 bg-slate-50/50 space-y-4">
-              <p className="text-xs text-slate-550 font-semibold leading-relaxed">
-                Formulario de préstamo temporal gratuito de equipo de movilidad para personas con necesidades especiales en Quetzaltenango.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('sillas');
-                  setIsModalOpen(true);
-                }}
-                className="w-full py-3 bg-blue-900 hover:bg-blue-800 text-white font-black rounded-2xl flex items-center justify-center space-x-2 text-xs shadow-md transition-all animate-pulse"
-              >
-                <Plus size={16} />
-                <span>Solicitar Silla</span>
-              </button>
-              <div className="pt-2">
-                {renderSolicitudesList('sillas')}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Accordion 3: Solicitudes Internas */}
-        <div className="border border-slate-200 rounded-3xl bg-white overflow-hidden shadow-sm">
-          <button
-            type="button"
-            onClick={() => {
-              if (hasInternalAccess) {
-                toggleMobileTab('internas');
-              } else {
-                alert("Esta opción es reservada exclusivamente para socios activos del club.");
-              }
-            }}
-            className={`w-full px-5 py-4 flex items-center justify-between text-left transition-colors ${
-              !hasInternalAccess ? 'bg-slate-50 text-slate-400 cursor-not-allowed opacity-75' :
-              mobileExpandedTab === 'internas' ? 'bg-blue-900 text-white' : 'text-slate-800 hover:bg-slate-50'
-            }`}
-          >
-            <div className="flex items-center space-x-3">
-              <div className={`p-2 rounded-xl ${
-                !hasInternalAccess ? 'bg-slate-200 text-slate-400' :
-                mobileExpandedTab === 'internas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900'
-              }`}>
-                <Lock size={20} />
-              </div>
-              <div>
-                <span className="font-extrabold text-sm tracking-tight block">Solicitudes Internas</span>
-                {hasInternalAccess && counts.internasPendientes > 0 && (
-                  <span className={`inline-block text-[8px] font-black px-1.5 py-0.5 rounded-full mt-0.5 ${
-                    mobileExpandedTab === 'internas' ? 'bg-yellow-500 text-blue-900 animate-pulse' : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {counts.internasPendientes} Pnd
-                  </span>
-                )}
-              </div>
-            </div>
-            <ChevronDown 
-              size={18} 
-              className={`transform transition-transform duration-300 ${
-                mobileExpandedTab === 'internas' ? 'rotate-180 text-white' : 'text-slate-400'
-              }`} 
-            />
-          </button>
-          
-          {hasInternalAccess && mobileExpandedTab === 'internas' && (
-            <div className="p-5 border-t border-slate-100 bg-slate-50/50 space-y-4">
-              <p className="text-xs text-slate-555 font-semibold leading-relaxed">
-                Coordinación interna del club, minutas de comisiones, propuestas presupuestarias y peticiones privadas de los socios activos.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('internas');
-                  setIsModalOpen(true);
-                }}
-                className="w-full py-3 bg-blue-900 hover:bg-blue-800 text-white font-black rounded-2xl flex items-center justify-center space-x-2 text-xs shadow-md transition-all animate-pulse"
-              >
-                <Plus size={16} />
-                <span>Crear Solicitud</span>
-              </button>
-              <div className="pt-2">
-                {renderSolicitudesList('internas')}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Accordion 4: Cartas Oficiales */}
-        {isAdministrative ? (
-          <div className="border border-slate-200 rounded-3xl bg-white overflow-hidden shadow-sm">
-            <button
-              type="button"
-              onClick={() => toggleMobileTab('cartas')}
-              className={`w-full px-5 py-4 flex items-center justify-between text-left transition-colors ${
-                mobileExpandedTab === 'cartas' ? 'bg-blue-900 text-white' : 'text-slate-800 hover:bg-slate-50'
-              }`}
-            >
-              <div className="flex items-center space-x-3">
-                <div className={`p-2 rounded-xl ${
-                  mobileExpandedTab === 'cartas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900'
-                }`}>
-                  <Mail size={20} />
-                </div>
-                <div>
-                  <span className="font-extrabold text-sm tracking-tight block">Cartas Oficiales</span>
-                </div>
-              </div>
-              <ChevronDown 
-                size={18} 
-                className={`transform transition-transform duration-300 ${
-                  mobileExpandedTab === 'cartas' ? 'rotate-180 text-white' : 'text-slate-400'
-                }`} 
-              />
-            </button>
-            
-            {mobileExpandedTab === 'cartas' && (
-              <div className="p-5 border-t border-slate-100 bg-slate-50/50 space-y-4">
-                <p className="text-xs text-slate-550 font-semibold leading-relaxed">
-                  Redacción, firma digital y generación en PDF de correspondencia membretada dirigida a terceras instituciones.
-                </p>
-                <div className="pt-2 w-full overflow-hidden">
-                  {renderCartasForm()}
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="border border-slate-100 rounded-3xl bg-slate-50/50 text-slate-400 opacity-60 p-4 flex items-center justify-between select-none">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 rounded-xl bg-slate-100 text-slate-400">
-                <Lock size={20} />
-              </div>
-              <div>
-                <span className="font-extrabold text-sm tracking-tight block">Cartas Oficiales</span>
-                <span className="text-[10px] font-medium text-slate-400">Solo Directiva</span>
-              </div>
-            </div>
-            <Lock size={16} className="text-slate-350" />
-          </div>
-        )}
-
-        {/* Accordion 5: Puntos de Agenda */}
-        {isSocio && (
-          <div className="border border-slate-200 rounded-3xl bg-white overflow-hidden shadow-sm">
-            <button
-              type="button"
-              onClick={() => toggleMobileTab('agenda')}
-              className={`w-full px-5 py-4 flex items-center justify-between text-left transition-colors ${
-                mobileExpandedTab === 'agenda' ? 'bg-blue-900 text-white' : 'text-slate-800 hover:bg-slate-50'
-              }`}
-            >
-              <div className="flex items-center space-x-3">
-                <div className={`p-2 rounded-xl ${
-                  mobileExpandedTab === 'agenda' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900'
-                }`}>
-                  <Calendar size={20} />
-                </div>
-                <div>
-                  <span className="font-extrabold text-sm tracking-tight block">Puntos de Agenda</span>
-                  {counts.agendaPendientes > 0 && (
-                    <span className={`inline-block text-[8px] font-black px-1.5 py-0.5 rounded-full mt-0.5 ${
-                      mobileExpandedTab === 'agenda' ? 'bg-yellow-500 text-blue-900 animate-pulse' : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {counts.agendaPendientes} Pnd
-                    </span>
-                  )}
-                </div>
-              </div>
-              <ChevronDown 
-                size={18} 
-                className={`transform transition-transform duration-300 ${
-                  mobileExpandedTab === 'agenda' ? 'rotate-180 text-white' : 'text-slate-400'
-                }`} 
-              />
-            </button>
-            
-            {mobileExpandedTab === 'agenda' && (
-              <div className="p-5 border-t border-slate-100 bg-slate-50/50 space-y-4">
-                <p className="text-xs text-slate-550 font-semibold leading-relaxed">
-                  Propuesta de temas, puntos a discutir y solicitudes para el orden del día de las reuniones generales de socios.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTab('agenda');
-                    setIsModalOpen(true);
-                  }}
-                  className="w-full py-3 bg-blue-900 hover:bg-blue-800 text-white font-black rounded-2xl flex items-center justify-center space-x-2 text-xs shadow-md transition-all animate-pulse"
-                >
-                  <Plus size={16} />
-                  <span>Proponer Punto</span>
-                </button>
-                <div className="pt-2">
-                  {renderSolicitudesList('agenda')}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
-    <div className="space-y-10 max-w-7xl mx-auto px-4 md:px-8 py-8 animate-in fade-in duration-700">
+    <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-8 animate-in fade-in duration-700">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-extrabold text-blue-900 tracking-tight">Gestión de Solicitudes</h1>
           <p className="text-base text-slate-750 mt-1 font-medium">
-            Administra y crea solicitudes de servicios, proyectos y donaciones alineadas a nuestras causas globales.
+            Administra y crea solicitudes de servicios, proyectos y donaciones de forma organizada.
           </p>
         </div>
       </header>
 
-      {/* VISTA DE ESCRITORIO (md en adelante) */}
-      <div className="hidden md:block space-y-10">
-        {/* Selector de Tipo de Solicitud (Tarjetas Modernas) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-6">
-          {/* Tarjeta 1: Solicitudes Abiertas */}
-          <div
-            onClick={() => setActiveTab('abiertas')}
-            className={`cursor-pointer flex flex-col text-left p-6 rounded-3xl border-2 transition-all duration-300 relative group h-full justify-between ${
-              activeTab === 'abiertas'
-                ? 'bg-blue-900 border-blue-900 text-white shadow-xl shadow-blue-900/20 scale-[1.02]'
-                : 'bg-white hover:bg-slate-50/85 border-slate-200 text-slate-800 hover:-translate-y-1'
-            }`}
-          >
-            <div className="space-y-4">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
-                activeTab === 'abiertas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900 group-hover:bg-blue-100'
-              }`}>
-                <FileText size={24} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-extrabold text-base tracking-tight">Solicitudes Abiertas</h3>
-                  {counts.abiertasPendientes > 0 && (
-                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse ${
-                      activeTab === 'abiertas' ? 'bg-yellow-500 text-blue-900' : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {counts.abiertasPendientes} Pnd
-                    </span>
-                  )}
-                </div>
-                <p className={`text-xs mt-2 leading-relaxed ${
-                  activeTab === 'abiertas' ? 'text-slate-200 font-medium' : 'text-slate-505 font-semibold'
-                }`}>
-                  Cualquier persona puede generar una solicitud al club llenando el formulario que aparece en crear solicitud.
-                </p>
-              </div>
-            </div>
-            
-            <div className="mt-5 space-y-4">
+      {/* SISTEMA DE ACORDEONES UNIFICADO Y RESPONSIVO */}
+      <div className="space-y-4">
+        {tabConfigs.map((cfg) => {
+          const isExpanded = activeTab === cfg.id;
+          
+          if (!cfg.visible) return null;
+
+          return (
+            <div 
+              key={cfg.id}
+              className={`border rounded-3xl bg-white overflow-hidden shadow-sm transition-all duration-300 ${
+                isExpanded ? 'border-blue-900/40 ring-1 ring-blue-900/10' : 'border-slate-200'
+              }`}
+            >
+              {/* Encabezado del Acordeón */}
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActiveTab('abiertas');
-                  setIsModalOpen(true);
+                onClick={() => {
+                  if (!cfg.allowed) {
+                    alert(`Esta opción está reservada para: ${cfg.audience}`);
+                    return;
+                  }
+                  setActiveTab(activeTab === cfg.id ? null : cfg.id);
                 }}
-                className={`w-full py-2.5 px-4 rounded-xl text-xs font-black tracking-wider uppercase transition-all duration-205 flex items-center justify-center space-x-1.5 active:scale-95 shadow-sm ${
-                  activeTab === 'abiertas'
-                    ? 'bg-yellow-500 hover:bg-yellow-400 text-blue-955'
-                    : 'bg-blue-900 hover:bg-blue-800 text-white'
+                className={`w-full px-6 py-5 flex items-center justify-between text-left transition-all ${
+                  !cfg.allowed ? 'bg-slate-50/50 text-slate-400 cursor-not-allowed' :
+                  isExpanded ? 'bg-blue-900 text-white' : 'text-slate-800 hover:bg-slate-50'
                 }`}
               >
-                <Plus size={14} />
-                <span>Crear Solicitud</span>
-              </button>
-
-              <div className={`pt-4 border-t border-dashed w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest opacity-80 ${
-                activeTab === 'abiertas' ? 'border-white/20' : 'border-slate-200'
-              }`}>
-                <span>Público & Socios</span>
-                <span>{counts.abiertas} registradas</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Tarjeta 2: Sillas de Ruedas */}
-          <div
-            onClick={() => setActiveTab('sillas')}
-            className={`cursor-pointer flex flex-col text-left p-6 rounded-3xl border-2 transition-all duration-300 relative group h-full justify-between ${
-              activeTab === 'sillas'
-                ? 'bg-blue-900 border-blue-900 text-white shadow-xl shadow-blue-900/20 scale-[1.02]'
-                : 'bg-white hover:bg-slate-50/85 border-slate-200 text-slate-800 hover:-translate-y-1'
-            }`}
-          >
-            <div className="space-y-4">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
-                activeTab === 'sillas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900 group-hover:bg-blue-100'
-              }`}>
-                <Accessibility size={24} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-extrabold text-base tracking-tight">Sillas de Ruedas</h3>
-                  {counts.sillasPendientes > 0 && (
-                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse ${
-                      activeTab === 'sillas' ? 'bg-yellow-500 text-blue-900' : 'bg-yellow-100 text-yellow-800'
+                <div className="flex items-center space-x-4">
+                  <div className={`p-3 rounded-2xl transition-colors ${
+                    !cfg.allowed ? 'bg-slate-100 text-slate-400' :
+                    isExpanded ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900'
+                  }`}>
+                    {cfg.icon}
+                  </div>
+                  <div>
+                    <span className="font-extrabold text-base tracking-tight block">{cfg.title}</span>
+                    <span className={`text-xs ${isExpanded ? 'text-blue-200' : 'text-slate-500'} font-semibold mt-0.5 block`}>
+                      {cfg.subtitle}
+                    </span>
+                  </div>
+                  {cfg.allowed && cfg.pendingCount > 0 && (
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse ml-2 ${
+                      isExpanded ? 'bg-yellow-500 text-blue-955' : 'bg-yellow-100 text-yellow-800'
                     }`}>
-                      {counts.sillasPendientes} Pnd
+                      {cfg.pendingCount} Pendiente{cfg.pendingCount > 1 ? 's' : ''}
                     </span>
                   )}
                 </div>
-                <p className={`text-xs mt-2 leading-relaxed ${
-                  activeTab === 'sillas' ? 'text-slate-200 font-medium' : 'text-slate-500 font-semibold'
-                }`}>
-                  Formulario de préstamo temporal gratuito de equipo de movilidad para personas con necesidades especiales en Quetzaltenango.
-                </p>
-              </div>
-            </div>
-            
-            <div className="mt-5 space-y-4">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActiveTab('sillas');
-                  setIsModalOpen(true);
-                }}
-                className={`w-full py-2.5 px-4 rounded-xl text-xs font-black tracking-wider uppercase transition-all duration-205 flex items-center justify-center space-x-1.5 active:scale-95 shadow-sm ${
-                  activeTab === 'sillas'
-                    ? 'bg-yellow-500 hover:bg-yellow-400 text-blue-955'
-                    : 'bg-blue-900 hover:bg-blue-800 text-white'
-                }`}
-              >
-                <Plus size={14} />
-                <span>Solicitar Silla</span>
-              </button>
-
-              <div className={`pt-4 border-t border-dashed w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest opacity-80 ${
-                activeTab === 'sillas' ? 'border-white/20' : 'border-slate-200'
-              }`}>
-                <span>Servicio Social</span>
-                <span>{counts.sillas} registradas</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Tarjeta 3: Solicitudes Internas */}
-          <div
-            onClick={() => {
-              if (hasInternalAccess) {
-                setActiveTab('internas');
-              } else {
-                alert("Esta opción es reservada exclusivamente para socios activos del club.");
-              }
-            }}
-            className={`cursor-pointer flex flex-col text-left p-6 rounded-3xl border-2 transition-all duration-300 relative group h-full justify-between ${
-              !hasInternalAccess 
-                ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed opacity-75' 
-                : activeTab === 'internas'
-                ? 'bg-blue-900 border-blue-900 text-white shadow-xl shadow-blue-900/20 scale-[1.02]'
-                : 'bg-white hover:bg-slate-50/85 border-slate-200 text-slate-800 hover:-translate-y-1'
-            }`}
-          >
-            <div className="space-y-4">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
-                !hasInternalAccess ? 'bg-slate-200 text-slate-400' : activeTab === 'internas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900 group-hover:bg-blue-100'
-              }`}>
-                <Lock size={24} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-extrabold text-base tracking-tight">Solicitudes Internas</h3>
-                  {hasInternalAccess && counts.internasPendientes > 0 && (
-                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse ${
-                      activeTab === 'internas' ? 'bg-yellow-500 text-blue-900' : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {counts.internasPendientes} Pnd
-                    </span>
+                
+                <div className="flex items-center space-x-2">
+                  {!cfg.allowed ? (
+                    <Lock size={18} className="text-slate-350" />
+                  ) : (
+                    <ChevronDown 
+                      size={20} 
+                      className={`transform transition-transform duration-300 ${
+                        isExpanded ? 'rotate-180 text-white' : 'text-slate-400'
+                      }`} 
+                    />
                   )}
                 </div>
-                <p className={`text-xs mt-2 leading-relaxed ${
-                  activeTab === 'internas' ? 'text-slate-200 font-medium' : 'text-slate-500 font-semibold'
-                }`}>
-                  Coordinación interna del club, minutas de comisiones, propuestas presupuestarias y peticiones privadas de los socios activos.
-                </p>
-              </div>
-            </div>
-            
-            <div className="mt-5 space-y-4">
-              {hasInternalAccess ? (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveTab('internas');
-                    setIsModalOpen(true);
-                  }}
-                  className={`w-full py-2.5 px-4 rounded-xl text-xs font-black tracking-wider uppercase transition-all duration-205 flex items-center justify-center space-x-1.5 active:scale-95 shadow-sm ${
-                    activeTab === 'internas'
-                      ? 'bg-yellow-500 hover:bg-yellow-400 text-blue-955'
-                      : 'bg-blue-900 hover:bg-blue-800 text-white'
-                  }`}
-                >
-                  <Plus size={14} />
-                  <span>Crear Solicitud</span>
-                </button>
-              ) : (
-                <div className="w-full py-2.5 text-center text-xs font-bold text-slate-400 bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-center space-x-1">
-                  <Lock size={12} />
-                  <span>No Autorizado</span>
+              </button>
+
+              {/* Contenido Expandido del Acordeón */}
+              {isExpanded && (
+                <div className="p-6 md:p-8 border-t border-slate-100 bg-slate-50/30 animate-in slide-in-from-top duration-300">
+                  {/* DISEÑO EN DOS COLUMNAS EN ESCRITORIO (md en adelante) */}
+                  <div className="hidden md:flex gap-8 items-start w-full">
+                    {/* Columna Izquierda (30%): Información y Acción */}
+                    <div className="w-1/3 max-w-[320px] bg-white rounded-2xl border border-slate-200/80 p-6 shadow-md space-y-6 flex-shrink-0">
+                      <div className="space-y-2">
+                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                          Información
+                        </h4>
+                        <p className="text-slate-655 text-sm leading-relaxed font-medium">
+                          {cfg.description}
+                        </p>
+                      </div>
+
+                      {/* Estadísticas de la pestaña activa */}
+                      {cfg.id !== 'cartas' && (
+                        <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 space-y-2.5 text-xs">
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-400 font-bold">Total Registros:</span>
+                            <span className="font-extrabold text-slate-800">{cfg.registeredCount}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-400 font-bold">Pendientes:</span>
+                            <span className="font-extrabold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">
+                              {cfg.pendingCount}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center pt-2 border-t border-slate-200/50">
+                            <span className="text-slate-400 font-bold">Acceso:</span>
+                            <span className="font-bold text-blue-900 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-100">
+                              {cfg.audience}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Botón de acción destacado */}
+                      {cfg.showAction && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveTab(cfg.id);
+                            setIsModalOpen(true);
+                          }}
+                          className="w-full py-3 bg-blue-900 hover:bg-blue-800 text-white font-extrabold rounded-xl flex items-center justify-center space-x-2 text-sm shadow-md transition-all duration-200 active:scale-95 hover:shadow-lg"
+                        >
+                          <Plus size={16} />
+                          <span>{cfg.actionText}</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Columna Derecha (70%): Listado o Formulario */}
+                    <div className="flex-grow w-2/3 overflow-hidden">
+                      {cfg.id === 'cartas' ? (
+                        renderCartasForm()
+                      ) : (
+                        renderSolicitudesList(cfg.id as 'abiertas' | 'sillas' | 'internas' | 'agenda')
+                      )}
+                    </div>
+                  </div>
+
+                  {/* DISEÑO EN UNA COLUMNA EN MÓVIL (de md hacia abajo) */}
+                  <div className="block md:hidden space-y-6 w-full animate-in fade-in duration-200">
+                    <p className="text-xs text-slate-550 font-semibold leading-relaxed">
+                      {cfg.description}
+                    </p>
+                    
+                    {cfg.showAction && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveTab(cfg.id);
+                          setIsModalOpen(true);
+                        }}
+                        className="w-full py-3 bg-blue-900 hover:bg-blue-800 text-white font-black rounded-2xl flex items-center justify-center space-x-2 text-xs shadow-md transition-all duration-200 active:scale-95"
+                      >
+                        <Plus size={16} />
+                        <span>{cfg.actionText}</span>
+                      </button>
+                    )}
+
+                    <div className="pt-2 w-full overflow-hidden">
+                      {cfg.id === 'cartas' ? (
+                        renderCartasForm()
+                      ) : (
+                        renderSolicitudesList(cfg.id as 'abiertas' | 'sillas' | 'internas' | 'agenda')
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
-
-              <div className={`pt-4 border-t border-dashed w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest opacity-80 ${
-                activeTab === 'internas' ? 'border-white/20' : 'border-slate-200'
-              }`}>
-                <span>Solo Socios</span>
-                <span>{hasInternalAccess ? `${counts.internas} registradas` : 'Privado'}</span>
-              </div>
             </div>
-          </div>
-
-          {/* Tarjeta 4: Cartas Oficiales */}
-          {isAdministrative ? (
-            <div
-              onClick={() => setActiveTab('cartas')}
-              className={`cursor-pointer flex flex-col text-left p-6 rounded-3xl border-2 transition-all duration-300 relative group h-full justify-between ${
-                activeTab === 'cartas'
-                  ? 'bg-blue-900 border-blue-900 text-white shadow-xl shadow-blue-900/20 scale-[1.02]'
-                  : 'bg-white hover:bg-slate-50/85 border-slate-200 text-slate-800 hover:-translate-y-1'
-              }`}
-            >
-              <div className="space-y-4">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
-                  activeTab === 'cartas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900 group-hover:bg-blue-100'
-                }`}>
-                  <Mail size={24} />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-base tracking-tight">Cartas Oficiales</h3>
-                  <p className={`text-xs mt-2 leading-relaxed ${
-                    activeTab === 'cartas' ? 'text-slate-200 font-medium' : 'text-slate-500 font-semibold'
-                  }`}>
-                    Redacción, firma digital y generación en PDF de correspondencia membretada dirigida a terceras instituciones.
-                  </p>
-                </div>
-              </div>
-              
-              <div className="mt-5 space-y-4">
-                <div className={`w-full py-2.5 text-center text-xs font-black tracking-wider uppercase rounded-xl border flex items-center justify-center space-x-1 ${
-                  activeTab === 'cartas' ? 'bg-white/10 border-white/20 text-yellow-400' : 'bg-blue-50 border-blue-100 text-blue-900'
-                }`}>
-                  <span>Editor Integrado</span>
-                </div>
-
-                <div className={`pt-4 border-t border-dashed w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest opacity-80 ${
-                  activeTab === 'cartas' ? 'border-white/20' : 'border-slate-200'
-                }`}>
-                  <span>Solo Directiva</span>
-                  <span>Herramienta PDF</span>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col text-left p-6 rounded-3xl border-2 border-slate-100 bg-slate-50/50 text-slate-400 opacity-60 h-full justify-between select-none">
-              <div className="space-y-4">
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-slate-100 text-slate-400">
-                  <Lock size={24} />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-base tracking-tight">Cartas Oficiales</h3>
-                  <p className="text-xs mt-2 leading-relaxed text-slate-400 font-medium">
-                    Función restringida únicamente para directores autorizados y secretaría para la emisión de correspondencia oficial.
-                  </p>
-                </div>
-              </div>
-              <div className="mt-6 pt-4 border-t border-slate-200 w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest">
-                <span>Solo Directiva</span>
-                <span>Bloqueado</span>
-              </div>
-            </div>
-          )}
-
-          {/* Tarjeta 5: Puntos de Agenda */}
-          {isSocio && (
-            <div
-              onClick={() => setActiveTab('agenda')}
-              className={`cursor-pointer flex flex-col text-left p-6 rounded-3xl border-2 transition-all duration-300 relative group h-full justify-between ${
-                activeTab === 'agenda'
-                  ? 'bg-blue-900 border-blue-900 text-white shadow-xl shadow-blue-900/20 scale-[1.02]'
-                  : 'bg-white hover:bg-slate-50/85 border-slate-200 text-slate-800 hover:-translate-y-1'
-              }`}
-            >
-              <div className="space-y-4">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
-                  activeTab === 'agenda' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900 group-hover:bg-blue-100'
-                }`}>
-                  <Calendar size={24} />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-extrabold text-base tracking-tight">Puntos de Agenda</h3>
-                    {counts.agendaPendientes > 0 && (
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse ${
-                        activeTab === 'agenda' ? 'bg-yellow-500 text-blue-900' : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {counts.agendaPendientes} Pnd
-                      </span>
-                    )}
-                  </div>
-                  <p className={`text-xs mt-2 leading-relaxed ${
-                    activeTab === 'agenda' ? 'text-slate-200 font-medium' : 'text-slate-550 font-semibold'
-                  }`}>
-                    Propuesta de temas, puntos a discutir y solicitudes para el orden del día de las reuniones generales de socios.
-                  </p>
-                </div>
-              </div>
-              
-              <div className="mt-5 space-y-4">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveTab('agenda');
-                    setIsModalOpen(true);
-                  }}
-                  className={`w-full py-2.5 px-4 rounded-xl text-xs font-black tracking-wider uppercase transition-all duration-205 flex items-center justify-center space-x-1.5 active:scale-95 shadow-sm ${
-                    activeTab === 'agenda'
-                      ? 'bg-yellow-500 hover:bg-yellow-400 text-blue-955'
-                      : 'bg-blue-900 hover:bg-blue-800 text-white'
-                  }`}
-                >
-                  <Plus size={14} />
-                  <span>Proponer Punto</span>
-                </button>
-
-                <div className={`pt-4 border-t border-dashed w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest opacity-80 ${
-                  activeTab === 'agenda' ? 'border-white/20' : 'border-slate-200'
-                }`}>
-                  <span>Reunión de Socios</span>
-                  <span>{counts.agenda} propuestas</span>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* CONTENIDO DE LA PESTAÑA ACTIVA EN ESCRITORIO */}
-        <div className="animate-in fade-in duration-300">
-          {activeTab === 'cartas' ? (
-            renderCartasForm()
-          ) : activeTab === 'internas' && !hasInternalAccess ? (
-            renderRestrictedAccess()
-          ) : (
-            renderSolicitudesList(activeTab)
-          )}
-        </div>
-      </div>
-
-      {/* VISTA MÓVIL (de md hacia abajo) */}
-      <div className="block md:hidden">
-        {renderMobileAccordion()}
+          );
+        })}
       </div>
       {/* FORM MODAL */}
       {isModalOpen && (
