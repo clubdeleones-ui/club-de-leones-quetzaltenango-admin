@@ -1117,3 +1117,250 @@ export const generateCartasInvitacionPDF = async (
   }
 };
 
+export interface CartaOficialInput {
+  fecha: string;
+  institucion: string;
+  destinatario: string;
+  cargo: string;
+  saludo: string;
+  asunto: string;
+  cuerpo: string;
+  firmaNombre: string;
+  firmaPuesto: string;
+}
+
+export const generateCartaOficialPDF = async (
+  carta: CartaOficialInput,
+  action: 'download' | 'open' = 'download'
+): Promise<void> => {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'letter'
+  });
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 20;
+  const contentWidth = pageWidth - (margin * 2);
+
+  // Header Blue Bar (Primary Color)
+  doc.setFillColor(27, 54, 93); // Blue-900
+  doc.rect(0, 0, pageWidth, 15, 'F');
+  
+  // Header Gold Bar (Secondary Accent Color)
+  doc.setFillColor(234, 179, 8); // Yellow-500
+  doc.rect(0, 15, pageWidth, 2, 'F');
+
+  // Load Logo
+  const base = window.location.pathname.endsWith('/') 
+    ? window.location.pathname 
+    : window.location.pathname + '/';
+  const logoUrl = `${window.location.origin}${base}images/logo.png`;
+
+  let logoImg: HTMLImageElement | null = null;
+  try {
+    logoImg = await loadImage(logoUrl);
+  } catch (err) {
+    console.error("Failed to load logo image, falling back to vector logo", err);
+  }
+
+  // Draw Logo
+  const logoX = margin;
+  const logoY = 22;
+  const logoRadius = 7;
+
+  if (logoImg) {
+    doc.addImage(logoImg, 'PNG', logoX, logoY - 1, 14, 14);
+  } else {
+    // Draw Vector Logo (Fallback)
+    doc.setFillColor(27, 54, 93);
+    doc.circle(logoX + logoRadius, logoY + logoRadius, logoRadius, 'F');
+    doc.setDrawColor(234, 179, 8);
+    doc.setLineWidth(0.5);
+    doc.circle(logoX + logoRadius, logoY + logoRadius, logoRadius - 0.5, 'S');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(234, 179, 8);
+    doc.text('L', logoX + logoRadius, logoY + logoRadius + 4.5, { align: 'center' });
+  }
+
+  // Title Branding
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(27, 54, 93);
+  doc.text('CLUB DE LEONES DE QUETZALTENANGO', logoX + 18, logoY + 5.5);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(217, 119, 6);
+  doc.text('NOSOTROS SERVIMOS', logoX + 18, logoY + 11.5);
+
+  // Separator line
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.5);
+  doc.line(margin, 42, pageWidth - margin, 42);
+
+  // Date
+  doc.setFont('times', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(51, 65, 85);
+  doc.text(carta.fecha || new Date().toLocaleDateString('es-ES'), pageWidth - margin, 52, { align: 'right' });
+
+  // Recipient block
+  let y = 62;
+  doc.setFont('times', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(27, 54, 93);
+
+  if (carta.destinatario) {
+    doc.text(carta.destinatario, margin, y);
+    y += 5.5;
+  }
+  if (carta.cargo) {
+    doc.setFont('times', 'italic');
+    doc.setTextColor(71, 85, 105);
+    doc.text(carta.cargo, margin, y);
+    y += 5.5;
+  }
+  if (carta.institucion) {
+    doc.setFont('times', 'bold');
+    doc.setTextColor(51, 65, 85);
+    doc.text(carta.institucion, margin, y);
+    y += 5.5;
+  }
+  doc.setFont('times', 'normal');
+  doc.setTextColor(51, 65, 85);
+  doc.text('Presente.', margin, y);
+  y += 10;
+
+  // Asunto
+  if (carta.asunto) {
+    doc.setFont('times', 'bold');
+    doc.setTextColor(27, 54, 93);
+    const asuntoText = `ASUNTO: ${carta.asunto.toUpperCase()}`;
+    const splitAsunto = doc.splitTextToSize(asuntoText, contentWidth);
+    splitAsunto.forEach((line: string) => {
+      doc.text(line, margin, y);
+      y += 5.5;
+    });
+    y += 4;
+  }
+
+  // Saludo
+  if (carta.saludo) {
+    doc.setFont('times', 'normal');
+    doc.setTextColor(51, 65, 85);
+    doc.text(carta.saludo, margin, y);
+    y += 8;
+  }
+
+  // Cuerpo
+  const rawLines = carta.cuerpo.split('\n');
+  const bottomMargin = 25;
+
+  const checkPageOverflow = (neededHeight: number) => {
+    if (y + neededHeight > pageHeight - bottomMargin) {
+      doc.addPage();
+      
+      // Page Header for extra pages
+      doc.setFillColor(27, 54, 93);
+      doc.rect(0, 0, pageWidth, 12, 'F');
+      doc.setFillColor(234, 179, 8);
+      doc.rect(0, 12, pageWidth, 1.5, 'F');
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184); // Slate-400
+      doc.text(`Carta Oficial - Página ${doc.internal.pages.length}`, margin, 18);
+      
+      y = 26; // Reset Y coordinate
+    }
+  };
+
+  rawLines.forEach((line) => {
+    const trimmedLine = line.trim();
+    if (trimmedLine === '') {
+      y += 4;
+      return;
+    }
+
+    doc.setFont('times', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(51, 65, 85);
+
+    const splitLines = doc.splitTextToSize(trimmedLine, contentWidth);
+    splitLines.forEach((subLine: string) => {
+      checkPageOverflow(6);
+      doc.text(subLine, margin, y, { align: 'justify' });
+      y += 5.8;
+    });
+    y += 2;
+  });
+
+  // Space before signature
+  y += 12;
+  checkPageOverflow(40);
+
+  // Atentamente / Signature block
+  doc.setFont('times', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(51, 65, 85);
+  doc.text('Atentamente,', margin, y);
+  
+  y += 16;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(27, 54, 93);
+  doc.text(carta.firmaNombre || '', margin, y);
+  
+  y += 4.5;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(100, 116, 139);
+  doc.text(carta.firmaPuesto || '', margin, y);
+
+  // Add official stamp at the bottom center if fits
+  y += 12;
+  if (y + 10 < pageHeight - bottomMargin) {
+    doc.setDrawColor(217, 119, 6); // Amber-600
+    doc.setLineWidth(0.2);
+    const stampW = 60;
+    const stampH = 7;
+    const stampX = (pageWidth - stampW) / 2;
+    doc.roundedRect(stampX, y, stampW, stampH, 1.5, 1.5, 'S');
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6.5);
+    doc.setTextColor(217, 119, 6);
+    doc.text('SELLO OFICIAL - CLUB DE LEONES QX', pageWidth / 2, y + 4.8, { align: 'center' });
+  }
+
+  // Footer decoration
+  const pageCount = doc.internal.pages.length;
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    
+    doc.setDrawColor(234, 179, 8);
+    doc.setLineWidth(0.5);
+    doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Nosotros Servimos - Lions Clubs International', margin, pageHeight - 10);
+    doc.text(`Página ${i} de ${pageCount}`, pageWidth - margin - 15, pageHeight - 10);
+  }
+
+  // Handle PDF Output
+  if (action === 'open') {
+    const blob = doc.output('blob');
+    const blobUrl = URL.createObjectURL(blob);
+    window.open(blobUrl, '_blank');
+  } else {
+    const cleanDest = (carta.destinatario || 'carta').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
+    doc.save(`carta-${cleanDest}.pdf`);
+  }
+};
+
+

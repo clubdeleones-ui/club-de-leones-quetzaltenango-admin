@@ -22,8 +22,12 @@ import {
   Users,
   Accessibility,
   Heart,
-  RefreshCw
+  RefreshCw,
+  Mail,
+  Copy
 } from 'lucide-react';
+import { generateCartaOficialPDF } from '../utils/pdfGenerator';
+
 
 interface SolicitudesProps {
   user: Socio | null;
@@ -59,9 +63,9 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     showAlert("Notificación", msg);
   };
 
-  const [activeTab, setActiveTab] = useState<'abiertas' | 'internas' | 'sillas'>(() => {
+  const [activeTab, setActiveTab] = useState<'abiertas' | 'internas' | 'sillas' | 'cartas'>(() => {
     const saved = sessionStorage.getItem('solicitudes_active_tab');
-    if (saved) return saved as 'abiertas' | 'internas' | 'sillas';
+    if (saved) return saved as 'abiertas' | 'internas' | 'sillas' | 'cartas';
     return 'abiertas';
   });
 
@@ -101,6 +105,40 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   const [nombreBeneficiario, setNombreBeneficiario] = useState('');
   const [edadBeneficiario, setEdadBeneficiario] = useState('');
   const [tiempoUso, setTiempoUso] = useState('');
+  
+  // Cartas Oficiales Form States
+  const [cartaFecha, setCartaFecha] = useState(() => new Date().toISOString().split('T')[0]);
+  const [cartaInstitucion, setCartaInstitucion] = useState('');
+  const [cartaDestinatario, setCartaDestinatario] = useState('');
+  const [cartaCargo, setCartaCargo] = useState('');
+  const [cartaSaludo, setCartaSaludo] = useState('Estimados señores:');
+  const [cartaAsunto, setCartaAsunto] = useState('');
+  const [cartaCuerpo, setCartaCuerpo] = useState('');
+  const [firmanteSelector, setFirmanteSelector] = useState<'presidente' | 'secretario' | 'personalizado'>('presidente');
+  const [cartaFirmaNombre, setCartaFirmaNombre] = useState('Edwin Ernesto Pacheco López');
+  const [cartaFirmaPuesto, setCartaFirmaPuesto] = useState('Presidente del Club');
+
+  // Dynamic names lookup for signatures
+  useEffect(() => {
+    try {
+      const local = localStorage.getItem('club_leones_socios');
+      if (local) {
+        const sociosList = JSON.parse(local);
+        const president = sociosList.find((s: any) => s.puesto?.toLowerCase().includes('presidente del club') || s.puesto?.toLowerCase() === 'presidente') || sociosList.find((s: any) => s.puesto?.toLowerCase().includes('presidente'));
+        const secretary = sociosList.find((s: any) => s.puesto?.toLowerCase().includes('secretario del club') || s.puesto?.toLowerCase() === 'secretario') || sociosList.find((s: any) => s.puesto?.toLowerCase().includes('secretario'));
+        
+        if (firmanteSelector === 'presidente' && president) {
+          setCartaFirmaNombre(president.nombre);
+          setCartaFirmaPuesto(president.puesto || 'Presidente del Club');
+        } else if (firmanteSelector === 'secretario' && secretary) {
+          setCartaFirmaNombre(secretary.nombre);
+          setCartaFirmaPuesto(secretary.puesto || 'Secretario del Club');
+        }
+      }
+    } catch (e) {
+      console.error("Error loading signature names:", e);
+    }
+  }, [firmanteSelector]);
   
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -366,8 +404,9 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
             {activeTab === 'abiertas' && <FileText size={18} className="text-yellow-400" />}
             {activeTab === 'internas' && <Lock size={18} className="text-yellow-400" />}
             {activeTab === 'sillas' && <Accessibility size={18} className="text-yellow-400" />}
+            {activeTab === 'cartas' && <Mail size={18} className="text-yellow-400" />}
             <span>
-              {activeTab === 'abiertas' ? 'Solicitudes Abiertas' : activeTab === 'internas' ? 'Solicitudes Internas' : 'Sillas de Ruedas'}
+              {activeTab === 'abiertas' ? 'Solicitudes Abiertas' : activeTab === 'internas' ? 'Solicitudes Internas' : activeTab === 'sillas' ? 'Sillas de Ruedas' : 'Cartas Oficiales'}
             </span>
             {activeTab === 'abiertas' && counts.abiertasPendientes > 0 && (
               <span className="bg-yellow-500 text-blue-900 text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full animate-pulse ml-1.5">
@@ -456,6 +495,23 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                 </span>
               )}
             </button>
+            {isAdministrative && (
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('cartas');
+                  setIsMobileTabMenuOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-5 py-3 text-sm font-extrabold transition-colors text-left ${
+                  activeTab === 'cartas' ? 'bg-blue-50 text-blue-900' : 'text-slate-655 hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <Mail size={18} className={activeTab === 'cartas' ? 'text-blue-900' : 'text-slate-400'} />
+                  <span>Cartas Oficiales</span>
+                </div>
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -516,11 +572,382 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
             </span>
           )}
         </button>
+        {isAdministrative && (
+          <button
+            onClick={() => setActiveTab('cartas')}
+            className={`flex items-center space-x-3 px-6 py-3 font-semibold text-base border-b-4 transition-all ${
+              activeTab === 'cartas'
+                ? 'border-blue-900 text-blue-900'
+                : 'border-transparent text-slate-600 hover:text-slate-800'
+            }`}
+          >
+            <Mail size={18} />
+            <span>Cartas Oficiales</span>
+          </button>
+        )}
       </div>
 
       {/* TAB CONTENT */}
       <div className="animate-in fade-in duration-300">
-        {activeTab === 'internas' && !hasInternalAccess ? (
+        {activeTab === 'cartas' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* Formulario */}
+            <div className="lg:col-span-5 bg-white rounded-3xl border border-slate-200/80 shadow-md p-6 sm:p-8 space-y-6">
+              <div className="border-b border-slate-100 pb-4">
+                <h2 className="text-xl font-bold text-blue-900 flex items-center gap-2">
+                  <Mail size={20} className="text-blue-900" />
+                  Redactar Carta Oficial
+                </h2>
+                <p className="text-xs text-slate-500 font-medium mt-1">
+                  Complete los campos para generar la correspondencia membretada en formato PDF.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {/* Fecha */}
+                <div>
+                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">
+                    Fecha de la Carta
+                  </label>
+                  <input
+                    type="date"
+                    value={cartaFecha}
+                    onChange={(e) => setCartaFecha(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
+                  />
+                </div>
+
+                {/* Destinatario Details */}
+                <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 space-y-4">
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                    Información del Destinatario
+                  </h3>
+                  
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1">
+                      Nombre de la Persona
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej. Lic. Carlos Mérida"
+                      value={cartaDestinatario}
+                      onChange={(e) => setCartaDestinatario(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1">
+                      Cargo / Puesto
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej. Director Ejecutivo"
+                      value={cartaCargo}
+                      onChange={(e) => setCartaCargo(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1">
+                      Institución / Organización
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej. Municipalidad de Quetzaltenango"
+                      value={cartaInstitucion}
+                      onChange={(e) => setCartaInstitucion(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Asunto */}
+                <div>
+                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">
+                    Asunto de la Carta
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Solicitud de colaboración para jornada oftalmológica"
+                    value={cartaAsunto}
+                    onChange={(e) => setCartaAsunto(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
+                  />
+                </div>
+
+                {/* Saludo */}
+                <div>
+                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">
+                    Saludo Inicial
+                  </label>
+                  <div className="flex gap-2">
+                    <select
+                      value={cartaSaludo.startsWith('Estimado') || cartaSaludo.startsWith('Respetable') ? cartaSaludo : 'personalizado'}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val !== 'personalizado') {
+                          setCartaSaludo(val);
+                        } else {
+                          setCartaSaludo('');
+                        }
+                      }}
+                      className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none"
+                    >
+                      <option value="Estimados señores:">Estimados señores:</option>
+                      <option value="Estimado señor director:">Estimado señor director:</option>
+                      <option value="Estimado/a señor/a:">Estimado/a señor/a:</option>
+                      <option value="Respetables miembros de la Junta Directiva:">Respetables miembros:</option>
+                      <option value="personalizado">Personalizado...</option>
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Redacte saludo personalizado..."
+                      value={cartaSaludo}
+                      onChange={(e) => setCartaSaludo(e.target.value)}
+                      className="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Cuerpo de la Carta */}
+                <div>
+                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5 flex justify-between">
+                    <span>Cuerpo de la Carta</span>
+                    <span className="text-[10px] text-slate-400 font-normal">Use Enter para separar párrafos</span>
+                  </label>
+                  <textarea
+                    rows={8}
+                    placeholder="Redacte aquí el contenido principal de la carta..."
+                    value={cartaCuerpo}
+                    onChange={(e) => setCartaCuerpo(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all resize-y"
+                  />
+                </div>
+
+                {/* Firmas y Sellos */}
+                <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 space-y-4">
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                    Bloque de Firma y Autoría
+                  </h3>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFirmanteSelector('presidente')}
+                      className={`flex-1 text-[10px] font-black uppercase tracking-wider py-2 rounded-xl border transition-all ${
+                        firmanteSelector === 'presidente'
+                          ? 'bg-blue-900 border-blue-900 text-white'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      Presidente
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFirmanteSelector('secretario')}
+                      className={`flex-1 text-[10px] font-black uppercase tracking-wider py-2 rounded-xl border transition-all ${
+                        firmanteSelector === 'secretario'
+                          ? 'bg-blue-900 border-blue-900 text-white'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      Secretario
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFirmanteSelector('personalizado')}
+                      className={`flex-1 text-[10px] font-black uppercase tracking-wider py-2 rounded-xl border transition-all ${
+                        firmanteSelector === 'personalizado'
+                          ? 'bg-blue-900 border-blue-900 text-white'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      Personalizado
+                    </button>
+                  </div>
+
+                  {firmanteSelector === 'personalizado' && (
+                    <div className="space-y-3 pt-2 animate-in slide-in-from-top-1 duration-200">
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1">
+                          Nombre del Firmante
+                        </label>
+                        <input
+                          type="text"
+                          value={cartaFirmaNombre}
+                          onChange={(e) => setCartaFirmaNombre(e.target.value)}
+                          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1">
+                          Puesto del Firmante
+                        </label>
+                        <input
+                          type="text"
+                          value={cartaFirmaPuesto}
+                          onChange={(e) => setCartaFirmaPuesto(e.target.value)}
+                          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Botones de Acción del Formulario */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    generateCartaOficialPDF({
+                      fecha: cartaFecha,
+                      institucion: cartaInstitucion,
+                      destinatario: cartaDestinatario,
+                      cargo: cartaCargo,
+                      saludo: cartaSaludo,
+                      asunto: cartaAsunto,
+                      cuerpo: cartaCuerpo,
+                      firmaNombre: cartaFirmaNombre,
+                      firmaPuesto: cartaFirmaPuesto
+                    }, 'download');
+                  }}
+                  disabled={!cartaDestinatario.trim() || !cartaCuerpo.trim()}
+                  className="flex-1 bg-blue-900 hover:bg-blue-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-extrabold px-5 py-3 rounded-xl transition-all shadow-md shadow-blue-900/10 flex items-center justify-center space-x-2 text-sm active:scale-[0.98]"
+                >
+                  <FileText size={16} />
+                  <span>Descargar PDF</span>
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => {
+                    generateCartaOficialPDF({
+                      fecha: cartaFecha,
+                      institucion: cartaInstitucion,
+                      destinatario: cartaDestinatario,
+                      cargo: cartaCargo,
+                      saludo: cartaSaludo,
+                      asunto: cartaAsunto,
+                      cuerpo: cartaCuerpo,
+                      firmaNombre: cartaFirmaNombre,
+                      firmaPuesto: cartaFirmaPuesto
+                    }, 'open');
+                  }}
+                  disabled={!cartaDestinatario.trim() || !cartaCuerpo.trim()}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:bg-slate-50 disabled:text-slate-300 disabled:cursor-not-allowed font-extrabold px-5 py-3 rounded-xl transition-all border border-slate-200 flex items-center justify-center space-x-2 text-sm active:scale-[0.98]"
+                  title="Abrir Vista de Impresión"
+                >
+                  <span>Previsualizar</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const formattedDate = new Date(cartaFecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+                    const textToCopy = `Quetzaltenango, ${formattedDate}\n\n${cartaDestinatario}\n${cartaCargo}\n${cartaInstitucion}\nPresente.\n\nASUNTO: ${cartaAsunto.toUpperCase()}\n\n${cartaSaludo}\n\n${cartaCuerpo}\n\nAtentamente,\n\n${cartaFirmaNombre}\n${cartaFirmaPuesto}\nClub de Leones de Quetzaltenango`;
+                    navigator.clipboard.writeText(textToCopy);
+                    alert("Texto copiado al portapapeles. Listo para pegar en Google Docs.");
+                  }}
+                  disabled={!cartaCuerpo.trim()}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:bg-slate-50 disabled:text-slate-300 disabled:cursor-not-allowed font-extrabold px-3 py-3 rounded-xl transition-all border border-slate-200 flex items-center justify-center"
+                  title="Copiar texto para pegar en Google Docs"
+                >
+                  <Copy size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Vista Previa En Vivo (Live Preview) */}
+            <div className="lg:col-span-7 bg-slate-100/50 rounded-3xl border border-slate-200/60 p-4 sm:p-6 space-y-4">
+              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">
+                Vista Previa en Tiempo Real
+              </h3>
+              
+              {/* Hoja de Papel Membretado simulada */}
+              <div className="bg-white shadow-xl rounded-2xl border border-slate-200 p-8 sm:p-12 min-h-[700px] flex flex-col justify-between font-serif text-slate-800 relative overflow-hidden text-xs sm:text-sm">
+                
+                {/* Cabecera oficial decorativa */}
+                <div className="absolute top-0 left-0 right-0">
+                  <div className="bg-blue-900 h-3 w-full"></div>
+                  <div className="bg-yellow-500 h-0.5 w-full"></div>
+                </div>
+
+                <div className="space-y-6">
+                  {/* Membrete del Club */}
+                  <div className="flex items-center space-x-3 pb-4 border-b border-slate-100 mt-2">
+                    <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center text-yellow-500 border border-yellow-500/35 flex-shrink-0 font-sans font-black text-lg">
+                      L
+                    </div>
+                    <div>
+                      <h4 className="text-blue-900 font-sans font-black text-xs sm:text-sm tracking-tight leading-none">
+                        CLUB DE LEONES DE QUETZALTENANGO
+                      </h4>
+                      <p className="text-amber-600 font-sans font-black text-[9px] tracking-wider mt-0.5">
+                        NOSOTROS SERVIMOS
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Fecha */}
+                  <div className="text-right text-slate-500 text-xs italic font-sans">
+                    Quetzaltenango, {cartaFecha ? new Date(cartaFecha + "T12:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : '...'}
+                  </div>
+
+                  {/* Destinatario */}
+                  <div className="space-y-0.5 leading-snug">
+                    <p className="font-bold text-blue-900">{cartaDestinatario || '[Nombre del Destinatario]'}</p>
+                    <p className="text-slate-500 italic font-sans text-xs">{cartaCargo || '[Cargo/Puesto]'}</p>
+                    <p className="font-bold text-slate-700">{cartaInstitucion || '[Institución/Empresa]'}</p>
+                    <p className="text-slate-400">Presente.</p>
+                  </div>
+
+                  {/* Asunto */}
+                  {cartaAsunto && (
+                    <div className="font-sans font-black text-xs text-blue-950 bg-blue-50/50 p-2.5 rounded-lg border border-blue-100/50">
+                      ASUNTO: {cartaAsunto.toUpperCase()}
+                    </div>
+                  )}
+
+                  {/* Saludo */}
+                  <div className="text-slate-650 font-medium">
+                    {cartaSaludo || '[Saludo Inicial]'}
+                  </div>
+
+                  {/* Cuerpo */}
+                  <div className="text-slate-700 leading-relaxed space-y-3 font-normal whitespace-pre-line text-xs sm:text-[13px] text-justify">
+                    {cartaCuerpo || (
+                      <span className="text-slate-350 italic">
+                        El cuerpo de la carta redactado en el formulario se previsualizará en esta área respetando los párrafos y alineaciones del formato oficial...
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Firma y Cierre */}
+                <div className="pt-8 space-y-8">
+                  <div className="space-y-1">
+                    <p className="text-slate-500 text-xs italic">Atentamente,</p>
+                    <div className="pt-4 border-t border-slate-100 max-w-[220px]">
+                      <p className="font-sans font-bold text-xs text-blue-900">{cartaFirmaNombre}</p>
+                      <p className="font-sans text-[10px] text-slate-400 font-semibold">{cartaFirmaPuesto}</p>
+                    </div>
+                  </div>
+
+                  {/* Sello simulado */}
+                  <div className="flex justify-center pt-2">
+                    <div className="border border-dashed border-amber-600/60 rounded px-4 py-1 text-[8px] font-sans font-bold text-amber-600 tracking-wider bg-amber-50/10">
+                      SELLO OFICIAL - CLUB DE LEONES QX
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        ) : activeTab === 'internas' && !hasInternalAccess ? (
           /* RESTRICTED ACCESS SCREEN */
           <div className="bg-white rounded-[2rem] border border-slate-200/80 shadow-md p-10 sm:p-16 text-center max-w-2xl mx-auto space-y-6">
             <div className="bg-red-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto text-red-600 border border-red-100 animate-pulse">
