@@ -63,9 +63,9 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     showAlert("Notificación", msg);
   };
 
-  const [activeTab, setActiveTab] = useState<'abiertas' | 'internas' | 'sillas' | 'cartas'>(() => {
+  const [activeTab, setActiveTab] = useState<'abiertas' | 'sillas' | 'internas' | 'agenda' | 'cartas'>(() => {
     const saved = sessionStorage.getItem('solicitudes_active_tab');
-    if (saved) return saved as 'abiertas' | 'internas' | 'sillas' | 'cartas';
+    if (saved) return saved as 'abiertas' | 'sillas' | 'internas' | 'agenda' | 'cartas';
     return 'abiertas';
   });
 
@@ -86,6 +86,8 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       internasPendientes: solicitudes.filter(s => s.tipo === 'internas' && s.estado === 'Pendiente').length,
       sillas: solicitudes.filter(s => s.tipo === 'sillas').length,
       sillasPendientes: solicitudes.filter(s => s.tipo === 'sillas' && s.estado === 'Pendiente').length,
+      agenda: solicitudes.filter(s => s.tipo === 'agenda').length,
+      agendaPendientes: solicitudes.filter(s => s.tipo === 'agenda' && s.estado === 'Pendiente').length,
     };
   }, [solicitudes]);
 
@@ -118,6 +120,19 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   const [cartaFirmaNombre, setCartaFirmaNombre] = useState('Edwin Ernesto Pacheco López');
   const [cartaFirmaPuesto, setCartaFirmaPuesto] = useState('Presidente del Club');
   const [cartaFirmaImg, setCartaFirmaImg] = useState<string | null>(null);
+
+  // Form State para Puntos de Agenda
+  const [agendaSocioNombre, setAgendaSocioNombre] = useState('');
+  const [agendaNombrePunto, setAgendaNombrePunto] = useState('');
+  const [agendaContenido, setAgendaContenido] = useState('');
+  const [agendaRazon, setAgendaRazon] = useState('');
+
+  // Set default socio name for agenda when user changes
+  useEffect(() => {
+    if (user) {
+      setAgendaSocioNombre(user.nombre);
+    }
+  }, [user]);
 
   const handleFirmaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -183,6 +198,12 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     return user.rol !== UserRole.DONANTE;
   }, [user]);
 
+  // Check if user is a logged-in socio (not guest, not donor, and user exists)
+  const isSocio = useMemo(() => {
+    if (!user) return false;
+    return user.rol !== UserRole.DONANTE && user.rol !== UserRole.GUEST;
+  }, [user]);
+
   // Fetch Solicitudes
   const fetchSolicitudes = async () => {
     setIsLoading(true);
@@ -245,7 +266,30 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
 
     let nuevaSolicitud: Solicitud;
 
-    if (activeTab === 'sillas') {
+    if (activeTab === 'agenda') {
+      if (
+        !agendaSocioNombre.trim() || 
+        !agendaNombrePunto.trim() || 
+        !agendaContenido.trim() || 
+        !agendaRazon.trim()
+      ) {
+        setSaveError("Por favor, complete todos los campos obligatorios.");
+        return;
+      }
+
+      nuevaSolicitud = {
+        id: `sol-${Date.now()}`,
+        nombre: `Punto de Agenda - ${agendaNombrePunto.trim()}`,
+        tipo: 'agenda',
+        estado: 'Pendiente',
+        usuarioCreador: user ? `${user.nombre} (${user.correo})` : 'Socio',
+        fechaCreacion: new Date().toISOString().split('T')[0],
+        agendaSocioNombre: agendaSocioNombre.trim(),
+        agendaNombrePunto: agendaNombrePunto.trim(),
+        agendaContenido: agendaContenido.trim(),
+        agendaRazon: agendaRazon.trim()
+      };
+    } else if (activeTab === 'sillas') {
       // Wheelchair request validations
       if (
         !nombreSolicitante.trim() || 
@@ -339,6 +383,11 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
         setNombreBeneficiario('');
         setEdadBeneficiario('');
         setTiempoUso('');
+
+        // Reset agenda form
+        setAgendaNombrePunto('');
+        setAgendaContenido('');
+        setAgendaRazon('');
         
         setSaveSuccess(false);
       }, 1500);
@@ -403,19 +452,19 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
             Administra y crea solicitudes de servicios, proyectos y donaciones alineadas a nuestras causas globales.
           </p>
         </div>
-        {(activeTab === 'abiertas' || activeTab === 'sillas' || hasInternalAccess) && (
+        {activeTab !== 'cartas' && (activeTab === 'abiertas' || activeTab === 'sillas' || activeTab === 'agenda' || hasInternalAccess) && (
           <button
             onClick={() => setIsModalOpen(true)}
             className="bg-blue-900 hover:bg-blue-800 text-white font-black px-6 py-3.5 rounded-2xl transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center space-x-2 w-full md:w-auto active:scale-95"
           >
             <Plus size={18} />
-            <span>Crear Solicitud</span>
+            <span>{activeTab === 'agenda' ? 'Proponer Punto' : 'Crear Solicitud'}</span>
           </button>
         )}
       </header>
 
       {/* Selector de Tipo de Solicitud (Moderno) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-6">
         
         {/* Tarjeta 1: Solicitudes Abiertas */}
         <button
@@ -447,7 +496,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
               <p className={`text-xs mt-2 leading-relaxed ${
                 activeTab === 'abiertas' ? 'text-slate-200 font-medium' : 'text-slate-500 font-semibold'
               }`}>
-                Proyectos y servicios comunitarios alineados con nuestras causas globales (visión, diabetes, medio ambiente, mitigación del hambre, etc.).
+                Cualquier persona puede generar una solicitud al club llenando el formulario que aparece en crear solicitud.
               </p>
             </div>
           </div>
@@ -457,7 +506,47 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
           </div>
         </button>
 
-        {/* Tarjeta 2: Solicitudes Internas */}
+        {/* Tarjeta 2: Sillas de Ruedas */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('sillas')}
+          className={`flex flex-col text-left p-6 rounded-3xl border-2 transition-all duration-300 relative group h-full justify-between ${
+            activeTab === 'sillas'
+              ? 'bg-blue-900 border-blue-900 text-white shadow-xl shadow-blue-900/20 scale-[1.02]'
+              : 'bg-white hover:bg-slate-50/85 border-slate-200 text-slate-800 hover:-translate-y-1'
+          }`}
+        >
+          <div className="space-y-4">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+              activeTab === 'sillas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900 group-hover:bg-blue-100'
+            }`}>
+              <Accessibility size={24} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-extrabold text-base tracking-tight">Sillas de Ruedas</h3>
+                {counts.sillasPendientes > 0 && (
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse ${
+                    activeTab === 'sillas' ? 'bg-yellow-500 text-blue-900' : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {counts.sillasPendientes} Pnd
+                  </span>
+                )}
+              </div>
+              <p className={`text-xs mt-2 leading-relaxed ${
+                activeTab === 'sillas' ? 'text-slate-200 font-medium' : 'text-slate-500 font-semibold'
+              }`}>
+                Formulario de préstamo temporal gratuito de equipo de movilidad para personas con necesidades especiales en Quetzaltenango.
+              </p>
+            </div>
+          </div>
+          <div className="mt-6 pt-4 border-t border-dashed w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest opacity-80">
+            <span>Servicio Social</span>
+            <span>{counts.sillas} registradas</span>
+          </div>
+        </button>
+
+        {/* Tarjeta 3: Solicitudes Internas */}
         <button
           type="button"
           onClick={() => {
@@ -502,46 +591,6 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
           <div className="mt-6 pt-4 border-t border-dashed w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest opacity-80">
             <span>Solo Socios</span>
             <span>{hasInternalAccess ? `${counts.internas} registradas` : 'Privado'}</span>
-          </div>
-        </button>
-
-        {/* Tarjeta 3: Sillas de Ruedas */}
-        <button
-          type="button"
-          onClick={() => setActiveTab('sillas')}
-          className={`flex flex-col text-left p-6 rounded-3xl border-2 transition-all duration-300 relative group h-full justify-between ${
-            activeTab === 'sillas'
-              ? 'bg-blue-900 border-blue-900 text-white shadow-xl shadow-blue-900/20 scale-[1.02]'
-              : 'bg-white hover:bg-slate-50/85 border-slate-200 text-slate-800 hover:-translate-y-1'
-          }`}
-        >
-          <div className="space-y-4">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
-              activeTab === 'sillas' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900 group-hover:bg-blue-100'
-            }`}>
-              <Accessibility size={24} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-base tracking-tight">Sillas de Ruedas</h3>
-                {counts.sillasPendientes > 0 && (
-                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse ${
-                    activeTab === 'sillas' ? 'bg-yellow-500 text-blue-900' : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {counts.sillasPendientes} Pnd
-                  </span>
-                )}
-              </div>
-              <p className={`text-xs mt-2 leading-relaxed ${
-                activeTab === 'sillas' ? 'text-slate-200 font-medium' : 'text-slate-500 font-semibold'
-              }`}>
-                Formulario de préstamo temporal gratuito de equipo de movilidad para personas con necesidades especiales en Quetzaltenango.
-              </p>
-            </div>
-          </div>
-          <div className="mt-6 pt-4 border-t border-dashed w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest opacity-80">
-            <span>Servicio Social</span>
-            <span>{counts.sillas} registradas</span>
           </div>
         </button>
 
@@ -594,6 +643,48 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
               <span>Bloqueado</span>
             </div>
           </div>
+        )}
+
+        {/* Tarjeta 5: Puntos de Agenda */}
+        {isSocio && (
+          <button
+            type="button"
+            onClick={() => setActiveTab('agenda')}
+            className={`flex flex-col text-left p-6 rounded-3xl border-2 transition-all duration-300 relative group h-full justify-between ${
+              activeTab === 'agenda'
+                ? 'bg-blue-900 border-blue-900 text-white shadow-xl shadow-blue-900/20 scale-[1.02]'
+                : 'bg-white hover:bg-slate-50/85 border-slate-200 text-slate-800 hover:-translate-y-1'
+            }`}
+          >
+            <div className="space-y-4">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                activeTab === 'agenda' ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900 group-hover:bg-blue-100'
+              }`}>
+                <Calendar size={24} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-extrabold text-base tracking-tight">Puntos de Agenda</h3>
+                  {counts.agendaPendientes > 0 && (
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse ${
+                      activeTab === 'agenda' ? 'bg-yellow-500 text-blue-900' : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {counts.agendaPendientes} Pnd
+                    </span>
+                  )}
+                </div>
+                <p className={`text-xs mt-2 leading-relaxed ${
+                  activeTab === 'agenda' ? 'text-slate-200 font-medium' : 'text-slate-500 font-semibold'
+                }`}>
+                  Propuesta de temas, puntos a discutir y solicitudes para el orden del día de las reuniones generales de socios.
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 pt-4 border-t border-dashed w-full flex justify-between items-center text-[10px] uppercase font-black tracking-widest opacity-80">
+              <span>Reunión de Socios</span>
+              <span>{counts.agenda} propuestas</span>
+            </div>
+          </button>
         )}
 
       </div>
@@ -1153,6 +1244,102 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                     );
                   }
 
+                  if (sol.tipo === 'agenda') {
+                    return (
+                      <div 
+                        key={sol.id}
+                        className={`bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-xl border border-slate-100 transition-all duration-300 flex flex-col justify-between ${statusBorderColor}`}
+                      >
+                        <div className="p-6 space-y-4 flex-grow">
+                          {/* Tags and Status */}
+                          <div className="flex justify-between items-start gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border bg-yellow-50 text-yellow-750 border-yellow-200 flex items-center space-x-1">
+                              <Calendar size={12} className="mr-0.5 text-yellow-600" />
+                              <span>Punto de Agenda</span>
+                            </span>
+                            
+                            <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center space-x-1 ${
+                              sol.estado === 'Aprobada' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                              sol.estado === 'Rechazada' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+                              'bg-yellow-50 text-yellow-700 border border-yellow-100'
+                            }`}>
+                              {sol.estado === 'Aprobada' && <CheckCircle size={10} className="mr-1" />}
+                              {sol.estado === 'Rechazada' && <XOctagon size={10} className="mr-1" />}
+                              {sol.estado === 'Pendiente' && <Clock size={10} className="mr-1" />}
+                              <span>{sol.estado}</span>
+                            </span>
+                          </div>
+
+                          {/* Info details */}
+                          <div className="space-y-1">
+                            <h3 className="font-extrabold text-lg text-slate-900 leading-snug break-words">
+                              {sol.agendaNombrePunto}
+                            </h3>
+                            <div className="flex items-center text-xs font-semibold text-slate-400">
+                              <User size={12} className="mr-1 text-slate-400 flex-shrink-0" />
+                              <span>Solicitado por: <strong className="text-slate-600 font-extrabold">{sol.agendaSocioNombre}</strong> • {sol.fechaCreacion}</span>
+                            </div>
+                          </div>
+
+                          {/* Contenido / Detalle */}
+                          <div className="space-y-1 bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50">
+                            <div className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">
+                              Contenido / Detalle:
+                            </div>
+                            <p className="text-slate-705 text-xs leading-relaxed font-medium break-words">
+                              {sol.agendaContenido}
+                            </p>
+                          </div>
+
+                          {/* Razón */}
+                          <div className="space-y-1 bg-blue-50/20 p-4 rounded-2xl border border-blue-50/50">
+                            <div className="text-xs font-black text-blue-900/60 uppercase tracking-widest mb-1">
+                              Razón / Justificación:
+                            </div>
+                            <p className="text-slate-705 text-xs leading-relaxed font-medium break-words">
+                              {sol.agendaRazon}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Footer actions for Admin/Creator */}
+                        <div className="bg-slate-50/80 px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row gap-2 justify-between items-center text-[10px] font-bold text-slate-400">
+                          <span className="truncate max-w-[130px]" title={sol.usuarioCreador}>Por: {sol.usuarioCreador || 'Socio'}</span>
+                          
+                          {(isAdministrative || (user && sol.usuarioCreador?.includes(user.correo))) && (
+                            <div className="flex items-center space-x-1 flex-shrink-0 mt-2 sm:mt-0">
+                              {isAdministrative && sol.estado === 'Pendiente' && (
+                                <>
+                                  <button
+                                    onClick={() => handleUpdateStatus(sol.id, 'Aprobada')}
+                                    className="bg-emerald-500 hover:bg-emerald-600 text-white p-1.5 rounded-lg shadow-sm transition-colors"
+                                    title="Aprobar Punto"
+                                  >
+                                    <Check size={12} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleUpdateStatus(sol.id, 'Rechazada')}
+                                    className="bg-rose-500 hover:bg-rose-600 text-white p-1.5 rounded-lg shadow-sm transition-colors"
+                                    title="Rechazar Punto"
+                                  >
+                                    <X size={12} />
+                                  </button>
+                                </>
+                              )}
+                              <button
+                                onClick={() => handleDeleteSolicitud(sol.id)}
+                                className="bg-slate-200 hover:bg-red-50 text-slate-500 hover:text-red-600 p-1.5 rounded-lg border border-slate-300/30 transition-colors"
+                                title="Eliminar Punto"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+
                   return (
                     <div 
                       key={sol.id}
@@ -1274,10 +1461,20 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
 
             <div className="space-y-1">
               <h2 className="text-2xl font-black text-blue-900">
-                {activeTab === 'sillas' ? 'Solicitud de Silla de Ruedas' : `Crear Nueva Solicitud ${activeTab === 'abiertas' ? 'Abierta' : 'Interna'}`}
+                {activeTab === 'sillas' 
+                  ? 'Solicitud de Silla de Ruedas' 
+                  : activeTab === 'agenda' 
+                  ? 'Propuesta de Punto de Agenda' 
+                  : `Crear Nueva Solicitud ${activeTab === 'abiertas' ? 'Abierta' : 'Interna'}`}
               </h2>
               <p className="text-xs text-slate-550 font-bold uppercase tracking-wider">
-                {activeTab === 'sillas' ? 'Formulario de Préstamo Temporal' : activeTab === 'abiertas' ? 'Formulario Público de Proyectos' : 'Formulario de Coordinación Interna'}
+                {activeTab === 'sillas' 
+                  ? 'Formulario de Préstamo Temporal' 
+                  : activeTab === 'agenda' 
+                  ? 'Formulario de Puntos de Agenda' 
+                  : activeTab === 'abiertas' 
+                  ? 'Formulario Público de Proyectos' 
+                  : 'Formulario de Coordinación Interna'}
               </p>
             </div>
 
@@ -1432,6 +1629,103 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                       </>
                     ) : (
                       <span>Enviar Solicitud</span>
+                    )}
+                  </button>
+                </div>
+              </form>
+            ) : activeTab === 'agenda' ? (
+              <form onSubmit={handleSubmit} className="space-y-5 text-left animate-in fade-in duration-300">
+                {/* Agenda Info Alert */}
+                <div className="bg-yellow-50/60 border border-yellow-200/80 rounded-2xl p-5 flex items-start space-x-3 text-yellow-900 text-xs md:text-sm shadow-sm">
+                  <Calendar className="flex-shrink-0 text-yellow-600 mt-0.5 animate-pulse" size={18} />
+                  <div className="space-y-1">
+                    <p className="font-extrabold text-yellow-950 text-sm">💡 Propuesta de Punto de Agenda</p>
+                    <p className="leading-relaxed font-medium text-slate-750">
+                      Como socio activo, puedes proponer temas, puntos a discutir o solicitudes para que sean incluidos en el orden del día de las reuniones generales.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Form Fields */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                      Socio Solicitante *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={agendaSocioNombre}
+                      onChange={(e) => setAgendaSocioNombre(e.target.value)}
+                      placeholder="Nombre del socio"
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                      Nombre del Punto *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={agendaNombrePunto}
+                      onChange={(e) => setAgendaNombrePunto(e.target.value)}
+                      placeholder="Ej. Campaña Médica Quetzaltenango / Ajuste de cuota de socios"
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                      Contenido del Punto *
+                    </label>
+                    <textarea
+                      rows={3}
+                      required
+                      value={agendaContenido}
+                      onChange={(e) => setAgendaContenido(e.target.value)}
+                      placeholder="Describe el contenido o propuesta a detallar en la reunión..."
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold resize-none text-slate-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                      Razón del Mismo *
+                    </label>
+                    <textarea
+                      rows={2}
+                      required
+                      value={agendaRazon}
+                      onChange={(e) => setAgendaRazon(e.target.value)}
+                      placeholder="Indica el motivo o justificación de por qué se solicita tratar este punto..."
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold resize-none text-slate-800"
+                    />
+                  </div>
+                </div>
+
+                {/* Submit Buttons */}
+                <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-5 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-colors text-sm"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-black rounded-xl shadow-lg transition-all text-sm flex items-center justify-center space-x-2"
+                  >
+                    {isSaving ? (
+                      <>
+                        <div className="animate-spin text-white flex-shrink-0"><Users size={14} /></div>
+                        <span>Enviando...</span>
+                      </>
+                    ) : (
+                      <span>Enviar Propuesta</span>
                     )}
                   </button>
                 </div>

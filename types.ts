@@ -175,7 +175,7 @@ export interface Solicitud {
   responsables?: Responsable[]; // Opcional para sillas de ruedas (de 1 a 3 responsables)
   tema?: string; // Opcional para sillas de ruedas (Diabetes, Visión, etc.)
   otroTemaDescripcion?: string; // Opcional
-  tipo: 'abiertas' | 'internas' | 'sillas'; // Tipos alineados a minúsculas
+  tipo: 'abiertas' | 'internas' | 'sillas' | 'agenda'; // Tipos alineados a minúsculas
   estado: 'Pendiente' | 'Aprobada' | 'Rechazada';
   usuarioCreador?: string; // email o id del socio/admin o 'público'
   fechaCreacion: string;
@@ -189,6 +189,12 @@ export interface Solicitud {
   nombreBeneficiario?: string;
   edadBeneficiario?: number;
   tiempoUso?: string;
+
+  // Campos específicos para Puntos de Agenda
+  agendaSocioNombre?: string;
+  agendaNombrePunto?: string;
+  agendaContenido?: string;
+  agendaRazon?: string;
 }
 
 export interface VehiculoParqueo {
