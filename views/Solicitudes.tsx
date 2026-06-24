@@ -879,83 +879,86 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       <div className="space-y-8 w-full text-left">
         {/* Formulario */}
         <div className="space-y-6 w-full">
-          <div className="space-y-4">
-            {/* Fecha */}
-            <div>
-              <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">
-                Fecha de la Carta
-              </label>
-              <input
-                type="date"
-                value={cartaFecha}
-                onChange={(e) => setCartaFecha(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
-              />
+          <div className="space-y-5">
+            {/* Fecha y Asunto */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                  Fecha de la Carta
+                </label>
+                <input
+                  type="date"
+                  value={cartaFecha}
+                  onChange={(e) => setCartaFecha(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                  Asunto de la Carta
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej. Solicitud de colaboración para jornada oftalmológica"
+                  value={cartaAsunto}
+                  onChange={(e) => setCartaAsunto(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+                />
+              </div>
             </div>
 
             {/* Destinatario Details */}
-            <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 space-y-4">
-              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">
+            <div className="space-y-4 pt-2">
+              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1 flex items-center">
+                <User size={14} className="mr-1.5 text-slate-450" />
                 Información del Destinatario
               </h3>
               
-              <div>
-                <label className="block text-[10px] font-black text-slate-655 uppercase tracking-wider mb-1">
-                  Nombre de la Persona
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ej. Lic. Carlos Mérida"
-                  value={cartaDestinatario}
-                  onChange={(e) => setCartaDestinatario(e.target.value)}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
-                />
-              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                    Nombre de la Persona
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Lic. Carlos Mérida"
+                    value={cartaDestinatario}
+                    onChange={(e) => setCartaDestinatario(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-[10px] font-black text-slate-655 uppercase tracking-wider mb-1">
-                  Cargo / Puesto
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ej. Director Ejecutivo"
-                  value={cartaCargo}
-                  onChange={(e) => setCartaCargo(e.target.value)}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
-                />
-              </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                    Cargo / Puesto
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Director Ejecutivo"
+                    value={cartaCargo}
+                    onChange={(e) => setCartaCargo(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-[10px] font-black text-slate-655 uppercase tracking-wider mb-1">
-                  Institución / Organización
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ej. Municipalidad de Quetzaltenango"
-                  value={cartaInstitucion}
-                  onChange={(e) => setCartaInstitucion(e.target.value)}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
-                />
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                    Institución / Organización
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Municipalidad de Quetzaltenango"
+                    value={cartaInstitucion}
+                    onChange={(e) => setCartaInstitucion(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+                  />
+                </div>
               </div>
-            </div>
-
-            {/* Asunto */}
-            <div>
-              <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">
-                Asunto de la Carta
-              </label>
-              <input
-                type="text"
-                placeholder="Ej. Solicitud de colaboración para jornada oftalmológica"
-                value={cartaAsunto}
-                onChange={(e) => setCartaAsunto(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
-              />
             </div>
 
             {/* Saludo */}
-            <div>
-              <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">
+            <div className="pt-2">
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
                 Saludo Inicial
               </label>
               <div className="flex flex-col sm:flex-row gap-2">
@@ -969,7 +972,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                       setCartaSaludo('');
                     }
                   }}
-                  className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none w-full sm:w-auto"
+                  className="bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none w-full sm:w-auto focus:ring-2 focus:ring-blue-900 focus:border-transparent"
                 >
                   <option value="Estimados señores:">Estimados señores:</option>
                   <option value="Estimado señor director:">Estimado señor director:</option>
@@ -982,14 +985,14 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                   placeholder="Redacte saludo personalizado..."
                   value={cartaSaludo}
                   onChange={(e) => setCartaSaludo(e.target.value)}
-                  className="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all w-full"
+                  className="flex-grow px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white transition-all w-full"
                 />
               </div>
             </div>
 
             {/* Cuerpo de la Carta */}
-            <div>
-              <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5 flex justify-between">
+            <div className="pt-2">
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex justify-between">
                 <span>Cuerpo de la Carta</span>
                 <span className="text-[10px] text-slate-400 font-normal">Use Enter para separar párrafos</span>
               </label>
@@ -998,108 +1001,118 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                 placeholder="Redacte aquí el contenido principal de la carta..."
                 value={cartaCuerpo}
                 onChange={(e) => setCartaCuerpo(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all resize-y"
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white transition-all resize-y"
               />
             </div>
 
-            {/* Firmas, Sellos y Firma Digital PNG */}
-            <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 space-y-4">
-              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">
+            {/* Bloque de Firma y Autoría */}
+            <div className="space-y-4 pt-4">
+              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1 flex items-center">
+                <Mail size={14} className="mr-1.5 text-slate-450" />
                 Bloque de Firma y Autoría
               </h3>
 
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setFirmanteSelector('presidente')}
-                  className={`text-[10px] font-black uppercase tracking-wider py-2 rounded-xl border transition-all truncate px-1 ${
-                    firmanteSelector === 'presidente'
-                      ? 'bg-blue-900 border-blue-900 text-white'
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  Presidente
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFirmanteSelector('secretario')}
-                  className={`text-[10px] font-black uppercase tracking-wider py-2 rounded-xl border transition-all truncate px-1 ${
-                    firmanteSelector === 'secretario'
-                      ? 'bg-blue-900 border-blue-900 text-white'
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  Secretario
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFirmanteSelector('personalizado')}
-                  className={`text-[10px] font-black uppercase tracking-wider py-2 rounded-xl border transition-all truncate px-1 ${
-                    firmanteSelector === 'personalizado'
-                      ? 'bg-blue-900 border-blue-900 text-white'
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  Personalizado
-                </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Selector de Rol */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                    Rol del Firmante
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFirmanteSelector('presidente')}
+                      className={`text-[10px] font-black uppercase tracking-wider py-2.5 rounded-xl border transition-all truncate px-1 ${
+                        firmanteSelector === 'presidente'
+                          ? 'bg-blue-900 border-blue-900 text-white'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      Presidente
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFirmanteSelector('secretario')}
+                      className={`text-[10px] font-black uppercase tracking-wider py-2.5 rounded-xl border transition-all truncate px-1 ${
+                        firmanteSelector === 'secretario'
+                          ? 'bg-blue-900 border-blue-900 text-white'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      Secretario
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFirmanteSelector('personalizado')}
+                      className={`text-[10px] font-black uppercase tracking-wider py-2.5 rounded-xl border transition-all truncate px-1 ${
+                        firmanteSelector === 'personalizado'
+                          ? 'bg-blue-900 border-blue-900 text-white'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      Personalizado
+                    </button>
+                  </div>
+                </div>
+
+                {/* Firma Digital PNG */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex justify-between items-center">
+                    <span>Firma Digital (.png transparente)</span>
+                    {cartaFirmaImg && (
+                      <button
+                        type="button"
+                        onClick={handleClearFirma}
+                        className="text-red-500 hover:text-red-700 font-extrabold text-[9px]"
+                      >
+                        Eliminar firma
+                      </button>
+                    )}
+                  </label>
+                  
+                  {cartaFirmaImg ? (
+                    <div className="flex items-center space-x-3 bg-white p-2 rounded-xl border border-slate-200 h-[42px]">
+                      <img src={cartaFirmaImg} alt="Firma cargada" className="h-8 w-20 object-contain bg-slate-50 rounded p-1 border border-slate-100" />
+                      <span className="text-xs text-slate-500 font-semibold truncate flex-grow">Firma cargada</span>
+                    </div>
+                  ) : (
+                    <input
+                      type="file"
+                      accept="image/png"
+                      onChange={handleFirmaUpload}
+                      className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-blue-50 file:text-blue-900 hover:file:bg-blue-100 transition-all cursor-pointer h-[42px] flex items-center"
+                    />
+                  )}
+                </div>
               </div>
 
+              {/* Campos personalizados */}
               {firmanteSelector === 'personalizado' && (
-                <div className="space-y-3 pt-2 animate-in slide-in-from-top-1 duration-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 animate-in slide-in-from-top-1 duration-200">
                   <div>
-                    <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-slate-550 uppercase tracking-wider mb-2">
                       Nombre del Firmante
                     </label>
                     <input
                       type="text"
                       value={cartaFirmaNombre}
                       onChange={(e) => setCartaFirmaNombre(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-bold text-slate-550 uppercase tracking-wider mb-2">
                       Puesto del Firmante
                     </label>
                     <input
                       type="text"
                       value={cartaFirmaPuesto}
                       onChange={(e) => setCartaFirmaPuesto(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
                     />
                   </div>
                 </div>
               )}
-
-              {/* Firma Digital PNG */}
-              <div className="pt-3 border-t border-slate-200">
-                <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1.5 flex justify-between items-center">
-                  <span>Firma Digital (.png transparente)</span>
-                  {cartaFirmaImg && (
-                    <button
-                      type="button"
-                      onClick={handleClearFirma}
-                      className="text-red-500 hover:text-red-700 font-extrabold text-[9px]"
-                    >
-                      Eliminar firma
-                    </button>
-                  )}
-                </label>
-                
-                {cartaFirmaImg ? (
-                  <div className="flex items-center space-x-3 bg-white p-2.5 rounded-xl border border-slate-200">
-                    <img src={cartaFirmaImg} alt="Firma cargada" className="h-10 w-24 object-contain bg-slate-50 rounded p-1 border border-slate-100" />
-                    <span className="text-xs text-slate-500 font-semibold truncate flex-grow">Firma cargada</span>
-                  </div>
-                ) : (
-                  <input
-                    type="file"
-                    accept="image/png"
-                    onChange={handleFirmaUpload}
-                    className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-blue-50 file:text-blue-900 hover:file:bg-blue-100 transition-all cursor-pointer"
-                  />
-                )}
-              </div>
             </div>
           </div>
 
@@ -1507,6 +1520,8 @@ Club de Leones de Quetzaltenango`;
                   ? 'Solicitud de Silla de Ruedas' 
                   : activeTab === 'agenda' 
                   ? 'Propuesta de Punto de Agenda' 
+                  : activeTab === 'cartas'
+                  ? 'Redactar Nueva Carta Oficial'
                   : `Crear Nueva Solicitud ${activeTab === 'abiertas' ? 'Abierta' : 'Interna'}`}
               </h2>
               <p className="text-xs text-slate-550 font-bold uppercase tracking-wider">
@@ -1514,6 +1529,8 @@ Club de Leones de Quetzaltenango`;
                   ? 'Formulario de Préstamo Temporal' 
                   : activeTab === 'agenda' 
                   ? 'Formulario de Puntos de Agenda' 
+                  : activeTab === 'cartas'
+                  ? 'Formulario de Correspondencia Oficial'
                   : activeTab === 'abiertas' 
                   ? 'Formulario Público de Proyectos' 
                   : 'Formulario de Coordinación Interna'}
