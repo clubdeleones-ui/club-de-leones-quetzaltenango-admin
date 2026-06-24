@@ -140,14 +140,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
       };
 
       await firebaseService.saveSocio(updated);
-      
-      // Update local storage directory cache backup if it exists
-      const local = localStorage.getItem('club_leones_socios_v3');
-      if (local) {
-        const list: Socio[] = JSON.parse(local);
-        const newList = list.map(s => s.id === updated.id ? updated : s);
-        localStorage.setItem('club_leones_socios_v3', JSON.stringify(newList));
-      }
 
       onUpdateUser(updated);
       setSocioSaveSuccess(true);

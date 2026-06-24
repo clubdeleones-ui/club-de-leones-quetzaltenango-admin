@@ -3,6 +3,7 @@ import { MOCK_PROPUESTAS } from '../constants';
 import { Socio, PropuestaSocio, UserRole } from '../types';
 import { firebaseService } from '../services/firebaseService';
 import { useModal } from '../context/ModalContext';
+import { useClubData } from '../context/ClubDataContext';
 import { compressImageFile } from '../utils/imageCompressor';
 import { generateCartasInvitacionPDF } from '../utils/pdfGenerator';
 import { 
@@ -91,19 +92,14 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
     showAlert("Notificación", msg);
   };
 
-  // Load proposals from localStorage or fallback to mock
-  const [propuestas, setPropuestas] = useState<PropuestaSocio[]>(() => {
-    const local = localStorage.getItem('club_leones_propuestas');
-    if (local) return JSON.parse(local);
-    localStorage.setItem('club_leones_propuestas', JSON.stringify(MOCK_PROPUESTAS));
-    return MOCK_PROPUESTAS;
-  });
+  // Load proposals and socios from unified global context
+  const { propuestas: dbPropuestas, socios: dbSocios } = useClubData();
 
-  const [socios, setSocios] = useState<Socio[]>(() => {
-    const local = localStorage.getItem('club_leones_socios_v3');
-    if (local) return JSON.parse(local);
-    return [];
-  });
+  const [propuestas, setPropuestas] = useState<PropuestaSocio[]>(dbPropuestas);
+  const [socios, setSocios] = useState<Socio[]>(dbSocios);
+
+  useEffect(() => { setPropuestas(dbPropuestas); }, [dbPropuestas]);
+  useEffect(() => { setSocios(dbSocios); }, [dbSocios]);
 
   const [editingPropuesta, setEditingPropuesta] = useState<PropuestaSocio | null>(null);
   const [shareConfigPropuesta, setShareConfigPropuesta] = useState<PropuestaSocio | null>(null);
@@ -176,48 +172,7 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
     }
   };
 
-  // Fetch from Firebase on component mount
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const fetchedPropuestas = await firebaseService.getProposals();
-        if (fetchedPropuestas) {
-          setPropuestas(prev => {
-            const fetchedIds = new Set(fetchedPropuestas.map(p => p.id));
-            const fetchedNames = new Set(fetchedPropuestas.map(p => p.nombreCandidato.trim().toLowerCase()));
-            const unsynced = prev.filter(p => 
-              (p as any).synced === false && 
-              !fetchedIds.has(p.id) &&
-              !fetchedNames.has(p.nombreCandidato.trim().toLowerCase())
-            );
-            const syncedFetched = fetchedPropuestas.map(p => ({ ...p, synced: true }));
-            const merged = [...syncedFetched, ...unsynced];
-            localStorage.setItem('club_leones_propuestas', JSON.stringify(merged));
-            return merged;
-          });
-        }
-      } catch (err) {
-        console.error("Error fetching proposals from Firebase:", err);
-      }
-
-      try {
-        const fetchedSocios = await firebaseService.getSocios();
-        if (fetchedSocios && fetchedSocios.length > 0) {
-          setSocios(fetchedSocios);
-          localStorage.setItem('club_leones_socios_v3', JSON.stringify(fetchedSocios));
-        }
-      } catch (err) {
-        console.error("Error fetching socios from Firebase:", err);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  // Save proposals to localStorage when state changes to avoid stale local cache
-  useEffect(() => {
-    localStorage.setItem('club_leones_propuestas', JSON.stringify(propuestas));
-  }, [propuestas]);
+  // Fetching and cache persistence are managed by the root ClubDataContext provider
 
   const canEditPropuestas = user?.rol === UserRole.SUPER_ADMIN || user?.rol === UserRole.PRESIDENTE_AFILIACION;
 
@@ -240,7 +195,6 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
     const updatedPropuestas = propuestas.map(p => p.id === propuesta.id ? { ...p, estado: 'Aprobado' as const } : p);
     setPropuestas(updatedPropuestas);
     setSocios([nuevoSocio, ...socios]);
-    localStorage.setItem('club_leones_socios_v3', JSON.stringify([nuevoSocio, ...socios]));
 
     try {
       await firebaseService.updateProposalStatus(propuesta.id, 'Aprobado');

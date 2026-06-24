@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { db } from '../services/firebase';
 import { firebaseService } from '../services/firebaseService';
+import { useClubData } from '../context/ClubDataContext';
 import { Comision, Socio, AsignacionComision, Acta } from '../types';
 import { Briefcase, Plus, Search, Trash2, Users, CheckCircle, Save, DollarSign, FileText, X, Pencil, Calendar, Award } from 'lucide-react';
 import { MOCK_ACTAS } from '../constants';
@@ -22,14 +21,23 @@ export const Comisiones: React.FC = () => {
     showAlert("Notificación", msg);
   };
 
-  const [comisiones, setComisiones] = useState<Comision[]>([]);
-  const [socios, setSocios] = useState<Socio[]>(() => {
-    const local = localStorage.getItem('club_leones_socios_v3');
-    if (local) return JSON.parse(local);
-    return [];
-  });
-  const [asignaciones, setAsignaciones] = useState<AsignacionComision[]>([]);
-  const [actas, setActas] = useState<Acta[]>([]);
+  // Load data from global ClubDataContext
+  const { 
+    comisiones: dbComisiones, 
+    socios: dbSocios, 
+    asignaciones: dbAsignaciones, 
+    actas: dbActas 
+  } = useClubData();
+
+  const [comisiones, setComisiones] = useState<Comision[]>(dbComisiones);
+  const [socios, setSocios] = useState<Socio[]>(dbSocios);
+  const [asignaciones, setAsignaciones] = useState<AsignacionComision[]>(dbAsignaciones);
+  const [actas, setActas] = useState<Acta[]>(dbActas);
+
+  useEffect(() => { setComisiones(dbComisiones); }, [dbComisiones]);
+  useEffect(() => { setSocios(dbSocios); }, [dbSocios]);
+  useEffect(() => { setAsignaciones(dbAsignaciones); }, [dbAsignaciones]);
+  useEffect(() => { setActas(dbActas); }, [dbActas]);
   
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -65,43 +73,7 @@ export const Comisiones: React.FC = () => {
   const [miembrosSearch, setMiembrosSearch] = useState('');
   const [actasSearch, setActasSearch] = useState('');
 
-  useEffect(() => {
-    // Suscripción a socios
-    const qSocios = query(collection(db, 'socios'));
-    const unsubSocios = onSnapshot(qSocios, (snapshot) => {
-      setSocios(snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as Socio));
-    });
-
-    // Suscripción a comisiones
-    const qComisiones = query(collection(db, 'comisiones'), orderBy('fechaCreacion', 'desc'));
-    const unsubComisiones = onSnapshot(qComisiones, (snapshot) => {
-      setComisiones(snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as Comision));
-    });
-
-    // Suscripción a asignaciones
-    const qAsignaciones = query(collection(db, 'presupuestos_asignaciones'));
-    const unsubAsignaciones = onSnapshot(qAsignaciones, (snapshot) => {
-      setAsignaciones(snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as AsignacionComision));
-    });
-
-    // Cargar Actas de localStorage para permitir vinculación
-    const local = localStorage.getItem('club_leones_actas');
-    let loadedActas = MOCK_ACTAS;
-    if (local) {
-      try {
-        loadedActas = JSON.parse(local);
-      } catch (e) {
-        loadedActas = MOCK_ACTAS;
-      }
-    }
-    setActas(loadedActas);
-
-    return () => {
-      unsubSocios();
-      unsubComisiones();
-      unsubAsignaciones();
-    };
-  }, []);
+  // Suscripciones y caché gestionadas globalmente por ClubDataContext
 
   useEffect(() => {
     if (comisiones.length > 0 && !selectedComisionId) {

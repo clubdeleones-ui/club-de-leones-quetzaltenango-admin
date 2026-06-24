@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { db } from '../services/firebase';
 import { firebaseService } from '../services/firebaseService';
+import { useClubData } from '../context/ClubDataContext';
 import { Comision, Socio, MinutaComision, MinutaPunto, Solicitud, Responsable } from '../types';
 import { generateMinutaPDF } from '../utils/pdfGenerator';
 import { useModal } from '../context/ModalContext';
@@ -44,10 +43,23 @@ export const MinutasComisiones: React.FC = () => {
     showAlert("Notificación", msg);
   };
 
-  const [minutas, setMinutas] = useState<MinutaComision[]>([]);
-  const [comisiones, setComisiones] = useState<Comision[]>([]);
-  const [socios, setSocios] = useState<Socio[]>([]);
-  const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
+  // Load data from global ClubDataContext
+  const { 
+    minutas: dbMinutas, 
+    comisiones: dbComisiones, 
+    socios: dbSocios, 
+    solicitudes: dbSolicitudes 
+  } = useClubData();
+
+  const [minutas, setMinutas] = useState<MinutaComision[]>(dbMinutas);
+  const [comisiones, setComisiones] = useState<Comision[]>(dbComisiones);
+  const [socios, setSocios] = useState<Socio[]>(dbSocios);
+  const [solicitudes, setSolicitudes] = useState<Solicitud[]>(dbSolicitudes);
+
+  useEffect(() => { setMinutas(dbMinutas); }, [dbMinutas]);
+  useEffect(() => { setComisiones(dbComisiones); }, [dbComisiones]);
+  useEffect(() => { setSocios(dbSocios); }, [dbSocios]);
+  useEffect(() => { setSolicitudes(dbSolicitudes); }, [dbSolicitudes]);
 
   const [selectedMinutaId, setSelectedMinutaId] = useState<string>('');
   const [showForm, setShowForm] = useState(false);
@@ -123,35 +135,7 @@ export const MinutasComisiones: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Subscriptions
-  useEffect(() => {
-    const qSocios = query(collection(db, 'socios'), orderBy('nombre', 'asc'));
-    const unsubSocios = onSnapshot(qSocios, (snapshot) => {
-      setSocios(snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as Socio));
-    });
-
-    const qComisiones = query(collection(db, 'comisiones'), orderBy('nombre', 'asc'));
-    const unsubComisiones = onSnapshot(qComisiones, (snapshot) => {
-      setComisiones(snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as Comision));
-    });
-
-    const qMinutas = query(collection(db, 'minutas'), orderBy('fechaHora', 'desc'));
-    const unsubMinutas = onSnapshot(qMinutas, (snapshot) => {
-      setMinutas(snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as MinutaComision));
-    });
-
-    const qSolicitudes = query(collection(db, 'solicitudes'), orderBy('fechaCreacion', 'desc'));
-    const unsubSolicitudes = onSnapshot(qSolicitudes, (snapshot) => {
-      setSolicitudes(snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as Solicitud));
-    });
-
-    return () => {
-      unsubSocios();
-      unsubComisiones();
-      unsubMinutas();
-      unsubSolicitudes();
-    };
-  }, []);
+  // Suscripciones gestionadas globalmente por ClubDataContext
 
 
 

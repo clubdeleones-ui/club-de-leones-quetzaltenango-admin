@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Calendar as CalendarIcon, ExternalLink, Info, Loader2, MapPin, Clock, Heart, Share2, Check, Copy, Search, Filter, UserPlus } from 'lucide-react';
 import { googleService } from '../services/googleService';
 import { firebaseService } from '../services/firebaseService';
+import { useClubData } from '../context/ClubDataContext';
 import { Actividad } from '../types';
 import { InscripcionVoluntarioModal } from '../components/InscripcionVoluntarioModal';
 
@@ -13,7 +14,7 @@ interface CalendarioProps {
 
 const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = false }) => {
     const navigate = useNavigate();
-    const [actividades, setActividades] = useState<Actividad[]>([]);
+    const { actividades, loading: dbLoading } = useClubData();
     const [events, setEvents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeView, setActiveView] = useState<'lista' | 'google'>(() => {
@@ -38,29 +39,24 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
     const [isVolModalOpen, setIsVolModalOpen] = useState(false);
 
     useEffect(() => {
-        const loadAllData = async () => {
-            setLoading(true);
-            try {
-                // Fetch activities from Firestore
-                const data = await firebaseService.getActividades();
-                // Sort by date descending or ascending? Let's sort by date ascending to show what's coming up first
-                const sorted = (data || []).sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
-                setActividades(sorted);
-
-                // Fetch events from Google Calendar if token is present
-                if (accessToken) {
+        const loadGoogleEvents = async () => {
+            if (accessToken) {
+                setLoading(true);
+                try {
                     await googleService.initClient();
                     googleService.setAccessToken(accessToken);
                     const fetchedEvents = await googleService.fetchCalendarEvents();
                     if (fetchedEvents) setEvents(fetchedEvents);
+                } catch (error) {
+                    console.error('Error loading Google Calendar events:', error);
+                } finally {
+                    setLoading(false);
                 }
-            } catch (error) {
-                console.error('Error loading activity data:', error);
-            } finally {
+            } else {
                 setLoading(false);
             }
         };
-        loadAllData();
+        loadGoogleEvents();
     }, [accessToken]);
 
     // Handle donation redirection
@@ -199,7 +195,7 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                     </div>
 
                     {/* Activities Grid */}
-                    {loading ? (
+                    {loading || (actividades.length === 0 && dbLoading.actividades) ? (
                         <div className="flex flex-col items-center justify-center py-24 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm">
                             <Loader2 className="animate-spin text-blue-900 mb-4" size={48} />
                             <p className="text-slate-550 font-extrabold text-base">Cargando cartelera de actividades...</p>

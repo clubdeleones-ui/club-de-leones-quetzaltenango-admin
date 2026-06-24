@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Socio, UserRole, Solicitud, Responsable } from '../types';
 import { firebaseService } from '../services/firebaseService';
 import { useModal } from '../context/ModalContext';
+import { useClubData } from '../context/ClubDataContext';
 import { 
   Plus, 
   Trash2, 
@@ -63,9 +64,18 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     showAlert("Notificación", msg);
   };
 
+  const { solicitudes: dbSolicitudes, socios, loading } = useClubData();
   const [activeTab, setActiveTab] = useState<'abiertas' | 'sillas' | 'internas' | 'agenda' | 'cartas' | null>(null);
-  const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
+  const [solicitudes, setSolicitudes] = useState<Solicitud[]>(dbSolicitudes);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setSolicitudes(dbSolicitudes);
+  }, [dbSolicitudes]);
+
+  useEffect(() => {
+    setIsLoading(loading.solicitudes);
+  }, [loading.solicitudes]);
 
   // Count calculations
   const counts = useMemo(() => {
@@ -144,27 +154,23 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   };
 
 
-  // Dynamic names lookup for signatures
+  // Dynamic names lookup for signatures using context data
   useEffect(() => {
     try {
-      const local = localStorage.getItem('club_leones_socios');
-      if (local) {
-        const sociosList = JSON.parse(local);
-        const president = sociosList.find((s: any) => s.puesto?.toLowerCase().includes('presidente del club') || s.puesto?.toLowerCase() === 'presidente') || sociosList.find((s: any) => s.puesto?.toLowerCase().includes('presidente'));
-        const secretary = sociosList.find((s: any) => s.puesto?.toLowerCase().includes('secretario del club') || s.puesto?.toLowerCase() === 'secretario') || sociosList.find((s: any) => s.puesto?.toLowerCase().includes('secretario'));
-        
-        if (firmanteSelector === 'presidente' && president) {
-          setCartaFirmaNombre(president.nombre);
-          setCartaFirmaPuesto(president.puesto || 'Presidente del Club');
-        } else if (firmanteSelector === 'secretario' && secretary) {
-          setCartaFirmaNombre(secretary.nombre);
-          setCartaFirmaPuesto(secretary.puesto || 'Secretario del Club');
-        }
+      const president = socios.find((s: any) => s.puesto?.toLowerCase().includes('presidente del club') || s.puesto?.toLowerCase() === 'presidente') || socios.find((s: any) => s.puesto?.toLowerCase().includes('presidente'));
+      const secretary = socios.find((s: any) => s.puesto?.toLowerCase().includes('secretario del club') || s.puesto?.toLowerCase() === 'secretario') || socios.find((s: any) => s.puesto?.toLowerCase().includes('secretario'));
+      
+      if (firmanteSelector === 'presidente' && president) {
+        setCartaFirmaNombre(president.nombre);
+        setCartaFirmaPuesto(president.puesto || 'Presidente del Club');
+      } else if (firmanteSelector === 'secretario' && secretary) {
+        setCartaFirmaNombre(secretary.nombre);
+        setCartaFirmaPuesto(secretary.puesto || 'Secretario del Club');
       }
     } catch (e) {
       console.error("Error loading signature names:", e);
     }
-  }, [firmanteSelector]);
+  }, [firmanteSelector, socios]);
   
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -194,34 +200,8 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     return user.rol !== UserRole.DONANTE && user.rol !== UserRole.GUEST;
   }, [user]);
 
-  // Fetch Solicitudes
-  const fetchSolicitudes = async () => {
-    setIsLoading(true);
-    try {
-      const data = await firebaseService.getSolicitudes();
-      setSolicitudes(data);
-    } catch (error) {
-      console.error("Error fetching solicitudes:", error);
-      // Fallback from localStorage
-      const local = localStorage.getItem('club_leones_solicitudes');
-      if (local) {
-        setSolicitudes(JSON.parse(local));
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchSolicitudes();
-  }, []);
-
-  // Save solicitudes to localStorage whenever they change as a backup
-  useEffect(() => {
-    if (solicitudes.length > 0) {
-      localStorage.setItem('club_leones_solicitudes', JSON.stringify(solicitudes));
-    }
-  }, [solicitudes]);
+  // Fetch Solicitudes is handled by global ClubDataContext
+  const fetchSolicitudes = async () => {};
 
   // Add Responsible person
   const handleAddResponsable = () => {

@@ -1,8 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { MOCK_SOCIOS } from '../constants';
-import { Socio, UserRole } from '../types';
-import { firebaseService } from '../services/firebaseService';
+import React, { useState } from 'react';
+import { useClubData } from '../context/ClubDataContext';
+import { Socio } from '../types';
 import { 
   Mail, 
   Calendar, 
@@ -19,35 +17,13 @@ interface SociosProps {
 }
 
 const Socios: React.FC<SociosProps> = ({ user }) => {
-  // Load members from localStorage or fallback to mock
-  const [socios, setSocios] = useState<Socio[]>(() => {
-    const local = localStorage.getItem('club_leones_socios_v3');
-    if (local) return JSON.parse(local);
-    return MOCK_SOCIOS;
-  });
+  const { socios } = useClubData();
 
   const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; title: string } | null>(null);
 
   const sociosActivos = React.useMemo(() => {
     return socios.filter(s => s.estatus !== 'Inactive');
   }, [socios]);
-
-  // Fetch from Firebase on component mount
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const fetchedSocios = await firebaseService.getSocios();
-        if (fetchedSocios && fetchedSocios.length > 0) {
-          setSocios(fetchedSocios);
-          localStorage.setItem('club_leones_socios_v3', JSON.stringify(fetchedSocios));
-        }
-      } catch (err) {
-        console.error("Error fetching socios from Firebase:", err);
-      }
-    };
-
-    fetchData();
-  }, []);
 
   return (
     <div className="space-y-10 max-w-7xl mx-auto px-4 md:px-8 py-8 animate-in fade-in duration-700">

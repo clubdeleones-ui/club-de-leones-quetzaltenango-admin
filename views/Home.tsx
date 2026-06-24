@@ -2,42 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar as CalendarIcon, MapPin, ArrowRight, ShieldCheck, Heart, Users, Clock, Share2, Check, Copy, Loader2, UserPlus } from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
+import { useClubData } from '../context/ClubDataContext';
 import { Actividad } from '../types';
 import { MOCK_ACTIVIDADES } from '../constants';
 import { InscripcionVoluntarioModal } from '../components/InscripcionVoluntarioModal';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
-  const [actividades, setActividades] = useState<Actividad[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { actividades: dbActividades, loading: dbLoading } = useClubData();
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedActForVol, setSelectedActForVol] = useState<Actividad | null>(null);
   const [isVolModalOpen, setIsVolModalOpen] = useState(false);
 
-  useEffect(() => {
-    const fetchActividades = async () => {
-      setLoading(true);
-      try {
-        const data = await firebaseService.getActividades();
-        // Filter only public activities and sort by date ascending (upcoming first)
-        const publicSorted = (data || [])
-          .filter(a => a.publica)
-          .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
-        
-        if (publicSorted.length > 0) {
-          setActividades(publicSorted);
-        } else {
-          setActividades(MOCK_ACTIVIDADES.filter(a => a.publica));
-        }
-      } catch (err) {
-        console.error("Error loading activities for homepage:", err);
-        setActividades(MOCK_ACTIVIDADES.filter(a => a.publica));
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchActividades();
-  }, []);
+  const actividades = React.useMemo(() => {
+    const publicSorted = dbActividades
+      .filter(a => a.publica)
+      .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+    return publicSorted.length > 0 ? publicSorted : MOCK_ACTIVIDADES.filter(a => a.publica);
+  }, [dbActividades]);
+
+  const loading = dbLoading.actividades && dbActividades.length === 0;
 
   const handleDonateClick = (act: Actividad) => {
     if (act.donacionUrl && act.donacionUrl.startsWith('http')) {

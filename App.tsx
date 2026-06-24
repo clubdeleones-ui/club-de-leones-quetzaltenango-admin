@@ -6,6 +6,7 @@ import { AuthState, Socio, UserRole } from './types';
 import { firebaseService } from './services/firebaseService';
 import { ToastProvider } from './context/ToastContext';
 import { ModalProvider } from './context/ModalContext';
+import { ClubDataProvider } from './context/ClubDataContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import { env } from './config/env';
 
@@ -99,74 +100,76 @@ const App: React.FC = () => {
       <ModalProvider>
         <ToastProvider>
           <ErrorBoundary>
-            <Router>
-            <Layout auth={auth} onLogout={handleLogout}>
-              <Suspense fallback={
-                <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50/50">
-                  <div className="w-12 h-12 border-4 border-blue-900 border-t-transparent rounded-full animate-spin shadow-lg"></div>
-                  <p className="mt-4 text-blue-900 font-bold animate-pulse">Cargando...</p>
-                </div>
-              }>
-                <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Home />} />
-            <Route path="/actividades" element={<Calendario accessToken={auth.accessToken} isAuthenticated={auth.isAuthenticated} />} />
-            <Route path="/galeria" element={<Galeria />} />
-            <Route path="/historia" element={<Historia />} />
-            <Route path="/socios" element={<Socios user={auth.user} />} />
-            <Route path="/proponer-socio" element={<ProponerSocio />} />
-            <Route path="/donar" element={<Donar />} />
-            <Route path="/solicitudes" element={<Solicitudes user={auth.user} />} />
-            <Route path="/ficha-evaluacion/:id" element={<FichaEvaluacion />} />
-            <Route path="/evaluacion-compartida" element={<EvaluacionCompartida />} />
-            <Route path="/confirmar-invitacion/:id" element={<ConfirmarInvitacion />} />
-
-            <Route path="/login" element={auth.isAuthenticated ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />} />
-
-            {/* Protected Routes */}
-            <Route
-              path="/estatutos"
-              element={
-                <ProtectedRoute isAuthenticated={auth.isAuthenticated}>
-                  <Estatutos accessToken={auth.accessToken} />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute isAuthenticated={auth.isAuthenticated}>
-                  <Dashboard user={auth.user!} onUpdateUser={handleUpdateUser} />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute isAuthenticated={
-                  auth.isAuthenticated && 
-                  (auth.user?.rol === UserRole.SUPER_ADMIN || 
-                   auth.user?.rol === UserRole.TESORERO || 
-                   auth.user?.rol === UserRole.SECRETARIO || 
-                   auth.user?.rol === UserRole.ASESOR_SERVICIOS ||
-                   auth.user?.rol === UserRole.PRESIDENTE_AFILIACION)
+            <ClubDataProvider>
+              <Router>
+              <Layout auth={auth} onLogout={handleLogout}>
+                <Suspense fallback={
+                  <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50/50">
+                    <div className="w-12 h-12 border-4 border-blue-900 border-t-transparent rounded-full animate-spin shadow-lg"></div>
+                    <p className="mt-4 text-blue-900 font-bold animate-pulse">Cargando...</p>
+                  </div>
                 }>
-                  <SuperAdmin user={auth.user!} onUpdateUser={handleUpdateUser} />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/actas"
-              element={
-                <ProtectedRoute isAuthenticated={auth.isAuthenticated}>
-                  <Actas accessToken={auth.accessToken} />
-                </ProtectedRoute>
-              }
-            />
-                </Routes>
-              </Suspense>
-            </Layout>
-          </Router>
+                  <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<Home />} />
+              <Route path="/actividades" element={<Calendario accessToken={auth.accessToken} isAuthenticated={auth.isAuthenticated} />} />
+              <Route path="/galeria" element={<Galeria />} />
+              <Route path="/historia" element={<Historia />} />
+              <Route path="/socios" element={<Socios user={auth.user} />} />
+              <Route path="/proponer-socio" element={<ProponerSocio />} />
+              <Route path="/donar" element={<Donar />} />
+              <Route path="/solicitudes" element={<Solicitudes user={auth.user} />} />
+              <Route path="/ficha-evaluacion/:id" element={<FichaEvaluacion />} />
+              <Route path="/evaluacion-compartida" element={<EvaluacionCompartida />} />
+              <Route path="/confirmar-invitacion/:id" element={<ConfirmarInvitacion />} />
+
+              <Route path="/login" element={auth.isAuthenticated ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />} />
+
+              {/* Protected Routes */}
+              <Route
+                path="/estatutos"
+                element={
+                  <ProtectedRoute isAuthenticated={auth.isAuthenticated}>
+                    <Estatutos accessToken={auth.accessToken} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute isAuthenticated={auth.isAuthenticated}>
+                    <Dashboard user={auth.user!} onUpdateUser={handleUpdateUser} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute isAuthenticated={
+                    auth.isAuthenticated && 
+                    (auth.user?.rol === UserRole.SUPER_ADMIN || 
+                     auth.user?.rol === UserRole.TESORERO || 
+                     auth.user?.rol === UserRole.SECRETARIO || 
+                     auth.user?.rol === UserRole.ASESOR_SERVICIOS ||
+                     auth.user?.rol === UserRole.PRESIDENTE_AFILIACION)
+                  }>
+                    <SuperAdmin user={auth.user!} onUpdateUser={handleUpdateUser} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/actas"
+                element={
+                  <ProtectedRoute isAuthenticated={auth.isAuthenticated}>
+                    <Actas accessToken={auth.accessToken} />
+                  </ProtectedRoute>
+                }
+              />
+                  </Routes>
+                </Suspense>
+              </Layout>
+            </Router>
+          </ClubDataProvider>
         </ErrorBoundary>
       </ToastProvider>
       </ModalProvider>

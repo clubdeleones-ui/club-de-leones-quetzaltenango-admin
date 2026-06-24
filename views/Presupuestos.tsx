@@ -11,9 +11,8 @@ import {
   CheckCircle,
   FileText
 } from 'lucide-react';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
-import { db } from '../services/firebase';
 import { firebaseService } from '../services/firebaseService';
+import { useClubData } from '../context/ClubDataContext';
 import { RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision } from '../types';
 import { useModal } from '../context/ModalContext';
 
@@ -25,45 +24,30 @@ export const Presupuestos: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'fondos' | 'asignaciones' | 'rubros'>('fondos');
   
-  const [rubros, setRubros] = useState<RubroPresupuesto[]>([]);
-  const [fondos, setFondos] = useState<FondoPresupuesto[]>([]);
-  const [asignaciones, setAsignaciones] = useState<AsignacionComision[]>([]);
-  const [comisiones, setComisiones] = useState<Comision[]>([]);
+  // Load data from global ClubDataContext
+  const { 
+    rubros: dbRubros, 
+    fondos: dbFondos, 
+    asignaciones: dbAsignaciones, 
+    comisiones: dbComisiones 
+  } = useClubData();
+
+  const [rubros, setRubros] = useState<RubroPresupuesto[]>(dbRubros);
+  const [fondos, setFondos] = useState<FondoPresupuesto[]>(dbFondos);
+  const [asignaciones, setAsignaciones] = useState<AsignacionComision[]>(dbAsignaciones);
+  const [comisiones, setComisiones] = useState<Comision[]>(dbComisiones);
+
+  useEffect(() => { setRubros(dbRubros); }, [dbRubros]);
+  useEffect(() => { setFondos(dbFondos); }, [dbFondos]);
+  useEffect(() => { setAsignaciones(dbAsignaciones); }, [dbAsignaciones]);
+  useEffect(() => { setComisiones(dbComisiones); }, [dbComisiones]);
   
   // Forms States
   const [rubroForm, setRubroForm] = useState({ codigo: '', nombre: '', descripcion: '' });
   const [fondoForm, setFondoForm] = useState({ tipo: 'Cuotas' as FondoPresupuesto['tipo'], monto: '', descripcion: '' });
   const [asignacionForm, setAsignacionForm] = useState({ comision: '', monto: '', rubroId: '', temporalidad: 'Mensual' as AsignacionComision['temporalidad'], actividad: '', descripcion: '' });
 
-  // Load Data
-  useEffect(() => {
-    const qRubros = query(collection(db, 'presupuestos_rubros'), orderBy('fechaCreacion', 'desc'));
-    const unsubRubros = onSnapshot(qRubros, (snapshot) => {
-      setRubros(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as RubroPresupuesto));
-    });
-
-    const qFondos = query(collection(db, 'presupuestos_fondos'), orderBy('fecha', 'desc'));
-    const unsubFondos = onSnapshot(qFondos, (snapshot) => {
-      setFondos(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as FondoPresupuesto));
-    });
-
-    const qAsignaciones = query(collection(db, 'presupuestos_asignaciones'), orderBy('fechaCreacion', 'desc'));
-    const unsubAsignaciones = onSnapshot(qAsignaciones, (snapshot) => {
-      setAsignaciones(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as AsignacionComision));
-    });
-
-    const qComisiones = query(collection(db, 'comisiones'), orderBy('fechaCreacion', 'desc'));
-    const unsubComisiones = onSnapshot(qComisiones, (snapshot) => {
-      setComisiones(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Comision));
-    });
-
-    return () => {
-      unsubRubros();
-      unsubFondos();
-      unsubAsignaciones();
-      unsubComisiones();
-    };
-  }, []);
+  // Carga y suscripciones gestionadas globalmente por ClubDataContext
 
   // Handlers
   const handleSaveRubro = async (e: React.FormEvent) => {

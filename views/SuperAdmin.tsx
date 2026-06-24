@@ -19,6 +19,7 @@ import {
   SolicitudVoluntario
 } from '../types';
 import { firebaseService } from '../services/firebaseService';
+import { useClubData } from '../context/ClubDataContext';
 import { useModal } from '../context/ModalContext';
 import { getWrittenDateTimeSpanish } from '../utils/dateSpanishFormatter';
 import { 
@@ -202,179 +203,38 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     }
   }, [allowedTabs, activeTab]);
   
-  // Dynamic States with localStorage persistence
-  const [socios, setSocios] = useState<Socio[]>(() => {
-    const local = localStorage.getItem('club_leones_socios_v4');
-    if (local) return JSON.parse(local);
-    localStorage.setItem('club_leones_socios_v4', JSON.stringify(MOCK_SOCIOS));
-    return MOCK_SOCIOS;
-  });
+  // Load data from global ClubDataContext to avoid redundant queries and fragmentation
+  const {
+    socios: dbSocios,
+    propuestas: dbPropuestas,
+    solicitudes: dbSolicitudes,
+    actividades: dbActividades,
+    voluntarios: dbVoluntarios,
+    actas: dbActas,
+    loading: dbLoading
+  } = useClubData();
 
-  const [propuestas, setPropuestas] = useState<PropuestaSocio[]>(() => {
-    const local = localStorage.getItem('club_leones_propuestas');
-    if (local) return JSON.parse(local);
-    localStorage.setItem('club_leones_propuestas', JSON.stringify(MOCK_PROPUESTAS));
-    return MOCK_PROPUESTAS;
-  });
+  const [socios, setSocios] = useState<Socio[]>(dbSocios);
+  const [propuestas, setPropuestas] = useState<PropuestaSocio[]>(dbPropuestas);
+  const [solicitudes, setSolicitudes] = useState<Solicitud[]>(dbSolicitudes);
+  const [actividades, setActividades] = useState<Actividad[]>(dbActividades);
+  const [actas, setActas] = useState<Acta[]>(dbActas);
+  const [voluntarios, setVoluntarios] = useState<SolicitudVoluntario[]>(dbVoluntarios);
 
-  const [solicitudes, setSolicitudes] = useState<Solicitud[]>(() => {
-    const local = localStorage.getItem('club_leones_solicitudes');
-    if (local) return JSON.parse(local);
-    return [];
-  });
+  useEffect(() => { setSocios(dbSocios); }, [dbSocios]);
+  useEffect(() => { setPropuestas(dbPropuestas); }, [dbPropuestas]);
+  useEffect(() => { setSolicitudes(dbSolicitudes); }, [dbSolicitudes]);
+  useEffect(() => { setActividades(dbActividades); }, [dbActividades]);
+  useEffect(() => { setActas(dbActas); }, [dbActas]);
+  useEffect(() => { setVoluntarios(dbVoluntarios); }, [dbVoluntarios]);
 
-  // Sync with Firestore and load the latest data on component mount
+  // Sync global loading status
   useEffect(() => {
-    const syncAndLoad = async () => {
-      setIsLoadingSocios(true);
-      // Sync mock socios if Firestore is empty
-      try {
-        await firebaseService.syncInitialSocios(MOCK_SOCIOS);
-      } catch (err) {
-        console.error("Error syncing initial socios:", err);
-      }
+    setIsLoadingSocios(dbLoading.socios);
+  }, [dbLoading.socios]);
 
-      // Fetch latest socios
-      try {
-        const fetchedSocios = await firebaseService.getSocios();
-        if (fetchedSocios && fetchedSocios.length > 0) {
-          setSocios(fetchedSocios);
-          localStorage.setItem('club_leones_socios_v4', JSON.stringify(fetchedSocios));
-        }
-      } catch (err) {
-        console.error("Error fetching socios from Firestore:", err);
-      } finally {
-        setIsLoadingSocios(false);
-      }
-
-      try {
-        const fetchedPropuestas = await firebaseService.getProposals();
-        if (fetchedPropuestas) {
-          setPropuestas(prev => {
-            const fetchedIds = new Set(fetchedPropuestas.map(p => p.id));
-            const fetchedNames = new Set(fetchedPropuestas.map(p => p.nombreCandidato.trim().toLowerCase()));
-            const unsynced = prev.filter(p => 
-              (p as any).synced === false && 
-              !fetchedIds.has(p.id) &&
-              !fetchedNames.has(p.nombreCandidato.trim().toLowerCase())
-            );
-            const syncedFetched = fetchedPropuestas.map(p => ({ ...p, synced: true }));
-            const merged = [...syncedFetched, ...unsynced];
-            localStorage.setItem('club_leones_propuestas', JSON.stringify(merged));
-            return merged;
-          });
-        }
-      } catch (err) {
-        console.error("Error fetching proposals from Firestore:", err);
-      }
-
-      try {
-        const fetchedSolicitudes = await firebaseService.getSolicitudes();
-        if (fetchedSolicitudes) {
-          setSolicitudes(fetchedSolicitudes);
-          localStorage.setItem('club_leones_solicitudes', JSON.stringify(fetchedSolicitudes));
-        }
-      } catch (err) {
-        console.error("Error fetching solicitudes from Firestore:", err);
-      }
-
-      // Sync and load activities
-      try {
-        await firebaseService.syncInitialActividades(MOCK_ACTIVIDADES);
-        const fetchedActividades = await firebaseService.getActividades();
-        if (fetchedActividades && fetchedActividades.length > 0) {
-          setActividades(fetchedActividades);
-          localStorage.setItem('club_leones_actividades', JSON.stringify(fetchedActividades));
-        }
-      } catch (err) {
-        console.error("Error syncing/fetching activities from Firestore:", err);
-      }
-
-      try {
-        const fetchedVoluntarios = await firebaseService.getSolicitudesVoluntarios();
-        if (fetchedVoluntarios) {
-          setVoluntarios(fetchedVoluntarios);
-        }
-      } catch (err) {
-        console.error("Error fetching volunteer requests from Firestore:", err);
-      }
-
-      // Sync and load actas from Firestore with merge logic
-      try {
-        const fetchedActas = await firebaseService.getActas();
-        const localActasStr = localStorage.getItem('club_leones_actas');
-        const localActas: Acta[] = localActasStr ? JSON.parse(localActasStr) : MOCK_ACTAS;
-        
-        const mergedMap = new Map<string, Acta>();
-        // Primero, agregamos todas las remotas
-        fetchedActas.forEach(a => mergedMap.set(a.id, a));
-        
-        // Luego, agregamos las locales que no existan en la nube para subirlas
-        const toUpload: Acta[] = [];
-        localActas.forEach(a => {
-          if (!mergedMap.has(a.id)) {
-            mergedMap.set(a.id, a);
-            toUpload.push(a);
-          }
-        });
-        
-        // Subir las locales faltantes a Firestore
-        for (const acta of toUpload) {
-          try {
-            await firebaseService.saveActa(acta);
-          } catch (uploadErr) {
-            console.error("Error al subir acta local a Firestore:", acta.id, uploadErr);
-          }
-        }
-        
-        const finalMergedList = Array.from(mergedMap.values()).sort((a, b) => b.fecha.localeCompare(a.fecha));
-        setActas(finalMergedList);
-        localStorage.setItem('club_leones_actas', JSON.stringify(finalMergedList));
-      } catch (err) {
-        console.error("Error syncing/fetching actas from Firestore:", err);
-      }
-    };
-
-    syncAndLoad();
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('club_leones_socios_v4', JSON.stringify(socios));
-  }, [socios]);
-
-  useEffect(() => {
-    localStorage.setItem('club_leones_propuestas', JSON.stringify(propuestas));
-  }, [propuestas]);
-
-  useEffect(() => {
-    localStorage.setItem('club_leones_solicitudes', JSON.stringify(solicitudes));
-  }, [solicitudes]);
-
-  const [actividades, setActividades] = useState<Actividad[]>(() => {
-    const local = localStorage.getItem('club_leones_actividades');
-    if (local) return JSON.parse(local);
-    return MOCK_ACTIVIDADES;
-  });
-
-  useEffect(() => {
-    localStorage.setItem('club_leones_actividades', JSON.stringify(actividades));
-  }, [actividades]);
-
-  const [actas, setActas] = useState<Acta[]>(() => {
-    const local = localStorage.getItem('club_leones_actas');
-    if (local) return JSON.parse(local);
-    localStorage.setItem('club_leones_actas', JSON.stringify(MOCK_ACTAS));
-    return MOCK_ACTAS;
-  });
-
-  useEffect(() => {
-    localStorage.setItem('club_leones_actas', JSON.stringify(actas));
-  }, [actas]);
   const [donaciones, setDonaciones] = useState<Donacion[]>(MOCK_DONACIONES);
   const [beneficios, setBeneficios] = useState<Beneficio[]>(MOCK_BENEFICIOS);
-
-  // Voluntarios States
-  const [voluntarios, setVoluntarios] = useState<SolicitudVoluntario[]>([]);
   const [calendarioSubTab, setCalendarioSubTab] = useState<'lista' | 'voluntarios'>('lista');
   const [voluntarioSearch, setVoluntarioSearch] = useState('');
   const [voluntarioFilterActividad, setVoluntarioFilterActividad] = useState('Todas');
