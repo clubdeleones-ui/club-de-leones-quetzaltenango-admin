@@ -12,7 +12,7 @@ import {
   limit
 } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda, Acta, HitoHistorico } from "../types";
+import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda, Acta, HitoHistorico, SolicitudVoluntario } from "../types";
 
 export const firebaseService = {
   // Upload candidate photo to Firebase Storage (Supports Base64 data_url format)
@@ -722,6 +722,43 @@ export const firebaseService = {
       await deleteDoc(docRef);
     } catch (error) {
       console.error("Error deleting hito from Firestore:", error);
+      throw error;
+    }
+  },
+
+  // ================= VOLUNTARIOS =================
+  saveSolicitudVoluntario: async (solicitud: SolicitudVoluntario): Promise<void> => {
+    try {
+      const docRef = doc(db, "solicitudes_voluntarios", solicitud.id);
+      const cleanData = JSON.parse(JSON.stringify(solicitud));
+      await setDoc(docRef, cleanData);
+    } catch (error) {
+      console.error("Error saving volunteer request in Firestore:", error);
+      throw error;
+    }
+  },
+
+  getSolicitudesVoluntarios: async (): Promise<SolicitudVoluntario[]> => {
+    try {
+      const colRef = collection(db, "solicitudes_voluntarios");
+      const snapshot = await getDocs(colRef);
+      const list: SolicitudVoluntario[] = [];
+      snapshot.forEach(doc => {
+        list.push(doc.data() as SolicitudVoluntario);
+      });
+      return list.sort((a, b) => new Date(b.fechaRegistro).getTime() - new Date(a.fechaRegistro).getTime());
+    } catch (error) {
+      console.error("Error fetching volunteer requests from Firestore:", error);
+      throw error;
+    }
+  },
+
+  deleteSolicitudVoluntario: async (id: string): Promise<void> => {
+    try {
+      const docRef = doc(db, "solicitudes_voluntarios", id);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting volunteer request from Firestore:", error);
       throw error;
     }
   },

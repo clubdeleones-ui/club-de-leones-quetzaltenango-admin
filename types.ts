@@ -267,3 +267,15 @@ export interface MinutaComision {
   puntos: MinutaPunto[];
   solicitudVinculadaId?: string;
 }
+
+export interface SolicitudVoluntario {
+  id: string;
+  actividadId: string;
+  actividadTitulo: string;
+  nombre: string;
+  correo: string;
+  telefono: string; // Almacenará el teléfono completo con prefijo, ej. "+50255555555"
+  mensaje?: string;
+  fechaRegistro: string;
+  estado: 'Pendiente' | 'Aprobado' | 'Rechazado';
+}

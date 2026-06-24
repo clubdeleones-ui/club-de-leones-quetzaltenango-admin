@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar as CalendarIcon, MapPin, ArrowRight, ShieldCheck, Heart, Users, Clock, Share2, Check, Copy, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, MapPin, ArrowRight, ShieldCheck, Heart, Users, Clock, Share2, Check, Copy, Loader2, UserPlus } from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
 import { Actividad } from '../types';
 import { MOCK_ACTIVIDADES } from '../constants';
+import { InscripcionVoluntarioModal } from '../components/InscripcionVoluntarioModal';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
   const [actividades, setActividades] = useState<Actividad[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [selectedActForVol, setSelectedActForVol] = useState<Actividad | null>(null);
+  const [isVolModalOpen, setIsVolModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchActividades = async () => {
@@ -338,6 +341,18 @@ const Home: React.FC = () => {
                         <span>Apoyar con Donación</span>
                       </button>
                     )}
+
+                    {/* Volunteer CTA */}
+                    <button
+                      onClick={() => {
+                        setSelectedActForVol(act);
+                        setIsVolModalOpen(true);
+                      }}
+                      className="w-full bg-blue-900 hover:bg-blue-800 text-white font-extrabold py-3 px-4 rounded-2xl transition-all shadow-md hover:shadow-lg active:scale-98 flex items-center justify-center space-x-1.5 text-xs"
+                    >
+                      <UserPlus size={14} />
+                      <span>Me apunto como voluntario</span>
+                    </button>
                   </div>
                 </div>
               </article>
@@ -349,6 +364,19 @@ const Home: React.FC = () => {
           </div>
         )}
       </section>
+
+      {/* Volunteer Modal */}
+      {isVolModalOpen && selectedActForVol && (
+        <InscripcionVoluntarioModal
+          isOpen={isVolModalOpen}
+          onClose={() => {
+            setIsVolModalOpen(false);
+            setSelectedActForVol(null);
+          }}
+          actividadId={selectedActForVol.id}
+          actividadTitulo={selectedActForVol.titulo}
+        />
+      )}
     </div>
   );
 };

@@ -15,7 +15,8 @@ import {
   Beneficio, 
   UserRole,
   PropuestaSocio,
-  Solicitud
+  Solicitud,
+  SolicitudVoluntario
 } from '../types';
 import { firebaseService } from '../services/firebaseService';
 import { useModal } from '../context/ModalContext';
@@ -56,7 +57,8 @@ import {
   Car,
   Archive,
   Camera,
-  BookUser
+  BookUser,
+  Upload
 } from 'lucide-react';
 import { generateActaPDF, generateActaCode, generateReciboPagoPDF } from '../utils/pdfGenerator';
 import { FormattedActa } from '../components/FormattedActa';
@@ -288,6 +290,15 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
         console.error("Error syncing/fetching activities from Firestore:", err);
       }
 
+      try {
+        const fetchedVoluntarios = await firebaseService.getSolicitudesVoluntarios();
+        if (fetchedVoluntarios) {
+          setVoluntarios(fetchedVoluntarios);
+        }
+      } catch (err) {
+        console.error("Error fetching volunteer requests from Firestore:", err);
+      }
+
       // Sync and load actas from Firestore with merge logic
       try {
         const fetchedActas = await firebaseService.getActas();
@@ -362,6 +373,13 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const [donaciones, setDonaciones] = useState<Donacion[]>(MOCK_DONACIONES);
   const [beneficios, setBeneficios] = useState<Beneficio[]>(MOCK_BENEFICIOS);
 
+  // Voluntarios States
+  const [voluntarios, setVoluntarios] = useState<SolicitudVoluntario[]>([]);
+  const [calendarioSubTab, setCalendarioSubTab] = useState<'lista' | 'voluntarios'>('lista');
+  const [voluntarioSearch, setVoluntarioSearch] = useState('');
+  const [voluntarioFilterActividad, setVoluntarioFilterActividad] = useState('Todas');
+  const [voluntarioFilterEstado, setVoluntarioFilterEstado] = useState('Todos');
+
   // Search & Filter States
   const [socioSearch, setSocioSearch] = useState('');
 
@@ -402,6 +420,28 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     
     return result;
   }, [actividades, actividadFilter, actividadSearch, actividadSort]);
+
+  const filteredVoluntarios = useMemo(() => {
+    let result = [...voluntarios];
+
+    if (voluntarioFilterActividad !== 'Todas') {
+      result = result.filter(v => v.actividadId === voluntarioFilterActividad);
+    }
+
+    if (voluntarioFilterEstado !== 'Todos') {
+      result = result.filter(v => v.estado === voluntarioFilterEstado);
+    }
+
+    if (voluntarioSearch.trim()) {
+      const term = voluntarioSearch.toLowerCase();
+      result = result.filter(v => 
+        v.nombre.toLowerCase().includes(term) ||
+        v.correo.toLowerCase().includes(term)
+      );
+    }
+
+    return result;
+  }, [voluntarios, voluntarioFilterActividad, voluntarioFilterEstado, voluntarioSearch]);
   const [roleFilter, setRoleFilter] = useState('Todos');
   const [statusFilter, setStatusFilter] = useState('Todos');
   const [financialFilter, setFinancialFilter] = useState('Todos');
@@ -532,6 +572,11 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     donacionUrl: '',
     imagen: ''
   });
+  const [newActividadImageFile, setNewActividadImageFile] = useState<File | null>(null);
+  const [editActividadImageFile, setEditActividadImageFile] = useState<File | null>(null);
+  const [newActividadImagePreview, setNewActividadImagePreview] = useState<string | null>(null);
+  const [editActividadImagePreview, setEditActividadImagePreview] = useState<string | null>(null);
+  const [isSavingActividad, setIsSavingActividad] = useState(false);
 
   const [showAddDonacion, setShowAddDonacion] = useState(false);
   const [newDonacion, setNewDonacion] = useState({ donante: '', monto: '', proyecto: '', tipo: 'Individual' as 'Individual' | 'Empresarial' });
@@ -1080,42 +1125,71 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
   const handleAddActividad = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newActividad.titulo || !newActividad.fecha || !newActividad.lugar) return;
-    const created: Actividad = {
-      id: `ev-${Date.now()}`,
-      titulo: newActividad.titulo,
-      descripcion: newActividad.descripcion,
-      fecha: newActividad.fecha.replace('T', ' '),
-      lugar: newActividad.lugar,
-      imagen: newActividad.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800',
-      publica: newActividad.publica,
-      conBotonDonacion: newActividad.conBotonDonacion,
-      donacionUrl: newActividad.conBotonDonacion ? (newActividad.donacionUrl || '#/donar') : ''
-    };
+    setIsSavingActividad(true);
     try {
+      let finalImageUrl = newActividad.imagen;
+      if (newActividadImageFile) {
+        const compressedBase64 = await compressImageFile(newActividadImageFile, 1200, 1200, 0.8);
+        finalImageUrl = await firebaseService.uploadGaleriaImage(compressedBase64, 'actividad');
+      }
+
+      const created: Actividad = {
+        id: `ev-${Date.now()}`,
+        titulo: newActividad.titulo,
+        descripcion: newActividad.descripcion,
+        fecha: newActividad.fecha.replace('T', ' '),
+        lugar: newActividad.lugar,
+        imagen: finalImageUrl || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800',
+        publica: newActividad.publica,
+        conBotonDonacion: newActividad.conBotonDonacion,
+        donacionUrl: newActividad.conBotonDonacion ? (newActividad.donacionUrl || '#/donar') : ''
+      };
+
       await firebaseService.saveActividad(created);
       setActividades([created, ...actividades]);
       setNewActividad({ titulo: '', descripcion: '', fecha: '', lugar: '', publica: true, conBotonDonacion: false, donacionUrl: '', imagen: '' });
+      setNewActividadImageFile(null);
+      setNewActividadImagePreview(null);
       setShowAddActividad(false);
-    } catch (err) {
+      showAlert("Actividad programada exitosamente", "success");
+    } catch (err: any) {
       console.error("Error saving new activity in Firestore:", err);
+      showAlert(err.message || "Error al guardar la actividad", "error");
+    } finally {
+      setIsSavingActividad(false);
     }
   };
 
   const handleSaveEditedActividad = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingActividad || !editingActividad.titulo || !editingActividad.fecha || !editingActividad.lugar) return;
-    const updated: Actividad = {
-      ...editingActividad,
-      fecha: editingActividad.fecha.replace('T', ' '),
-      donacionUrl: editingActividad.conBotonDonacion ? (editingActividad.donacionUrl || '#/donar') : ''
-    };
+    setIsSavingActividad(true);
     try {
+      let finalImageUrl = editingActividad.imagen;
+      if (editActividadImageFile) {
+        const compressedBase64 = await compressImageFile(editActividadImageFile, 1200, 1200, 0.8);
+        finalImageUrl = await firebaseService.uploadGaleriaImage(compressedBase64, 'actividad');
+      }
+
+      const updated: Actividad = {
+        ...editingActividad,
+        fecha: editingActividad.fecha.replace('T', ' '),
+        imagen: finalImageUrl,
+        donacionUrl: editingActividad.conBotonDonacion ? (editingActividad.donacionUrl || '#/donar') : ''
+      };
+
       await firebaseService.saveActividad(updated);
       setActividades(actividades.map(a => a.id === updated.id ? updated : a));
       setEditingActividad(null);
+      setEditActividadImageFile(null);
+      setEditActividadImagePreview(null);
       setShowEditActividad(false);
-    } catch (err) {
+      showAlert("Actividad actualizada exitosamente", "success");
+    } catch (err: any) {
       console.error("Error saving updated activity in Firestore:", err);
+      showAlert(err.message || "Error al actualizar la actividad", "error");
+    } finally {
+      setIsSavingActividad(false);
     }
   };
 
@@ -1436,6 +1510,35 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       setActividades(actividades.filter(a => a.id !== id));
     } catch (err) {
       console.error("Error deleting activity from Firestore:", err);
+    }
+  };
+
+  const handleUpdateVoluntarioEstado = async (id: string, nuevoEstado: 'Aprobado' | 'Rechazado') => {
+    const vol = voluntarios.find(v => v.id === id);
+    if (!vol) return;
+    const updated: SolicitudVoluntario = {
+      ...vol,
+      estado: nuevoEstado
+    };
+    try {
+      await firebaseService.saveSolicitudVoluntario(updated);
+      setVoluntarios(voluntarios.map(v => v.id === id ? updated : v));
+      showAlert(`Solicitud de voluntariado ${nuevoEstado === 'Aprobado' ? 'aprobada' : 'rechazada'} con éxito.`, "success");
+    } catch (err) {
+      console.error("Error updating volunteer status:", err);
+      showAlert("No se pudo actualizar el estado de la solicitud.", "error");
+    }
+  };
+
+  const handleDeleteVoluntario = async (id: string) => {
+    if (!(await showConfirm("Eliminar Solicitud", "¿Está seguro de que desea eliminar esta solicitud de voluntariado?", { type: 'danger', confirmText: 'Eliminar', cancelText: 'Cancelar' }))) return;
+    try {
+      await firebaseService.deleteSolicitudVoluntario(id);
+      setVoluntarios(voluntarios.filter(v => v.id !== id));
+      showAlert("Solicitud de voluntariado eliminada exitosamente.", "success");
+    } catch (err) {
+      console.error("Error deleting volunteer request:", err);
+      showAlert("No se pudo eliminar la solicitud.", "error");
     }
   };
 
@@ -2416,14 +2519,67 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Imagen / Afiche (URL)</label>
-                        <input 
-                          type="text" 
-                          value={newActividad.imagen} 
-                          onChange={e => setNewActividad({...newActividad, imagen: e.target.value})}
-                          placeholder="https://images.unsplash.com/... (Dejar en blanco para predeterminado)"
-                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-mono"
-                        />
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Imagen / Afiche de la Actividad</label>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-center w-full">
+                            <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100/50 hover:border-blue-900/30 transition-all overflow-hidden relative group">
+                              {newActividadImagePreview ? (
+                                <>
+                                  <img src={newActividadImagePreview} alt="Preview" className="w-full h-full object-cover" />
+                                  <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold">
+                                    Cambiar Imagen
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="flex flex-col items-center justify-center pt-5 pb-6 px-4 text-center">
+                                  <Upload className="w-8 h-8 text-slate-400 mb-2 group-hover:text-blue-900 transition-colors" />
+                                  <p className="mb-1 text-xs font-bold text-slate-500 uppercase tracking-wider">Subir archivo de imagen</p>
+                                  <p className="text-[10px] text-slate-400">PNG, JPG o WEBP (se comprimirá automáticamente)</p>
+                                </div>
+                              )}
+                              <input 
+                                type="file" 
+                                accept="image/*" 
+                                className="hidden" 
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    setNewActividadImageFile(file);
+                                    try {
+                                      const compressed = await compressImageFile(file, 800, 800, 0.7);
+                                      setNewActividadImagePreview(compressed);
+                                    } catch (err) {
+                                      console.error("Error compressing preview image:", err);
+                                      const reader = new FileReader();
+                                      reader.onloadend = () => {
+                                        setNewActividadImagePreview(reader.result as string);
+                                      };
+                                      reader.readAsDataURL(file);
+                                    }
+                                  }
+                                }}
+                              />
+                            </label>
+                          </div>
+                          
+                          <div className="relative flex items-center">
+                            <div className="flex-grow border-t border-slate-200"></div>
+                            <span className="flex-shrink mx-4 text-slate-400 text-[10px] font-black uppercase tracking-widest">O ingresar URL</span>
+                            <div className="flex-grow border-t border-slate-200"></div>
+                          </div>
+
+                          <input 
+                            type="text" 
+                            value={newActividad.imagen} 
+                            onChange={e => {
+                              setNewActividad({...newActividad, imagen: e.target.value});
+                              setNewActividadImageFile(null);
+                              setNewActividadImagePreview(null);
+                            }}
+                            placeholder="https://images.unsplash.com/... (Opcional)"
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-mono"
+                          />
+                        </div>
                       </div>
                       <div className="flex flex-col gap-3 pt-2">
                         <div className="flex items-center space-x-3">
@@ -2467,14 +2623,23 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                         type="button" 
                         onClick={() => setShowAddActividad(false)}
                         className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl transition-colors text-sm"
+                        disabled={isSavingActividad}
                       >
                         Cancelar
                       </button>
                       <button 
                         type="submit" 
-                        className="w-1/2 bg-blue-900 hover:bg-blue-800 text-white font-black py-3.5 rounded-2xl transition-all shadow-md hover:shadow-lg text-sm"
+                        disabled={isSavingActividad}
+                        className="w-1/2 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-black py-3.5 rounded-2xl transition-all shadow-md hover:shadow-lg text-sm flex items-center justify-center space-x-2"
                       >
-                        Agregar
+                        {isSavingActividad ? (
+                          <>
+                            <Loader2 className="animate-spin" size={16} />
+                            <span>Guardando...</span>
+                          </>
+                        ) : (
+                          <span>Agregar</span>
+                        )}
                       </button>
                     </div>
                   </form>
@@ -2546,13 +2711,67 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Imagen / Afiche (URL)</label>
-                        <input 
-                          type="text" 
-                          value={editingActividad.imagen} 
-                          onChange={e => setEditingActividad({...editingActividad, imagen: e.target.value})}
-                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-mono"
-                        />
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Imagen / Afiche de la Actividad</label>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-center w-full">
+                            <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100/50 hover:border-blue-900/30 transition-all overflow-hidden relative group">
+                              {(editActividadImagePreview || editingActividad.imagen) ? (
+                                <>
+                                  <img src={editActividadImagePreview || editingActividad.imagen} alt="Preview" className="w-full h-full object-cover" />
+                                  <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold">
+                                    Cambiar Imagen
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="flex flex-col items-center justify-center pt-5 pb-6 px-4 text-center">
+                                  <Upload className="w-8 h-8 text-slate-400 mb-2 group-hover:text-blue-900 transition-colors" />
+                                  <p className="mb-1 text-xs font-bold text-slate-500 uppercase tracking-wider">Subir archivo de imagen</p>
+                                  <p className="text-[10px] text-slate-400">PNG, JPG o WEBP (se comprimirá automáticamente)</p>
+                                </div>
+                              )}
+                              <input 
+                                type="file" 
+                                accept="image/*" 
+                                className="hidden" 
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    setEditActividadImageFile(file);
+                                    try {
+                                      const compressed = await compressImageFile(file, 800, 800, 0.7);
+                                      setEditActividadImagePreview(compressed);
+                                    } catch (err) {
+                                      console.error("Error compressing preview image:", err);
+                                      const reader = new FileReader();
+                                      reader.onloadend = () => {
+                                        setEditActividadImagePreview(reader.result as string);
+                                      };
+                                      reader.readAsDataURL(file);
+                                    }
+                                  }
+                                }}
+                              />
+                            </label>
+                          </div>
+                          
+                          <div className="relative flex items-center">
+                            <div className="flex-grow border-t border-slate-200"></div>
+                            <span className="flex-shrink mx-4 text-slate-400 text-[10px] font-black uppercase tracking-widest">O ingresar URL</span>
+                            <div className="flex-grow border-t border-slate-200"></div>
+                          </div>
+
+                          <input 
+                            type="text" 
+                            value={editingActividad.imagen} 
+                            onChange={e => {
+                              setEditingActividad({...editingActividad, imagen: e.target.value});
+                              setEditActividadImageFile(null);
+                              setEditActividadImagePreview(null);
+                            }}
+                            placeholder="https://images.unsplash.com/... (Opcional)"
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-mono"
+                          />
+                        </div>
                       </div>
                       <div className="flex flex-col gap-3 pt-2">
                         <div className="flex items-center space-x-3">
@@ -2597,24 +2816,60 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                         onClick={() => {
                           setShowEditActividad(false);
                           setEditingActividad(null);
+                          setEditActividadImageFile(null);
+                          setEditActividadImagePreview(null);
                         }}
                         className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl transition-colors text-sm"
+                        disabled={isSavingActividad}
                       >
                         Cancelar
                       </button>
                       <button 
                         type="submit" 
-                        className="w-1/2 bg-blue-900 hover:bg-blue-800 text-white font-black py-3.5 rounded-2xl transition-all shadow-md hover:shadow-lg text-sm"
+                        disabled={isSavingActividad}
+                        className="w-1/2 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-black py-3.5 rounded-2xl transition-all shadow-md hover:shadow-lg text-sm flex items-center justify-center space-x-2"
                       >
-                        Guardar Cambios
+                        {isSavingActividad ? (
+                          <>
+                            <Loader2 className="animate-spin" size={16} />
+                            <span>Guardando...</span>
+                          </>
+                        ) : (
+                          <span>Guardar Cambios</span>
+                        )}
                       </button>
                     </div>
                   </form>
                 </div>
               )}
 
-              {/* Activities Filters & List */}
-              <div className="space-y-6">
+              {/* Sub tabs for Calendario: Actividades vs Voluntarios */}
+              <div className="flex border-b border-slate-200 gap-6 mb-2">
+                <button
+                  onClick={() => setCalendarioSubTab('lista')}
+                  className={`pb-4 text-sm font-extrabold transition-all relative ${
+                    calendarioSubTab === 'lista'
+                      ? 'text-blue-900 border-b-2 border-blue-900'
+                      : 'text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  Actividades Programadas ({actividades.length})
+                </button>
+                <button
+                  onClick={() => setCalendarioSubTab('voluntarios')}
+                  className={`pb-4 text-sm font-extrabold transition-all relative ${
+                    calendarioSubTab === 'voluntarios'
+                      ? 'text-blue-900 border-b-2 border-blue-900'
+                      : 'text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  Solicitudes de Voluntarios ({voluntarios.length})
+                </button>
+              </div>
+
+              {calendarioSubTab === 'lista' ? (
+                /* Activities Filters & List */
+                <div className="space-y-6">
                 {/* Filters */}
                 <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
                   <div className="relative w-full md:w-1/3">
@@ -2726,6 +2981,208 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   </div>
                 )}
               </div>
+              ) : (
+                /* Volunteer Requests Section */
+                <div className="space-y-6 animate-in fade-in duration-300">
+                  {/* Filters & Search */}
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+                    <div className="relative w-full md:w-1/3">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                      <input 
+                        type="text" 
+                        placeholder="Buscar por nombre o correo..."
+                        value={voluntarioSearch}
+                        onChange={e => setVoluntarioSearch(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:bg-white transition-all text-sm outline-none font-semibold text-slate-800"
+                      />
+                    </div>
+                    <div className="flex flex-col sm:flex-row w-full md:w-auto gap-3">
+                      {/* Activity Filter */}
+                      <div className="flex items-center space-x-2 w-full sm:w-auto">
+                        <Filter size={16} className="text-slate-400 hidden sm:block" />
+                        <select 
+                          value={voluntarioFilterActividad}
+                          onChange={e => setVoluntarioFilterActividad(e.target.value)}
+                          className="w-full sm:w-auto bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-900 appearance-none cursor-pointer font-bold"
+                        >
+                          <option value="Todas">Todas las Actividades</option>
+                          {actividades.map(act => (
+                            <option key={act.id} value={act.id}>{act.titulo}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Status Filter */}
+                      <select 
+                        value={voluntarioFilterEstado}
+                        onChange={e => setVoluntarioFilterEstado(e.target.value)}
+                        className="w-full sm:w-auto bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-900 appearance-none cursor-pointer font-bold"
+                      >
+                        <option value="Todos">Todos los Estados</option>
+                        <option value="Pendiente">Pendientes</option>
+                        <option value="Aprobado">Aprobados</option>
+                        <option value="Rechazado">Rechazados</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* List / Table */}
+                  {filteredVoluntarios.length === 0 ? (
+                    <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200/80 shadow-sm text-center">
+                      <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                      <p className="text-slate-500 font-semibold text-base">No se encontraron solicitudes de voluntariado.</p>
+                      <p className="text-slate-400 text-xs mt-1">Las personas que se apunten en la web pública aparecerán aquí.</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Desktop Table View */}
+                      <div className="hidden lg:block bg-white rounded-[2.5rem] border border-slate-200/80 shadow-sm overflow-hidden">
+                        <div className="overflow-x-auto">
+                          <table className="w-full border-collapse text-left">
+                            <thead>
+                              <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold text-xs uppercase tracking-wider">
+                                <th className="py-6 px-6">Voluntario</th>
+                                <th className="py-6 px-6">Teléfono</th>
+                                <th className="py-6 px-6">Actividad</th>
+                                <th className="py-6 px-6">Fecha Registro</th>
+                                <th className="py-6 px-6">Mensaje / Motivación</th>
+                                <th className="py-6 px-6">Estado</th>
+                                <th className="py-6 px-6 text-right">Acciones</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {filteredVoluntarios.map(v => (
+                                <tr key={v.id} className="hover:bg-slate-50/30 transition-colors">
+                                  <td className="py-5 px-6">
+                                    <p className="font-extrabold text-slate-800 text-sm">{v.nombre}</p>
+                                    <p className="text-xs text-slate-450 mt-0.5">{v.correo}</p>
+                                  </td>
+                                  <td className="py-5 px-6">
+                                    <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg">
+                                      {v.telefono}
+                                    </span>
+                                  </td>
+                                  <td className="py-5 px-6 text-xs font-bold text-slate-700 max-w-[150px] truncate">
+                                    {v.actividadTitulo}
+                                  </td>
+                                  <td className="py-5 px-6 text-xs text-slate-500 font-semibold">
+                                    {new Date(v.fechaRegistro).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                  </td>
+                                  <td className="py-5 px-6 text-xs text-slate-650 max-w-xs truncate" title={v.mensaje}>
+                                    {v.mensaje || <span className="text-slate-350 italic">Sin mensaje</span>}
+                                  </td>
+                                  <td className="py-5 px-6">
+                                    <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider ${
+                                      v.estado === 'Aprobado' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                                      v.estado === 'Rechazado' ? 'bg-red-50 text-red-700 border border-red-200' :
+                                      'bg-amber-50 text-amber-700 border border-amber-200'
+                                    }`}>
+                                      {v.estado}
+                                    </span>
+                                  </td>
+                                  <td className="py-5 px-6 text-right">
+                                    <div className="flex items-center justify-end space-x-2">
+                                      {v.estado === 'Pendiente' && (
+                                        <>
+                                          <button
+                                            onClick={() => handleUpdateVoluntarioEstado(v.id, 'Aprobado')}
+                                            className="w-8 h-8 rounded-xl bg-green-50 hover:bg-green-500 text-green-600 hover:text-white flex items-center justify-center transition-all shadow-sm active:scale-95"
+                                            title="Aprobar Solicitud"
+                                          >
+                                            <Check size={16} />
+                                          </button>
+                                          <button
+                                            onClick={() => handleUpdateVoluntarioEstado(v.id, 'Rechazado')}
+                                            className="w-8 h-8 rounded-xl bg-red-50 hover:bg-red-500 text-red-600 hover:text-white flex items-center justify-center transition-all shadow-sm active:scale-95"
+                                            title="Rechazar Solicitud"
+                                          >
+                                            <X size={16} />
+                                          </button>
+                                        </>
+                                      )}
+                                      <button
+                                        onClick={() => handleDeleteVoluntario(v.id)}
+                                        className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-red-50 text-slate-500 hover:text-red-600 flex items-center justify-center transition-all shadow-sm active:scale-95"
+                                        title="Eliminar Registro"
+                                      >
+                                        <Trash2 size={16} />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Mobile Cards View */}
+                      <div className="lg:hidden space-y-4">
+                        {filteredVoluntarios.map(v => (
+                          <div key={v.id} className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm space-y-4">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-extrabold text-slate-800 text-base">{v.nombre}</p>
+                                <p className="text-xs text-slate-450 mt-0.5">{v.correo}</p>
+                              </div>
+                              <span className={`text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                                v.estado === 'Aprobado' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                                v.estado === 'Rechazado' ? 'bg-red-50 text-red-700 border border-red-200' :
+                                'bg-amber-50 text-amber-700 border border-amber-200'
+                              }`}>
+                                {v.estado}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-3">
+                              <div>
+                                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Actividad:</span>
+                                <p className="text-slate-750 font-extrabold mt-0.5">{v.actividadTitulo}</p>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Teléfono:</span>
+                                <p className="text-slate-750 font-extrabold mt-0.5">{v.telefono}</p>
+                              </div>
+                            </div>
+                            {v.mensaje && (
+                              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
+                                <span className="text-slate-450 font-bold uppercase tracking-wider text-[8px] block mb-1">Mensaje:</span>
+                                <p className="text-slate-650 font-medium italic">{v.mensaje}</p>
+                              </div>
+                            )}
+                            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                              {v.estado === 'Pendiente' && (
+                                <>
+                                  <button
+                                    onClick={() => handleUpdateVoluntarioEstado(v.id, 'Aprobado')}
+                                    className="px-3 py-1.5 rounded-xl bg-green-50 hover:bg-green-500 text-green-700 hover:text-white text-xs font-black transition-all shadow-sm active:scale-95 flex items-center gap-1"
+                                  >
+                                    <Check size={14} />
+                                    <span>Aprobar</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleUpdateVoluntarioEstado(v.id, 'Rechazado')}
+                                    className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-500 text-red-700 hover:text-white text-xs font-black transition-all shadow-sm active:scale-95 flex items-center gap-1"
+                                  >
+                                    <X size={14} />
+                                    <span>Rechazar</span>
+                                  </button>
+                                </>
+                              )}
+                              <button
+                                onClick={() => handleDeleteVoluntario(v.id)}
+                                className="p-2 rounded-xl bg-slate-50 hover:bg-red-50 text-slate-550 hover:text-red-600 transition-all active:scale-95"
+                                title="Eliminar"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

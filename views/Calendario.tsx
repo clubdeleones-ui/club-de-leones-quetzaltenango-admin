@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar as CalendarIcon, ExternalLink, Info, Loader2, MapPin, Clock, Heart, Share2, Check, Copy, Search, Filter } from 'lucide-react';
+import { Calendar as CalendarIcon, ExternalLink, Info, Loader2, MapPin, Clock, Heart, Share2, Check, Copy, Search, Filter, UserPlus } from 'lucide-react';
 import { googleService } from '../services/googleService';
 import { firebaseService } from '../services/firebaseService';
 import { Actividad } from '../types';
+import { InscripcionVoluntarioModal } from '../components/InscripcionVoluntarioModal';
 
 interface CalendarioProps {
     accessToken?: string;
@@ -31,6 +32,10 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
 
     // Clipboard feedback
     const [copiedId, setCopiedId] = useState<string | null>(null);
+
+    // Volunteer modal states
+    const [selectedActForVol, setSelectedActForVol] = useState<Actividad | null>(null);
+    const [isVolModalOpen, setIsVolModalOpen] = useState(false);
 
     useEffect(() => {
         const loadAllData = async () => {
@@ -314,6 +319,18 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                                     <span>Apoyar con Donación</span>
                                                 </button>
                                             )}
+
+                                            {/* Volunteer CTA */}
+                                            <button
+                                                onClick={() => {
+                                                    setSelectedActForVol(act);
+                                                    setIsVolModalOpen(true);
+                                                }}
+                                                className="w-full bg-blue-900 hover:bg-blue-800 text-white font-extrabold py-3.5 px-6 rounded-2xl transition-all shadow-md hover:shadow-xl active:scale-98 flex items-center justify-center space-x-2 text-sm"
+                                            >
+                                                <UserPlus size={16} />
+                                                <span>Me apunto como voluntario</span>
+                                            </button>
                                         </div>
                                     </div>
                                 </article>
@@ -368,6 +385,19 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Volunteer Modal */}
+            {isVolModalOpen && selectedActForVol && (
+                <InscripcionVoluntarioModal
+                    isOpen={isVolModalOpen}
+                    onClose={() => {
+                        setIsVolModalOpen(false);
+                        setSelectedActForVol(null);
+                    }}
+                    actividadId={selectedActForVol.id}
+                    actividadTitulo={selectedActForVol.titulo}
+                />
             )}
         </div>
     );
