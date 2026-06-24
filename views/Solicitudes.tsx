@@ -26,7 +26,7 @@ import {
   Mail,
   Copy
 } from 'lucide-react';
-import { generateCartaOficialPDF } from '../utils/pdfGenerator';
+import { generateCartaOficialPDF, formatFechaCarta } from '../utils/pdfGenerator';
 
 
 interface SolicitudesProps {
@@ -117,6 +117,27 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   const [firmanteSelector, setFirmanteSelector] = useState<'presidente' | 'secretario' | 'personalizado'>('presidente');
   const [cartaFirmaNombre, setCartaFirmaNombre] = useState('Edwin Ernesto Pacheco López');
   const [cartaFirmaPuesto, setCartaFirmaPuesto] = useState('Presidente del Club');
+  const [cartaFirmaImg, setCartaFirmaImg] = useState<string | null>(null);
+
+  const handleFirmaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("La imagen de la firma no debe superar los 2MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setCartaFirmaImg(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleClearFirma = () => {
+    setCartaFirmaImg(null);
+  };
+
 
   // Dynamic names lookup for signatures
   useEffect(() => {
@@ -682,7 +703,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                   <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">
                     Saludo Inicial
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <select
                       value={cartaSaludo.startsWith('Estimado') || cartaSaludo.startsWith('Respetable') ? cartaSaludo : 'personalizado'}
                       onChange={(e) => {
@@ -693,7 +714,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                           setCartaSaludo('');
                         }
                       }}
-                      className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none"
+                      className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none w-full sm:w-auto"
                     >
                       <option value="Estimados señores:">Estimados señores:</option>
                       <option value="Estimado señor director:">Estimado señor director:</option>
@@ -706,7 +727,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                       placeholder="Redacte saludo personalizado..."
                       value={cartaSaludo}
                       onChange={(e) => setCartaSaludo(e.target.value)}
-                      className="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all"
+                      className="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/20 focus:border-blue-900 transition-all w-full"
                     />
                   </div>
                 </div>
@@ -726,17 +747,17 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                   />
                 </div>
 
-                {/* Firmas y Sellos */}
+                {/* Firmas, Sellos y Firma Digital PNG */}
                 <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 space-y-4">
                   <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">
                     Bloque de Firma y Autoría
                   </h3>
 
-                  <div className="flex gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <button
                       type="button"
                       onClick={() => setFirmanteSelector('presidente')}
-                      className={`flex-1 text-[10px] font-black uppercase tracking-wider py-2 rounded-xl border transition-all ${
+                      className={`text-[10px] font-black uppercase tracking-wider py-2 rounded-xl border transition-all truncate px-1 ${
                         firmanteSelector === 'presidente'
                           ? 'bg-blue-900 border-blue-900 text-white'
                           : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -747,7 +768,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                     <button
                       type="button"
                       onClick={() => setFirmanteSelector('secretario')}
-                      className={`flex-1 text-[10px] font-black uppercase tracking-wider py-2 rounded-xl border transition-all ${
+                      className={`text-[10px] font-black uppercase tracking-wider py-2 rounded-xl border transition-all truncate px-1 ${
                         firmanteSelector === 'secretario'
                           ? 'bg-blue-900 border-blue-900 text-white'
                           : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -758,7 +779,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                     <button
                       type="button"
                       onClick={() => setFirmanteSelector('personalizado')}
-                      className={`flex-1 text-[10px] font-black uppercase tracking-wider py-2 rounded-xl border transition-all ${
+                      className={`text-[10px] font-black uppercase tracking-wider py-2 rounded-xl border transition-all truncate px-1 ${
                         firmanteSelector === 'personalizado'
                           ? 'bg-blue-900 border-blue-900 text-white'
                           : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -794,11 +815,41 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                       </div>
                     </div>
                   )}
+
+                  {/* Firma Digital PNG */}
+                  <div className="pt-3 border-t border-slate-200">
+                    <label className="block text-[10px] font-black text-slate-600 uppercase tracking-wider mb-1.5 flex justify-between items-center">
+                      <span>Firma Digital (.png transparente)</span>
+                      {cartaFirmaImg && (
+                        <button
+                          type="button"
+                          onClick={handleClearFirma}
+                          className="text-red-500 hover:text-red-700 font-extrabold text-[9px]"
+                        >
+                          Eliminar firma
+                        </button>
+                      )}
+                    </label>
+                    
+                    {cartaFirmaImg ? (
+                      <div className="flex items-center space-x-3 bg-white p-2.5 rounded-xl border border-slate-200">
+                        <img src={cartaFirmaImg} alt="Firma cargada" className="h-10 w-24 object-contain bg-slate-50 rounded p-1 border border-slate-100" />
+                        <span className="text-xs text-slate-500 font-semibold truncate flex-grow">Firma cargada</span>
+                      </div>
+                    ) : (
+                      <input
+                        type="file"
+                        accept="image/png"
+                        onChange={handleFirmaUpload}
+                        className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-blue-50 file:text-blue-900 hover:file:bg-blue-100 transition-all cursor-pointer"
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* Botones de Acción del Formulario */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -811,11 +862,12 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                       asunto: cartaAsunto,
                       cuerpo: cartaCuerpo,
                       firmaNombre: cartaFirmaNombre,
-                      firmaPuesto: cartaFirmaPuesto
+                      firmaPuesto: cartaFirmaPuesto,
+                      firmaImg: cartaFirmaImg
                     }, 'download');
                   }}
                   disabled={!cartaDestinatario.trim() || !cartaCuerpo.trim()}
-                  className="flex-1 bg-blue-900 hover:bg-blue-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-extrabold px-5 py-3 rounded-xl transition-all shadow-md shadow-blue-900/10 flex items-center justify-center space-x-2 text-sm active:scale-[0.98]"
+                  className="sm:col-span-6 bg-blue-900 hover:bg-blue-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-extrabold px-4 py-3 rounded-xl transition-all shadow-md shadow-blue-900/10 flex items-center justify-center space-x-2 text-sm active:scale-[0.98]"
                 >
                   <FileText size={16} />
                   <span>Descargar PDF</span>
@@ -833,11 +885,12 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                       asunto: cartaAsunto,
                       cuerpo: cartaCuerpo,
                       firmaNombre: cartaFirmaNombre,
-                      firmaPuesto: cartaFirmaPuesto
+                      firmaPuesto: cartaFirmaPuesto,
+                      firmaImg: cartaFirmaImg
                     }, 'open');
                   }}
                   disabled={!cartaDestinatario.trim() || !cartaCuerpo.trim()}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:bg-slate-50 disabled:text-slate-300 disabled:cursor-not-allowed font-extrabold px-5 py-3 rounded-xl transition-all border border-slate-200 flex items-center justify-center space-x-2 text-sm active:scale-[0.98]"
+                  className="sm:col-span-4 bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:bg-slate-50 disabled:text-slate-350 disabled:cursor-not-allowed font-extrabold px-4 py-3 rounded-xl transition-all border border-slate-200 flex items-center justify-center space-x-2 text-sm active:scale-[0.98]"
                   title="Abrir Vista de Impresión"
                 >
                   <span>Previsualizar</span>
@@ -846,13 +899,13 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                 <button
                   type="button"
                   onClick={() => {
-                    const formattedDate = new Date(cartaFecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-                    const textToCopy = `Quetzaltenango, ${formattedDate}\n\n${cartaDestinatario}\n${cartaCargo}\n${cartaInstitucion}\nPresente.\n\nASUNTO: ${cartaAsunto.toUpperCase()}\n\n${cartaSaludo}\n\n${cartaCuerpo}\n\nAtentamente,\n\n${cartaFirmaNombre}\n${cartaFirmaPuesto}\nClub de Leones de Quetzaltenango`;
+                    const formattedDate = formatFechaCarta(cartaFecha);
+                    const textToCopy = `${formattedDate}\n\n${cartaDestinatario}\n${cartaCargo}\n${cartaInstitucion}\nPresente.\n\nASUNTO: ${cartaAsunto.toUpperCase()}\n\n${cartaSaludo}\n\n${cartaCuerpo}\n\nAtentamente,\n\n${cartaFirmaNombre}\n${cartaFirmaPuesto}\nClub de Leones de Quetzaltenango`;
                     navigator.clipboard.writeText(textToCopy);
                     alert("Texto copiado al portapapeles. Listo para pegar en Google Docs.");
                   }}
                   disabled={!cartaCuerpo.trim()}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:bg-slate-50 disabled:text-slate-300 disabled:cursor-not-allowed font-extrabold px-3 py-3 rounded-xl transition-all border border-slate-200 flex items-center justify-center"
+                  className="sm:col-span-2 bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:bg-slate-50 disabled:text-slate-350 disabled:cursor-not-allowed font-extrabold px-3 py-3 rounded-xl transition-all border border-slate-200 flex items-center justify-center active:scale-[0.98]"
                   title="Copiar texto para pegar en Google Docs"
                 >
                   <Copy size={16} />
@@ -861,13 +914,13 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
             </div>
 
             {/* Vista Previa En Vivo (Live Preview) */}
-            <div className="lg:col-span-7 bg-slate-100/50 rounded-3xl border border-slate-200/60 p-4 sm:p-6 space-y-4">
+            <div className="lg:col-span-7 bg-slate-100/50 rounded-3xl border border-slate-200/60 p-4 sm:p-6 space-y-4 w-full overflow-hidden">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">
                 Vista Previa en Tiempo Real
               </h3>
               
               {/* Hoja de Papel Membretado simulada */}
-              <div className="bg-white shadow-xl rounded-2xl border border-slate-200 p-8 sm:p-12 min-h-[700px] flex flex-col justify-between font-serif text-slate-800 relative overflow-hidden text-xs sm:text-sm">
+              <div className="bg-white shadow-xl rounded-2xl border border-slate-200 p-5 sm:p-12 min-h-[700px] flex flex-col justify-between font-serif text-slate-800 relative overflow-hidden text-[11px] sm:text-sm">
                 
                 {/* Cabecera oficial decorativa */}
                 <div className="absolute top-0 left-0 right-0">
@@ -878,9 +931,14 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                 <div className="space-y-6">
                   {/* Membrete del Club */}
                   <div className="flex items-center space-x-3 pb-4 border-b border-slate-100 mt-2">
-                    <div className="w-10 h-10 rounded-full bg-blue-900 flex items-center justify-center text-yellow-500 border border-yellow-500/35 flex-shrink-0 font-sans font-black text-lg">
-                      L
-                    </div>
+                    <img 
+                      src="/images/logo.png"
+                      alt="Logo Club de Leones"
+                      className="w-10 h-10 object-contain flex-shrink-0"
+                      onError={(e) => {
+                        e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%231b365d"/><circle cx="50" cy="50" r="41" fill="none" stroke="%23eab308" stroke-width="3"/><text x="50" y="65" font-family="Helvetica" font-weight="bold" font-size="45" fill="%23eab308" text-anchor="middle">L</text></svg>';
+                      }}
+                    />
                     <div>
                       <h4 className="text-blue-900 font-sans font-black text-xs sm:text-sm tracking-tight leading-none">
                         CLUB DE LEONES DE QUETZALTENANGO
@@ -893,7 +951,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
 
                   {/* Fecha */}
                   <div className="text-right text-slate-500 text-xs italic font-sans">
-                    Quetzaltenango, {cartaFecha ? new Date(cartaFecha + "T12:00:00").toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : '...'}
+                    {cartaFecha ? formatFechaCarta(cartaFecha) : '...'}
                   </div>
 
                   {/* Destinatario */}
@@ -930,7 +988,20 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                 <div className="pt-8 space-y-8">
                   <div className="space-y-1">
                     <p className="text-slate-500 text-xs italic">Atentamente,</p>
-                    <div className="pt-4 border-t border-slate-100 max-w-[220px]">
+                    {cartaFirmaImg && (
+                      <div className="my-2 relative group w-32 h-14">
+                        <img src={cartaFirmaImg} alt="Firma Digital" className="h-full object-contain" />
+                        <button
+                          type="button"
+                          onClick={handleClearFirma}
+                          className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Quitar firma"
+                        >
+                          <X size={8} />
+                        </button>
+                      </div>
+                    )}
+                    <div className="pt-2 border-t border-slate-100 max-w-[220px]">
                       <p className="font-sans font-bold text-xs text-blue-900">{cartaFirmaNombre}</p>
                       <p className="font-sans text-[10px] text-slate-400 font-semibold">{cartaFirmaPuesto}</p>
                     </div>

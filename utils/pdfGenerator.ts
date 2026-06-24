@@ -1127,7 +1127,20 @@ export interface CartaOficialInput {
   cuerpo: string;
   firmaNombre: string;
   firmaPuesto: string;
+  firmaImg?: string | null;
 }
+
+export const formatFechaCarta = (fechaStr: string): string => {
+  if (!fechaStr) return '';
+  const date = new Date(fechaStr + 'T12:00:00');
+  if (isNaN(date.getTime())) return fechaStr;
+  
+  const months = [
+    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+  ];
+  return `Quetzaltenango, ${date.getDate()} de ${months[date.getMonth()]} de ${date.getFullYear()}`;
+};
 
 export const generateCartaOficialPDF = async (
   carta: CartaOficialInput,
@@ -1205,7 +1218,7 @@ export const generateCartaOficialPDF = async (
   doc.setFont('times', 'normal');
   doc.setFontSize(11);
   doc.setTextColor(51, 65, 85);
-  doc.text(carta.fecha || new Date().toLocaleDateString('es-ES'), pageWidth - margin, 52, { align: 'right' });
+  doc.text(formatFechaCarta(carta.fecha), pageWidth - margin, 52, { align: 'right' });
 
   // Recipient block
   let y = 62;
@@ -1308,7 +1321,18 @@ export const generateCartaOficialPDF = async (
   doc.setTextColor(51, 65, 85);
   doc.text('Atentamente,', margin, y);
   
-  y += 16;
+  if (carta.firmaImg) {
+    try {
+      doc.addImage(carta.firmaImg, 'PNG', margin, y + 4, 35, 14);
+      y += 18;
+    } catch (err) {
+      console.error("Error adding signature image to PDF:", err);
+      y += 16;
+    }
+  } else {
+    y += 16;
+  }
+  
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.setTextColor(27, 54, 93);
