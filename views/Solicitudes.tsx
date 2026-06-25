@@ -669,7 +669,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       );
     }
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-8 w-full">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 w-full">
         {list.map((sol) => {
           const statusBorderColor = 
             sol.estado === 'Aprobada' ? 'border-l-4 border-l-emerald-500' :
