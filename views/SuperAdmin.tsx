@@ -5338,8 +5338,17 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     <div className="border-t border-slate-100 mt-6 pt-4 flex justify-between items-center">
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Activo</span>
                       <button 
-                        onClick={() => setBeneficios(beneficios.filter(b => b.id !== ben.id))}
-                        className="text-slate-300 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition-colors"
+                        onClick={async () => {
+                          const confirmed = await showConfirm(
+                            "Eliminar Convenio",
+                            `¿Está seguro de que desea eliminar el convenio "${ben.titulo}" permanentemente?`,
+                            { type: 'danger', confirmText: 'Eliminar', cancelText: 'Cancelar' }
+                          );
+                          if (confirmed) {
+                            setBeneficios(beneficios.filter(b => b.id !== ben.id));
+                          }
+                        }}
+                        className="text-blue-600 hover:text-red-600 p-2 rounded-lg hover:bg-blue-50 transition-colors"
                         title="Eliminar convenio"
                       >
                         <Trash2 size={16} />
