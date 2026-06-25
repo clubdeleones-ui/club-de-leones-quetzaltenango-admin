@@ -238,7 +238,10 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   }, [dbLoading.socios]);
 
   const [donaciones, setDonaciones] = useState<Donacion[]>(MOCK_DONACIONES);
-  const [beneficios, setBeneficios] = useState<Beneficio[]>(MOCK_BENEFICIOS);
+  const [beneficios, setBeneficios] = useState<Beneficio[]>(() => {
+    const local = localStorage.getItem('club_leones_beneficios');
+    return local ? JSON.parse(local) : MOCK_BENEFICIOS;
+  });
   const [calendarioSubTab, setCalendarioSubTab] = useState<'lista' | 'voluntarios'>('lista');
   const [voluntarioSearch, setVoluntarioSearch] = useState('');
   const [voluntarioFilterActividad, setVoluntarioFilterActividad] = useState('Todas');
@@ -1090,7 +1093,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       descuento: newBeneficio.descuento,
       categoria: newBeneficio.categoria
     };
-    setBeneficios([created, ...beneficios]);
+    const updated = [created, ...beneficios];
+    setBeneficios(updated);
+    localStorage.setItem('club_leones_beneficios', JSON.stringify(updated));
     setNewBeneficio({ titulo: '', descripcion: '', convenioCon: '', descuento: '', categoria: 'Salud' });
     setShowAddBeneficio(false);
   };
@@ -5345,7 +5350,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                             { type: 'danger', confirmText: 'Eliminar', cancelText: 'Cancelar' }
                           );
                           if (confirmed) {
-                            setBeneficios(beneficios.filter(b => b.id !== ben.id));
+                            const updated = beneficios.filter(b => b.id !== ben.id);
+                            setBeneficios(updated);
+                            localStorage.setItem('club_leones_beneficios', JSON.stringify(updated));
                           }
                         }}
                         className="text-blue-600 hover:text-red-600 p-2 rounded-lg hover:bg-blue-50 transition-colors"
