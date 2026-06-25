@@ -59,7 +59,11 @@ import {
   Archive,
   Camera,
   BookUser,
-  Upload
+  Upload,
+  Layers,
+  Accessibility,
+  XOctagon,
+  Lock
 } from 'lucide-react';
 import { generateActaPDF, generateActaCode, generateReciboPagoPDF } from '../utils/pdfGenerator';
 import { FormattedActa } from '../components/FormattedActa';
@@ -116,7 +120,7 @@ interface SuperAdminProps {
   onUpdateUser?: (user: Socio) => void;
 }
 
-type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas' | 'afiliacion' | 'inventario' | 'galeria_admin' | 'linea_tiempo_admin' | 'agenda_contactos';
+type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas' | 'afiliacion' | 'inventario' | 'galeria_admin' | 'linea_tiempo_admin' | 'agenda_contactos' | 'control_solicitudes';
 
 const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const { showAlert, showConfirm } = useModal();
@@ -128,15 +132,15 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const allowedTabs = useMemo(() => {
     switch (user.rol) {
       case UserRole.SUPER_ADMIN:
-        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario', 'galeria_admin', 'linea_tiempo_admin', 'agenda_contactos'];
+        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario', 'galeria_admin', 'linea_tiempo_admin', 'agenda_contactos', 'control_solicitudes'];
       case UserRole.TESORERO:
         return ['resumen', 'socios', 'cuotas', 'donaciones', 'parqueo', 'presupuestos', 'inventario', 'galeria_admin', 'linea_tiempo_admin'];
       case UserRole.SECRETARIO:
-        return ['resumen', 'socios', 'calendario', 'actas', 'comisiones', 'minutas', 'agenda_contactos'];
+        return ['resumen', 'socios', 'calendario', 'actas', 'comisiones', 'minutas', 'agenda_contactos', 'control_solicitudes'];
       case UserRole.ASESOR_SERVICIOS:
         return ['socios', 'calendario', 'beneficios', 'minutas'];
       case UserRole.PRESIDENTE_AFILIACION:
-        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'agenda_contactos'];
+        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'agenda_contactos', 'control_solicitudes'];
       default:
         return [];
     }
@@ -242,6 +246,11 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
 
   // Search & Filter States
   const [socioSearch, setSocioSearch] = useState('');
+
+  // States para "Control de Solicitudes"
+  const [controlSolicitudesFilterType, setControlSolicitudesFilterType] = useState<'todos' | 'abiertas' | 'internas' | 'sillas' | 'salon'>('todos');
+  const [controlSolicitudesFilterStatus, setControlSolicitudesFilterStatus] = useState<'todos' | 'Pendiente' | 'Aprobada' | 'Rechazada'>('todos');
+  const [controlSolicitudesSearchQuery, setControlSolicitudesSearchQuery] = useState('');
 
   // Actividades Search & Sort
   const [actividadSearch, setActividadSearch] = useState('');
@@ -1242,6 +1251,387 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     }
   };
 
+  const handleUpdateSolicitudStatus = async (solicitudId: string, nuevoEstado: 'Aprobada' | 'Rechazada') => {
+    const solicitud = solicitudes.find(s => s.id === solicitudId);
+    if (!solicitud) return;
+
+    const updated: Solicitud = {
+      ...solicitud,
+      estado: nuevoEstado
+    };
+
+    try {
+      await firebaseService.saveSolicitud(updated);
+      const newList = solicitudes.map(s => s.id === solicitudId ? updated : s);
+      setSolicitudes(newList);
+      alert(`La solicitud ha sido ${nuevoEstado.toLowerCase()} exitosamente.`);
+    } catch (err) {
+      console.error("Error updating status:", err);
+      alert("Error al actualizar el estado de la solicitud.");
+    }
+  };
+
+  const handleDeleteSolicitud = async (solicitudId: string) => {
+    if (!(await showConfirm("Eliminar Solicitud", "¿Está seguro de eliminar esta solicitud permanentemente? Esta acción no se puede deshacer.", { type: 'danger', confirmText: 'Eliminar', cancelText: 'Cancelar' }))) {
+      return;
+    }
+
+    try {
+      await firebaseService.deleteSolicitud(solicitudId);
+      const newList = solicitudes.filter(s => s.id !== solicitudId);
+      setSolicitudes(newList);
+      alert("Solicitud eliminada correctamente.");
+    } catch (err) {
+      console.error("Error deleting solicitud:", err);
+      alert("Error al eliminar la solicitud en Firebase.");
+    }
+  };
+
+  const renderControlSolicitudesList = () => {
+    // Filter list
+    const filteredList = solicitudes.filter(sol => {
+      // Exclude 'agenda' and 'cartas' from the unified list
+      if (sol.tipo === 'agenda') return false; 
+      
+      const matchesType = controlSolicitudesFilterType === 'todos' || sol.tipo === controlSolicitudesFilterType;
+      const matchesStatus = controlSolicitudesFilterStatus === 'todos' || sol.estado === controlSolicitudesFilterStatus;
+      
+      const searchLower = controlSolicitudesSearchQuery.toLowerCase();
+      const matchesSearch = 
+        (sol.nombre && sol.nombre.toLowerCase().includes(searchLower)) ||
+        (sol.descripcion && sol.descripcion.toLowerCase().includes(searchLower)) ||
+        (sol.nombreBeneficiario && sol.nombreBeneficiario.toLowerCase().includes(searchLower)) ||
+        (sol.nombreSolicitante && sol.nombreSolicitante.toLowerCase().includes(searchLower)) ||
+        (sol.salonNombreSolicitante && sol.salonNombreSolicitante.toLowerCase().includes(searchLower));
+        
+      return matchesType && matchesStatus && matchesSearch;
+    });
+
+    if (dbLoading.solicitudes) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 space-y-4 w-full">
+          <div className="animate-spin text-blue-900"><Users size={36} /></div>
+          <p className="text-slate-500 font-bold text-sm">Cargando solicitudes...</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6 w-full text-left">
+        {/* Leyenda y Filtros */}
+        <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center">
+              <Layers size={14} className="mr-1.5 text-slate-450" />
+              Código de Colores / Categorías
+            </h3>
+            {/* Leyenda */}
+            <div className="flex flex-wrap gap-2 text-[10px] font-bold">
+              <span className="flex items-center px-2 py-1 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-1.5"></span>
+                ♿ Sillas de Ruedas
+              </span>
+              <span className="flex items-center px-2 py-1 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5"></span>
+                🔓 Solicitudes Abiertas
+              </span>
+              <span className="flex items-center px-2 py-1 rounded bg-purple-50 text-purple-700 border border-purple-200">
+                <span className="w-2.5 h-2.5 rounded-full bg-purple-500 mr-1.5"></span>
+                🔒 Solicitudes Internas
+              </span>
+              <span className="flex items-center px-2 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 mr-1.5"></span>
+                🏛️ Salón y Parqueo
+              </span>
+            </div>
+          </div>
+
+          {/* Filtros de Búsqueda */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Buscar por Nombre / Detalle
+              </label>
+              <input
+                type="text"
+                value={controlSolicitudesSearchQuery}
+                onChange={(e) => setControlSolicitudesSearchQuery(e.target.value)}
+                placeholder="Ej. Juan Pérez..."
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-xs font-semibold text-slate-800 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Filtrar por Categoría
+              </label>
+              <select
+                value={controlSolicitudesFilterType}
+                onChange={(e) => setControlSolicitudesFilterType(e.target.value as any)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-xs font-semibold bg-white cursor-pointer"
+              >
+                <option value="todos">Todas las categorías</option>
+                <option value="sillas">♿ Sillas de Ruedas</option>
+                <option value="abiertas">🔓 Solicitudes Abiertas</option>
+                <option value="internas">🔒 Solicitudes Internas</option>
+                <option value="salon">🏛️ Salón y Parqueo</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Filtrar por Estado
+              </label>
+              <select
+                value={controlSolicitudesFilterStatus}
+                onChange={(e) => setControlSolicitudesFilterStatus(e.target.value as any)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-xs font-semibold bg-white cursor-pointer"
+              >
+                <option value="todos">Todos los estados</option>
+                <option value="Pendiente">🟡 Pendientes</option>
+                <option value="Aprobada">🟢 Aprobadas</option>
+                <option value="Rechazada">🔴 Rechazadas</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Listado de Solicitudes Consolidado */}
+        {filteredList.length === 0 ? (
+          <div className="bg-white rounded-3xl border border-slate-200/60 p-12 text-center w-full">
+            <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+              <FileText size={28} />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800">Sin resultados</h3>
+            <p className="text-slate-500 text-xs mt-1 font-semibold">
+              No se encontraron solicitudes que coincidan con los filtros seleccionados.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+            {filteredList.map((sol) => {
+              // LEFT BORDER = Approval status
+              const statusBorderColor = 
+                sol.estado === 'Aprobada' ? 'border-l-4 border-l-emerald-500' :
+                sol.estado === 'Rechazada' ? 'border-l-4 border-l-rose-500' :
+                'border-l-4 border-l-yellow-500';
+
+              // TOP BORDER = Request type color code
+              const typeTopBorderColor = 
+                sol.tipo === 'sillas' ? 'border-t-4 border-t-blue-500' :
+                sol.tipo === 'abiertas' ? 'border-t-4 border-t-emerald-500' :
+                sol.tipo === 'internas' ? 'border-t-4 border-t-purple-500' :
+                sol.tipo === 'salon' ? 'border-t-4 border-t-amber-500' :
+                'border-t-4 border-t-slate-300';
+
+              // Request type tag
+              let typeTag = null;
+              if (sol.tipo === 'sillas') {
+                typeTag = (
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border bg-blue-50 text-blue-700 border-blue-200 flex items-center space-x-1">
+                    <Accessibility size={12} className="mr-0.5" />
+                    <span>Silla de Ruedas</span>
+                  </span>
+                );
+              } else if (sol.tipo === 'abiertas') {
+                typeTag = (
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border bg-emerald-50 text-emerald-700 border-emerald-200 flex items-center space-x-1">
+                    <FileText size={12} className="mr-0.5" />
+                    <span>Abierta</span>
+                  </span>
+                );
+              } else if (sol.tipo === 'internas') {
+                typeTag = (
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border bg-purple-50 text-purple-700 border-purple-200 flex items-center space-x-1">
+                    <Lock size={12} className="mr-0.5" />
+                    <span>Interna</span>
+                  </span>
+                );
+              } else if (sol.tipo === 'salon') {
+                typeTag = (
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border bg-amber-50 text-amber-700 border-amber-200 flex items-center space-x-1">
+                    <Building size={12} className="mr-0.5" />
+                    <span>Salón/Parqueo</span>
+                  </span>
+                );
+              }
+
+              return (
+                <div 
+                  key={sol.id}
+                  className={`bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-md border border-slate-150 transition-all duration-300 flex flex-col justify-between ${statusBorderColor} ${typeTopBorderColor}`}
+                >
+                  <div className="p-5 space-y-3.5 flex-grow">
+                    {/* Tags and Status */}
+                    <div className="flex justify-between items-start gap-2">
+                      {typeTag}
+                      
+                      <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center space-x-1 ${
+                        sol.estado === 'Aprobada' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                        sol.estado === 'Rechazada' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+                        'bg-yellow-50 text-yellow-700 border border-yellow-100'
+                      }`}>
+                        {sol.estado === 'Aprobada' && <CheckCircle size={10} className="mr-1" />}
+                        {sol.estado === 'Rechazada' && <XOctagon size={10} className="mr-1" />}
+                        {sol.estado === 'Pendiente' && <Clock size={10} className="mr-1" />}
+                        <span>{sol.estado}</span>
+                      </span>
+                    </div>
+
+                    {/* Rent-specific details */}
+                    {sol.tipo === 'salon' && (
+                      <div className="space-y-2">
+                        <div className="space-y-1">
+                          <h3 className="font-extrabold text-base text-slate-900 leading-snug break-words">
+                            Reservación: {sol.salonDia}
+                          </h3>
+                          <div className="flex items-center text-xs font-semibold text-slate-400">
+                            <Clock size={12} className="mr-1 text-slate-400 flex-shrink-0" />
+                            <span>{sol.salonHoraInicio} - {sol.salonHoraFin} | Tipo: <strong className="text-slate-600 font-extrabold uppercase">{sol.salonTipoAlquiler}</strong></span>
+                          </div>
+                        </div>
+
+                        <div className="bg-slate-50/50 p-3.5 rounded-2xl border border-slate-100 space-y-2 text-xs font-medium">
+                          <div className="flex justify-between">
+                            <span className="text-slate-400 font-bold">Solicitante:</span>
+                            <span className="font-extrabold text-slate-800">{sol.salonNombreSolicitante}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-400 font-bold">Teléfono:</span>
+                            <a href={`tel:${sol.salonTelefono}`} className="text-blue-900 font-extrabold flex items-center">
+                              <Phone size={10} className="mr-0.5" />
+                              <span>{sol.salonTelefono}</span>
+                            </a>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-400 font-bold">Asistentes:</span>
+                            <span className="font-extrabold text-slate-800">{sol.salonAsistentes} personas</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-400 font-bold">Limpieza:</span>
+                            <span className="font-bold text-slate-700">
+                              {sol.salonCompromisoLimpieza === 'dejar_limpio' ? 'Compromiso limpiar' : 'Servicio pagado'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between pt-1 border-t border-slate-200/50">
+                            <span className="text-slate-550 font-bold text-xs">Costo Total:</span>
+                            <span className="font-black text-blue-900 text-xs">Q{sol.salonCostoTotal}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Wheelchair-specific details */}
+                    {sol.tipo === 'sillas' && (
+                      <div className="space-y-2">
+                        <div className="space-y-1">
+                          <h3 className="font-extrabold text-base text-slate-900 leading-snug break-words">
+                            Beneficiario: {sol.nombreBeneficiario}
+                          </h3>
+                          <div className="flex items-center text-xs font-semibold text-slate-400">
+                            <Calendar size={12} className="mr-1 text-slate-400 flex-shrink-0" />
+                            <span>Edad: {sol.edadBeneficiario} años | Registro: {sol.fechaCreacion}</span>
+                          </div>
+                        </div>
+
+                        <div className="bg-slate-50/50 p-3.5 rounded-2xl border border-slate-100 space-y-2 text-xs font-medium">
+                          <div className="flex justify-between">
+                            <span className="text-slate-400 font-bold">Solicitante:</span>
+                            <span className="font-extrabold text-slate-800">{sol.nombreSolicitante}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-400 font-bold">DPI:</span>
+                            <span className="font-mono text-slate-700">{sol.dpiSolicitante}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-400 font-bold">Teléfono:</span>
+                            <a href={`tel:${sol.telefonoSolicitante}`} className="text-blue-900 font-extrabold flex items-center">
+                              <Phone size={10} className="mr-0.5" />
+                              <span>{sol.telefonoSolicitante}</span>
+                            </a>
+                          </div>
+                          <div className="flex justify-between pt-1 border-t border-slate-200/50">
+                            <span className="text-slate-400 font-bold">Uso propuesto:</span>
+                            <span className="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">{sol.tiempoUso}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Open/Internal standard details */}
+                    {(sol.tipo === 'abiertas' || sol.tipo === 'internas') && (
+                      <div className="space-y-2">
+                        <div className="space-y-1">
+                          <h3 className="font-extrabold text-base text-slate-900 leading-snug break-words">
+                            {sol.nombre}
+                          </h3>
+                          <div className="flex items-center text-xs font-semibold text-slate-400">
+                            <Calendar size={12} className="mr-1 text-slate-400 flex-shrink-0" />
+                            <span>Fecha límite sugerida: {sol.fecha}</span>
+                          </div>
+                        </div>
+
+                        <p className="text-slate-600 text-xs leading-relaxed font-medium bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+                          {sol.descripcion}
+                        </p>
+
+                        <div className="space-y-1 pt-1.5">
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Responsables:</span>
+                          <div className="space-y-1">
+                            {sol.responsables?.map((resp, i) => (
+                              <div key={i} className="flex justify-between text-xs bg-slate-50 px-2 py-1 rounded border border-slate-100">
+                                <span className="font-bold text-slate-700">{resp.nombre}</span>
+                                <a href={`tel:${resp.telefono}`} className="text-blue-900 font-bold flex items-center space-x-1">
+                                  <Phone size={10} className="mr-0.5" />
+                                  <span>{resp.telefono}</span>
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions Bar */}
+                  <div className="bg-slate-50/80 px-5 py-3 border-t border-slate-100 flex justify-between items-center text-[10px] font-bold text-slate-400">
+                    <span className="truncate max-w-[150px]" title={sol.usuarioCreador}>Por: {sol.usuarioCreador || 'Público'}</span>
+                    
+                    <div className="flex items-center space-x-1.5 flex-shrink-0">
+                      {sol.estado === 'Pendiente' && (
+                        <>
+                          <button
+                            onClick={() => handleUpdateSolicitudStatus(sol.id, 'Aprobada')}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white p-1.5 rounded-lg shadow-sm transition-all active:scale-95"
+                            title="Aprobar Solicitud"
+                          >
+                            <Check size={12} />
+                          </button>
+                          <button
+                            onClick={() => handleUpdateSolicitudStatus(sol.id, 'Rechazada')}
+                            className="bg-rose-500 hover:bg-rose-600 text-white p-1.5 rounded-lg shadow-sm transition-all active:scale-95"
+                            title="Rechazar Solicitud"
+                          >
+                            <X size={12} />
+                          </button>
+                        </>
+                      )}
+                      <button
+                        onClick={() => handleDeleteSolicitud(sol.id)}
+                        className="bg-slate-200 hover:bg-red-50 text-slate-500 hover:text-red-600 p-1.5 rounded-lg border border-slate-300/30 transition-all active:scale-95"
+                        title="Eliminar Solicitud"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const handleEditSocioClick = (socio: Socio) => {
     setEditingSocio(socio);
     setEditSocioForm({ ...socio });
@@ -1507,6 +1897,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 category: 'Secretaría',
                 items: [
                   { id: 'actas', label: 'Libro de Actas', icon: FileText },
+                  { id: 'control_solicitudes', label: 'Control de Solicitudes', icon: Layers },
                   { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
                   { id: 'calendario', label: 'Actividades', icon: Calendar },
                   { id: 'comisiones', label: 'Gestión de Comisiones', icon: Briefcase }
@@ -1630,7 +2021,12 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     { id: 'presupuestos', label: 'Presupuestos', icon: DollarSign },
                     { id: 'comisiones', label: 'Gestión de Comisiones', icon: Briefcase },
                     { id: 'minutas', label: 'Minutas de Comisiones', icon: FileText },
-                    { id: 'afiliacion', label: 'Comité de Afiliación', icon: UserCheck }
+                    { id: 'afiliacion', label: 'Comité de Afiliación', icon: UserCheck },
+                    { id: 'inventario', label: 'Inventario', icon: Archive },
+                    { id: 'galeria_admin', label: 'Gestión de Galería', icon: Camera },
+                    { id: 'linea_tiempo_admin', label: 'Línea de Tiempo', icon: Clock },
+                    { id: 'agenda_contactos', label: 'Agenda de Contactos', icon: BookUser },
+                    { id: 'control_solicitudes', label: 'Control de Solicitudes', icon: Layers }
                   ].find(t => t.id === activeTab);
                   if (currentTab) {
                     const Icon = currentTab.icon;
@@ -1654,7 +2050,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     { id: 'afiliacion', label: 'Comité de Afiliación' },
                     { id: 'inventario', label: 'Inventario' },
                     { id: 'galeria_admin', label: 'Gestión de Galería' },
+                    { id: 'linea_tiempo_admin', label: 'Línea de Tiempo' },
                     { id: 'agenda_contactos', label: 'Agenda de Contactos' },
+                    { id: 'control_solicitudes', label: 'Control de Solicitudes' }
                   ].find(t => t.id === activeTab)?.label}
                 </span>
               </div>
@@ -1674,6 +2072,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     category: 'Secretaría',
                     items: [
                       { id: 'actas', label: 'Libro de Actas', icon: FileText },
+                      { id: 'control_solicitudes', label: 'Control de Solicitudes', icon: Layers },
                       { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
                       { id: 'calendario', label: 'Actividades', icon: Calendar },
                       { id: 'comisiones', label: 'Gestión de Comisiones', icon: Briefcase }
@@ -4977,6 +5376,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           )}
           {activeTab === 'agenda_contactos' && (
             <AgendaContactos />
+          )}
+          {activeTab === 'control_solicitudes' && (
+            renderControlSolicitudesList()
           )}
         </main>
       </div>
