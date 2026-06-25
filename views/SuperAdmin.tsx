@@ -5225,55 +5225,68 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
               {/* Add Beneficio Modal */}
               {showAddBeneficio && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-md">
-                  <form onSubmit={handleAddBeneficio} className="bg-white rounded-[2.5rem] p-10 md:p-12 max-w-lg w-full space-y-8 shadow-2xl border border-slate-100">
-                    <div className="flex justify-between items-center">
-                      <h4 className="text-2xl font-black text-slate-800">Añadir Beneficio/Convenio</h4>
-                      <button type="button" onClick={() => setShowAddBeneficio(false)} className="p-2 hover:bg-slate-50 rounded-xl transition-colors"><X size={20} /></button>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-300">
+                  <form 
+                    onSubmit={handleAddBeneficio} 
+                    className="bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 sm:p-10 space-y-6 relative animate-in zoom-in-95 duration-300 text-left"
+                  >
+                    <button 
+                      type="button" 
+                      onClick={() => setShowAddBeneficio(false)} 
+                      className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors"
+                    >
+                      <X size={20} />
+                    </button>
+
+                    <div className="pb-2">
+                      <h4 className="text-2xl font-black text-slate-800 tracking-tight">Añadir Beneficio/Convenio</h4>
+                      <p className="text-slate-500 text-xs mt-1 font-semibold">Completa los campos para registrar un nuevo beneficio del club.</p>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-5">
                       <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2">Nombre del Beneficio</label>
+                        <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">Nombre del Beneficio</label>
                         <input 
                           type="text" 
                           required 
                           value={newBeneficio.titulo} 
                           onChange={e => setNewBeneficio({...newBeneficio, titulo: e.target.value})}
                           placeholder="Ej. Descuento en Consultas Dentales"
-                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all"
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-800 bg-white"
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-bold text-slate-700 mb-2">Establecimiento / Alianza</label>
+                          <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">Establecimiento / Alianza</label>
                           <input 
                             type="text" 
                             required 
                             value={newBeneficio.convenioCon} 
                             onChange={e => setNewBeneficio({...newBeneficio, convenioCon: e.target.value})}
                             placeholder="Ej. Clínica Dental Xela"
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all"
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-800 bg-white"
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-bold text-slate-700 mb-2">Descuento Ofrecido</label>
+                          <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">Descuento Ofrecido</label>
                           <input 
                             type="text" 
                             required 
                             value={newBeneficio.descuento} 
                             onChange={e => setNewBeneficio({...newBeneficio, descuento: e.target.value})}
                             placeholder="Ej. 20% o Q50"
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all"
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-800 bg-white"
                           />
                         </div>
                       </div>
+
                       <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2">Categoría</label>
+                        <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">Categoría</label>
                         <select
                           value={newBeneficio.categoria}
                           onChange={e => setNewBeneficio({...newBeneficio, categoria: e.target.value as any})}
-                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700 font-bold"
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-bold text-slate-700 bg-white cursor-pointer"
                         >
                           <option value="Salud">Salud</option>
                           <option value="Comercio">Comercio</option>
@@ -5281,14 +5294,15 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                           <option value="Otros">Otros</option>
                         </select>
                       </div>
+
                       <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2">Descripción Corta</label>
+                        <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">Descripción Corta</label>
                         <textarea 
-                          rows={2} 
+                          rows={3} 
                           value={newBeneficio.descripcion} 
                           onChange={e => setNewBeneficio({...newBeneficio, descripcion: e.target.value})}
                           placeholder="Detalles sobre cómo aplicar el beneficio..."
-                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all resize-none text-sm"
+                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all resize-none text-sm font-semibold text-slate-800 bg-white"
                         />
                       </div>
                     </div>
