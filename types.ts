@@ -175,7 +175,7 @@ export interface Solicitud {
   responsables?: Responsable[]; // Opcional para sillas de ruedas (de 1 a 3 responsables)
   tema?: string; // Opcional para sillas de ruedas (Diabetes, Visión, etc.)
   otroTemaDescripcion?: string; // Opcional
-  tipo: 'abiertas' | 'internas' | 'sillas' | 'agenda'; // Tipos alineados a minúsculas
+  tipo: 'abiertas' | 'internas' | 'sillas' | 'agenda' | 'salon'; // Tipos alineados a minúsculas
   estado: 'Pendiente' | 'Aprobada' | 'Rechazada';
   usuarioCreador?: string; // email o id del socio/admin o 'público'
   fechaCreacion: string;
@@ -195,6 +195,19 @@ export interface Solicitud {
   agendaNombrePunto?: string;
   agendaContenido?: string;
   agendaRazon?: string;
+
+  // Campos específicos para alquiler de salón y parqueo
+  salonDia?: string;
+  salonHoraInicio?: string;
+  salonHoraFin?: string;
+  salonTipoAlquiler?: 'salon' | 'parqueo' | 'ambos';
+  salonAsistentes?: number;
+  salonCompromisoLimpieza?: 'dejar_limpio' | 'pagar_limpieza';
+  salonCostoTotal?: number;
+  salonRequisitosAceptados?: boolean;
+  salonEsSocio?: boolean;
+  salonTelefono?: string;
+  salonEmail?: string;
 }
 
 export interface VehiculoParqueo {

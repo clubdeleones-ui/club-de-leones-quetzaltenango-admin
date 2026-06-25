@@ -25,7 +25,13 @@ import {
   Heart,
   RefreshCw,
   Mail,
-  Copy
+  Copy,
+  Home,
+  Shield,
+  Building,
+  DollarSign,
+  AlertTriangle,
+  Layers
 } from 'lucide-react';
 import { generateCartaOficialPDF, formatFechaCarta } from '../utils/pdfGenerator';
 
@@ -65,7 +71,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   };
 
   const { solicitudes: dbSolicitudes, socios, loading } = useClubData();
-  const [activeTab, setActiveTab] = useState<'abiertas' | 'sillas' | 'internas' | 'agenda' | 'cartas' | null>(null);
+  const [activeTab, setActiveTab] = useState<'abiertas' | 'sillas' | 'internas' | 'agenda' | 'cartas' | 'salon' | 'secretaria' | null>(null);
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>(dbSolicitudes);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -88,8 +94,43 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       sillasPendientes: solicitudes.filter(s => s.tipo === 'sillas' && s.estado === 'Pendiente').length,
       agenda: solicitudes.filter(s => s.tipo === 'agenda').length,
       agendaPendientes: solicitudes.filter(s => s.tipo === 'agenda' && s.estado === 'Pendiente').length,
+      salon: solicitudes.filter(s => s.tipo === 'salon').length,
+      salonPendientes: solicitudes.filter(s => s.tipo === 'salon' && s.estado === 'Pendiente').length,
     };
   }, [solicitudes]);
+
+  // Form State para Alquiler de Salón y Parqueo
+  const [salonNombreSolicitante, setSalonNombreSolicitante] = useState('');
+  const [salonTelefonoDigitos, setSalonTelefonoDigitos] = useState('');
+  const [salonEmail, setSalonEmail] = useState('');
+  const [salonDia, setSalonDia] = useState('');
+  const [salonHoraInicio, setSalonHoraInicio] = useState('');
+  const [salonHoraFin, setSalonHoraFin] = useState('');
+  const [salonTipoAlquiler, setSalonTipoAlquiler] = useState<'salon' | 'parqueo' | 'ambos'>('salon');
+  const [salonAsistentes, setSalonAsistentes] = useState('');
+  const [salonCompromisoLimpieza, setSalonCompromisoLimpieza] = useState<'dejar_limpio' | 'pagar_limpieza'>('dejar_limpio');
+  const [salonRequisitosAceptados, setSalonRequisitosAceptados] = useState(false);
+
+  // States para filtros de Secretaría
+  const [secretariaFilterType, setSecretariaFilterType] = useState<'todos' | 'abiertas' | 'internas' | 'sillas' | 'salon'>('todos');
+  const [secretariaFilterStatus, setSecretariaFilterStatus] = useState<'todos' | 'Pendiente' | 'Aprobada' | 'Rechazada'>('todos');
+  const [secretariaSearchQuery, setSecretariaSearchQuery] = useState('');
+
+  // Auto-fill salon form details if user is logged in
+  useEffect(() => {
+    if (user) {
+      setSalonNombreSolicitante(user.nombre);
+      setSalonEmail(user.correo);
+      if (user.telefono) {
+        const clean = user.telefono.replace(/^\+?502/, '').replace(/\D/g, '');
+        setSalonTelefonoDigitos(clean.substring(0, 8));
+      }
+    } else {
+      setSalonNombreSolicitante('');
+      setSalonEmail('');
+      setSalonTelefonoDigitos('');
+    }
+  }, [user]);
 
   // Form State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -200,6 +241,19 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     return user.rol !== UserRole.DONANTE && user.rol !== UserRole.GUEST;
   }, [user]);
 
+  const salonCostoTotal = useMemo(() => {
+    let base = 0;
+    if (salonTipoAlquiler === 'salon') {
+      base = isSocio ? 0 : 1500;
+    } else if (salonTipoAlquiler === 'parqueo') {
+      base = isSocio ? 1500 : 3500;
+    } else if (salonTipoAlquiler === 'ambos') {
+      base = isSocio ? 1500 : 5000;
+    }
+    const cleaning = salonCompromisoLimpieza === 'pagar_limpieza' ? 300 : 0;
+    return base + cleaning;
+  }, [salonTipoAlquiler, salonCompromisoLimpieza, isSocio]);
+
   // Fetch Solicitudes is handled by global ClubDataContext
   const fetchSolicitudes = async () => {};
 
@@ -231,7 +285,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   // Submit Request Form
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeTab || activeTab === 'cartas') {
+    if (!activeTab || activeTab === 'cartas' || activeTab === 'secretaria') {
       setSaveError("Categoría de solicitud no válida.");
       return;
     }
@@ -240,7 +294,61 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
 
     let nuevaSolicitud: Solicitud;
 
-    if (activeTab === 'agenda') {
+    if (activeTab === 'salon') {
+      if (
+        !salonNombreSolicitante.trim() || 
+        !salonTelefonoDigitos.trim() || 
+        !salonEmail.trim() || 
+        !salonDia || 
+        !salonHoraInicio || 
+        !salonHoraFin || 
+        !salonAsistentes
+      ) {
+        setSaveError("Por favor, complete todos los campos obligatorios.");
+        return;
+      }
+      if (salonTelefonoDigitos.trim().length !== 8) {
+        setSaveError("El número de teléfono debe tener exactamente 8 dígitos.");
+        return;
+      }
+      const asistentesNum = parseInt(salonAsistentes);
+      if (isNaN(asistentesNum) || asistentesNum <= 0) {
+        setSaveError("Por favor, ingrese un número de asistentes válido.");
+        return;
+      }
+      if (asistentesNum > 80) {
+        setSaveError("La capacidad máxima del salón es de 80 personas (60 sentadas / 80 de pie).");
+        return;
+      }
+      if (!salonRequisitosAceptados) {
+        setSaveError("Debe aceptar los requisitos y condiciones de uso.");
+        return;
+      }
+
+      nuevaSolicitud = {
+        id: `sol-${Date.now()}`,
+        nombre: `Alquiler - ${
+          salonTipoAlquiler === 'salon' ? 'Salón' : 
+          salonTipoAlquiler === 'parqueo' ? 'Parqueo' : 
+          'Salón y Parqueo'
+        }`,
+        tipo: 'salon',
+        estado: 'Pendiente',
+        usuarioCreador: user ? `${user.nombre} (${user.correo})` : 'Público',
+        fechaCreacion: new Date().toISOString().split('T')[0],
+        salonDia,
+        salonHoraInicio,
+        salonHoraFin,
+        salonTipoAlquiler,
+        salonAsistentes: asistentesNum,
+        salonCompromisoLimpieza,
+        salonCostoTotal,
+        salonRequisitosAceptados,
+        salonEsSocio: isSocio,
+        salonTelefono: `+502${salonTelefonoDigitos}`,
+        salonEmail: salonEmail.trim()
+      };
+    } else if (activeTab === 'agenda') {
       if (
         !agendaSocioNombre.trim() || 
         !agendaNombrePunto.trim() || 
@@ -362,6 +470,20 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
         setAgendaNombrePunto('');
         setAgendaContenido('');
         setAgendaRazon('');
+
+        // Reset salon form
+        setSalonDia('');
+        setSalonHoraInicio('');
+        setSalonHoraFin('');
+        setSalonTipoAlquiler('salon');
+        setSalonAsistentes('');
+        setSalonCompromisoLimpieza('dejar_limpio');
+        setSalonRequisitosAceptados(false);
+        if (!user) {
+          setSalonNombreSolicitante('');
+          setSalonEmail('');
+          setSalonTelefonoDigitos('');
+        }
         
         setSaveSuccess(false);
       }, 1500);
@@ -413,7 +535,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   };
 
   interface TabConfig {
-    id: 'abiertas' | 'sillas' | 'internas' | 'cartas' | 'agenda';
+    id: 'abiertas' | 'sillas' | 'internas' | 'cartas' | 'agenda' | 'salon' | 'secretaria';
     title: string;
     subtitle: string;
     description: string;
@@ -428,6 +550,20 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   }
 
   const tabConfigs: TabConfig[] = [
+    {
+      id: 'secretaria',
+      title: 'Control de Secretaría',
+      subtitle: 'Administración Global',
+      description: 'Panel de control consolidado para revisar, filtrar y resolver todas las solicitudes (Sillas de ruedas, Abiertas, Internas, Salón/Parqueo) de forma color-codificada.',
+      icon: <Shield size={20} />,
+      visible: isAdministrative,
+      allowed: isAdministrative,
+      audience: 'Administrativos',
+      pendingCount: solicitudes.filter(s => s.estado === 'Pendiente').length,
+      registeredCount: solicitudes.length,
+      showAction: false,
+      actionText: ''
+    },
     {
       id: 'abiertas',
       title: 'Solicitudes Abiertas',
@@ -455,6 +591,20 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       registeredCount: counts.sillas,
       showAction: true,
       actionText: 'Solicitar Silla'
+    },
+    {
+      id: 'salon',
+      title: 'Alquiler Salón y Parqueo',
+      subtitle: 'Eventos y Reservaciones',
+      description: 'Solicitudes para el alquiler del salón de eventos del club (capacidad de 60 personas sentadas y 80 de pie) y uso del parqueo completo.',
+      icon: <Home size={20} />,
+      visible: true,
+      allowed: true,
+      audience: 'Público General',
+      pendingCount: counts.salonPendientes,
+      registeredCount: counts.salon,
+      showAction: true,
+      actionText: 'Reservar Salón'
     },
     {
       id: 'internas',
@@ -516,7 +666,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     );
   };
 
-  const renderSolicitudesList = (tipo: 'abiertas' | 'sillas' | 'internas' | 'agenda') => {
+  const renderSolicitudesList = (tipo: 'abiertas' | 'sillas' | 'internas' | 'agenda' | 'salon') => {
     const list = solicitudes.filter(s => s.tipo === tipo);
     if (isLoading) {
       return (
@@ -748,6 +898,131 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
             );
           }
 
+          if (sol.tipo === 'salon') {
+            return (
+              <div 
+                key={sol.id}
+                className={`bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-xl border border-slate-100 transition-all duration-300 flex flex-col justify-between ${statusBorderColor}`}
+              >
+                <div className="p-6 space-y-4 flex-grow text-left">
+                  {/* Tags and Status */}
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border bg-amber-50 text-amber-700 border-amber-200 flex items-center space-x-1">
+                      <Building size={12} className="mr-0.5" />
+                      <span>
+                        {sol.salonTipoAlquiler === 'salon' ? 'Solo Salón' : 
+                         sol.salonTipoAlquiler === 'parqueo' ? 'Solo Parqueo' : 
+                         'Salón y Parqueo'}
+                      </span>
+                    </span>
+                    
+                    <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center space-x-1 ${
+                      sol.estado === 'Aprobada' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                      sol.estado === 'Rechazada' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+                      'bg-yellow-50 text-yellow-700 border border-yellow-100'
+                    }`}>
+                      {sol.estado === 'Aprobada' && <CheckCircle size={10} className="mr-1" />}
+                      {sol.estado === 'Rechazada' && <XOctagon size={10} className="mr-1" />}
+                      {sol.estado === 'Pendiente' && <Clock size={10} className="mr-1" />}
+                      <span>{sol.estado}</span>
+                    </span>
+                  </div>
+
+                  {/* Info details */}
+                  <div className="space-y-1">
+                    <h3 className="font-extrabold text-base text-slate-900 leading-snug break-words">
+                      Reservación: {sol.salonDia}
+                    </h3>
+                    <div className="flex items-center text-xs font-semibold text-slate-400">
+                      <Clock size={12} className="mr-1 text-slate-400 flex-shrink-0" />
+                      <span>{sol.salonHoraInicio} - {sol.salonHoraFin}</span>
+                    </div>
+                  </div>
+
+                  {/* Rental details */}
+                  <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50 space-y-2.5 text-xs font-medium">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400 font-bold">Solicitante:</span>
+                      <span className="font-extrabold text-slate-800">{sol.salonNombreSolicitante || sol.nombre}</span>
+                    </div>
+                    {sol.salonTelefono && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-400 font-bold">Teléfono:</span>
+                        <a href={`tel:${sol.salonTelefono}`} className="text-blue-900 hover:underline font-extrabold flex items-center space-x-1">
+                          <Phone size={10} className="mr-0.5" />
+                          <span>{sol.salonTelefono}</span>
+                        </a>
+                      </div>
+                    )}
+                    {sol.salonEmail && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-400 font-bold">Correo:</span>
+                        <span className="font-semibold text-slate-700">{sol.salonEmail}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between pt-1.5 border-t border-slate-200/50">
+                      <span className="text-slate-400 font-bold">Asistentes:</span>
+                      <span className="font-extrabold text-slate-800">{sol.salonAsistentes} personas</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400 font-bold">Limpieza:</span>
+                      <span className="font-bold text-slate-700">
+                        {sol.salonCompromisoLimpieza === 'dejar_limpio' ? 'Dejará limpio' : 'Pago de servicio'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400 font-bold">Tarifa:</span>
+                      <span className={`font-bold px-1.5 py-0.5 rounded text-[10px] ${
+                        sol.salonEsSocio ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-slate-100 text-slate-750'
+                      }`}>
+                        {sol.salonEsSocio ? 'Socio' : 'Público General'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between pt-1.5 border-t border-slate-200/50">
+                      <span className="text-slate-400 font-bold text-sm">Costo Total:</span>
+                      <span className="font-black text-sm text-blue-900">Q{sol.salonCostoTotal}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer actions for Admin */}
+                <div className="bg-slate-50/80 px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row gap-2 justify-between items-center text-[10px] font-bold text-slate-400">
+                  <span className="truncate max-w-[130px]" title={sol.usuarioCreador}>Por: {sol.usuarioCreador || 'Público'}</span>
+                  
+                  {(isAdministrative || (user && sol.usuarioCreador?.includes(user.correo))) && (
+                    <div className="flex items-center space-x-1 flex-shrink-0 mt-2 sm:mt-0">
+                      {isAdministrative && sol.estado === 'Pendiente' && (
+                        <>
+                          <button
+                            onClick={() => handleUpdateStatus(sol.id, 'Aprobada')}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white p-1.5 rounded-lg shadow-sm"
+                            title="Aprobar Reservación"
+                          >
+                            <Check size={12} />
+                          </button>
+                          <button
+                            onClick={() => handleUpdateStatus(sol.id, 'Rechazada')}
+                            className="bg-rose-500 hover:bg-rose-600 text-white p-1.5 rounded-lg shadow-sm"
+                            title="Rechazar Reservación"
+                          >
+                            <X size={12} />
+                          </button>
+                        </>
+                      )}
+                      <button
+                        onClick={() => handleDeleteSolicitud(sol.id)}
+                        className="bg-slate-200 hover:bg-red-50 text-slate-500 hover:text-red-600 p-1.5 rounded-lg border border-slate-300/30 transition-colors"
+                        title="Eliminar Reservación"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
           return (
             <div 
               key={sol.id}
@@ -851,6 +1126,623 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
           );
         })}
       </div>
+    );
+  };
+
+  const renderSecretariaList = () => {
+    // Filter list
+    const filteredList = solicitudes.filter(sol => {
+      // Exclude 'agenda' and 'cartas' from the unified list
+      if (sol.tipo === 'agenda') return false; 
+      
+      const matchesType = secretariaFilterType === 'todos' || sol.tipo === secretariaFilterType;
+      const matchesStatus = secretariaFilterStatus === 'todos' || sol.estado === secretariaFilterStatus;
+      
+      const searchLower = secretariaSearchQuery.toLowerCase();
+      const matchesSearch = 
+        (sol.nombre && sol.nombre.toLowerCase().includes(searchLower)) ||
+        (sol.descripcion && sol.descripcion.toLowerCase().includes(searchLower)) ||
+        (sol.nombreBeneficiario && sol.nombreBeneficiario.toLowerCase().includes(searchLower)) ||
+        (sol.nombreSolicitante && sol.nombreSolicitante.toLowerCase().includes(searchLower)) ||
+        (sol.salonNombreSolicitante && sol.salonNombreSolicitante.toLowerCase().includes(searchLower));
+        
+      return matchesType && matchesStatus && matchesSearch;
+    });
+
+    if (isLoading) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 space-y-4 w-full">
+          <div className="animate-spin text-blue-900"><Users size={36} /></div>
+          <p className="text-slate-500 font-bold text-sm">Cargando solicitudes...</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6 w-full text-left">
+        {/* Leyenda y Filtros */}
+        <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center">
+              <Layers size={14} className="mr-1.5 text-slate-450" />
+              Código de Colores / Categorías
+            </h3>
+            {/* Leyenda */}
+            <div className="flex flex-wrap gap-2 text-[10px] font-bold">
+              <span className="flex items-center px-2 py-1 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 mr-1.5"></span>
+                ♿ Sillas de Ruedas
+              </span>
+              <span className="flex items-center px-2 py-1 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5"></span>
+                🔓 Solicitudes Abiertas
+              </span>
+              <span className="flex items-center px-2 py-1 rounded bg-purple-50 text-purple-700 border border-purple-200">
+                <span className="w-2.5 h-2.5 rounded-full bg-purple-500 mr-1.5"></span>
+                🔒 Solicitudes Internas
+              </span>
+              <span className="flex items-center px-2 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 mr-1.5"></span>
+                🏛️ Salón y Parqueo
+              </span>
+            </div>
+          </div>
+
+          {/* Filtros de Búsqueda */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Buscar por Nombre / Detalle
+              </label>
+              <input
+                type="text"
+                value={secretariaSearchQuery}
+                onChange={(e) => setSecretariaSearchQuery(e.target.value)}
+                placeholder="Ej. Juan Pérez..."
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-xs font-semibold text-slate-800 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Filtrar por Categoría
+              </label>
+              <select
+                value={secretariaFilterType}
+                onChange={(e) => setSecretariaFilterType(e.target.value as any)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-xs font-semibold bg-white cursor-pointer"
+              >
+                <option value="todos">Todas las categorías</option>
+                <option value="sillas">♿ Sillas de Ruedas</option>
+                <option value="abiertas">🔓 Solicitudes Abiertas</option>
+                <option value="internas">🔒 Solicitudes Internas</option>
+                <option value="salon">🏛️ Salón y Parqueo</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Filtrar por Estado
+              </label>
+              <select
+                value={secretariaFilterStatus}
+                onChange={(e) => setSecretariaFilterStatus(e.target.value as any)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-xs font-semibold bg-white cursor-pointer"
+              >
+                <option value="todos">Todos los estados</option>
+                <option value="Pendiente">🟡 Pendientes</option>
+                <option value="Aprobada">🟢 Aprobadas</option>
+                <option value="Rechazada">🔴 Rechazadas</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Listado de Solicitudes Consolidado */}
+        {filteredList.length === 0 ? (
+          <div className="bg-white rounded-3xl border border-slate-200/60 p-12 text-center w-full">
+            <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+              <FileText size={28} />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800">Sin resultados</h3>
+            <p className="text-slate-500 text-xs mt-1 font-semibold">
+              No se encontraron solicitudes que coincidan con los filtros seleccionados.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+            {filteredList.map((sol) => {
+              // LEFT BORDER = Approval status
+              const statusBorderColor = 
+                sol.estado === 'Aprobada' ? 'border-l-4 border-l-emerald-500' :
+                sol.estado === 'Rechazada' ? 'border-l-4 border-l-rose-500' :
+                'border-l-4 border-l-yellow-500';
+
+              // TOP BORDER = Request type color code
+              const typeTopBorderColor = 
+                sol.tipo === 'sillas' ? 'border-t-4 border-t-blue-500' :
+                sol.tipo === 'abiertas' ? 'border-t-4 border-t-emerald-500' :
+                sol.tipo === 'internas' ? 'border-t-4 border-t-purple-500' :
+                sol.tipo === 'salon' ? 'border-t-4 border-t-amber-500' :
+                'border-t-4 border-t-slate-300';
+
+              // Request type tag
+              let typeTag = null;
+              if (sol.tipo === 'sillas') {
+                typeTag = (
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border bg-blue-50 text-blue-700 border-blue-200 flex items-center space-x-1">
+                    <Accessibility size={12} className="mr-0.5" />
+                    <span>Silla de Ruedas</span>
+                  </span>
+                );
+              } else if (sol.tipo === 'abiertas') {
+                typeTag = (
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border bg-emerald-50 text-emerald-700 border-emerald-200 flex items-center space-x-1">
+                    <FileText size={12} className="mr-0.5" />
+                    <span>Abierta</span>
+                  </span>
+                );
+              } else if (sol.tipo === 'internas') {
+                typeTag = (
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border bg-purple-50 text-purple-700 border-purple-200 flex items-center space-x-1">
+                    <Lock size={12} className="mr-0.5" />
+                    <span>Interna</span>
+                  </span>
+                );
+              } else if (sol.tipo === 'salon') {
+                typeTag = (
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border bg-amber-50 text-amber-700 border-amber-200 flex items-center space-x-1">
+                    <Building size={12} className="mr-0.5" />
+                    <span>Salón/Parqueo</span>
+                  </span>
+                );
+              }
+
+              return (
+                <div 
+                  key={sol.id}
+                  className={`bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-md border border-slate-150 transition-all duration-300 flex flex-col justify-between ${statusBorderColor} ${typeTopBorderColor}`}
+                >
+                  <div className="p-5 space-y-3.5 flex-grow">
+                    {/* Tags and Status */}
+                    <div className="flex justify-between items-start gap-2">
+                      {typeTag}
+                      
+                      <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center space-x-1 ${
+                        sol.estado === 'Aprobada' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                        sol.estado === 'Rechazada' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+                        'bg-yellow-50 text-yellow-700 border border-yellow-100'
+                      }`}>
+                        {sol.estado === 'Aprobada' && <CheckCircle size={10} className="mr-1" />}
+                        {sol.estado === 'Rechazada' && <XOctagon size={10} className="mr-1" />}
+                        {sol.estado === 'Pendiente' && <Clock size={10} className="mr-1" />}
+                        <span>{sol.estado}</span>
+                      </span>
+                    </div>
+
+                    {/* Rent-specific details */}
+                    {sol.tipo === 'salon' && (
+                      <div className="space-y-2">
+                        <div className="space-y-1">
+                          <h3 className="font-extrabold text-base text-slate-900 leading-snug break-words">
+                            Reservación: {sol.salonDia}
+                          </h3>
+                          <div className="flex items-center text-xs font-semibold text-slate-400">
+                            <Clock size={12} className="mr-1 text-slate-400 flex-shrink-0" />
+                            <span>{sol.salonHoraInicio} - {sol.salonHoraFin} | Tipo: <strong className="text-slate-600 font-extrabold uppercase">{sol.salonTipoAlquiler}</strong></span>
+                          </div>
+                        </div>
+
+                        <div className="bg-slate-50/50 p-3.5 rounded-2xl border border-slate-100 space-y-2 text-xs font-medium">
+                          <div className="flex justify-between">
+                            <span className="text-slate-400 font-bold">Solicitante:</span>
+                            <span className="font-extrabold text-slate-800">{sol.salonNombreSolicitante}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-400 font-bold">Teléfono:</span>
+                            <a href={`tel:${sol.salonTelefono}`} className="text-blue-900 font-extrabold flex items-center">
+                              <Phone size={10} className="mr-0.5" />
+                              <span>{sol.salonTelefono}</span>
+                            </a>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-400 font-bold">Asistentes:</span>
+                            <span className="font-extrabold text-slate-800">{sol.salonAsistentes} personas</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-400 font-bold">Limpieza:</span>
+                            <span className="font-bold text-slate-700">
+                              {sol.salonCompromisoLimpieza === 'dejar_limpio' ? 'Compromiso limpiar' : 'Servicio pagado'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between pt-1 border-t border-slate-200/50">
+                            <span className="text-slate-550 font-bold text-xs">Costo Total:</span>
+                            <span className="font-black text-blue-900 text-xs">Q{sol.salonCostoTotal}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Wheelchair-specific details */}
+                    {sol.tipo === 'sillas' && (
+                      <div className="space-y-2">
+                        <div className="space-y-1">
+                          <h3 className="font-extrabold text-base text-slate-900 leading-snug break-words">
+                            Beneficiario: {sol.nombreBeneficiario}
+                          </h3>
+                          <div className="flex items-center text-xs font-semibold text-slate-400">
+                            <Calendar size={12} className="mr-1 text-slate-400 flex-shrink-0" />
+                            <span>Edad: {sol.edadBeneficiario} años | Registro: {sol.fechaCreacion}</span>
+                          </div>
+                        </div>
+
+                        <div className="bg-slate-50/50 p-3.5 rounded-2xl border border-slate-100 space-y-2 text-xs font-medium">
+                          <div className="flex justify-between">
+                            <span className="text-slate-400 font-bold">Solicitante:</span>
+                            <span className="font-extrabold text-slate-800">{sol.nombreSolicitante}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-400 font-bold">DPI:</span>
+                            <span className="font-mono text-slate-700">{sol.dpiSolicitante}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-400 font-bold">Teléfono:</span>
+                            <a href={`tel:${sol.telefonoSolicitante}`} className="text-blue-900 font-extrabold flex items-center">
+                              <Phone size={10} className="mr-0.5" />
+                              <span>{sol.telefonoSolicitante}</span>
+                            </a>
+                          </div>
+                          <div className="flex justify-between pt-1 border-t border-slate-200/50">
+                            <span className="text-slate-400 font-bold">Uso propuesto:</span>
+                            <span className="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">{sol.tiempoUso}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Open/Internal standard details */}
+                    {(sol.tipo === 'abiertas' || sol.tipo === 'internas') && (
+                      <div className="space-y-2">
+                        <div className="space-y-1">
+                          <h3 className="font-extrabold text-base text-slate-900 leading-snug break-words">
+                            {sol.nombre}
+                          </h3>
+                          <div className="flex items-center text-xs font-semibold text-slate-400">
+                            <Calendar size={12} className="mr-1 text-slate-400 flex-shrink-0" />
+                            <span>Fecha límite sugerida: {sol.fecha}</span>
+                          </div>
+                        </div>
+
+                        <p className="text-slate-600 text-xs leading-relaxed font-medium bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+                          {sol.descripcion}
+                        </p>
+
+                        <div className="space-y-1 pt-1.5">
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Responsables:</span>
+                          <div className="space-y-1">
+                            {sol.responsables?.map((resp, i) => (
+                              <div key={i} className="flex justify-between text-xs bg-slate-50 px-2 py-1 rounded border border-slate-100">
+                                <span className="font-bold text-slate-700">{resp.nombre}</span>
+                                <a href={`tel:${resp.telefono}`} className="text-blue-900 font-bold flex items-center space-x-1">
+                                  <Phone size={10} className="mr-0.5" />
+                                  <span>{resp.telefono}</span>
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions Bar */}
+                  <div className="bg-slate-50/80 px-5 py-3 border-t border-slate-100 flex justify-between items-center text-[10px] font-bold text-slate-400">
+                    <span className="truncate max-w-[150px]" title={sol.usuarioCreador}>Por: {sol.usuarioCreador || 'Público'}</span>
+                    
+                    <div className="flex items-center space-x-1.5 flex-shrink-0">
+                      {sol.estado === 'Pendiente' && (
+                        <>
+                          <button
+                            onClick={() => handleUpdateStatus(sol.id, 'Aprobada')}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white p-1.5 rounded-lg shadow-sm transition-all active:scale-95"
+                            title="Aprobar Solicitud"
+                          >
+                            <Check size={12} />
+                          </button>
+                          <button
+                            onClick={() => handleUpdateStatus(sol.id, 'Rechazada')}
+                            className="bg-rose-500 hover:bg-rose-600 text-white p-1.5 rounded-lg shadow-sm transition-all active:scale-95"
+                            title="Rechazar Solicitud"
+                          >
+                            <X size={12} />
+                          </button>
+                        </>
+                      )}
+                      <button
+                        onClick={() => handleDeleteSolicitud(sol.id)}
+                        className="bg-slate-200 hover:bg-red-50 text-slate-500 hover:text-red-600 p-1.5 rounded-lg border border-slate-300/30 transition-all active:scale-95"
+                        title="Eliminar Solicitud"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderSalonForm = () => {
+    const isCapacityWarning = parseInt(salonAsistentes) > 60 && parseInt(salonAsistentes) <= 80;
+    const isCapacityError = parseInt(salonAsistentes) > 80;
+
+    return (
+      <form onSubmit={handleSubmit} className="space-y-6 text-left animate-in fade-in duration-300">
+        {/* Info y Precios Banner */}
+        <div className="bg-amber-50/60 border border-amber-250/70 rounded-2xl p-5 space-y-3.5 text-slate-800 text-xs md:text-sm shadow-sm">
+          <div className="flex items-start space-x-3 text-amber-900">
+            <Building className="flex-shrink-0 mt-0.5 text-amber-700" size={18} />
+            <div className="space-y-1.5 w-full">
+              <p className="font-extrabold text-amber-955 text-sm">🏛️ Información y Tarifas Oficiales del Salón</p>
+              <ul className="list-disc pl-4 space-y-1 font-semibold text-slate-700 text-[11px] md:text-xs">
+                <li><strong className="text-amber-900">Capacidad Máxima:</strong> Hasta 60 personas sentadas u 80 personas de pie.</li>
+                <li><strong className="text-amber-900">Costo del Salón:</strong> Q0 para socios activos | Q1,500 para público general.</li>
+                <li><strong className="text-amber-955">Costo del Parqueo Completo (jornada):</strong> Q1,500 para socios activos | Q3,500 para público general.</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center justify-between text-blue-900 text-xs">
+            <span className="font-bold">Tarifa detectada para ti:</span>
+            <span className={`font-black px-2.5 py-1 rounded-lg uppercase tracking-wider text-[10px] ${
+              isSocio ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-200 text-slate-700'
+            }`}>
+              {isSocio ? 'Socio Activo (Descuento aplicado)' : 'No Socio / Invitado'}
+            </span>
+          </div>
+        </div>
+
+        {/* Datos de Contacto */}
+        <div className="space-y-4">
+          <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1 flex items-center">
+            <User size={14} className="mr-1.5 text-slate-450" />
+            Información de Contacto
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                Nombre del Solicitante *
+              </label>
+              <input
+                type="text"
+                required
+                value={salonNombreSolicitante}
+                onChange={(e) => setSalonNombreSolicitante(e.target.value)}
+                placeholder="Ej. Juan Pérez"
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                Correo Electrónico *
+              </label>
+              <input
+                type="email"
+                required
+                value={salonEmail}
+                onChange={(e) => setSalonEmail(e.target.value)}
+                placeholder="ejemplo@correo.com"
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+              Número de Teléfono *
+            </label>
+            <div className="flex rounded-xl border border-slate-200 focus-within:ring-2 focus-within:ring-blue-900 focus-within:border-transparent overflow-hidden bg-white">
+              <span className="bg-slate-100 text-slate-500 px-4 py-3 flex items-center justify-center border-r border-slate-200 text-sm font-extrabold select-none">
+                +502
+              </span>
+              <input
+                type="tel"
+                required
+                value={salonTelefonoDigitos}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '');
+                  if (val.length <= 8) setSalonTelefonoDigitos(val);
+                }}
+                placeholder="5555 5555"
+                className="w-full px-4 py-2.5 outline-none text-sm text-slate-800 font-semibold"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Detalles del Alquiler */}
+        <div className="space-y-4 pt-2">
+          <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1 flex items-center">
+            <Calendar size={14} className="mr-1.5 text-slate-450" />
+            Detalles de la Reserva
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                Tipo de Alquiler *
+              </label>
+              <select
+                value={salonTipoAlquiler}
+                onChange={(e) => setSalonTipoAlquiler(e.target.value as any)}
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold bg-white cursor-pointer"
+              >
+                <option value="salon">Solo Salón de Eventos</option>
+                <option value="parqueo">Solo Parqueo Completo</option>
+                <option value="ambos">Ambos (Salón y Parqueo)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                Día del Evento *
+              </label>
+              <input
+                type="date"
+                required
+                value={salonDia}
+                onChange={(e) => setSalonDia(e.target.value)}
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                Hora de Inicio *
+              </label>
+              <input
+                type="time"
+                required
+                value={salonHoraInicio}
+                onChange={(e) => setSalonHoraInicio(e.target.value)}
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                Hora de Fin *
+              </label>
+              <input
+                type="time"
+                required
+                value={salonHoraFin}
+                onChange={(e) => setSalonHoraFin(e.target.value)}
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                Asistentes Estimados *
+              </label>
+              <input
+                type="number"
+                required
+                min="1"
+                value={salonAsistentes}
+                onChange={(e) => setSalonAsistentes(e.target.value)}
+                placeholder="Ej. 50"
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+              />
+            </div>
+          </div>
+
+          {/* Warnings de Asistentes */}
+          {isCapacityWarning && (
+            <div className="bg-amber-50 border border-amber-250 rounded-xl p-3 flex items-start space-x-2 text-[11px] text-amber-800 font-bold leading-relaxed">
+              <AlertTriangle size={14} className="flex-shrink-0 mt-0.5 text-amber-700" />
+              <span>Aviso: Capacidad superior a 60 personas. Los asistentes deberán estar de pie para el evento (capacidad máx. sentados: 60).</span>
+            </div>
+          )}
+
+          {isCapacityError && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-start space-x-2 text-[11px] text-red-800 font-bold leading-relaxed">
+              <AlertTriangle size={14} className="flex-shrink-0 mt-0.5 text-red-600 animate-pulse" />
+              <span>Error: La cantidad de asistentes supera el límite permitido de 80 personas de pie. Por favor, reduzca la cantidad.</span>
+            </div>
+          )}
+
+          {/* Compromiso de Limpieza */}
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+              Compromiso de Limpieza *
+            </label>
+            <select
+              value={salonCompromisoLimpieza}
+              onChange={(e) => setSalonCompromisoLimpieza(e.target.value as any)}
+              className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold bg-white cursor-pointer"
+            >
+              <option value="dejar_limpio">Me comprometo a dejar limpio el salón (Q0)</option>
+              <option value="pagar_limpieza">Pagar por el servicio de limpieza (Q300 adicional)</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Resumen de Costo */}
+        <div className="bg-slate-50 p-4 rounded-2xl border border-slate-250/70 space-y-2 text-xs">
+          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 pb-1.5">
+            Desglose de Pago Estimado
+          </div>
+          <div className="flex justify-between font-semibold text-slate-600">
+            <span>Costo Alquiler Base:</span>
+            <span>Q{
+              salonTipoAlquiler === 'salon' ? (isSocio ? 0 : 1500) :
+              salonTipoAlquiler === 'parqueo' ? (isSocio ? 1500 : 3500) :
+              (isSocio ? 1500 : 5000)
+            }</span>
+          </div>
+          <div className="flex justify-between font-semibold text-slate-600">
+            <span>Tasa de Servicio Limpieza:</span>
+            <span>Q{salonCompromisoLimpieza === 'pagar_limpieza' ? 300 : 0}</span>
+          </div>
+          <div className="flex justify-between pt-2 border-t border-slate-200 font-extrabold text-sm text-blue-900">
+            <span>Costo Total Estimado:</span>
+            <span>Q{salonCostoTotal}</span>
+          </div>
+        </div>
+
+        {/* Requisitos y Checkbox */}
+        <div className="space-y-3 pt-2">
+          <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1">
+            Requisitos de Uso y Condiciones
+          </h4>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-[10px] md:text-xs text-slate-600 font-medium space-y-2 leading-relaxed max-h-40 overflow-y-auto">
+            <p>1. **Límites de Capacidad:** Respetar de forma rigurosa la cantidad de asistentes (máximo 60 personas sentadas y 80 de pie).</p>
+            <p>2. **Limpieza:** En caso de no pagar la tasa de limpieza, el salón debe ser devuelto barrido, trapeado y sin basura.</p>
+            <p>3. **Horario:** El evento debe finalizar a la hora solicitada, incluyendo el tiempo de desmontaje.</p>
+            <p>4. **Música y Ruido:** Mantener un volumen moderado para no perturbar las zonas vecinas.</p>
+            <p>5. **Responsabilidad:** El solicitante se hace responsable directo de daños físicos causados a la propiedad.</p>
+            <p>6. **Confirmación:** La reserva solo tendrá validez una vez aprobada por la Secretaría y habiendo solventado los pagos si los hubiera.</p>
+          </div>
+
+          <label className="flex items-center space-x-2.5 cursor-pointer pt-1 text-slate-700">
+            <input
+              type="checkbox"
+              checked={salonRequisitosAceptados}
+              onChange={(e) => setSalonRequisitosAceptados(e.target.checked)}
+              className="w-4.5 h-4.5 text-blue-900 border-slate-300 rounded focus:ring-blue-900 cursor-pointer"
+            />
+            <span className="text-xs font-bold leading-normal select-none">
+              Acepto los requisitos y el compromiso de limpieza/pago correspondientes. *
+            </span>
+          </label>
+        </div>
+
+        {/* Botones de Envío */}
+        <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(false)}
+            className="px-5 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-colors text-sm"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            disabled={isSaving || !salonRequisitosAceptados || isCapacityError}
+            className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-black rounded-xl shadow-lg transition-all text-sm flex items-center justify-center space-x-2"
+          >
+            {isSaving ? (
+              <>
+                <div className="animate-spin text-white flex-shrink-0"><Users size={14} /></div>
+                <span>Enviando...</span>
+              </>
+            ) : (
+              <span>Enviar Reservación</span>
+            )}
+          </button>
+        </div>
+      </form>
     );
   };
 
@@ -1439,8 +2331,10 @@ Club de Leones de Quetzaltenango`;
                             <span>Redactar Nueva Carta</span>
                           </button>
                         </div>
+                      ) : cfg.id === 'secretaria' ? (
+                        renderSecretariaList()
                       ) : (
-                        renderSolicitudesList(cfg.id as 'abiertas' | 'sillas' | 'internas' | 'agenda')
+                        renderSolicitudesList(cfg.id as any)
                       )}
                     </div>
                   </div>
@@ -1472,8 +2366,10 @@ Club de Leones de Quetzaltenango`;
                             Redacte la correspondencia oficial usando el botón emergente superior.
                           </p>
                         </div>
+                      ) : cfg.id === 'secretaria' ? (
+                        renderSecretariaList()
                       ) : (
-                        renderSolicitudesList(cfg.id as 'abiertas' | 'sillas' | 'internas' | 'agenda')
+                        renderSolicitudesList(cfg.id as any)
                       )}
                     </div>
                   </div>
@@ -1533,6 +2429,8 @@ Club de Leones de Quetzaltenango`;
 
             {activeTab === 'cartas' ? (
               renderCartasForm()
+            ) : activeTab === 'salon' ? (
+              renderSalonForm()
             ) : activeTab === 'sillas' ? (
               <form onSubmit={handleSubmit} className="space-y-5 text-left animate-in fade-in duration-300">
                 {/* Solidarity Note */}
