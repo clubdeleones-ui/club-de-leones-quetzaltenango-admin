@@ -164,7 +164,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   useEffect(() => {
     const groups = [
       { category: 'Principal', items: ['resumen'] },
-      { category: 'Secretaría', items: ['actas', 'beneficios', 'calendario', 'comisiones'] },
+      { category: 'Secretaría', items: ['actas', 'control_solicitudes', 'beneficios', 'calendario', 'comisiones'] },
       { category: 'Tesorería', items: ['cuotas', 'parqueo', 'donaciones', 'presupuestos'] },
       { category: 'Comité de Afiliación', items: ['socios', 'afiliacion'] },
       { category: 'Comité de Servicio', items: ['minutas'] },
@@ -1983,13 +1983,13 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                           >
                             <Icon 
                               size={16} 
-                              className={`transition-colors ${
+                              className={`transition-colors flex-shrink-0 ${
                                 active 
                                   ? 'text-white' 
                                   : 'text-slate-400 group-hover:text-blue-600'
                               }`} 
                             />
-                            <span className="text-sm">{tab.label}</span>
+                            <span className="text-sm truncate text-left flex-1" title={tab.label}>{tab.label}</span>
                           </button>
                         );
                       })}
