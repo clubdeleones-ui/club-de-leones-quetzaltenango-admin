@@ -63,7 +63,8 @@ import {
   Layers,
   Accessibility,
   XOctagon,
-  Lock
+  Lock,
+  Star
 } from 'lucide-react';
 import { generateActaPDF, generateActaCode, generateReciboPagoPDF } from '../utils/pdfGenerator';
 import { FormattedActa } from '../components/FormattedActa';
@@ -1849,7 +1850,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
   }, [socios, socioSearch, cuotasFilterStatus]);
 
   const filteredSociosAdmin = useMemo(() => {
-    return socios.filter(s => {
+    const list = socios.filter(s => {
       const matchesSearch = 
         s.nombre.toLowerCase().includes(socioSearch.toLowerCase()) ||
         s.correo.toLowerCase().includes(socioSearch.toLowerCase());
@@ -1868,6 +1869,41 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
         (financialFilter === 'en_mora' && s.estadoCuotas === 'En mora');
 
       return matchesSearch && matchesRole && matchesStatus && matchesFinancial;
+    });
+
+    // Sort: Directiva first, then Active, then Inactive
+    return list.sort((a, b) => {
+      const aInactive = a.estatus === 'Inactive';
+      const bInactive = b.estatus === 'Inactive';
+      
+      const aDirectiva = !aInactive && (
+        a.rol === UserRole.SUPER_ADMIN ||
+        a.rol === UserRole.SECRETARIO ||
+        a.rol === UserRole.TESORERO ||
+        a.rol === UserRole.ASESOR_SERVICIOS ||
+        a.rol === UserRole.PRESIDENTE_AFILIACION ||
+        (a.puesto && a.puesto.trim() !== '' && a.puesto.toLowerCase() !== 'socio' && a.puesto.toLowerCase() !== 'socio regular')
+      );
+      
+      const bDirectiva = !bInactive && (
+        b.rol === UserRole.SUPER_ADMIN ||
+        b.rol === UserRole.SECRETARIO ||
+        b.rol === UserRole.TESORERO ||
+        b.rol === UserRole.ASESOR_SERVICIOS ||
+        b.rol === UserRole.PRESIDENTE_AFILIACION ||
+        (b.puesto && b.puesto.trim() !== '' && b.puesto.toLowerCase() !== 'socio' && b.puesto.toLowerCase() !== 'socio regular')
+      );
+
+      // Directiva = 1, Active = 2, Inactive = 3
+      const aRank = aInactive ? 3 : (aDirectiva ? 1 : 2);
+      const bRank = bInactive ? 3 : (bDirectiva ? 1 : 2);
+      
+      if (aRank !== bRank) {
+        return aRank - bRank;
+      }
+      
+      // Fallback alphabetical by name
+      return a.nombre.localeCompare(b.nombre);
     });
   }, [socios, socioSearch, roleFilter, statusFilter, financialFilter]);
 
@@ -2292,247 +2328,128 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     <p className="text-xs text-slate-500 max-w-sm mx-auto">Prueba cambiando los filtros o el texto del buscador.</p>
                   </div>
                 ) : (
-                  <>
-                    {/* Desktop View: Table */}
-                    <div className="hidden md:block overflow-x-auto">
-                      <table className="w-full border-collapse text-left">
-                        <thead>
-                          <tr className="bg-slate-50 border-b border-slate-250 text-slate-400 font-bold text-xs uppercase tracking-wider">
-                            <th className="py-6.5 px-6">Miembro</th>
-                            <th className="py-6.5 px-6">Contacto</th>
-                            <th className="py-6.5 px-6">Puesto y Rol</th>
-                            <th className="py-6.5 px-6 text-right">Acciones</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {filteredSociosAdmin.map(socio => {
-                            const isInactive = socio.estatus === 'Inactive';
-                            const isDirectiva = !isInactive && (
-                              socio.rol === UserRole.SUPER_ADMIN ||
-                              socio.rol === UserRole.SECRETARIO ||
-                              socio.rol === UserRole.TESORERO ||
-                              socio.rol === UserRole.ASESOR_SERVICIOS ||
-                              socio.rol === UserRole.PRESIDENTE_AFILIACION
-                            );
-                            
-                            const rowBorderColor = isInactive 
-                              ? 'border-l-4 border-l-slate-400' 
-                              : isDirectiva 
-                              ? 'border-l-4 border-l-amber-500' 
-                              : 'border-l-4 border-l-blue-900';
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+                    {filteredSociosAdmin.map(socio => {
+                      const isInactive = socio.estatus === 'Inactive';
+                      const isDirectiva = !isInactive && (
+                        socio.rol === UserRole.SUPER_ADMIN ||
+                        socio.rol === UserRole.SECRETARIO ||
+                        socio.rol === UserRole.TESORERO ||
+                        socio.rol === UserRole.ASESOR_SERVICIOS ||
+                        socio.rol === UserRole.PRESIDENTE_AFILIACION ||
+                        (socio.puesto && socio.puesto.trim() !== '' && socio.puesto.toLowerCase() !== 'socio' && socio.puesto.toLowerCase() !== 'socio regular')
+                      );
 
-                            return (
-                              <tr 
-                                key={socio.id} 
-                                className={`hover:bg-slate-50/50 transition-colors ${rowBorderColor} ${
-                                  isInactive ? 'opacity-65 bg-slate-50/20' : ''
-                                }`}
-                              >
-                                <td className="py-6.5 px-6">
-                                  <div className="flex items-center space-x-3.5">
-                                    <img 
-                                      src={socio.foto || `https://picsum.photos/seed/${socio.id}/100/100`} 
-                                      alt={socio.nombre} 
-                                      className={`w-11 h-11 rounded-full object-cover border-2 shadow-sm cursor-zoom-in ${
-                                        isInactive ? 'border-slate-300' : isDirectiva ? 'border-amber-400' : 'border-blue-900'
-                                      }`}
-                                      onClick={() => setSelectedPhoto({ url: socio.foto, title: socio.nombre })}
-                                    />
-                                    <div className="min-w-0">
-                                      <p className="font-extrabold text-slate-800 text-sm leading-tight flex items-center">
-                                        {socio.nombre || <span className="text-slate-400 italic">Sin nombre</span>}
-                                        {isInactive && (
-                                          <span className="ml-2 bg-slate-200 text-slate-700 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">Inactivo</span>
-                                        )}
-                                      </p>
-                                      {socio.codigoSocio && (
-                                        <p className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded mt-1 w-fit border border-blue-100">
-                                          # {socio.codigoSocio}
-                                        </p>
-                                      )}
-                                      <p className="text-xs text-slate-400 mt-1 font-semibold">Ingresó: {socio.fechaIngreso}</p>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className="py-6.5 px-6">
-                                  <div className="text-xs space-y-1 font-semibold">
-                                    <div className="flex items-center text-slate-700">
-                                      <Mail size={12} className="mr-1.5 text-slate-400" />
-                                      <span className="truncate max-w-[180px]">{socio.correo}</span>
-                                    </div>
-                                    <div className="flex items-center text-slate-600">
-                                      <Phone size={12} className="mr-1.5 text-slate-400" />
-                                      <span>{socio.telefono || 'Sin teléfono'}</span>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className="py-6.5 px-6">
-                                  <div className="space-y-1.5">
-                                    <span className="text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-0.5 rounded-lg border border-slate-200/50 block w-fit">
-                                      {socio.puesto || 'Socio Regular'}
-                                    </span>
-                                    {(socio.puestosAdicionales || []).map((pa, pi) => (
-                                      <span key={pi} className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200 block w-fit">
-                                        + {pa}
-                                      </span>
-                                    ))}
-                                    <div className="flex items-center space-x-1.5">
-                                      {isInactive ? (
-                                        <span className="bg-slate-100 text-slate-600 border border-slate-250 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
-                                          Inactivo
-                                        </span>
-                                      ) : isDirectiva ? (
-                                        <span className="bg-amber-100 text-amber-800 border border-amber-250 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
-                                          Directiva
-                                        </span>
-                                      ) : (
-                                        <span className="bg-blue-50 text-blue-900 border border-blue-250 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">
-                                          Socio Activo
-                                        </span>
-                                      )}
-                                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                                        ({socio.rol})
-                                      </span>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className="py-6.5 px-6 text-right">
-                                  <div className="flex items-center justify-end space-x-2">
-                                    <button
-                                      onClick={() => handleQrClick(socio)}
-                                      className="bg-white hover:bg-yellow-50 text-amber-600 hover:text-amber-700 border border-slate-200/60 p-2 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm disabled:opacity-50"
-                                      title="Generar código QR de acceso"
-                                      disabled={isGeneratingQr}
-                                    >
-                                      <QrCode size={13} className="mr-1" />
-                                      <span>QR</span>
-                                    </button>
-                                    <button
-                                      onClick={() => handleEditSocioClick(socio)}
-                                      className="bg-white hover:bg-blue-50 text-slate-605 hover:text-blue-900 border border-slate-200/60 p-2 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm"
-                                      title="Editar Ficha"
-                                    >
-                                      <Pencil size={13} className="mr-1" />
-                                      <span>Editar</span>
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteSocio(socio)}
-                                      className="bg-white hover:bg-red-50 text-slate-605 hover:text-red-600 border border-slate-200/60 p-2 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm"
-                                      title="Eliminar Socio"
-                                    >
-                                      <Trash2 size={13} className="mr-1" />
-                                      <span>Eliminar</span>
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                      // Layout color definitions
+                      const cardBgColor = isInactive ? 'bg-slate-50/50' : isDirectiva ? 'bg-amber-50/10' : 'bg-white';
+                      const cardBorderColor = isInactive ? 'border-slate-200' : isDirectiva ? 'border-amber-200' : 'border-blue-100';
+                      const leftBorderAccent = isInactive ? 'border-l-8 border-l-slate-400' : isDirectiva ? 'border-l-8 border-l-amber-500' : 'border-l-8 border-l-blue-900';
+                      const avatarBorder = isInactive ? 'border-slate-300' : isDirectiva ? 'border-amber-400' : 'border-blue-900';
 
-                    {/* Mobile View: Cards */}
-                    <div className="block md:hidden divide-y divide-slate-100">
-                      {filteredSociosAdmin.map(socio => {
-                        const isInactive = socio.estatus === 'Inactive';
-                        const isDirectiva = !isInactive && (
-                          socio.rol === UserRole.SUPER_ADMIN ||
-                          socio.rol === UserRole.SECRETARIO ||
-                          socio.rol === UserRole.TESORERO ||
-                          socio.rol === UserRole.ASESOR_SERVICIOS ||
-                          socio.rol === UserRole.PRESIDENTE_AFILIACION
-                        );
-                        
-                        const rowBorderColor = isInactive 
-                          ? 'border-l-4 border-l-slate-400' 
-                          : isDirectiva 
-                          ? 'border-l-4 border-l-amber-500' 
-                          : 'border-l-4 border-l-blue-900';
-
-                        return (
-                          <div 
-                            key={socio.id} 
-                            className={`p-6 space-y-4 hover:bg-slate-50/30 transition-colors ${rowBorderColor} ${
-                              isInactive ? 'opacity-65 bg-slate-50/10' : ''
-                            }`}
-                          >
-                            <div className="flex items-center space-x-4">
-                              <img 
-                                src={socio.foto || `https://picsum.photos/seed/${socio.id}/100/100`} 
-                                alt={socio.nombre} 
-                                className={`w-14 h-14 rounded-full object-cover border-2 shadow-sm cursor-zoom-in ${
-                                  isInactive ? 'border-slate-300' : isDirectiva ? 'border-amber-400' : 'border-blue-900'
-                                }`}
-                                onClick={() => setSelectedPhoto({ url: socio.foto, title: socio.nombre })}
-                              />
-                              <div className="min-w-0 flex-grow">
-                                <h4 className="font-extrabold text-slate-800 text-base leading-snug flex flex-wrap items-center gap-1.5">
-                                  <span>{socio.nombre || <span className="text-slate-400 italic">Sin nombre</span>}</span>
-                                  {isInactive && (
-                                    <span className="bg-slate-200 text-slate-700 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Inactivo</span>
-                                  )}
-                                </h4>
-                                {socio.codigoSocio && (
-                                  <span className="inline-block text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded mt-0.5 border border-blue-100">
-                                    # {socio.codigoSocio}
-                                  </span>
-                                )}
-                                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">{socio.puesto || 'Socio Regular'}</p>
-                                {(socio.puestosAdicionales || []).map((pa, pi) => (
-                                  <span key={pi} className="inline-block text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200 mt-0.5 mr-1">
-                                    + {pa}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-
-                            <div className="text-xs font-semibold pt-1">
-                              <span className="text-slate-400 text-[10px] uppercase tracking-wider block mb-1">Contacto</span>
-                              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-slate-700">
-                                <div className="flex items-center truncate">
-                                  <Mail size={12} className="mr-1.5 text-slate-400 flex-shrink-0" />
-                                  <span className="truncate">{socio.correo}</span>
-                                </div>
-                                <div className="flex items-center">
-                                  <Phone size={12} className="mr-1.5 text-slate-400 flex-shrink-0" />
-                                  <span>{socio.telefono || 'Sin teléfono'}</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pt-3 border-t border-slate-100 gap-2">
-                              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Ingreso: {socio.fechaIngreso} ({socio.rol})</span>
-                              <div className="flex space-x-2 w-full sm:w-auto justify-end">
-                                <button
-                                  onClick={() => handleQrClick(socio)}
-                                  className="bg-white hover:bg-yellow-50 text-amber-600 hover:text-amber-700 border border-slate-200/60 px-3 py-1.5 rounded-xl font-black text-xs transition-all flex items-center shadow-sm disabled:opacity-50"
-                                  disabled={isGeneratingQr}
-                                >
-                                  <QrCode size={13} className="mr-1" />
-                                  <span>QR</span>
-                                </button>
-                                <button
-                                  onClick={() => handleEditSocioClick(socio)}
-                                  className="bg-white hover:bg-blue-50 text-slate-650 hover:text-blue-900 border border-slate-200/60 px-3 py-1.5 rounded-xl font-black text-xs transition-all flex items-center shadow-sm"
-                                >
-                                  <Pencil size={13} className="mr-1" />
-                                  <span>Editar</span>
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteSocio(socio)}
-                                  className="bg-white hover:bg-red-50 text-slate-650 hover:text-red-650 border border-slate-200/60 px-3 py-1.5 rounded-xl font-black text-xs transition-all flex items-center shadow-sm"
-                                >
-                                  <Trash2 size={13} className="mr-1" />
-                                  <span>Eliminar</span>
-                                </button>
-                              </div>
+                      return (
+                        <div 
+                          key={socio.id}
+                          className={`bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-xl border ${cardBorderColor} ${leftBorderAccent} ${cardBgColor} transition-all duration-300 flex flex-col justify-between p-6 space-y-4 ${
+                            isInactive ? 'opacity-75' : ''
+                          }`}
+                        >
+                          {/* Top Info Header */}
+                          <div className="flex items-start space-x-4">
+                            <img 
+                              src={socio.foto || `https://picsum.photos/seed/${socio.id}/100/100`} 
+                              alt={socio.nombre} 
+                              className={`w-16 h-16 rounded-full object-cover border-2 shadow-sm cursor-zoom-in ${avatarBorder}`}
+                              onClick={() => setSelectedPhoto({ url: socio.foto, title: socio.nombre })}
+                            />
+                            <div className="min-w-0 flex-1 text-left">
+                              <h4 className="font-extrabold text-slate-900 text-base leading-snug break-words flex flex-wrap items-center gap-1.5">
+                                {socio.nombre || <span className="text-slate-400 italic">Sin nombre</span>}
+                              </h4>
+                              {socio.codigoSocio && (
+                                <span className="inline-block text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded mt-1 border border-blue-100/60">
+                                  # {socio.codigoSocio}
+                                </span>
+                              )}
+                              <p className="text-xs text-slate-450 font-semibold mt-1">Ingresó: {socio.fechaIngreso}</p>
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  </>
+
+                          {/* Badges / Roles */}
+                          <div className="flex flex-wrap gap-1.5 pt-1 text-left">
+                            <span className="text-[10px] font-bold text-slate-800 bg-slate-100/80 px-2.5 py-0.5 rounded-lg border border-slate-200/50">
+                              {socio.puesto || 'Socio Regular'}
+                            </span>
+                            {(socio.puestosAdicionales || []).map((pa, pi) => (
+                              <span key={pi} className="text-[9px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200/60">
+                                + {pa}
+                              </span>
+                            ))}
+                            
+                            <div className="w-full flex items-center space-x-1.5 mt-1">
+                              {isInactive ? (
+                                <span className="bg-slate-150 text-slate-655 border border-slate-250 text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">
+                                  Inactivo
+                                </span>
+                              ) : isDirectiva ? (
+                                <span className="bg-amber-100 text-amber-800 border border-amber-250 text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center">
+                                  <Star size={8} className="mr-1 text-amber-600 fill-amber-600 animate-pulse" />
+                                  Junta Directiva
+                                </span>
+                              ) : (
+                                <span className="bg-blue-50 text-blue-900 border border-blue-200 text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">
+                                  Socio Activo
+                                </span>
+                              )}
+                              <span className="text-[9px] text-slate-405 font-bold uppercase tracking-wider">
+                                ({socio.rol})
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Contact Info Section */}
+                          <div className="bg-slate-50/50 p-3 rounded-2xl border border-slate-100/50 space-y-2 text-xs font-semibold text-left">
+                            <div className="flex items-center text-slate-700">
+                              <Mail size={12} className="mr-2 text-slate-405 flex-shrink-0" />
+                              <span className="truncate" title={socio.correo}>{socio.correo}</span>
+                            </div>
+                            <div className="flex items-center text-slate-600">
+                              <Phone size={12} className="mr-2 text-slate-405 flex-shrink-0" />
+                              <span>{socio.telefono || 'Sin teléfono'}</span>
+                            </div>
+                          </div>
+
+                          {/* Card Footer Actions */}
+                          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                            <button
+                              onClick={() => handleQrClick(socio)}
+                              className="bg-white hover:bg-yellow-50 text-amber-600 hover:text-amber-700 border border-slate-200/60 px-3 py-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm disabled:opacity-50"
+                              title="Generar código QR de acceso"
+                              disabled={isGeneratingQr}
+                            >
+                              <QrCode size={13} className="mr-1.5" />
+                              <span>QR</span>
+                            </button>
+                            <button
+                              onClick={() => handleEditSocioClick(socio)}
+                              className="bg-white hover:bg-blue-50 text-slate-650 hover:text-blue-900 border border-slate-200/60 px-3 py-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm"
+                              title="Editar Ficha"
+                            >
+                              <Pencil size={13} className="mr-1.5" />
+                              <span>Editar</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSocio(socio)}
+                              className="bg-white hover:bg-red-50 text-slate-650 hover:text-red-650 border border-slate-200/60 px-3 py-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm"
+                              title="Eliminar Socio"
+                            >
+                              <Trash2 size={13} className="mr-1.5" />
+                              <span>Eliminar</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             </div>
