@@ -414,7 +414,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
       saludoSocioId: '',
       saludoInvitadoName: '',
       solicitudesResoluciones: {} as Record<string, { decision: 'Aprobada' | 'Rechazada' | 'Pendiente', razon: string }>,
-      puntosAgenda: [] as { tema: string; debate: string; acuerdo: string }[],
+      puntosAgenda: [] as { tema: string; debate: string; acuerdo: string; socioSolicitante?: string; agendaContenido?: string; }[],
       asistencia: [] as string[],
       numeroActa: ''
     };
@@ -426,7 +426,13 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     }
   }, [actaWizardData, showAddActa]);
 
-  const [newAgendaPoint, setNewAgendaPoint] = useState({ tema: '', debate: '', acuerdo: '' });
+  const [newAgendaPoint, setNewAgendaPoint] = useState({ 
+    tema: '', 
+    debate: '', 
+    acuerdo: '', 
+    socioSolicitante: '', 
+    agendaContenido: '' 
+  });
   const [asistenciaSearch, setAsistenciaSearch] = useState('');
   const [selectedAgendaPointTab, setSelectedAgendaPointTab] = useState<'new' | number>('new');
   const [actaPreviewMode, setActaPreviewMode] = useState<'documento' | 'texto'>('documento');
@@ -489,6 +495,10 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
       ? presentSocios 
       : sortedAllSocios.filter(s => s.estatus !== 'Inactive');
   }, [presentSocios, sortedAllSocios]);
+
+  const agendaProposals = useMemo(() => {
+    return solicitudes.filter(s => s.tipo === 'agenda');
+  }, [solicitudes]);
 
   const handleInsertMemberMention = (memberName: string) => {
     const textarea = debateRef.current;
@@ -765,7 +775,8 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     if (data.puntosAgenda && data.puntosAgenda.length > 0) {
       agendaSection = '\nPUNTOS DE AGENDA DISCUTIDOS:\n\n';
       data.puntosAgenda.forEach((p, idx) => {
-        agendaSection += `Punto ${idx + 1}: ${p.tema.trim() || 'Sin tema'}\n`;
+        const propLabel = p.socioSolicitante ? ` (Solicitado por: ${p.socioSolicitante})` : '';
+        agendaSection += `Punto ${idx + 1}: ${p.tema.trim() || 'Sin tema'}${propLabel}\n`;
         agendaSection += `   - Debate: ${p.debate.trim() || 'Sin debate registrado.'}\n`;
         agendaSection += `   - Acuerdo: ${p.acuerdo.trim() || 'Sin acuerdo registrado.'}\n\n`;
       });
@@ -849,7 +860,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     setShowAddActa(true);
   };
 
-  const handleUpdateAgendaPoint = (index: number, field: 'tema' | 'debate' | 'acuerdo', value: string) => {
+  const handleUpdateAgendaPoint = (index: number, field: 'tema' | 'debate' | 'acuerdo' | 'socioSolicitante' | 'agendaContenido', value: string) => {
     setActaWizardData(prev => {
       const updated = [...(prev.puntosAgenda || [])];
       updated[index] = { ...updated[index], [field]: value };
@@ -864,7 +875,13 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       ...prev,
       puntosAgenda: [...(prev.puntosAgenda || []), newPoint]
     }));
-    setNewAgendaPoint({ tema: '', debate: '', acuerdo: '' });
+    setNewAgendaPoint({ 
+      tema: '', 
+      debate: '', 
+      acuerdo: '', 
+      socioSolicitante: '', 
+      agendaContenido: '' 
+    });
     setSelectedAgendaPointTab((actaWizardData.puntosAgenda || []).length);
   };
 
@@ -4637,9 +4654,18 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                 }`}>
                                   {idx + 1}
                                 </span>
-                                <span className="max-w-[120px] truncate">
-                                  {point.tema || `Punto ${idx + 1}`}
-                                </span>
+                                <div className="flex flex-col items-start text-left">
+                                  <span className="max-w-[120px] truncate">
+                                    {point.tema || `Punto ${idx + 1}`}
+                                  </span>
+                                  {point.socioSolicitante && (
+                                    <span className={`text-[9px] font-bold ${
+                                      selectedAgendaPointTab === idx ? 'text-amber-100' : 'text-slate-400'
+                                    }`}>
+                                      Socio: {point.socioSolicitante}
+                                    </span>
+                                  )}
+                                </div>
                               </button>
                             ))}
                           </div>
@@ -4648,6 +4674,64 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                           {selectedAgendaPointTab === 'new' ? (
                             /* Create Point Tab */
                             <div className="space-y-6 animate-in fade-in duration-300 text-left">
+                              {/* Import from Agenda Proposal Dropdown */}
+                              {agendaProposals.length > 0 && (
+                                <div className="bg-amber-50/30 p-5 rounded-2xl border border-amber-100/50 space-y-3">
+                                  <label className="block text-xs font-bold text-amber-900/80 uppercase tracking-wider">
+                                    💡 ¿Desea discutir una propuesta de punto de agenda?
+                                  </label>
+                                  <select
+                                    onChange={(e) => {
+                                      const selectedId = e.target.value;
+                                      if (!selectedId) return;
+                                      const prop = agendaProposals.find(p => p.id === selectedId);
+                                      if (prop) {
+                                        setNewAgendaPoint({
+                                          tema: prop.agendaNombrePunto || '',
+                                          debate: '',
+                                          acuerdo: '',
+                                          socioSolicitante: prop.agendaSocioNombre || '',
+                                          agendaContenido: prop.agendaContenido || ''
+                                        });
+                                      }
+                                      // Reset value
+                                      e.target.value = '';
+                                    }}
+                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none font-semibold text-slate-800 text-xs shadow-sm"
+                                  >
+                                    <option value="">Seleccione una propuesta registrada para debatirla...</option>
+                                    {agendaProposals.map((prop) => (
+                                      <option key={prop.id} value={prop.id}>
+                                        {prop.agendaNombrePunto} (Solicitado por: {prop.agendaSocioNombre})
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              )}
+
+                              {newAgendaPoint.agendaContenido && (
+                                <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100/60 space-y-2 animate-in fade-in duration-300">
+                                  <div className="flex justify-between items-center text-[10px] font-black text-blue-900/60 uppercase tracking-widest">
+                                    <span>Contenido de la Propuesta (Discusión)</span>
+                                    {newAgendaPoint.socioSolicitante && (
+                                      <span>Solicitado por: <span className="font-extrabold text-blue-955">{newAgendaPoint.socioSolicitante}</span></span>
+                                    )}
+                                  </div>
+                                  <p className="text-slate-700 text-xs font-semibold leading-relaxed">
+                                    {newAgendaPoint.agendaContenido}
+                                  </p>
+                                  <div className="flex justify-end pt-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => setNewAgendaPoint(prev => ({ ...prev, socioSolicitante: '', agendaContenido: '' }))}
+                                      className="text-xs font-bold text-red-500 hover:text-red-700 underline"
+                                    >
+                                      Remover propuesta importada
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+
                               <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tema del Punto</label>
                                 <input 
@@ -4758,6 +4842,34 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                   className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold shadow-sm"
                                 />
                               </div>
+
+                              {((actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.agendaContenido || (actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.socioSolicitante) && (
+                                <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100/60 space-y-2 animate-in fade-in duration-300">
+                                  <div className="flex justify-between items-center text-[10px] font-black text-blue-900/60 uppercase tracking-widest">
+                                    <span>Contenido de la Propuesta (Discusión)</span>
+                                    {(actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.socioSolicitante && (
+                                      <span>Solicitado por: <span className="font-extrabold text-blue-955">{(actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.socioSolicitante}</span></span>
+                                    )}
+                                  </div>
+                                  {(actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.agendaContenido && (
+                                    <p className="text-slate-700 text-xs font-semibold leading-relaxed">
+                                      {(actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.agendaContenido}
+                                    </p>
+                                  )}
+                                  <div className="flex justify-end pt-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        handleUpdateAgendaPoint(selectedAgendaPointTab as number, 'agendaContenido', '');
+                                        handleUpdateAgendaPoint(selectedAgendaPointTab as number, 'socioSolicitante', '');
+                                      }}
+                                      className="text-xs font-bold text-red-500 hover:text-red-700 underline"
+                                    >
+                                      Remover propuesta importada
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
 
                               <div className="space-y-6">
                                 <div>

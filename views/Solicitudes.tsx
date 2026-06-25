@@ -163,7 +163,6 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   const [agendaSocioNombre, setAgendaSocioNombre] = useState('');
   const [agendaNombrePunto, setAgendaNombrePunto] = useState('');
   const [agendaContenido, setAgendaContenido] = useState('');
-  const [agendaRazon, setAgendaRazon] = useState('');
 
   // Set default socio name for agenda when user changes
   useEffect(() => {
@@ -349,8 +348,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       if (
         !agendaSocioNombre.trim() || 
         !agendaNombrePunto.trim() || 
-        !agendaContenido.trim() || 
-        !agendaRazon.trim()
+        !agendaContenido.trim()
       ) {
         setSaveError("Por favor, complete todos los campos obligatorios.");
         return;
@@ -365,8 +363,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
         fechaCreacion: new Date().toISOString().split('T')[0],
         agendaSocioNombre: agendaSocioNombre.trim(),
         agendaNombrePunto: agendaNombrePunto.trim(),
-        agendaContenido: agendaContenido.trim(),
-        agendaRazon: agendaRazon.trim()
+        agendaContenido: agendaContenido.trim()
       };
     } else if (activeTab === 'sillas') {
       // Wheelchair request validations
@@ -466,7 +463,6 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
         // Reset agenda form
         setAgendaNombrePunto('');
         setAgendaContenido('');
-        setAgendaRazon('');
 
         // Reset salon form
         setSalonDia('');
@@ -829,16 +825,6 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                     </div>
                     <p className="text-slate-705 text-xs leading-relaxed font-medium break-words">
                       {sol.agendaContenido}
-                    </p>
-                  </div>
-
-                  {/* Razón */}
-                  <div className="space-y-1 bg-blue-50/20 p-4 rounded-2xl border border-blue-50/50">
-                    <div className="text-xs font-black text-blue-900/60 uppercase tracking-widest mb-1">
-                      Razón / Justificación:
-                    </div>
-                    <p className="text-slate-705 text-xs leading-relaxed font-medium break-words">
-                      {sol.agendaRazon}
                     </p>
                   </div>
                 </div>
@@ -2225,14 +2211,25 @@ Club de Leones de Quetzaltenango`;
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
                       Socio Solicitante *
                     </label>
-                    <input
-                      type="text"
+                    <select
                       required
                       value={agendaSocioNombre}
                       onChange={(e) => setAgendaSocioNombre(e.target.value)}
-                      placeholder="Nombre del socio"
                       className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
-                    />
+                    >
+                      <option value="" disabled>Seleccione un socio...</option>
+                      {[...socios]
+                        .sort((a, b) => a.nombre.localeCompare(b.nombre))
+                        .map((socio) => (
+                          <option key={socio.id} value={socio.nombre}>
+                            {socio.nombre} {socio.puesto ? `(${socio.puesto})` : ''}
+                          </option>
+                        ))
+                      }
+                      {agendaSocioNombre && !socios.some(s => s.nombre === agendaSocioNombre) && (
+                        <option value={agendaSocioNombre}>{agendaSocioNombre}</option>
+                      )}
+                    </select>
                   </div>
 
                   <div>
@@ -2259,20 +2256,6 @@ Club de Leones de Quetzaltenango`;
                       value={agendaContenido}
                       onChange={(e) => setAgendaContenido(e.target.value)}
                       placeholder="Describe el contenido o propuesta a detallar en la reunión..."
-                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold resize-none text-slate-800"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      Razón del Mismo *
-                    </label>
-                    <textarea
-                      rows={2}
-                      required
-                      value={agendaRazon}
-                      onChange={(e) => setAgendaRazon(e.target.value)}
-                      placeholder="Indica el motivo o justificación de por qué se solicita tratar este punto..."
                       className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold resize-none text-slate-800"
                     />
                   </div>
