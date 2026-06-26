@@ -64,6 +64,126 @@ const TEMA_COLORS: { [key: string]: string } = {
   'Otra': 'bg-slate-100 text-slate-700 border-slate-300'
 };
 
+const TEMA_COLOR_MAP: { [key: string]: 'blue' | 'emerald' | 'purple' | 'amber' | 'indigo' | 'orange' } = {
+  abiertas: 'emerald',
+  sillas: 'blue',
+  salon: 'amber',
+  internas: 'purple',
+  cartas: 'orange',
+  agenda: 'indigo'
+};
+
+const BORDER_CLASSES = {
+  blue: 'border-blue-500/40 ring-1 ring-blue-500/10',
+  emerald: 'border-emerald-500/40 ring-1 ring-emerald-500/10',
+  purple: 'border-purple-500/40 ring-1 ring-purple-500/10',
+  amber: 'border-amber-500/40 ring-1 ring-amber-500/10',
+  indigo: 'border-indigo-500/40 ring-1 ring-indigo-500/10',
+  orange: 'border-orange-500/40 ring-1 ring-orange-500/10'
+};
+
+const HEADER_EXPANDED_CLASSES = {
+  blue: 'bg-blue-600 text-white',
+  emerald: 'bg-emerald-600 text-white',
+  purple: 'bg-purple-600 text-white',
+  amber: 'bg-amber-500 text-white',
+  indigo: 'bg-indigo-600 text-white',
+  orange: 'bg-orange-500 text-white'
+};
+
+const ICON_EXPANDED_CLASSES = {
+  blue: 'bg-white/20 text-white',
+  emerald: 'bg-white/20 text-white',
+  purple: 'bg-white/20 text-white',
+  amber: 'bg-white/20 text-white',
+  indigo: 'bg-white/20 text-white',
+  orange: 'bg-white/20 text-white'
+};
+
+const ICON_COLLAPSED_CLASSES = {
+  blue: 'bg-blue-50 text-blue-600',
+  emerald: 'bg-emerald-50 text-emerald-600',
+  purple: 'bg-purple-50 text-purple-600',
+  amber: 'bg-amber-50 text-amber-600',
+  indigo: 'bg-indigo-50 text-indigo-600',
+  orange: 'bg-orange-50 text-orange-600'
+};
+
+const BUTTON_CLASSES = {
+  blue: 'bg-blue-600 hover:bg-blue-700 text-white',
+  emerald: 'bg-emerald-600 hover:bg-emerald-700 text-white',
+  purple: 'bg-purple-600 hover:bg-purple-700 text-white',
+  amber: 'bg-amber-500 hover:bg-amber-600 text-white',
+  indigo: 'bg-indigo-600 hover:bg-indigo-700 text-white',
+  orange: 'bg-orange-500 hover:bg-orange-600 text-white'
+};
+
+const STEPPER_LINE_CLASSES = {
+  blue: 'bg-blue-600',
+  emerald: 'bg-emerald-600',
+  purple: 'bg-purple-600',
+  amber: 'bg-amber-500',
+  indigo: 'bg-indigo-600',
+  orange: 'bg-orange-500'
+};
+
+const STEPPER_CIRCLE_ACTIVE = {
+  blue: 'bg-blue-600 border-blue-600 text-white ring-4 ring-blue-600/10',
+  emerald: 'bg-emerald-600 border-emerald-600 text-white ring-4 ring-emerald-600/10',
+  purple: 'bg-purple-600 border-purple-600 text-white ring-4 ring-purple-600/10',
+  amber: 'bg-amber-50 border-amber-500 text-white ring-4 ring-amber-500/10',
+  indigo: 'bg-indigo-600 border-indigo-600 text-white ring-4 ring-indigo-600/10',
+  orange: 'bg-orange-50 border-orange-500 text-white ring-4 ring-orange-500/10'
+};
+
+const STEPPER_CIRCLE_COMPLETED = {
+  blue: 'bg-blue-50 border-blue-600 text-blue-600',
+  emerald: 'bg-emerald-50 border-emerald-600 text-emerald-600',
+  purple: 'bg-purple-50 border-purple-600 text-purple-600',
+  amber: 'bg-amber-50 border-amber-500 text-amber-550',
+  indigo: 'bg-indigo-50 border-indigo-600 text-indigo-600',
+  orange: 'bg-orange-50 border-orange-500 text-orange-500'
+};
+
+const STEPPER_TEXT_ACTIVE = {
+  blue: 'text-blue-600',
+  emerald: 'text-emerald-600',
+  purple: 'text-purple-600',
+  amber: 'text-amber-500',
+  indigo: 'text-indigo-600',
+  orange: 'text-orange-500'
+};
+
+const generateShortTrackingCode = (existingIds: string[]): string => {
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const existingLower = existingIds.map(id => id.toLowerCase().trim());
+  
+  let code = '';
+  let attempts = 0;
+  
+  do {
+    let randomLetters = '';
+    for (let i = 0; i < 3; i++) {
+      randomLetters += letters.charAt(Math.floor(Math.random() * letters.length));
+    }
+    
+    let randomDigits = '';
+    const usedIndices = new Set<number>();
+    while (randomDigits.length < 3) {
+      const idx = Math.floor(Math.random() * 10);
+      if (!usedIndices.has(idx)) {
+        usedIndices.add(idx);
+        randomDigits += idx.toString();
+      }
+    }
+    
+    code = `${randomLetters}-${randomDigits}`;
+    attempts++;
+  } while (existingLower.includes(code.toLowerCase().trim()) && attempts < 1000);
+  
+  return code;
+};
+
 const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   const { showAlert, showConfirm } = useModal();
   const alert = (msg: string) => {
@@ -307,6 +427,8 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     setSaveError(null);
     setSaveSuccess(false);
 
+    const existingIds = solicitudes.map(s => s.id);
+    const trackingCodeId = generateShortTrackingCode(existingIds);
     let nuevaSolicitud: Solicitud;
 
     if (activeTab === 'salon') {
@@ -341,7 +463,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       }
 
       nuevaSolicitud = {
-        id: `sol-${Date.now()}`,
+        id: trackingCodeId,
         nombre: `Alquiler - ${
           salonTipoAlquiler === 'salon' ? 'Salón' : 
           salonTipoAlquiler === 'parqueo' ? 'Parqueo' : 
@@ -375,7 +497,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       }
 
       nuevaSolicitud = {
-        id: `sol-${Date.now()}`,
+        id: trackingCodeId,
         nombre: `Punto de Agenda - ${agendaNombrePunto.trim()}`,
         tipo: 'agenda',
         estado: 'Pendiente',
@@ -405,8 +527,13 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
         return;
       }
 
+      if (telefonoSolicitante.trim().length !== 8) {
+        setSaveError("El número de teléfono debe tener exactamente 8 dígitos.");
+        return;
+      }
+
       nuevaSolicitud = {
-        id: `sol-${Date.now()}`,
+        id: trackingCodeId,
         nombre: `Silla de Ruedas - ${nombreBeneficiario.trim()}`,
         tipo: 'sillas',
         estado: 'Pendiente',
@@ -415,7 +542,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
         fechaCreacion: new Date().toISOString().split('T')[0],
         nombreSolicitante: nombreSolicitante.trim(),
         dpiSolicitante: dpiSolicitante.trim(),
-        telefonoSolicitante: telefonoSolicitante.trim(),
+        telefonoSolicitante: `+502${telefonoSolicitante.trim()}`,
         nombreBeneficiario: nombreBeneficiario.trim(),
         edadBeneficiario: parseInt(edadBeneficiario),
         tiempoUso: tiempoUso.trim()
@@ -438,14 +565,21 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
           setSaveError(`Por favor, complete los datos del Responsable ${i + 1}.`);
           return;
         }
+        if (responsables[i].telefono.trim().length !== 8) {
+          setSaveError(`El teléfono del Responsable ${i + 1} debe tener exactamente 8 dígitos.`);
+          return;
+        }
       }
 
       nuevaSolicitud = {
-        id: `sol-${Date.now()}`,
+        id: trackingCodeId,
         nombre: nombre.trim(),
         fecha,
         descripcion: descripcion.trim(),
-        responsables,
+        responsables: responsables.map(r => ({
+          nombre: r.nombre.trim(),
+          telefono: `+502${r.telefono.trim()}`
+        })),
         tema,
         otroTemaDescripcion: tema === 'Otra' ? otroTemaDescripcion.trim() : undefined,
         tipo: activeTab, // Save to current open tab ('abiertas' or 'internas')
@@ -560,6 +694,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     showAction: boolean;
     visible: boolean;
     allowed: boolean;
+    colorTheme: 'blue' | 'emerald' | 'purple' | 'amber' | 'indigo' | 'orange';
   }
 
   const tabConfigs: TabConfig[] = [
@@ -575,7 +710,8 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       pendingCount: counts.abiertasPendientes,
       registeredCount: counts.abiertas,
       showAction: true,
-      actionText: 'Crear Solicitud'
+      actionText: 'Crear Solicitud',
+      colorTheme: 'emerald'
     },
     {
       id: 'sillas',
@@ -589,7 +725,8 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       pendingCount: counts.sillasPendientes,
       registeredCount: counts.sillas,
       showAction: true,
-      actionText: 'Solicitar Silla'
+      actionText: 'Solicitar Silla',
+      colorTheme: 'blue'
     },
     {
       id: 'salon',
@@ -603,7 +740,8 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       pendingCount: counts.salonPendientes,
       registeredCount: counts.salon,
       showAction: true,
-      actionText: 'Reservar Salón'
+      actionText: 'Reservar Salón',
+      colorTheme: 'amber'
     },
     {
       id: 'internas',
@@ -617,7 +755,8 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       pendingCount: counts.internasPendientes,
       registeredCount: counts.internas,
       showAction: true,
-      actionText: 'Crear Solicitud'
+      actionText: 'Crear Solicitud',
+      colorTheme: 'purple'
     },
     {
       id: 'cartas',
@@ -631,7 +770,8 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       pendingCount: 0,
       registeredCount: 0,
       showAction: true,
-      actionText: 'Redactar Carta'
+      actionText: 'Redactar Carta',
+      colorTheme: 'orange'
     },
     {
       id: 'agenda',
@@ -645,7 +785,8 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       pendingCount: counts.agendaPendientes,
       registeredCount: counts.agenda,
       showAction: true,
-      actionText: 'Proponer Punto'
+      actionText: 'Proponer Punto',
+      colorTheme: 'indigo'
     }
   ];
   const renderRestrictedAccess = () => {
@@ -2014,7 +2155,7 @@ Club de Leones de Quetzaltenango`;
             <div 
               key={cfg.id}
               className={`border rounded-3xl bg-white overflow-hidden shadow-sm transition-all duration-300 ${
-                isExpanded ? 'border-blue-900/40 ring-1 ring-blue-900/10' : 'border-slate-200'
+                isExpanded ? BORDER_CLASSES[cfg.colorTheme] : 'border-slate-200'
               }`}
             >
               {/* Encabezado del Acordeón */}
@@ -2029,25 +2170,25 @@ Club de Leones de Quetzaltenango`;
                 }}
                 className={`w-full px-6 py-5 flex items-center justify-between text-left transition-all ${
                   !cfg.allowed ? 'bg-slate-50/50 text-slate-400 cursor-not-allowed' :
-                  isExpanded ? 'bg-blue-900 text-white' : 'text-slate-800 hover:bg-slate-50'
+                  isExpanded ? HEADER_EXPANDED_CLASSES[cfg.colorTheme] : 'text-slate-800 hover:bg-slate-50'
                 }`}
               >
                 <div className="flex items-center space-x-4">
                   <div className={`p-3 rounded-2xl transition-colors ${
                     !cfg.allowed ? 'bg-slate-100 text-slate-400' :
-                    isExpanded ? 'bg-white/10 text-yellow-400' : 'bg-blue-50 text-blue-900'
+                    isExpanded ? ICON_EXPANDED_CLASSES[cfg.colorTheme] : ICON_COLLAPSED_CLASSES[cfg.colorTheme]
                   }`}>
                     {cfg.icon}
                   </div>
                   <div>
                     <span className="font-extrabold text-base tracking-tight block">{cfg.title}</span>
-                    <span className={`text-xs ${isExpanded ? 'text-blue-200' : 'text-slate-500'} font-semibold mt-0.5 block`}>
+                    <span className={`text-xs ${isExpanded ? 'text-white/80' : 'text-slate-500'} font-semibold mt-0.5 block`}>
                       {cfg.subtitle}
                     </span>
                   </div>
                   {cfg.allowed && cfg.pendingCount > 0 && (
                     <span className={`text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse ml-2 ${
-                      isExpanded ? 'bg-yellow-500 text-blue-955' : 'bg-yellow-100 text-yellow-800'
+                      isExpanded ? 'bg-white/20 text-white' : 'bg-yellow-100 text-yellow-800'
                     }`}>
                       {cfg.pendingCount} Pendiente{cfg.pendingCount > 1 ? 's' : ''}
                     </span>
@@ -2093,13 +2234,27 @@ Club de Leones de Quetzaltenango`;
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-slate-400 font-bold">Pendientes:</span>
-                            <span className="font-extrabold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">
+                            <span className={`font-extrabold px-2 py-0.5 rounded border ${
+                              cfg.colorTheme === 'blue' ? 'text-blue-750 bg-blue-50 border-blue-100' :
+                              cfg.colorTheme === 'emerald' ? 'text-emerald-755 bg-emerald-50 border-emerald-100' :
+                              cfg.colorTheme === 'purple' ? 'text-purple-755 bg-purple-50 border-purple-100' :
+                              cfg.colorTheme === 'amber' ? 'text-amber-755 bg-amber-50 border-amber-100' :
+                              cfg.colorTheme === 'indigo' ? 'text-indigo-755 bg-indigo-50 border-indigo-100' :
+                              'text-orange-755 bg-orange-50 border-orange-100'
+                            }`}>
                               {cfg.pendingCount}
                             </span>
                           </div>
                           <div className="flex justify-between items-center pt-2 border-t border-slate-200/50">
                             <span className="text-slate-400 font-bold">Acceso:</span>
-                            <span className="font-bold text-blue-900 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-100">
+                            <span className={`font-bold px-2.5 py-0.5 rounded border ${
+                              cfg.colorTheme === 'blue' ? 'text-blue-900 bg-blue-50 border-blue-100' :
+                              cfg.colorTheme === 'emerald' ? 'text-emerald-900 bg-emerald-50 border-emerald-100' :
+                              cfg.colorTheme === 'purple' ? 'text-purple-900 bg-purple-50 border-purple-100' :
+                              cfg.colorTheme === 'amber' ? 'text-amber-900 bg-amber-50 border-amber-100' :
+                              cfg.colorTheme === 'indigo' ? 'text-indigo-900 bg-indigo-50 border-indigo-100' :
+                              'text-orange-900 bg-orange-50 border-orange-100'
+                            }`}>
                               {cfg.audience}
                             </span>
                           </div>
@@ -2114,7 +2269,9 @@ Club de Leones de Quetzaltenango`;
                             setActiveTab(cfg.id);
                             setIsModalOpen(true);
                           }}
-                          className="w-full py-3 bg-blue-900 hover:bg-blue-800 text-white font-extrabold rounded-xl flex items-center justify-center space-x-2 text-sm shadow-md transition-all duration-200 active:scale-95 hover:shadow-lg"
+                          className={`w-full py-3 font-extrabold rounded-xl flex items-center justify-center space-x-2 text-sm shadow-md transition-all duration-200 active:scale-95 hover:shadow-lg ${
+                            BUTTON_CLASSES[cfg.colorTheme]
+                          }`}
                         >
                           <Plus size={16} />
                           <span>{cfg.actionText}</span>
@@ -2139,7 +2296,9 @@ Club de Leones de Quetzaltenango`;
                               setActiveTab('cartas');
                               setIsModalOpen(true);
                             }}
-                            className="px-6 py-3 bg-blue-900 hover:bg-blue-800 text-white font-extrabold rounded-xl text-sm shadow-md transition-all inline-flex items-center space-x-2"
+                            className={`px-6 py-3 text-white font-extrabold rounded-xl text-sm shadow-md transition-all inline-flex items-center space-x-2 ${
+                              BUTTON_CLASSES[cfg.colorTheme]
+                            }`}
                           >
                             <Plus size={16} />
                             <span>Redactar Nueva Carta</span>
@@ -2164,7 +2323,9 @@ Club de Leones de Quetzaltenango`;
                           setActiveTab(cfg.id);
                           setIsModalOpen(true);
                         }}
-                        className="w-full py-3 bg-blue-900 hover:bg-blue-800 text-white font-black rounded-2xl flex items-center justify-center space-x-2 text-xs shadow-md transition-all duration-200 active:scale-95"
+                        className={`w-full py-3 text-white font-black rounded-2xl flex items-center justify-center space-x-2 text-xs shadow-md transition-all duration-200 active:scale-95 ${
+                          BUTTON_CLASSES[cfg.colorTheme]
+                        }`}
                       >
                         <Plus size={16} />
                         <span>{cfg.actionText}</span>
@@ -2337,14 +2498,22 @@ Club de Leones de Quetzaltenango`;
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
                       Número de Teléfono *
                     </label>
-                    <input
-                      type="text"
-                      required
-                      value={telefonoSolicitante}
-                      onChange={(e) => setTelefonoSolicitante(e.target.value)}
-                      placeholder="Ej. +502 5555-5555"
-                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
-                    />
+                    <div className="flex rounded-xl border border-slate-200 focus-within:ring-2 focus-within:ring-blue-900 focus-within:border-transparent overflow-hidden bg-white">
+                      <span className="bg-slate-100 text-slate-500 px-4 py-3 flex items-center justify-center border-r border-slate-200 text-sm font-extrabold select-none">
+                        +502
+                      </span>
+                      <input
+                        type="tel"
+                        required
+                        value={telefonoSolicitante}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          if (val.length <= 8) setTelefonoSolicitante(val);
+                        }}
+                        placeholder="5555 5555"
+                        className="w-full px-4 py-2.5 outline-none text-sm text-slate-800 font-semibold"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -2645,14 +2814,24 @@ Club de Leones de Quetzaltenango`;
                             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
                               Número de Teléfono *
                             </label>
-                            <input
-                              type="text"
-                              required
-                              value={resp.telefono}
-                              onChange={(e) => handleUpdateResponsable(index, 'telefono', e.target.value)}
-                              placeholder="+502 Xxxx-xxxx"
-                              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-xs font-semibold text-slate-800 bg-white"
-                            />
+                            <div className="flex rounded-lg border border-slate-200 focus-within:ring-2 focus-within:ring-blue-900 focus-within:border-transparent overflow-hidden bg-white">
+                              <span className="bg-slate-100 text-slate-500 px-3 py-2 flex items-center justify-center border-r border-slate-200 text-xs font-extrabold select-none">
+                                +502
+                              </span>
+                              <input
+                                type="tel"
+                                required
+                                value={resp.telefono}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/\D/g, '');
+                                  if (val.length <= 8) {
+                                    handleUpdateResponsable(index, 'telefono', val);
+                                  }
+                                }}
+                                placeholder="55555555"
+                                className="w-full px-3 py-2 outline-none text-xs text-slate-800 font-semibold"
+                              />
+                            </div>
                           </div>
                         </div>
 
