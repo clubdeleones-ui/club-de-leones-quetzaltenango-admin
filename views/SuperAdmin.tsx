@@ -2328,7 +2328,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     <p className="text-xs text-slate-500 max-w-sm mx-auto">Prueba cambiando los filtros o el texto del buscador.</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
                     {filteredSociosAdmin.map(socio => {
                       const isInactive = socio.estatus === 'Inactive';
                       const isDirectiva = !isInactive && (

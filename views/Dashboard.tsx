@@ -36,6 +36,7 @@ import { MOCK_DONACIONES, MOCK_SOCIOS } from '../constants';
 import { generateDiplomaDonacionPDF } from '../utils/pdfGenerator';
 import { compressImageFile } from '../utils/imageCompressor';
 import { firebaseService } from '../services/firebaseService';
+import { useModal } from '../context/ModalContext';
 
 const PUESTOS_PREDEFINIDOS = [
   'Presidente',
@@ -67,6 +68,60 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
+  const { showAlert } = useModal();
+  const alert = (msg: string) => {
+    showAlert("Notificación", msg);
+  };
+
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [isGeneratingQr, setIsGeneratingQr] = useState(false);
+
+  const handleQrClick = async () => {
+    if (user.qrToken) {
+      setShowQrModal(true);
+      return;
+    }
+
+    setIsGeneratingQr(true);
+    try {
+      const token = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+      const updatedUser = { ...user, qrToken: token };
+      await firebaseService.saveSocio(updatedUser);
+      onUpdateUser(updatedUser);
+      setShowQrModal(true);
+    } catch (err) {
+      console.error("Error generating QR token:", err);
+      alert("Error al generar el token del código QR.");
+    } finally {
+      setIsGeneratingQr(false);
+    }
+  };
+
+  const handleDownloadQr = () => {
+    if (!user.qrToken) return;
+    
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
+      window.location.origin + window.location.pathname + '#/login?qr_token=' + user.qrToken
+    )}`;
+    
+    fetch(qrUrl)
+      .then(response => response.blob())
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `QR_Acceso_${user.nombre.replace(/\s+/g, '_')}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      })
+      .catch(err => {
+        console.error("Error downloading QR:", err);
+        alert("No se pudo descargar el código QR.");
+      });
+  };
+
   const [activeTab, setActiveTab] = useState<'resumen' | 'perfil'>(() => {
     const saved = sessionStorage.getItem('dashboard_active_tab');
     if (saved) return saved as 'resumen' | 'perfil';
@@ -656,6 +711,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                   <Pencil size={16} />
                   <span>Editar Perfil</span>
                 </button>
+
+                {/* Botón QR de Acceso */}
+                <button
+                  type="button"
+                  onClick={handleQrClick}
+                  disabled={isGeneratingQr}
+                  className="w-full mt-3 bg-white hover:bg-yellow-50 text-amber-600 hover:text-amber-700 border border-amber-250 font-black py-3.5 rounded-2xl transition-all shadow-md hover:shadow-lg flex items-center justify-center space-x-2 disabled:opacity-50"
+                >
+                  <QrCode size={16} />
+                  <span>{isGeneratingQr ? 'Generando QR...' : 'Ver Mi Código QR'}</span>
+                </button>
               </div>
             </div>
           </div>
@@ -782,6 +848,66 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showQrModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full max-w-md p-6 sm:p-10 text-center space-y-6 relative animate-in zoom-in-95 duration-300">
+            <button 
+              type="button"
+              onClick={() => setShowQrModal(false)}
+              className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="space-y-1">
+              <h2 className="text-2xl font-black text-blue-900">Mi Código QR de Acceso</h2>
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+                {user.nombre}
+              </p>
+              <p className="text-[11px] text-slate-400 font-medium">
+                {user.puesto || 'Socio Regular'}
+              </p>
+            </div>
+
+            {/* QR Image Display */}
+            {user.qrToken ? (
+              <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-col items-center justify-center space-y-4">
+                <div className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-inner">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
+                      window.location.origin + window.location.pathname + '#/login?qr_token=' + user.qrToken
+                    )}`}
+                    alt="Acceso QR"
+                    className="w-56 h-56 object-contain"
+                  />
+                </div>
+                
+                <p className="text-[10px] text-slate-450 leading-relaxed font-semibold max-w-xs">
+                  Escanea este código con la cámara de tu móvil para iniciar sesión automáticamente en tu cuenta.
+                </p>
+              </div>
+            ) : (
+              <div className="py-10 text-slate-450">
+                <Loader2 className="animate-spin mx-auto text-blue-900 mb-2" size={32} />
+                <p className="text-sm font-semibold">Generando credenciales QR...</p>
+              </div>
+            )}
+
+            {/* Download Button */}
+            {user.qrToken && (
+              <button
+                type="button"
+                onClick={handleDownloadQr}
+                className="w-full bg-blue-900 hover:bg-blue-800 text-white py-3.5 rounded-2xl transition-all flex items-center justify-center space-x-2 text-xs font-black shadow-md hover:shadow-lg"
+              >
+                <Download size={16} />
+                <span>Descargar Código QR (PNG)</span>
+              </button>
+            )}
           </div>
         </div>
       )}
