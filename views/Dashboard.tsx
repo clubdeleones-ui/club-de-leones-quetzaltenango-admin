@@ -40,16 +40,16 @@ import { useModal } from '../context/ModalContext';
 
 const PUESTOS_PREDEFINIDOS = [
   'Presidente',
-  'Vicepresidente',
+  'Primer Vicepresidente',
+  'Segundo Vicepresidente',
   'Secretario',
   'Tesorero',
-  'Asesor de Servicios',
+  'Asesor de Servicio',
+  'Asesor de Mercadotecnia',
   'Presidente de Afiliación',
   'Vocal 1',
   'Vocal 2',
-  'Socio Regular',
-  'Socio Distinguido',
-  'Donante Distinguido'
+  'Socio Regular'
 ];
 
 const ROLES_LIST = [

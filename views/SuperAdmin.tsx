@@ -80,30 +80,17 @@ import { AgendaContactos } from './AgendaContactos';
 import { LineaTiempoAdmin } from './LineaTiempoAdmin';
 
 const PUESTOS_PREDEFINIDOS = [
-  'Presidente del Club',
-  'Primer Vicepresidente del Club',
-  'Segundo Vicepresidente del Club',
-  'Tercer Vicepresidente del Club',
-  'Secretario del Club',
-  'Tesorero del Club',
-  'Domador del Club',
-  'Asesor de Servicios del Club',
-  'Asesor de Mercadotecnia',
-  'Presidente del Comité de Aumento de Socios del Club',
-  'Presidente del Comité Zona Joven del Club',
-  'Presidente del Comité del Paz Póster',
-  'Presidente del Comité de Medio Ambiente',
   'Presidente',
-  'Vicepresidente',
+  'Primer Vicepresidente',
+  'Segundo Vicepresidente',
   'Secretario',
   'Tesorero',
-  'Asesor de Servicios',
+  'Asesor de Servicio',
+  'Asesor de Mercadotecnia',
   'Presidente de Afiliación',
   'Vocal 1',
   'Vocal 2',
-  'Socio Regular',
-  'Socio Distinguido',
-  'Donante Distinguido'
+  'Socio Regular'
 ];
 
 const ROLES_LIST = [
