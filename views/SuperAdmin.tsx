@@ -1714,11 +1714,11 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
   const handleSaveSocioSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingSocio || !editSocioForm.nombre?.trim() || !editSocioForm.correo?.trim()) {
-      setSocioSaveError("El nombre y el correo son obligatorios.");
+    if (!editingSocio || !editSocioForm.nombre?.trim()) {
+      setSocioSaveError("El nombre es obligatorio.");
       return;
     }
-    if (!/\S+@\S+\.\S+/.test(editSocioForm.correo)) {
+    if (editSocioForm.correo?.trim() && !/\S+@\S+\.\S+/.test(editSocioForm.correo)) {
       setSocioSaveError("Ingrese un correo electrónico válido.");
       return;
     }
@@ -5551,10 +5551,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Correo Electrónico *</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Correo Electrónico</label>
                     <input 
                       type="email"
-                      required
                       placeholder="Ej. carlosmendez@gmail.com"
                       value={editSocioForm.correo || ''}
                       onChange={e => setEditSocioForm(prev => ({ ...prev, correo: e.target.value }))}
@@ -5563,13 +5562,22 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Teléfono</label>
-                    <input 
-                      type="text"
-                      placeholder="Ej. +502 5555-5555"
-                      value={editSocioForm.telefono || ''}
-                      onChange={e => setEditSocioForm(prev => ({ ...prev, telefono: e.target.value }))}
-                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
-                    />
+                    <div className="relative flex items-center">
+                      <span className="absolute left-4 text-sm font-semibold text-slate-400 select-none">
+                        +502
+                      </span>
+                      <input 
+                        type="text"
+                        maxLength={8}
+                        placeholder="55555555"
+                        value={(editSocioForm.telefono || '').replace(/^\+502\s?/, '')}
+                        onChange={e => {
+                          const val = e.target.value.replace(/\D/g, '');
+                          setEditSocioForm(prev => ({ ...prev, telefono: val ? `+502 ${val}` : '' }));
+                        }}
+                        className="w-full pl-16 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">DPI / Identificación</label>
@@ -5732,44 +5740,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 </div>
               </div>
 
-              {/* ── Sección: Estado Financiero ── */}
-              <div>
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                  <span className="h-px flex-1 bg-slate-100"></span>
-                  <span>Estado Financiero</span>
-                  <span className="h-px flex-1 bg-slate-100"></span>
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                  <div>
-                    <label className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      <span>Estado de Solvencia de Cuota *</span>
-                    </label>
-                    <select 
-                      value={editSocioForm.estadoCuotas || 'Al día'}
-                      onChange={e => setEditSocioForm(prev => ({ ...prev, estadoCuotas: e.target.value as any }))}
-                      className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold bg-white"
-                    >
-                      <option value="Al día">Al día</option>
-                      <option value="Pendiente">Pendiente</option>
-                      <option value="En mora">En mora</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      <span>Monto Pendiente (Q) *</span>
-                    </label>
-                    <input 
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      required
-                      value={editSocioForm.montoPendiente === undefined ? 0 : editSocioForm.montoPendiente}
-                      onChange={e => setEditSocioForm(prev => ({ ...prev, montoPendiente: parseFloat(e.target.value) || 0 }))}
-                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
-                    />
-                  </div>
-                </div>
-              </div>
+
 
               {/* Audit details at the bottom */}
               {!isNewSocio && editingSocio.fechaEdicion && (

@@ -809,15 +809,21 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                 {/* Editable Phone */}
                 <div>
                   <label className="block text-xs font-bold text-slate-450 uppercase tracking-wide mb-1.5">Teléfono / WhatsApp *</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-3.5 text-slate-400" size={16} />
+                  <div className="relative flex items-center">
+                    <span className="absolute left-4 text-sm font-semibold text-slate-400 select-none">
+                      +502
+                    </span>
                     <input
                       type="tel"
                       required
-                      value={editTelefono}
-                      onChange={(e) => setEditTelefono(e.target.value)}
-                      placeholder="Ej. +502 5555 5555"
-                      className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all font-semibold text-sm"
+                      maxLength={8}
+                      value={editTelefono.replace(/^\+502\s?/, '')}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        setEditTelefono(val ? `+502 ${val}` : '');
+                      }}
+                      placeholder="55555555"
+                      className="w-full pl-16 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-sm text-slate-800"
                     />
                   </div>
                 </div>
