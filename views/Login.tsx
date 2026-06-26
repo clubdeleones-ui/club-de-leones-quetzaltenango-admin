@@ -1,18 +1,34 @@
 
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Lock, Mail, ArrowRight, Loader2, QrCode, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { ShieldCheck, Lock, Briefcase, ArrowRight, Loader2, QrCode, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useGoogleLogin } from '@react-oauth/google';
 import { MOCK_SOCIOS } from '../constants';
 import { Socio, UserRole } from '../types';
 import { firebaseService } from '../services/firebaseService';
+
+const PUESTOS_LOGIN = [
+  'Presidente',
+  'Primer Vicepresidente',
+  'Segundo Vicepresidente',
+  'Secretario',
+  'Tesorero',
+  'Asesor de Servicio',
+  'Asesor de Mercadotecnia',
+  'Presidente de Afiliación',
+  'Vocal 1',
+  'Vocal 2',
+  'Socio Regular',
+  'Club Leo',
+  'Donante',
+  'Administrador Principal'
+];
 
 interface LoginProps {
   onLogin: (user: any, accessToken?: string) => void;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [email, setEmail] = useState('');
+  const [puesto, setPuesto] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -62,79 +78,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     }
   }, [location.search, location.hash]);
 
-  const loginWithGoogle = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      console.log('Google Login Success:', tokenResponse);
-      try {
-        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: {
-            Authorization: `Bearer ${tokenResponse.access_token}`
-          }
-        });
-        const profile = await res.json();
-        console.log('Google profile details:', profile);
-
-        // Fetch latest socios list from Firestore to get updated details (like photos)
-        let sociosList: Socio[] = [];
-        try {
-          sociosList = await firebaseService.getSocios();
-        } catch (e) {
-          console.error("Error fetching socios on Google Login:", e);
-        }
-
-        let user = sociosList.find(s => s.correo.toLowerCase() === profile.email?.toLowerCase());
-        if (!user) {
-          user = MOCK_SOCIOS.find(s => s.correo.toLowerCase() === profile.email?.toLowerCase());
-        }
-        
-        if (!user && profile.email?.toLowerCase() === 'clubdeleonesquetzaltenango@gmail.com') {
-          user = {
-            id: '8', // Sync with constants ID 8 for main admin
-            nombre: 'Club de Leones Quetzaltenango',
-            correo: 'clubdeleonesquetzaltenango@gmail.com',
-            rol: UserRole.SUPER_ADMIN,
-            puesto: 'Administrador Principal',
-            estadoCuotas: 'Al día',
-            montoPendiente: 0,
-            foto: profile.picture || 'https://picsum.photos/seed/admin/200/200',
-            fechaIngreso: '2026-01-01'
-          };
-        }
-
-        if (!user) {
-          user = {
-            id: 'google-user-' + profile.sub,
-            nombre: profile.name || 'Invitado Google',
-            correo: profile.email || '',
-            rol: UserRole.GUEST,
-            estadoCuotas: 'Al día',
-            montoPendiente: 0,
-            foto: profile.picture || 'https://picsum.photos/seed/google/200/200',
-            fechaIngreso: new Date().toISOString().split('T')[0]
-          };
-        }
-
-        onLogin(user, tokenResponse.access_token);
-        const isAdministrative = 
-          user.rol === UserRole.SUPER_ADMIN || 
-          user.rol === UserRole.TESORERO || 
-          user.rol === UserRole.SECRETARIO || 
-          user.rol === UserRole.ASESOR_SERVICIOS ||
-          user.rol === UserRole.PRESIDENTE_AFILIACION;
-        if (isAdministrative) {
-          navigate('/admin');
-        } else {
-          navigate('/dashboard');
-        }
-      } catch (err) {
-        console.error('Error fetching Google profile info:', err);
-        onLogin(MOCK_SOCIOS[0], tokenResponse.access_token);
-        navigate('/dashboard');
-      }
-    },
-    scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/documents.readonly'
-  });
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -147,14 +90,62 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       console.error("Error fetching socios on credentials login:", err);
     }
 
-    let user = sociosList.find(s => s.correo.toLowerCase() === email.toLowerCase());
+    // Find user matching selected position
+    let user = sociosList.find(s => {
+      const sPuesto = (s.puesto || '').toLowerCase().trim();
+      const selPuesto = puesto.toLowerCase().trim();
+      return sPuesto === selPuesto || sPuesto.startsWith(selPuesto) || selPuesto.startsWith(sPuesto);
+    });
+
     if (!user) {
-      user = MOCK_SOCIOS.find(s => s.correo.toLowerCase() === email.toLowerCase());
+      user = MOCK_SOCIOS.find(s => {
+        const sPuesto = (s.puesto || '').toLowerCase().trim();
+        const selPuesto = puesto.toLowerCase().trim();
+        return sPuesto === selPuesto || sPuesto.startsWith(selPuesto) || selPuesto.startsWith(sPuesto);
+      });
     }
-    
+
+    // Construct a fallback mock user if not found in db or MOCK_SOCIOS
+    if (!user && puesto) {
+      let role = UserRole.SOCIO;
+      if (puesto === 'Donante') {
+        role = UserRole.DONANTE;
+      } else if (puesto === 'Club Leo') {
+        role = UserRole.SOCIO;
+      } else if (puesto === 'Presidente' || puesto === 'Administrador Principal') {
+        role = UserRole.SUPER_ADMIN;
+      } else if (puesto === 'Secretario') {
+        role = UserRole.SECRETARIO;
+      } else if (puesto === 'Tesorero') {
+        role = UserRole.TESORERO;
+      } else if (puesto === 'Asesor de Servicio') {
+        role = UserRole.ASESOR_SERVICIOS;
+      } else if (puesto === 'Presidente de Afiliación') {
+        role = UserRole.PRESIDENTE_AFILIACION;
+      }
+
+      user = {
+        id: `login-fallback-${puesto.toLowerCase().replace(/\s+/g, '-')}`,
+        nombre: `Usuario ${puesto}`,
+        correo: `${puesto.toLowerCase().replace(/\s+/g, '')}@leonesxela.com`,
+        rol: role,
+        puesto: puesto,
+        estadoCuotas: 'Al día',
+        montoPendiente: 0,
+        foto: `https://picsum.photos/seed/${puesto}/200/200`,
+        fechaIngreso: new Date().toISOString().split('T')[0],
+        estatus: 'Active',
+        club: 'QUETZALTENANGO'
+      };
+    }
+
+    const isSuperAdminPuesto = 
+      puesto === 'Presidente' || 
+      puesto === 'Administrador Principal';
+
     const isCorrectPassword = 
-      (email.toLowerCase() === 'clubdeleonesquetzaltenango@gmail.com' && password === 'Nuevadirectiva2627!') ||
-      (email.toLowerCase() !== 'clubdeleonesquetzaltenango@gmail.com' && password === '123456');
+      (isSuperAdminPuesto && password === 'Nuevadirectiva2627!') ||
+      (!isSuperAdminPuesto && password === '123456');
 
     if (user && isCorrectPassword) {
       onLogin(user);
@@ -171,39 +162,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       }
     } else {
       setError(
-        email.toLowerCase() === 'clubdeleonesquetzaltenango@gmail.com' 
-          ? 'Contraseña incorrecta para Super Admin.' 
-          : 'Credenciales inválidas. Use pass: 123456 para otros socios.'
+        isSuperAdminPuesto 
+          ? 'Contraseña incorrecta para el cargo administrativo principal.' 
+          : 'Contraseña incorrecta para el cargo seleccionado.'
       );
-    }
-  };
-
-  const handleQuickLogin = async (email: string) => {
-    let sociosList: Socio[] = [];
-    try {
-      sociosList = await firebaseService.getSocios();
-    } catch (err) {
-      console.error("Error fetching socios on quick login:", err);
-    }
-
-    let user = sociosList.find(s => s.correo.toLowerCase() === email.toLowerCase());
-    if (!user) {
-      user = MOCK_SOCIOS.find(s => s.correo.toLowerCase() === email.toLowerCase());
-    }
-
-    if (user) {
-      onLogin(user);
-      const isAdministrative = 
-        user.rol === UserRole.SUPER_ADMIN || 
-        user.rol === UserRole.TESORERO || 
-        user.rol === UserRole.SECRETARIO || 
-        user.rol === UserRole.ASESOR_SERVICIOS ||
-        user.rol === UserRole.PRESIDENTE_AFILIACION;
-      if (isAdministrative) {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard');
-      }
     }
   };
 
@@ -256,17 +218,25 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Correo Institucional</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Cargo Administrativo</label>
           <div className="relative">
-            <Mail className="absolute left-3 top-3 text-slate-400" size={18} />
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-              placeholder="socio@leonesxela.com"
+            <Briefcase className="absolute left-3 top-3 text-slate-400" size={18} />
+            <select
+              value={puesto}
+              onChange={(e) => setPuesto(e.target.value)}
+              className="w-full pl-10 pr-10 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white text-slate-700 font-medium appearance-none cursor-pointer"
               required
-            />
+            >
+              <option value="" disabled>Seleccione su cargo...</option>
+              {PUESTOS_LOGIN.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+              <span className="text-xs">▼</span>
+            </div>
           </div>
         </div>
 
@@ -300,82 +270,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <span>Ingresar ahora</span>
           <ArrowRight size={18} />
         </button>
-
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-slate-100"></span>
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-4 text-slate-400 font-bold tracking-widest">O accede con</span>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => loginWithGoogle()}
-          className="w-full bg-white border border-slate-200 py-3 rounded-2xl font-semibold text-sm text-slate-700 hover:bg-slate-50 transition-all flex items-center justify-center space-x-3 active:scale-[0.98] shadow-sm"
-        >
-          <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" alt="Google" className="w-5 h-5" />
-          <span>Cuenta del Club (Workspace)</span>
-        </button>
       </form>
-
-      <div className="mt-8 pt-6 border-t border-slate-100 space-y-4">
-        <p className="text-center text-sm font-semibold text-slate-400 uppercase tracking-widest">Accesos Rápidos de Prueba</p>
-        
-        {/* Desplegable para Directiva / Administradores */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-bold text-slate-450 uppercase tracking-wider">Junta Directiva / Gestión</label>
-          <div className="relative">
-            <select
-              onChange={(e) => {
-                if (e.target.value) {
-                  handleQuickLogin(e.target.value);
-                  e.target.value = ''; // Reset select
-                }
-              }}
-              defaultValue=""
-              className="w-full bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-sm rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-900 cursor-pointer appearance-none"
-            >
-              <option value="" disabled>Seleccione un cargo administrativo...</option>
-              <option value="clubdeleonesquetzaltenango@gmail.com">🦁 Presidente (Admin Principal)</option>
-              <option value="innovandoxela@gmail.com">🦁 Edwin Pacheco (Presidente 26-27)</option>
-              <option value="oscargarcia@leonesxela.com">💰 Oscar Garcia (Tesorero)</option>
-              <option value="ubirod3@gmail.com">📝 Flor Rodríguez (Secretario)</option>
-              <option value="mariancruzdl@gmail.com">🤝 Mariantonia Cruz (Mercadotecnia)</option>
-              <option value="contactomsixela@gmail.com">📋 Rolando Mérida (Afiliación)</option>
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400 font-bold text-xs">
-              ▼
-            </div>
-          </div>
-        </div>
-
-        {/* Botones separados para Socio y Donante */}
-        <div className="grid grid-cols-2 gap-3 pt-1">
-          <button
-            type="button"
-            onClick={() => handleQuickLogin('ricardo.solorzano.g@gmail.com')}
-            className="p-3.5 rounded-2xl border border-blue-200 bg-blue-50/50 hover:bg-blue-100 text-blue-700 font-bold text-center transition-all flex flex-col items-center justify-center space-y-1 shadow-sm active:scale-95"
-          >
-            <span className="text-lg">🦁</span>
-            <span className="text-sm">Socio Regular</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleQuickLogin('donante@leonesxela.com')}
-            className="p-3.5 rounded-2xl border border-rose-200 bg-rose-50/50 hover:bg-rose-100 text-rose-700 font-bold text-center transition-all flex flex-col items-center justify-center space-y-1 shadow-sm active:scale-95"
-          >
-            <span className="text-lg">❤️</span>
-            <span className="text-sm">Donante</span>
-          </button>
-        </div>
-
-        <p className="text-center text-xs text-slate-400 mt-2 leading-relaxed">
-          O escribe las credenciales manualmente con contraseña: <br />
-          🗝️ Super Admin: <span className="font-mono font-bold text-slate-500">Nuevadirectiva2627!</span> | Otros: <span className="font-mono font-bold text-slate-500">123456</span>
-        </p>
-      </div>
     </div>
   );
 };
