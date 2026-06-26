@@ -75,6 +75,18 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>(dbSolicitudes);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [createdSolicitudId, setCreatedSolicitudId] = useState('');
+  const [trackingCode, setTrackingCode] = useState('');
+  const [searchedSolicitud, setSearchedSolicitud] = useState<Solicitud | null>(null);
+  const [trackingError, setTrackingError] = useState('');
+
+  useEffect(() => {
+    setTrackingCode('');
+    setSearchedSolicitud(null);
+    setTrackingError('');
+    setCreatedSolicitudId('');
+  }, [activeTab]);
+
   useEffect(() => {
     setSolicitudes(dbSolicitudes);
   }, [dbSolicitudes]);
@@ -131,6 +143,13 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
 
   // Form State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  useEffect(() => {
+    if (isModalOpen) {
+      setCreatedSolicitudId('');
+      setSaveSuccess(false);
+      setSaveError(null);
+    }
+  }, [isModalOpen]);
   const [nombre, setNombre] = useState('');
   const [fecha, setFecha] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -330,6 +349,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
         }`,
         tipo: 'salon',
         estado: 'Pendiente',
+        faseTracking: 'recibido',
         usuarioCreador: user ? `${user.nombre} (${user.correo})` : 'Público',
         fechaCreacion: new Date().toISOString().split('T')[0],
         salonDia,
@@ -359,6 +379,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
         nombre: `Punto de Agenda - ${agendaNombrePunto.trim()}`,
         tipo: 'agenda',
         estado: 'Pendiente',
+        faseTracking: 'recibido',
         usuarioCreador: user ? `${user.nombre} (${user.correo})` : 'Socio',
         fechaCreacion: new Date().toISOString().split('T')[0],
         agendaSocioNombre: agendaSocioNombre.trim(),
@@ -389,6 +410,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
         nombre: `Silla de Ruedas - ${nombreBeneficiario.trim()}`,
         tipo: 'sillas',
         estado: 'Pendiente',
+        faseTracking: 'recibido',
         usuarioCreador: user ? `${user.nombre} (${user.correo})` : 'Público',
         fechaCreacion: new Date().toISOString().split('T')[0],
         nombreSolicitante: nombreSolicitante.trim(),
@@ -428,6 +450,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
         otroTemaDescripcion: tema === 'Otra' ? otroTemaDescripcion.trim() : undefined,
         tipo: activeTab, // Save to current open tab ('abiertas' or 'internas')
         estado: 'Pendiente',
+        faseTracking: 'recibido',
         usuarioCreador: user ? `${user.nombre} (${user.correo})` : 'Público',
         fechaCreacion: new Date().toISOString().split('T')[0]
       };
@@ -441,45 +464,42 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       setSolicitudes(updatedList);
       localStorage.setItem('club_leones_solicitudes', JSON.stringify(updatedList));
 
+      setCreatedSolicitudId(nuevaSolicitud.id);
       setSaveSuccess(true);
-      setTimeout(() => {
-        setIsModalOpen(false);
-        // Reset form
-        setNombre('');
-        setFecha('');
-        setDescripcion('');
-        setTema(TEMAS_SOLICITUD[0]);
-        setOtroTemaDescripcion('');
-        setResponsables([{ nombre: '', telefono: '' }]);
-        
-        // Reset wheelchair form
-        setNombreSolicitante('');
-        setDpiSolicitante('');
-        setTelefonoSolicitante('');
-        setNombreBeneficiario('');
-        setEdadBeneficiario('');
-        setTiempoUso('');
 
-        // Reset agenda form
-        setAgendaNombrePunto('');
-        setAgendaContenido('');
+      // Reset form
+      setNombre('');
+      setFecha('');
+      setDescripcion('');
+      setTema(TEMAS_SOLICITUD[0]);
+      setOtroTemaDescripcion('');
+      setResponsables([{ nombre: '', telefono: '' }]);
+      
+      // Reset wheelchair form
+      setNombreSolicitante('');
+      setDpiSolicitante('');
+      setTelefonoSolicitante('');
+      setNombreBeneficiario('');
+      setEdadBeneficiario('');
+      setTiempoUso('');
 
-        // Reset salon form
-        setSalonDia('');
-        setSalonHoraInicio('');
-        setSalonHoraFin('');
-        setSalonTipoAlquiler('salon');
-        setSalonAsistentes('');
-        setSalonCompromisoLimpieza('dejar_limpio');
-        setSalonRequisitosAceptados(false);
-        if (!user) {
-          setSalonNombreSolicitante('');
-          setSalonEmail('');
-          setSalonTelefonoDigitos('');
-        }
-        
-        setSaveSuccess(false);
-      }, 1500);
+      // Reset agenda form
+      setAgendaNombrePunto('');
+      setAgendaContenido('');
+
+      // Reset salon form
+      setSalonDia('');
+      setSalonHoraInicio('');
+      setSalonHoraFin('');
+      setSalonTipoAlquiler('salon');
+      setSalonAsistentes('');
+      setSalonCompromisoLimpieza('dejar_limpio');
+      setSalonRequisitosAceptados(false);
+      if (!user) {
+        setSalonNombreSolicitante('');
+        setSalonEmail('');
+        setSalonTelefonoDigitos('');
+      }
     } catch (err: any) {
       console.error("Error creating solicitud:", err);
       setSaveError("No se pudo enviar la solicitud a Firestore. Verifique su conexión.");
@@ -644,16 +664,173 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       </div>
     );
   };
-  const renderConfidentialNotice = () => {
+  const renderConfidentialNotice = (tipo: 'abiertas' | 'sillas' | 'internas' | 'agenda' | 'salon') => {
+    const handleSearchTracking = (e: React.FormEvent) => {
+      e.preventDefault();
+      setTrackingError('');
+      setSearchedSolicitud(null);
+
+      if (!trackingCode.trim()) {
+        setTrackingError("Por favor, ingrese un código de seguimiento.");
+        return;
+      }
+
+      const found = solicitudes.find(
+        s => s.id.toLowerCase().trim() === trackingCode.toLowerCase().trim() && s.tipo === tipo
+      );
+
+      if (found) {
+        setSearchedSolicitud(found);
+      } else {
+        setTrackingError("No se encontró ninguna solicitud con ese código en esta categoría.");
+      }
+    };
+
     return (
-      <div className="bg-white rounded-[2rem] border border-slate-200/80 shadow-md p-8 sm:p-12 text-center max-w-xl mx-auto space-y-4 w-full">
-        <div className="bg-blue-50 w-14 h-14 rounded-full flex items-center justify-center mx-auto text-blue-900 border border-blue-100">
-          <Lock size={24} />
+      <div className="space-y-8 w-full text-left">
+        {/* Panel de Confidencialidad */}
+        <div className="bg-white rounded-3xl border border-slate-200 p-6 md:p-8 text-center max-w-xl mx-auto shadow-sm flex flex-col items-center">
+          <div className="bg-blue-50 w-12 h-12 rounded-2xl flex items-center justify-center mb-4 text-blue-900 border border-blue-100">
+            <Lock size={20} />
+          </div>
+          <h3 className="text-lg font-bold text-slate-800">Proceso Interno y Confidencial</h3>
+          <p className="text-slate-500 mt-1.5 text-xs font-semibold leading-relaxed max-w-sm">
+            Las solicitudes de esta categoría son de carácter privado. Puedes crear una nueva solicitud o consultar el estado de tu trámite actual a continuación.
+          </p>
         </div>
-        <h3 className="text-xl font-bold text-slate-800">Proceso Interno y Confidencial</h3>
-        <p className="text-slate-600 text-xs sm:text-sm leading-relaxed max-w-md mx-auto font-medium">
-          Las solicitudes de esta categoría se procesan de forma interna y confidencial. Una vez creada, la solicitud es enviada directamente a la Presidencia para su oportuna revisión y resolución.
-        </p>
+
+        {/* Buscador de Tracking */}
+        <div className="bg-white rounded-3xl border border-slate-200 p-6 md:p-8 max-w-xl mx-auto shadow-sm text-left space-y-4">
+          <h4 className="text-sm font-extrabold text-blue-900 tracking-tight flex items-center">
+            <RefreshCw size={14} className="mr-1.5 text-blue-900 animate-spin-slow" />
+            Seguimiento de Solicitud
+          </h4>
+          <p className="text-xs text-slate-550 font-semibold leading-relaxed">
+            Ingresa el código único que se te proporcionó al registrar tu solicitud para rastrear su progreso en tiempo real.
+          </p>
+
+          <form onSubmit={handleSearchTracking} className="flex flex-col sm:flex-row gap-3 pt-1">
+            <input
+              type="text"
+              value={trackingCode}
+              onChange={(e) => setTrackingCode(e.target.value)}
+              placeholder="Ej. sol-17192931..."
+              className="flex-grow px-4 py-2.5 border border-slate-250 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-xs sm:text-sm text-slate-800 bg-white"
+            />
+            <button
+              type="submit"
+              className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-extrabold transition-all shadow-md active:scale-95 flex items-center justify-center space-x-1.5"
+            >
+              <span>Buscar</span>
+            </button>
+          </form>
+
+          {trackingError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-xl text-xs font-semibold flex items-start space-x-2 animate-in fade-in">
+              <AlertCircle size={14} className="flex-shrink-0 mt-0.5 text-red-500" />
+              <span>{trackingError}</span>
+            </div>
+          )}
+
+          {/* Resultado de Seguimiento */}
+          {searchedSolicitud && (
+            <div className="border-t border-slate-150 pt-6 mt-4 space-y-6 animate-in fade-in duration-300">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Solicitante / Detalle</span>
+                  <span className="text-xs font-bold text-slate-700 block mt-0.5">
+                    {searchedSolicitud.nombreBeneficiario || searchedSolicitud.salonNombreSolicitante || searchedSolicitud.agendaSocioNombre || searchedSolicitud.nombre}
+                  </span>
+                </div>
+                <div className="text-left sm:text-right">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Fecha de Envío</span>
+                  <span className="text-xs font-bold text-slate-700 block mt-0.5">{searchedSolicitud.fechaCreacion}</span>
+                </div>
+              </div>
+
+              {/* Stepper del Tracking */}
+              <div>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">Línea del Proceso</span>
+                {/* Stepper Horizontal en Escritorio, Vertical en Móvil */}
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 sm:gap-2 relative">
+                  {(() => {
+                    const phases: { id: string; label: string; desc: string; icon: any }[] = [
+                      { id: 'recibido', label: 'Recibido', desc: 'Ingresada con éxito', icon: CheckCircle },
+                      { id: 'en_proceso', label: 'En Proceso', desc: 'Asignada a revisión', icon: Clock },
+                      { id: 'en_analisis', label: 'En Análisis', desc: 'Evaluando viabilidad', icon: FileText },
+                      { id: 'resolucion', label: 'Resolución', desc: 'Trámite finalizado', icon: Shield }
+                    ];
+
+                    const currentPhase = searchedSolicitud.faseTracking || (
+                      (searchedSolicitud.estado === 'Aprobada' || searchedSolicitud.estado === 'Rechazada') 
+                        ? 'resolucion' 
+                        : 'recibido'
+                    );
+
+                    const phaseIndex = phases.findIndex(p => p.id === currentPhase);
+
+                    return phases.map((phase, idx) => {
+                      const isCompleted = idx <= phaseIndex;
+                      const isActive = phase.id === currentPhase;
+                      const StepIcon = phase.icon;
+
+                      return (
+                        <div key={phase.id} className="flex sm:flex-col items-center text-left sm:text-center space-x-3.5 sm:space-x-0 space-y-0 sm:space-y-2 relative group">
+                          {/* Línea conectora */}
+                          {idx < phases.length - 1 && (
+                            <div className="hidden sm:block absolute top-5 left-[60%] w-[80%] h-0.5 bg-slate-200 z-0">
+                              <div className={`h-full bg-blue-900 transition-all duration-500 ${
+                                idx < phaseIndex ? 'w-full' : 'w-0'
+                              }`} />
+                            </div>
+                          )}
+
+                          {/* Círculo indicador */}
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center z-10 border-2 transition-all duration-300 shadow-sm ${
+                            isActive ? 'bg-blue-900 border-blue-900 text-yellow-400 scale-110 ring-4 ring-blue-900/10' :
+                            isCompleted ? 'bg-blue-50 border-blue-900 text-blue-900' :
+                            'bg-white border-slate-200 text-slate-400'
+                          }`}>
+                            <StepIcon size={18} />
+                          </div>
+
+                          {/* Textos del paso */}
+                          <div>
+                            <span className={`text-xs font-extrabold tracking-tight block ${
+                              isActive ? 'text-blue-900' :
+                              isCompleted ? 'text-slate-800' : 'text-slate-400'
+                            }`}>{phase.label}</span>
+                            <span className="text-[10px] text-slate-500 font-medium block mt-0.5">{phase.desc}</span>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+
+              {/* Estado final si es fase resolución */}
+              {searchedSolicitud.estado !== 'Pendiente' && (
+                <div className={`p-4 rounded-2xl border text-xs font-semibold animate-in zoom-in-95 duration-300 ${
+                  searchedSolicitud.estado === 'Aprobada' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'
+                }`}>
+                  <div className="flex items-start space-x-2">
+                    <CheckCircle className="flex-shrink-0 mt-0.5" size={16} />
+                    <div className="space-y-1">
+                      <span className="font-extrabold block">Solicitud {searchedSolicitud.estado}</span>
+                      {searchedSolicitud.resolucionRazon && (
+                        <p className="leading-relaxed text-slate-650 font-medium">{searchedSolicitud.resolucionRazon}</p>
+                      )}
+                      {searchedSolicitud.fechaResolucion && (
+                        <span className="text-[10px] text-slate-400 block font-normal mt-1">Fecha: {searchedSolicitud.fechaResolucion}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -1969,7 +2146,7 @@ Club de Leones de Quetzaltenango`;
                           </button>
                         </div>
                       ) : (
-                        renderConfidentialNotice()
+                        renderConfidentialNotice(cfg.id as any)
                       )}
                     </div>
                   </div>
@@ -2002,7 +2179,7 @@ Club de Leones de Quetzaltenango`;
                           </p>
                         </div>
                       ) : (
-                        renderConfidentialNotice()
+                        renderConfidentialNotice(cfg.id as any)
                       )}
                     </div>
                   </div>
@@ -2053,12 +2230,54 @@ Club de Leones de Quetzaltenango`;
               </div>
             )}
 
-            {saveSuccess && (
-              <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-start space-x-3 text-green-700 text-sm animate-in fade-in">
-                <CheckCircle className="flex-shrink-0 mt-0.5" size={18} />
-                <span>¡Solicitud enviada y registrada con éxito!</span>
+            {saveSuccess ? (
+              <div className="text-center py-8 space-y-6 animate-in zoom-in-95 duration-300">
+                <div className="bg-green-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto text-green-600 border-4 border-green-100 shadow-sm">
+                  <CheckCircle size={40} />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-black text-slate-800">¡Registro Exitoso!</h3>
+                  <p className="text-slate-600 text-sm font-semibold max-w-sm mx-auto leading-relaxed">
+                    Tu solicitud ha sido enviada directamente a la Presidencia del club. Utiliza el siguiente código único para consultar su estado en la sección de seguimiento:
+                  </p>
+                </div>
+                
+                {createdSolicitudId && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 max-w-md mx-auto flex items-center justify-between shadow-inner">
+                    <div className="text-left">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Código de Seguimiento</span>
+                      <span className="text-sm font-mono font-bold text-blue-900 select-all block mt-0.5">{createdSolicitudId}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(createdSolicitudId);
+                        alert("Código copiado al portapapeles.");
+                      }}
+                      className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center space-x-1.5"
+                    >
+                      <Copy size={14} />
+                      <span>Copiar código</span>
+                    </button>
+                  </div>
+                )}
+
+                <div className="pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsModalOpen(false);
+                      setSaveSuccess(false);
+                      setCreatedSolicitudId('');
+                    }}
+                    className="px-8 py-3 bg-slate-900 hover:bg-slate-800 text-white font-extrabold rounded-2xl text-sm shadow-md transition-all active:scale-[0.98]"
+                  >
+                    Entendido, cerrar
+                  </button>
+                </div>
               </div>
-            )}
+            ) : (
+              <>
 
             {activeTab === 'cartas' ? (
               renderCartasForm()
@@ -2478,6 +2697,8 @@ Club de Leones de Quetzaltenango`;
                 </div>
               </form>
             )}
+          </>
+        )}
           </div>
         </div>
       )}

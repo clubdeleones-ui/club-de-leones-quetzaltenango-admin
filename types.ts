@@ -172,6 +172,7 @@ export interface Solicitud {
   nombre: string; // Nombre de la solicitud (o nombre de la persona que solicita en caso de silla de ruedas)
   fecha?: string; // Opcional para sillas de ruedas
   descripcion?: string; // Opcional para sillas de ruedas (detalles extra)
+  faseTracking?: 'recibido' | 'en_proceso' | 'en_analisis' | 'resolucion';
   responsables?: Responsable[]; // Opcional para sillas de ruedas (de 1 a 3 responsables)
   tema?: string; // Opcional para sillas de ruedas (Diabetes, Visión, etc.)
   otroTemaDescripcion?: string; // Opcional

@@ -1268,7 +1268,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
     const updated: Solicitud = {
       ...solicitud,
-      estado: nuevoEstado
+      estado: nuevoEstado,
+      faseTracking: 'resolucion'
     };
 
     try {
@@ -1279,6 +1280,25 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     } catch (err) {
       console.error("Error updating status:", err);
       alert("Error al actualizar el estado de la solicitud.");
+    }
+  };
+
+  const handleUpdateTrackingPhase = async (solicitudId: string, nuevaFase: 'recibido' | 'en_proceso' | 'en_analisis' | 'resolucion') => {
+    const solicitud = solicitudes.find(s => s.id === solicitudId);
+    if (!solicitud) return;
+
+    const updated: Solicitud = {
+      ...solicitud,
+      faseTracking: nuevaFase
+    };
+
+    try {
+      await firebaseService.saveSolicitud(updated);
+      const newList = solicitudes.map(s => s.id === solicitudId ? updated : s);
+      setSolicitudes(newList);
+    } catch (err) {
+      console.error("Error updating tracking phase:", err);
+      alert("Error al actualizar la fase de seguimiento.");
     }
   };
 
@@ -1600,6 +1620,53 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                         </div>
                       </div>
                     )}
+                    {/* Fase de Seguimiento / Tracking */}
+                    <div className="pt-3.5 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-semibold">
+                      <div className="flex items-center space-x-1.5">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Seguimiento:</span>
+                        {(() => {
+                          const currentPhase = sol.faseTracking || (
+                            (sol.estado === 'Aprobada' || sol.estado === 'Rechazada') 
+                              ? 'resolucion' 
+                              : 'recibido'
+                          );
+                          
+                          const badgeColors = 
+                            currentPhase === 'recibido' ? 'bg-blue-50 text-blue-755 border-blue-200' :
+                            currentPhase === 'en_proceso' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                            currentPhase === 'en_analisis' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                            'bg-green-50 text-green-700 border-green-200';
+
+                          const phaseLabel = 
+                            currentPhase === 'recibido' ? 'Recibido' :
+                            currentPhase === 'en_proceso' ? 'En Proceso' :
+                            currentPhase === 'en_analisis' ? 'En Análisis' :
+                            'Resolución';
+
+                          return (
+                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${badgeColors}`}>
+                              {phaseLabel}
+                            </span>
+                          );
+                        })()}
+                      </div>
+
+                      {/* Selector para cambiar de estado */}
+                      <div className="flex items-center space-x-1">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mr-1 sm:hidden">Actualizar:</label>
+                        <select
+                          value={sol.faseTracking || 'recibido'}
+                          onChange={(e) => handleUpdateTrackingPhase(sol.id, e.target.value as any)}
+                          className="px-2 py-1 bg-slate-50 border border-slate-200 text-slate-700 font-extrabold text-[9px] rounded-lg outline-none cursor-pointer focus:ring-1 focus:ring-blue-900 appearance-none pr-6 relative"
+                          style={{ backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2364748b\' stroke-width=\'3\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 6px center', backgroundSize: '8px' }}
+                        >
+                          <option value="recibido">📥 Recibido</option>
+                          <option value="en_proceso">⚙️ En Proceso</option>
+                          <option value="en_analisis">🔍 En Análisis</option>
+                          <option value="resolucion">🛡️ Resolución</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Actions Bar */}
