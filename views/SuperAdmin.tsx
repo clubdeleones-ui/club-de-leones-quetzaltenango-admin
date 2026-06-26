@@ -2395,6 +2395,12 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
                           {/* Contact Info Section */}
                           <div className="bg-slate-50/50 p-3 rounded-2xl border border-slate-100/50 space-y-2 text-xs font-semibold text-left">
+                            {socio.profesion && (
+                              <div className="flex items-center text-slate-700">
+                                <Briefcase size={12} className="mr-2 text-slate-405 flex-shrink-0" />
+                                <span className="truncate" title={socio.profesion}>{socio.profesion}</span>
+                              </div>
+                            )}
                             <div className="flex items-center text-slate-700">
                               <Mail size={12} className="mr-2 text-slate-405 flex-shrink-0" />
                               <span className="truncate" title={socio.correo}>{socio.correo}</span>

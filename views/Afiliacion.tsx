@@ -188,7 +188,11 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
       estadoCuotas: 'Al día',
       montoPendiente: 0,
       foto: propuesta.fotoCandidato || `https://picsum.photos/seed/${propuesta.nombreCandidato}/200/200`,
-      fechaIngreso: new Date().toISOString().split('T')[0]
+      fechaIngreso: new Date().toISOString().split('T')[0],
+      profesion: propuesta.profesionCandidato || '',
+      telefono: propuesta.telefonoConfirmacionCandidato || '',
+      estatus: 'Active',
+      club: 'QUETZALTENANGO'
     };
     
     // Update local state first for instant response

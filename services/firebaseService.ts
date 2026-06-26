@@ -176,17 +176,15 @@ export const firebaseService = {
     try {
       const colRef = collection(db, "socios");
       const snapshot = await getDocs(colRef);
-      const existingIds = new Set(snapshot.docs.map(doc => doc.id));
-      
-      let syncedCount = 0;
-      for (const socio of initialSocios) {
-        if (!existingIds.has(socio.id)) {
+      if (snapshot.empty) {
+        let syncedCount = 0;
+        for (const socio of initialSocios) {
           await setDoc(doc(db, "socios", socio.id), socio);
           syncedCount++;
         }
-      }
-      if (syncedCount > 0) {
-        console.log(`Sincronizados ${syncedCount} socios preestablecidos faltantes en Firestore.`);
+        if (syncedCount > 0) {
+          console.log(`Sincronizados ${syncedCount} socios iniciales en Firestore.`);
+        }
       }
     } catch (error) {
       console.error("Error syncing initial socios to Firestore:", error);
@@ -287,17 +285,15 @@ export const firebaseService = {
     try {
       const colRef = collection(db, "actividades");
       const snapshot = await getDocs(colRef);
-      const existingIds = new Set(snapshot.docs.map(doc => doc.id));
-      
-      let syncedCount = 0;
-      for (const act of initialActividades) {
-        if (!existingIds.has(act.id)) {
+      if (snapshot.empty) {
+        let syncedCount = 0;
+        for (const act of initialActividades) {
           await setDoc(doc(db, "actividades", act.id), act);
           syncedCount++;
         }
-      }
-      if (syncedCount > 0) {
-        console.log(`Sincronizadas ${syncedCount} actividades preestablecidas en Firestore.`);
+        if (syncedCount > 0) {
+          console.log(`Sincronizadas ${syncedCount} actividades iniciales en Firestore.`);
+        }
       }
     } catch (error) {
       console.error("Error syncing initial actividades to Firestore:", error);
@@ -598,17 +594,15 @@ export const firebaseService = {
     try {
       const colRef = collection(db, "galeria");
       const snapshot = await getDocs(colRef);
-      const existingIds = new Set(snapshot.docs.map(doc => doc.id));
-      
-      let syncedCount = 0;
-      for (const item of initialItems) {
-        if (!existingIds.has(item.id)) {
+      if (snapshot.empty) {
+        let syncedCount = 0;
+        for (const item of initialItems) {
           await setDoc(doc(db, "galeria", item.id), item);
           syncedCount++;
         }
-      }
-      if (syncedCount > 0) {
-        console.log(`Sincronizadas ${syncedCount} fotos de galería en Firestore.`);
+        if (syncedCount > 0) {
+          console.log(`Sincronizadas ${syncedCount} fotos de galería iniciales en Firestore.`);
+        }
       }
     } catch (error) {
       console.error("Error syncing initial galeria:", error);
@@ -664,17 +658,15 @@ export const firebaseService = {
     try {
       const colRef = collection(db, "actas");
       const snapshot = await getDocs(colRef);
-      const existingIds = new Set(snapshot.docs.map(doc => doc.id));
-      
-      let syncedCount = 0;
-      for (const acta of initialActas) {
-        if (!existingIds.has(acta.id)) {
+      if (snapshot.empty) {
+        let syncedCount = 0;
+        for (const acta of initialActas) {
           await setDoc(doc(db, "actas", acta.id), acta);
           syncedCount++;
         }
-      }
-      if (syncedCount > 0) {
-        console.log(`Sincronizadas ${syncedCount} actas iniciales en Firestore.`);
+        if (syncedCount > 0) {
+          console.log(`Sincronizadas ${syncedCount} actas iniciales en Firestore.`);
+        }
       }
     } catch (error) {
       console.error("Error syncing initial actas:", error);
