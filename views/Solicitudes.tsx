@@ -154,6 +154,66 @@ const STEPPER_TEXT_ACTIVE = {
   orange: 'text-orange-500'
 };
 
+const THEME_ACCENTS: {
+  [key: string]: {
+    border: string;
+    borderHover: string;
+    bg: string;
+    text: string;
+    textDark: string;
+    badge: string;
+  }
+} = {
+  blue: {
+    border: 'border-blue-200',
+    borderHover: 'hover:border-blue-300',
+    bg: 'bg-blue-50/50',
+    text: 'text-blue-600',
+    textDark: 'text-blue-900',
+    badge: 'bg-blue-50 text-blue-700 border-blue-200'
+  },
+  emerald: {
+    border: 'border-emerald-200',
+    borderHover: 'hover:border-emerald-300',
+    bg: 'bg-emerald-50/50',
+    text: 'text-emerald-600',
+    textDark: 'text-emerald-900',
+    badge: 'bg-emerald-50 text-emerald-700 border-emerald-200'
+  },
+  purple: {
+    border: 'border-purple-200',
+    borderHover: 'hover:border-purple-300',
+    bg: 'bg-purple-50/50',
+    text: 'text-purple-600',
+    textDark: 'text-purple-900',
+    badge: 'bg-purple-50 text-purple-700 border-purple-200'
+  },
+  amber: {
+    border: 'border-amber-200',
+    borderHover: 'hover:border-amber-300',
+    bg: 'bg-amber-50/50',
+    text: 'text-amber-600',
+    textDark: 'text-amber-900',
+    badge: 'bg-amber-50 text-amber-700 border-amber-200'
+  },
+  indigo: {
+    border: 'border-indigo-200',
+    borderHover: 'hover:border-indigo-300',
+    bg: 'bg-indigo-50/50',
+    text: 'text-indigo-600',
+    textDark: 'text-indigo-900',
+    badge: 'bg-indigo-50 text-indigo-700 border-indigo-200'
+  },
+  orange: {
+    border: 'border-orange-200',
+    borderHover: 'hover:border-orange-300',
+    bg: 'bg-orange-50/50',
+    text: 'text-orange-600',
+    textDark: 'text-orange-950',
+    badge: 'bg-orange-50 text-orange-700 border-orange-200'
+  }
+};
+
 const generateShortTrackingCode = (existingIds: string[]): string => {
   const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const existingLower = existingIds.map(id => id.toLowerCase().trim());
@@ -805,175 +865,26 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       </div>
     );
   };
-  const renderConfidentialNotice = (tipo: 'abiertas' | 'sillas' | 'internas' | 'agenda' | 'salon') => {
-    const handleSearchTracking = (e: React.FormEvent) => {
-      e.preventDefault();
-      setTrackingError('');
-      setSearchedSolicitud(null);
 
-      if (!trackingCode.trim()) {
-        setTrackingError("Por favor, ingrese un código de seguimiento.");
-        return;
-      }
+  const handleSearchTracking = (e: React.FormEvent, tipo: 'abiertas' | 'sillas' | 'internas' | 'agenda' | 'salon') => {
+    e.preventDefault();
+    setTrackingError('');
+    setSearchedSolicitud(null);
 
-      const found = solicitudes.find(
-        s => s.id.toLowerCase().trim() === trackingCode.toLowerCase().trim() && s.tipo === tipo
-      );
+    if (!trackingCode.trim()) {
+      setTrackingError("Por favor, ingrese un código de seguimiento.");
+      return;
+    }
 
-      if (found) {
-        setSearchedSolicitud(found);
-      } else {
-        setTrackingError("No se encontró ninguna solicitud con ese código en esta categoría.");
-      }
-    };
-
-    return (
-      <div className="space-y-8 w-full text-left">
-        {/* Panel de Confidencialidad */}
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 md:p-8 text-center max-w-xl mx-auto shadow-sm flex flex-col items-center">
-          <div className="bg-blue-50 w-12 h-12 rounded-2xl flex items-center justify-center mb-4 text-blue-900 border border-blue-100">
-            <Lock size={20} />
-          </div>
-          <h3 className="text-lg font-bold text-slate-800">Proceso Interno y Confidencial</h3>
-          <p className="text-slate-500 mt-1.5 text-xs font-semibold leading-relaxed max-w-sm">
-            Las solicitudes de esta categoría son de carácter privado. Puedes crear una nueva solicitud o consultar el estado de tu trámite actual a continuación.
-          </p>
-        </div>
-
-        {/* Buscador de Tracking */}
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 md:p-8 max-w-xl mx-auto shadow-sm text-left space-y-4">
-          <h4 className="text-sm font-extrabold text-blue-900 tracking-tight flex items-center">
-            <RefreshCw size={14} className="mr-1.5 text-blue-900 animate-spin-slow" />
-            Seguimiento de Solicitud
-          </h4>
-          <p className="text-xs text-slate-550 font-semibold leading-relaxed">
-            Ingresa el código único que se te proporcionó al registrar tu solicitud para rastrear su progreso en tiempo real.
-          </p>
-
-          <form onSubmit={handleSearchTracking} className="flex flex-col sm:flex-row gap-3 pt-1">
-            <input
-              type="text"
-              value={trackingCode}
-              onChange={(e) => setTrackingCode(e.target.value)}
-              placeholder="Ej. sol-17192931..."
-              className="flex-grow px-4 py-2.5 border border-slate-250 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-xs sm:text-sm text-slate-800 bg-white"
-            />
-            <button
-              type="submit"
-              className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-extrabold transition-all shadow-md active:scale-95 flex items-center justify-center space-x-1.5"
-            >
-              <span>Buscar</span>
-            </button>
-          </form>
-
-          {trackingError && (
-            <div className="bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-xl text-xs font-semibold flex items-start space-x-2 animate-in fade-in">
-              <AlertCircle size={14} className="flex-shrink-0 mt-0.5 text-red-500" />
-              <span>{trackingError}</span>
-            </div>
-          )}
-
-          {/* Resultado de Seguimiento */}
-          {searchedSolicitud && (
-            <div className="border-t border-slate-150 pt-6 mt-4 space-y-6 animate-in fade-in duration-300">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                <div>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Solicitante / Detalle</span>
-                  <span className="text-xs font-bold text-slate-700 block mt-0.5">
-                    {searchedSolicitud.nombreBeneficiario || searchedSolicitud.salonNombreSolicitante || searchedSolicitud.agendaSocioNombre || searchedSolicitud.nombre}
-                  </span>
-                </div>
-                <div className="text-left sm:text-right">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Fecha de Envío</span>
-                  <span className="text-xs font-bold text-slate-700 block mt-0.5">{searchedSolicitud.fechaCreacion}</span>
-                </div>
-              </div>
-
-              {/* Stepper del Tracking */}
-              <div>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">Línea del Proceso</span>
-                {/* Stepper Horizontal en Escritorio, Vertical en Móvil */}
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 sm:gap-2 relative">
-                  {(() => {
-                    const phases: { id: string; label: string; desc: string; icon: any }[] = [
-                      { id: 'recibido', label: 'Recibido', desc: 'Ingresada con éxito', icon: CheckCircle },
-                      { id: 'en_proceso', label: 'En Proceso', desc: 'Asignada a revisión', icon: Clock },
-                      { id: 'en_analisis', label: 'En Análisis', desc: 'Evaluando viabilidad', icon: FileText },
-                      { id: 'resolucion', label: 'Resolución', desc: 'Trámite finalizado', icon: Shield }
-                    ];
-
-                    const currentPhase = searchedSolicitud.faseTracking || (
-                      (searchedSolicitud.estado === 'Aprobada' || searchedSolicitud.estado === 'Rechazada') 
-                        ? 'resolucion' 
-                        : 'recibido'
-                    );
-
-                    const phaseIndex = phases.findIndex(p => p.id === currentPhase);
-
-                    return phases.map((phase, idx) => {
-                      const isCompleted = idx <= phaseIndex;
-                      const isActive = phase.id === currentPhase;
-                      const StepIcon = phase.icon;
-
-                      return (
-                        <div key={phase.id} className="flex sm:flex-col items-center text-left sm:text-center space-x-3.5 sm:space-x-0 space-y-0 sm:space-y-2 relative group">
-                          {/* Línea conectora */}
-                          {idx < phases.length - 1 && (
-                            <div className="hidden sm:block absolute top-5 left-[60%] w-[80%] h-0.5 bg-slate-200 z-0">
-                              <div className={`h-full bg-blue-900 transition-all duration-500 ${
-                                idx < phaseIndex ? 'w-full' : 'w-0'
-                              }`} />
-                            </div>
-                          )}
-
-                          {/* Círculo indicador */}
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center z-10 border-2 transition-all duration-300 shadow-sm ${
-                            isActive ? 'bg-blue-900 border-blue-900 text-yellow-400 scale-110 ring-4 ring-blue-900/10' :
-                            isCompleted ? 'bg-blue-50 border-blue-900 text-blue-900' :
-                            'bg-white border-slate-200 text-slate-400'
-                          }`}>
-                            <StepIcon size={18} />
-                          </div>
-
-                          {/* Textos del paso */}
-                          <div>
-                            <span className={`text-xs font-extrabold tracking-tight block ${
-                              isActive ? 'text-blue-900' :
-                              isCompleted ? 'text-slate-800' : 'text-slate-400'
-                            }`}>{phase.label}</span>
-                            <span className="text-[10px] text-slate-500 font-medium block mt-0.5">{phase.desc}</span>
-                          </div>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
-              </div>
-
-              {/* Estado final si es fase resolución */}
-              {searchedSolicitud.estado !== 'Pendiente' && (
-                <div className={`p-4 rounded-2xl border text-xs font-semibold animate-in zoom-in-95 duration-300 ${
-                  searchedSolicitud.estado === 'Aprobada' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'
-                }`}>
-                  <div className="flex items-start space-x-2">
-                    <CheckCircle className="flex-shrink-0 mt-0.5" size={16} />
-                    <div className="space-y-1">
-                      <span className="font-extrabold block">Solicitud {searchedSolicitud.estado}</span>
-                      {searchedSolicitud.resolucionRazon && (
-                        <p className="leading-relaxed text-slate-650 font-medium">{searchedSolicitud.resolucionRazon}</p>
-                      )}
-                      {searchedSolicitud.fechaResolucion && (
-                        <span className="text-[10px] text-slate-400 block font-normal mt-1">Fecha: {searchedSolicitud.fechaResolucion}</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+    const found = solicitudes.find(
+      s => s.id.toLowerCase().trim() === trackingCode.toLowerCase().trim() && s.tipo === tipo
     );
+
+    if (found) {
+      setSearchedSolicitud(found);
+    } else {
+      setTrackingError("No se encontró ninguna solicitud con ese código en esta categoría.");
+    }
   };
 
   const renderSolicitudesList = (tipo: 'abiertas' | 'sillas' | 'internas' | 'agenda' | 'salon') => {
@@ -2211,139 +2122,215 @@ Club de Leones de Quetzaltenango`;
 
               {/* Contenido Expandido del Acordeón */}
               {isExpanded && (
-                <div className="p-6 md:p-8 border-t border-slate-100 bg-slate-50/30 animate-in slide-in-from-top duration-300">
-                  {/* DISEÑO EN DOS COLUMNAS EN ESCRITORIO (md en adelante) */}
-                  <div className="hidden md:flex gap-8 items-start w-full">
-                    {/* Columna Izquierda (30%): Información y Acción */}
-                    <div className="w-1/3 max-w-[320px] bg-white rounded-2xl border border-slate-200/80 p-6 shadow-md space-y-6 flex-shrink-0">
-                      <div className="space-y-2">
-                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">
-                          Información
-                        </h4>
-                        <p className="text-slate-655 text-sm leading-relaxed font-medium">
-                          {cfg.description}
-                        </p>
+                <div className="p-6 md:p-8 border-t border-slate-100 bg-slate-50/20 animate-in slide-in-from-top duration-300">
+                  {(() => {
+                    const themeAccent = THEME_ACCENTS[cfg.colorTheme] || THEME_ACCENTS.blue;
+                    return (
+                      <div className="space-y-8 w-full text-left">
+                        {/* Guía de Pasos Unificada */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+                          {/* Paso 1: Entiende el Trámite */}
+                          <div className={`bg-white rounded-2xl border ${themeAccent.border} ${themeAccent.borderHover} p-6 shadow-sm transition-all duration-300 space-y-3 flex flex-col justify-between`}>
+                            <div className="space-y-3">
+                              <div className="flex items-center space-x-3">
+                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs ${themeAccent.bg} ${themeAccent.text}`}>
+                                  1
+                                </div>
+                                <h4 className="font-extrabold text-sm text-slate-800 tracking-tight">¿Qué hacemos aquí?</h4>
+                              </div>
+                              <p className="text-xs text-slate-600 leading-relaxed font-semibold">
+                                {cfg.description}
+                              </p>
+                            </div>
+                            <div className="pt-2 flex items-center space-x-2 border-t border-slate-100">
+                              <span className="text-[10px] text-slate-400 font-bold">Dirigido a:</span>
+                              <span className={`text-[9px] font-black uppercase px-2.5 py-0.5 rounded-md border ${themeAccent.badge}`}>
+                                {cfg.audience}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Paso 2: Completa tu Solicitud */}
+                          <div className={`bg-white rounded-2xl border ${themeAccent.border} ${themeAccent.borderHover} p-6 shadow-sm transition-all duration-300 space-y-4 flex flex-col justify-between`}>
+                            <div className="space-y-3">
+                              <div className="flex items-center space-x-3">
+                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs ${themeAccent.bg} ${themeAccent.text}`}>
+                                  2
+                                </div>
+                                <h4 className="font-extrabold text-sm text-slate-800 tracking-tight">Ingresa tus Datos</h4>
+                              </div>
+                              <p className="text-xs text-slate-600 leading-relaxed font-semibold">
+                                {cfg.id === 'cartas' 
+                                  ? 'Genera documentos formales firmados digitalmente para entregar a otras instituciones de inmediato.'
+                                  : 'Llena el formulario digital con tus datos. No te tomará más de 5 minutos y es totalmente guiado.'
+                                }
+                              </p>
+                            </div>
+                            {cfg.showAction && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveTab(cfg.id);
+                                  setIsModalOpen(true);
+                                }}
+                                className={`w-full py-3 font-extrabold rounded-xl flex items-center justify-center space-x-2 text-xs shadow-md transition-all duration-200 active:scale-95 hover:shadow-lg ${
+                                  BUTTON_CLASSES[cfg.colorTheme]
+                                }`}
+                              >
+                                <Plus size={14} />
+                                <span>{cfg.actionText}</span>
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Paso 3: Seguimiento */}
+                          <div className={`bg-white rounded-2xl border ${themeAccent.border} ${themeAccent.borderHover} p-6 shadow-sm transition-all duration-300 space-y-4 flex flex-col justify-between`}>
+                            <div className="space-y-3">
+                              <div className="flex items-center space-x-3">
+                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs ${themeAccent.bg} ${themeAccent.text}`}>
+                                  3
+                                </div>
+                                <h4 className="font-extrabold text-sm text-slate-800 tracking-tight">Monitorea en Línea</h4>
+                              </div>
+                              <p className="text-xs text-slate-600 leading-relaxed font-semibold">
+                                ¿Ya hiciste tu solicitud? Consulta el avance de tu trámite en tiempo real usando tu código.
+                              </p>
+                            </div>
+                            
+                            {/* Formulario de tracking integrado */}
+                            <form onSubmit={(e) => handleSearchTracking(e, cfg.id as any)} className="flex gap-2">
+                              <input
+                                type="text"
+                                value={trackingCode}
+                                onChange={(e) => setTrackingCode(e.target.value)}
+                                placeholder="Ej. LQX-358"
+                                className="flex-grow px-3 py-2.5 border border-slate-250 rounded-xl focus:ring-2 focus:ring-slate-400 focus:border-transparent outline-none font-bold text-xs text-slate-800 bg-white"
+                              />
+                              <button
+                                type="submit"
+                                className={`px-4 py-2.5 font-extrabold rounded-xl text-xs transition-all shadow-md active:scale-95 flex items-center justify-center ${
+                                  BUTTON_CLASSES[cfg.colorTheme]
+                                }`}
+                              >
+                                Buscar
+                              </button>
+                            </form>
+                          </div>
+                        </div>
+
+                        {/* Mensaje de error de búsqueda */}
+                        {trackingError && (
+                          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl text-xs font-semibold flex items-start space-x-2 animate-in fade-in max-w-2xl mx-auto">
+                            <AlertCircle size={14} className="flex-shrink-0 mt-0.5 text-red-500" />
+                            <span>{trackingError}</span>
+                          </div>
+                        )}
+
+                        {/* Resultado de Seguimiento */}
+                        {searchedSolicitud && (
+                          <div className="bg-white rounded-3xl border border-slate-200 p-6 md:p-8 shadow-md max-w-3xl mx-auto space-y-8 animate-in fade-in duration-300">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                              <div>
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Solicitante / Detalle</span>
+                                <span className="text-xs font-bold text-slate-750 block mt-0.5">
+                                  {searchedSolicitud.nombreBeneficiario || searchedSolicitud.salonNombreSolicitante || searchedSolicitud.agendaSocioNombre || searchedSolicitud.nombre}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Código Único</span>
+                                <span className="text-xs font-mono font-bold text-slate-750 block mt-0.5">{searchedSolicitud.id}</span>
+                              </div>
+                              <div className="text-left sm:text-right">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Fecha de Envío</span>
+                                <span className="text-xs font-bold text-slate-755 block mt-0.5">{searchedSolicitud.fechaCreacion}</span>
+                              </div>
+                            </div>
+
+                            {/* Stepper del Tracking */}
+                            <div className="space-y-6">
+                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block text-center sm:text-left">Línea del Proceso</span>
+                              {/* Stepper Grid */}
+                              <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 sm:gap-2 relative pt-2">
+                                {(() => {
+                                  const phases: { id: string; label: string; desc: string; icon: any }[] = [
+                                    { id: 'recibido', label: 'Recibido', desc: 'Ingresada con éxito', icon: CheckCircle },
+                                    { id: 'en_proceso', label: 'En Proceso', desc: 'Asignada a revisión', icon: Clock },
+                                    { id: 'en_analisis', label: 'En Análisis', desc: 'Evaluando viabilidad', icon: FileText },
+                                    { id: 'resolucion', label: 'Resolución', desc: 'Trámite finalizado', icon: Shield }
+                                  ];
+
+                                  const currentPhase = searchedSolicitud.faseTracking || (
+                                    (searchedSolicitud.estado === 'Aprobada' || searchedSolicitud.estado === 'Rechazada') 
+                                      ? 'resolucion' 
+                                      : 'recibido'
+                                  );
+
+                                  const phaseIndex = phases.findIndex(p => p.id === currentPhase);
+
+                                  return phases.map((phase, idx) => {
+                                    const isCompleted = idx <= phaseIndex;
+                                    const isActive = phase.id === currentPhase;
+                                    const StepIcon = phase.icon;
+
+                                    return (
+                                      <div key={phase.id} className="flex sm:flex-col items-center text-left sm:text-center space-x-4 sm:space-x-0 space-y-0 sm:space-y-2 relative group">
+                                        {/* Línea conectora */}
+                                        {idx < phases.length - 1 && (
+                                          <div className="hidden sm:block absolute top-5 left-[60%] w-[80%] h-0.5 bg-slate-105 z-0">
+                                            <div className={`h-full transition-all duration-550 ${STEPPER_LINE_CLASSES[cfg.colorTheme]} ${
+                                              idx < phaseIndex ? 'w-full' : 'w-0'
+                                            }`} />
+                                          </div>
+                                        )}
+
+                                        {/* Círculo indicador */}
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center z-10 border-2 transition-all duration-300 shadow-sm ${
+                                          isActive ? STEPPER_CIRCLE_ACTIVE[cfg.colorTheme] + ' scale-110' :
+                                          isCompleted ? STEPPER_CIRCLE_COMPLETED[cfg.colorTheme] :
+                                          'bg-white border-slate-200 text-slate-400'
+                                        }`}>
+                                          <StepIcon size={18} />
+                                        </div>
+
+                                        {/* Textos del paso */}
+                                        <div>
+                                          <span className={`text-xs font-extrabold tracking-tight block ${
+                                            isActive ? STEPPER_TEXT_ACTIVE[cfg.colorTheme] :
+                                            isCompleted ? 'text-slate-800' : 'text-slate-400'
+                                          }`}>{phase.label}</span>
+                                          <span className="text-[10px] text-slate-500 font-bold block mt-0.5">{phase.desc}</span>
+                                        </div>
+                                      </div>
+                                    );
+                                  });
+                                })()}
+                              </div>
+                            </div>
+
+                            {/* Estado final si es fase resolución */}
+                            {searchedSolicitud.estado !== 'Pendiente' && (
+                              <div className={`p-5 rounded-2xl border text-xs font-semibold animate-in zoom-in-95 duration-300 ${
+                                searchedSolicitud.estado === 'Aprobada' ? 'bg-green-50/60 border-green-200 text-green-700' : 'bg-red-50/60 border-red-200 text-red-700'
+                              }`}>
+                                <div className="flex items-start space-x-2.5">
+                                  <CheckCircle className="flex-shrink-0 mt-0.5" size={16} />
+                                  <div className="space-y-1">
+                                    <span className="font-extrabold block text-sm">Solicitud {searchedSolicitud.estado}</span>
+                                    {searchedSolicitud.resolucionRazon && (
+                                      <p className="leading-relaxed text-slate-655 font-semibold">{searchedSolicitud.resolucionRazon}</p>
+                                    )}
+                                    {searchedSolicitud.fechaResolucion && (
+                                      <span className="text-[10px] text-slate-400 block font-normal mt-1.5">Fecha: {searchedSolicitud.fechaResolucion}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-
-                      {/* Estadísticas de la pestaña activa */}
-                      {cfg.id !== 'cartas' && (
-                        <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 space-y-2.5 text-xs">
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-400 font-bold">Total Registros:</span>
-                            <span className="font-extrabold text-slate-800">{cfg.registeredCount}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-400 font-bold">Pendientes:</span>
-                            <span className={`font-extrabold px-2 py-0.5 rounded border ${
-                              cfg.colorTheme === 'blue' ? 'text-blue-750 bg-blue-50 border-blue-100' :
-                              cfg.colorTheme === 'emerald' ? 'text-emerald-755 bg-emerald-50 border-emerald-100' :
-                              cfg.colorTheme === 'purple' ? 'text-purple-755 bg-purple-50 border-purple-100' :
-                              cfg.colorTheme === 'amber' ? 'text-amber-755 bg-amber-50 border-amber-100' :
-                              cfg.colorTheme === 'indigo' ? 'text-indigo-755 bg-indigo-50 border-indigo-100' :
-                              'text-orange-755 bg-orange-50 border-orange-100'
-                            }`}>
-                              {cfg.pendingCount}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center pt-2 border-t border-slate-200/50">
-                            <span className="text-slate-400 font-bold">Acceso:</span>
-                            <span className={`font-bold px-2.5 py-0.5 rounded border ${
-                              cfg.colorTheme === 'blue' ? 'text-blue-900 bg-blue-50 border-blue-100' :
-                              cfg.colorTheme === 'emerald' ? 'text-emerald-900 bg-emerald-50 border-emerald-100' :
-                              cfg.colorTheme === 'purple' ? 'text-purple-900 bg-purple-50 border-purple-100' :
-                              cfg.colorTheme === 'amber' ? 'text-amber-900 bg-amber-50 border-amber-100' :
-                              cfg.colorTheme === 'indigo' ? 'text-indigo-900 bg-indigo-50 border-indigo-100' :
-                              'text-orange-900 bg-orange-50 border-orange-100'
-                            }`}>
-                              {cfg.audience}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Botón de acción destacado */}
-                      {cfg.showAction && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveTab(cfg.id);
-                            setIsModalOpen(true);
-                          }}
-                          className={`w-full py-3 font-extrabold rounded-xl flex items-center justify-center space-x-2 text-sm shadow-md transition-all duration-200 active:scale-95 hover:shadow-lg ${
-                            BUTTON_CLASSES[cfg.colorTheme]
-                          }`}
-                        >
-                          <Plus size={16} />
-                          <span>{cfg.actionText}</span>
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Columna Derecha (70%): Listado o Formulario */}
-                    <div className="flex-grow w-2/3 overflow-hidden">
-                      {cfg.id === 'cartas' ? (
-                        <div className="bg-white rounded-[2rem] border border-slate-200/80 shadow-md p-10 sm:p-16 text-center max-w-2xl mx-auto space-y-6 w-full">
-                          <div className="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto text-blue-900 border border-blue-100">
-                            <Mail size={28} />
-                          </div>
-                          <h3 className="text-2xl font-black text-slate-900">Redactor de Cartas Oficiales</h3>
-                          <p className="text-slate-655 text-sm leading-relaxed max-w-md mx-auto font-medium">
-                            Utilice el editor oficial para generar correspondencia membretada en PDF para terceras instituciones con firma digital y sello.
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setActiveTab('cartas');
-                              setIsModalOpen(true);
-                            }}
-                            className={`px-6 py-3 text-white font-extrabold rounded-xl text-sm shadow-md transition-all inline-flex items-center space-x-2 ${
-                              BUTTON_CLASSES[cfg.colorTheme]
-                            }`}
-                          >
-                            <Plus size={16} />
-                            <span>Redactar Nueva Carta</span>
-                          </button>
-                        </div>
-                      ) : (
-                        renderConfidentialNotice(cfg.id as any)
-                      )}
-                    </div>
-                  </div>
-
-                  {/* DISEÑO EN UNA COLUMNA EN MÓVIL (de md hacia abajo) */}
-                  <div className="block md:hidden space-y-6 w-full animate-in fade-in duration-200">
-                    <p className="text-xs text-slate-550 font-semibold leading-relaxed">
-                      {cfg.description}
-                    </p>
-                    
-                    {cfg.showAction && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveTab(cfg.id);
-                          setIsModalOpen(true);
-                        }}
-                        className={`w-full py-3 text-white font-black rounded-2xl flex items-center justify-center space-x-2 text-xs shadow-md transition-all duration-200 active:scale-95 ${
-                          BUTTON_CLASSES[cfg.colorTheme]
-                        }`}
-                      >
-                        <Plus size={16} />
-                        <span>{cfg.actionText}</span>
-                      </button>
-                    )}
-
-                    <div className="pt-2 w-full overflow-hidden">
-                      {cfg.id === 'cartas' ? (
-                        <div className="bg-white rounded-2xl border border-slate-100 p-6 text-center shadow-sm">
-                          <p className="text-xs text-slate-500 font-semibold">
-                            Redacte la correspondencia oficial usando el botón emergente superior.
-                          </p>
-                        </div>
-                      ) : (
-                        renderConfidentialNotice(cfg.id as any)
-                      )}
-                    </div>
-                  </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>
