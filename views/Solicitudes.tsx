@@ -644,6 +644,19 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       </div>
     );
   };
+  const renderConfidentialNotice = () => {
+    return (
+      <div className="bg-white rounded-[2rem] border border-slate-200/80 shadow-md p-8 sm:p-12 text-center max-w-xl mx-auto space-y-4 w-full">
+        <div className="bg-blue-50 w-14 h-14 rounded-full flex items-center justify-center mx-auto text-blue-900 border border-blue-100">
+          <Lock size={24} />
+        </div>
+        <h3 className="text-xl font-bold text-slate-800">Proceso Interno y Confidencial</h3>
+        <p className="text-slate-600 text-xs sm:text-sm leading-relaxed max-w-md mx-auto font-medium">
+          Las solicitudes de esta categoría se procesan de forma interna y confidencial. Una vez creada, la solicitud es enviada directamente a la Presidencia para su oportuna revisión y resolución.
+        </p>
+      </div>
+    );
+  };
 
   const renderSolicitudesList = (tipo: 'abiertas' | 'sillas' | 'internas' | 'agenda' | 'salon') => {
     const list = solicitudes.filter(s => s.tipo === tipo);
@@ -1956,7 +1969,7 @@ Club de Leones de Quetzaltenango`;
                           </button>
                         </div>
                       ) : (
-                        renderSolicitudesList(cfg.id as any)
+                        renderConfidentialNotice()
                       )}
                     </div>
                   </div>
@@ -1989,7 +2002,7 @@ Club de Leones de Quetzaltenango`;
                           </p>
                         </div>
                       ) : (
-                        renderSolicitudesList(cfg.id as any)
+                        renderConfidentialNotice()
                       )}
                     </div>
                   </div>

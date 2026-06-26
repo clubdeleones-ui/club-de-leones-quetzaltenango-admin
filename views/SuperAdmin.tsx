@@ -108,7 +108,7 @@ interface SuperAdminProps {
   onUpdateUser?: (user: Socio) => void;
 }
 
-type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas' | 'afiliacion' | 'inventario' | 'galeria_admin' | 'linea_tiempo_admin' | 'agenda_contactos' | 'control_solicitudes';
+type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas' | 'afiliacion' | 'inventario' | 'galeria_admin' | 'linea_tiempo_admin' | 'agenda_contactos' | 'presidencia';
 
 const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const { showAlert, showConfirm } = useModal();
@@ -120,15 +120,15 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const allowedTabs = useMemo(() => {
     switch (user.rol) {
       case UserRole.SUPER_ADMIN:
-        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario', 'galeria_admin', 'linea_tiempo_admin', 'agenda_contactos', 'control_solicitudes'];
+        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario', 'galeria_admin', 'linea_tiempo_admin', 'agenda_contactos', 'presidencia'];
       case UserRole.TESORERO:
         return ['resumen', 'socios', 'cuotas', 'donaciones', 'parqueo', 'presupuestos', 'inventario', 'galeria_admin', 'linea_tiempo_admin'];
       case UserRole.SECRETARIO:
-        return ['resumen', 'socios', 'calendario', 'actas', 'comisiones', 'minutas', 'agenda_contactos', 'control_solicitudes'];
+        return ['resumen', 'socios', 'calendario', 'actas', 'comisiones', 'minutas', 'agenda_contactos', 'presidencia'];
       case UserRole.ASESOR_SERVICIOS:
         return ['socios', 'calendario', 'beneficios', 'minutas'];
       case UserRole.PRESIDENTE_AFILIACION:
-        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'agenda_contactos', 'control_solicitudes'];
+        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'agenda_contactos', 'presidencia'];
       default:
         return [];
     }
@@ -152,7 +152,8 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   useEffect(() => {
     const groups = [
       { category: 'Principal', items: ['resumen'] },
-      { category: 'Secretaría', items: ['actas', 'control_solicitudes', 'beneficios', 'calendario', 'comisiones'] },
+      { category: 'Presidencia', items: ['presidencia'] },
+      { category: 'Secretaría', items: ['actas', 'beneficios', 'calendario', 'comisiones'] },
       { category: 'Tesorería', items: ['cuotas', 'parqueo', 'donaciones', 'presupuestos'] },
       { category: 'Comité de Afiliación', items: ['socios', 'afiliacion'] },
       { category: 'Comité de Servicio', items: ['minutas'] },
@@ -1939,10 +1940,15 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 ]
               },
               {
+                category: 'Presidencia',
+                items: [
+                  { id: 'presidencia', label: 'Gestión de Solicitudes', icon: Layers }
+                ]
+              },
+              {
                 category: 'Secretaría',
                 items: [
                   { id: 'actas', label: 'Libro de Actas', icon: FileText },
-                  { id: 'control_solicitudes', label: 'Control de Solicitudes', icon: Layers },
                   { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
                   { id: 'calendario', label: 'Actividades', icon: Calendar },
                   { id: 'comisiones', label: 'Gestión de Comisiones', icon: Briefcase }
@@ -2071,7 +2077,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     { id: 'galeria_admin', label: 'Gestión de Galería', icon: Camera },
                     { id: 'linea_tiempo_admin', label: 'Línea de Tiempo', icon: Clock },
                     { id: 'agenda_contactos', label: 'Agenda de Contactos', icon: BookUser },
-                    { id: 'control_solicitudes', label: 'Control de Solicitudes', icon: Layers }
+                    { id: 'presidencia', label: 'Gestión de Solicitudes', icon: Layers }
                   ].find(t => t.id === activeTab);
                   if (currentTab) {
                     const Icon = currentTab.icon;
@@ -2097,7 +2103,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     { id: 'galeria_admin', label: 'Gestión de Galería' },
                     { id: 'linea_tiempo_admin', label: 'Línea de Tiempo' },
                     { id: 'agenda_contactos', label: 'Agenda de Contactos' },
-                    { id: 'control_solicitudes', label: 'Control de Solicitudes' }
+                    { id: 'presidencia', label: 'Gestión de Solicitudes' }
                   ].find(t => t.id === activeTab)?.label}
                 </span>
               </div>
@@ -2114,10 +2120,15 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     ]
                   },
                   {
+                    category: 'Presidencia',
+                    items: [
+                      { id: 'presidencia', label: 'Gestión de Solicitudes', icon: Layers }
+                    ]
+                  },
+                  {
                     category: 'Secretaría',
                     items: [
                       { id: 'actas', label: 'Libro de Actas', icon: FileText },
-                      { id: 'control_solicitudes', label: 'Control de Solicitudes', icon: Layers },
                       { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
                       { id: 'calendario', label: 'Actividades', icon: Calendar },
                       { id: 'comisiones', label: 'Gestión de Comisiones', icon: Briefcase }
@@ -5429,7 +5440,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           {activeTab === 'agenda_contactos' && (
             <AgendaContactos />
           )}
-          {activeTab === 'control_solicitudes' && (
+          {activeTab === 'presidencia' && (
             renderControlSolicitudesList()
           )}
         </main>
