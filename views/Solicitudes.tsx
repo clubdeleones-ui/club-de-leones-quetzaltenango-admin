@@ -2198,17 +2198,18 @@ Club de Leones de Quetzaltenango`;
                             </div>
                             
                             {/* Formulario de tracking integrado */}
-                            <form onSubmit={(e) => handleSearchTracking(e, cfg.id as any)} className="flex gap-2">
+                            <form onSubmit={(e) => handleSearchTracking(e, cfg.id as any)} className="flex items-center gap-2 w-full mt-auto">
                               <input
                                 type="text"
                                 value={trackingCode}
                                 onChange={(e) => setTrackingCode(e.target.value)}
                                 placeholder="Ej. LQX-358"
-                                className="flex-grow px-3 py-2.5 border border-slate-250 rounded-xl focus:ring-2 focus:ring-slate-400 focus:border-transparent outline-none font-bold text-xs text-slate-800 bg-white"
+                                className="w-28 flex-shrink-0 px-3 py-2.5 border border-slate-250 rounded-xl focus:ring-2 focus:ring-slate-400 focus:border-transparent outline-none font-bold text-xs text-slate-800 bg-white placeholder-slate-350 text-center"
+                                maxLength={8}
                               />
                               <button
                                 type="submit"
-                                className={`px-4 py-2.5 font-extrabold rounded-xl text-xs transition-all shadow-md active:scale-95 flex items-center justify-center ${
+                                className={`flex-grow py-2.5 font-extrabold rounded-xl text-xs transition-all shadow-md active:scale-95 flex items-center justify-center ${
                                   BUTTON_CLASSES[cfg.colorTheme]
                                 }`}
                               >
