@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
-import { Acta, MinutaComision, Socio } from '../types';
+import { Acta, MinutaComision, Socio, ReunionAgenda } from '../types';
 
 export const generateActaCode = (
   categoria: string,
@@ -1285,7 +1285,7 @@ export const generateCartaOficialPDF = async (
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8);
       doc.setTextColor(148, 163, 184); // Slate-400
-      doc.text(`Carta Oficial - Página ${doc.internal.pages.length}`, margin, 18);
+      doc.text(`Carta Oficial - Página ${doc.internal.pages.length - 1}`, margin, 18);
       
       y = 26; // Reset Y coordinate
     }
@@ -1361,7 +1361,7 @@ export const generateCartaOficialPDF = async (
   }
 
   // Footer decoration
-  const pageCount = doc.internal.pages.length;
+  const pageCount = doc.internal.pages.length - 1;
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     
@@ -1384,6 +1384,218 @@ export const generateCartaOficialPDF = async (
   } else {
     const cleanDest = (carta.destinatario || 'carta').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
     doc.save(`carta-${cleanDest}.pdf`);
+  }
+};
+
+export const generateAgendaPDF = async (agenda: ReunionAgenda, action: 'download' | 'open' = 'download') => {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'letter'
+  });
+
+  const margin = 20;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const contentWidth = pageWidth - (margin * 2);
+
+  // Load Logo Image
+  const base = window.location.pathname.endsWith('/') 
+    ? window.location.pathname 
+    : window.location.pathname + '/';
+  const logoUrl = `${window.location.origin}${base}images/logo.png`;
+
+  let logoImg: HTMLImageElement | null = null;
+  try {
+    logoImg = await loadImage(logoUrl);
+  } catch (err) {
+    console.error("Failed to load logo image, falling back to vector logo", err);
+  }
+
+  // Header Blue Bar (Primary Color)
+  doc.setFillColor(27, 54, 93); // Blue-900
+  doc.rect(0, 0, pageWidth, 15, 'F');
+  
+  // Header Gold Bar (Secondary Accent Color)
+  doc.setFillColor(234, 179, 8); // Yellow-500
+  doc.rect(0, 15, pageWidth, 2, 'F');
+
+  // Draw Logo on the left
+  const logoX = margin;
+  const logoY = 22;
+  const logoRadius = 7;
+  
+  if (logoImg) {
+    doc.addImage(logoImg, 'PNG', logoX, logoY - 1, 14, 14);
+  } else {
+    doc.setFillColor(27, 54, 93);
+    doc.circle(logoX + logoRadius, logoY + logoRadius, logoRadius, 'F');
+    
+    doc.setDrawColor(234, 179, 8);
+    doc.setLineWidth(0.5);
+    doc.circle(logoX + logoRadius, logoY + logoRadius, logoRadius - 0.5, 'S');
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(234, 179, 8);
+    doc.text('L', logoX + logoRadius, logoY + logoRadius + 4.5, { align: 'center' });
+  }
+
+  // Title Branding
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(27, 54, 93);
+  doc.text('CLUB DE LEONES DE QUETZALTENANGO', logoX + 18, logoY + 5.5);
+
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(8);
+  doc.setTextColor(100, 116, 139);
+  doc.text('Nosotros Servimos - Lions Clubs International', logoX + 18, logoY + 10.5);
+
+  // Line below branding
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.5);
+  doc.line(margin, logoY + 16, pageWidth - margin, logoY + 16);
+
+  let y = logoY + 24;
+
+  // Title of Document based on category
+  let titleText = 'AGENDA OFICIAL DE REUNIÓN';
+  if (agenda.categoria === 'protocolaria') {
+    titleText = 'AGENDA PROTOCOLARIA (SESIÓN SOCIAL)';
+  } else if (agenda.categoria === 'ordinaria') {
+    titleText = 'AGENDA ORDINARIA DE SESIÓN';
+  } else if (agenda.categoria === 'extraordinaria') {
+    titleText = 'AGENDA EXTRAORDINARIA (ASAMBLEA)';
+  } else if (agenda.categoria === 'comisiones') {
+    titleText = 'AGENDA DE COMISIÓN DE TRABAJO';
+  }
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(15);
+  doc.setTextColor(27, 54, 93);
+  doc.text(titleText, pageWidth / 2, y, { align: 'center' });
+  
+  y += 10;
+
+  // Metadata Card
+  doc.setFillColor(248, 250, 252); // bg-slate-50
+  doc.setDrawColor(226, 232, 240); // border-slate-200
+  doc.setLineWidth(0.3);
+  doc.roundedRect(margin, y, contentWidth, 38, 2, 2, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(71, 85, 105);
+  doc.text('REUNIÓN:', margin + 6, y + 6);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(15, 23, 42);
+  doc.text(agenda.titulo.toUpperCase(), margin + 35, y + 6);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(71, 85, 105);
+  doc.text('CÓDIGO:', margin + 6, y + 12);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(15, 23, 42);
+  doc.text(agenda.codigo || 'S/C', margin + 35, y + 12);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(71, 85, 105);
+  doc.text('FECHA:', margin + 6, y + 18);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(15, 23, 42);
+  doc.text(agenda.fecha, margin + 35, y + 18);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(71, 85, 105);
+  doc.text('HORA:', margin + 6, y + 24);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(15, 23, 42);
+  doc.text(agenda.hora, margin + 35, y + 24);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(71, 85, 105);
+  doc.text('LUGAR:', margin + 6, y + 30);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(15, 23, 42);
+  doc.text(agenda.lugar, margin + 35, y + 30);
+
+  // Determine president name
+  let presidentName = agenda.presidencia || 'Edwin Ernesto Pacheco López';
+  try {
+    const local = localStorage.getItem('club_leones_socios');
+    if (local) {
+      const sociosList = JSON.parse(local);
+      const president = sociosList.find((s: any) => s.puesto?.toLowerCase().includes('presidente del club') || s.puesto?.toLowerCase() === 'presidente') || sociosList.find((s: any) => s.puesto?.toLowerCase().includes('presidente'));
+      if (!agenda.presidencia && president) presidentName = president.nombre;
+    }
+  } catch (e) {}
+
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(71, 85, 105);
+  doc.text('PRESIDENCIA:', margin + 6, y + 36);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(15, 23, 42);
+  doc.text(presidentName, margin + 35, y + 36);
+
+  y += 46;
+
+  // Section: Puntos de Agenda
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(27, 54, 93);
+  doc.text('ORDEN DEL DÍA Y PUNTOS A TRATAR:', margin, y);
+  
+  y += 8;
+
+  // Loop through points
+  doc.setFontSize(10);
+  agenda.puntos.forEach((p, idx) => {
+    // Check if we need a new page
+    if (y > pageHeight - 35) {
+      doc.addPage();
+      y = 30; // reset Y for new page
+    }
+
+    const titleText = `${idx + 1}. ${p.titulo}`;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(titleText, margin, y);
+    y += 5;
+
+    // Word wrap for description, trimmed to avoid extra whitespace/newlines at the end
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    const descText = (p.descripcion || '').trim() || 'Sin descripción detallada.';
+    const splitDesc = doc.splitTextToSize(descText, contentWidth - 6);
+    doc.text(splitDesc, margin + 4, y);
+    y += (splitDesc.length * 4.5);
+
+    y += 4; // Spacing between points
+  });
+
+  // Page Numbers
+  const pageCount = doc.internal.pages.length - 1;
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setDrawColor(234, 179, 8);
+    doc.setLineWidth(0.5);
+    doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Nosotros Servimos - Lions Clubs International', margin, pageHeight - 10);
+    doc.text(`Página ${i} de ${pageCount}`, pageWidth - margin - 15, pageHeight - 10);
+  }
+
+  if (action === 'open') {
+    const blob = doc.output('blob');
+    const blobUrl = URL.createObjectURL(blob);
+    window.open(blobUrl, '_blank');
+  } else {
+    const cleanCode = (agenda.codigo || `agenda-${agenda.fecha}`).toLowerCase().replace(/[^a-z0-9_-]+/g, '_');
+    doc.save(`${cleanCode}.pdf`);
   }
 };
 

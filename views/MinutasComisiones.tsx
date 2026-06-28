@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { firebaseService } from '../services/firebaseService';
 import { useClubData } from '../context/ClubDataContext';
-import { Comision, Socio, MinutaComision, MinutaPunto, Solicitud, Responsable } from '../types';
+import { Comision, Socio, MinutaComision, MinutaPunto, Solicitud, Responsable, TareaComision } from '../types';
 import { generateMinutaPDF } from '../utils/pdfGenerator';
 import { useModal } from '../context/ModalContext';
 import { 
@@ -43,23 +43,25 @@ export const MinutasComisiones: React.FC = () => {
     showAlert("Notificación", msg);
   };
 
-  // Load data from global ClubDataContext
   const { 
     minutas: dbMinutas, 
     comisiones: dbComisiones, 
     socios: dbSocios, 
-    solicitudes: dbSolicitudes 
+    solicitudes: dbSolicitudes,
+    tareasComisiones: dbTareasComisiones
   } = useClubData();
 
   const [minutas, setMinutas] = useState<MinutaComision[]>(dbMinutas);
   const [comisiones, setComisiones] = useState<Comision[]>(dbComisiones);
   const [socios, setSocios] = useState<Socio[]>(dbSocios);
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>(dbSolicitudes);
+  const [tareasComisiones, setTareasComisiones] = useState<TareaComision[]>(dbTareasComisiones || []);
 
   useEffect(() => { setMinutas(dbMinutas); }, [dbMinutas]);
   useEffect(() => { setComisiones(dbComisiones); }, [dbComisiones]);
   useEffect(() => { setSocios(dbSocios); }, [dbSocios]);
   useEffect(() => { setSolicitudes(dbSolicitudes); }, [dbSolicitudes]);
+  useEffect(() => { setTareasComisiones(dbTareasComisiones || []); }, [dbTareasComisiones]);
 
   const [selectedMinutaId, setSelectedMinutaId] = useState<string>('');
   const [showForm, setShowForm] = useState(false);
@@ -69,6 +71,7 @@ export const MinutasComisiones: React.FC = () => {
   const [filterMonth, setFilterMonth] = useState('Todos');
   const [filterSolicitud, setFilterSolicitud] = useState('Todos');
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedTareasIds, setSelectedTareasIds] = useState<string[]>([]);
 
   // Reset page on filter changes
   useEffect(() => {
@@ -159,6 +162,7 @@ export const MinutasComisiones: React.FC = () => {
       miembrosAsistencia: selected ? selected.miembros : [],
       solicitudResponsables: []
     }));
+    setSelectedTareasIds([]);
   };
 
   // Toggle member attendance
@@ -247,6 +251,15 @@ export const MinutasComisiones: React.FC = () => {
     return list;
   }, [selectedComisionInForm, form.otrosParticipantes, socios]);
 
+  // Retrieve pending presidency tasks for this commission
+  const tasksForCommission = useMemo(() => {
+    if (!form.comisionId) return [];
+    return (tareasComisiones || []).filter(t => 
+      t.comisionId === form.comisionId && 
+      (t.estado === 'Pendiente' || (form.id && t.minutaResolucionId === form.id))
+    );
+  }, [tareasComisiones, form.comisionId, form.id]);
+
   // Toggle responsible in request form
   const handleToggleSolicitudResponsable = (socioId: string) => {
     const current = form.solicitudResponsables;
@@ -328,6 +341,36 @@ export const MinutasComisiones: React.FC = () => {
       };
 
       await firebaseService.saveMinuta(newMinuta);
+
+      // Update tasks in Firestore
+      // 1. Mark selected tasks as Resuelta
+      for (const tareaId of selectedTareasIds) {
+        const t = (tareasComisiones || []).find(x => x.id === tareaId);
+        if (t) {
+          const updated: TareaComision = {
+            ...t,
+            estado: 'Resuelta',
+            fechaResolucion: new Date().toISOString().split('T')[0],
+            minutaResolucionId: newMinuta.id
+          };
+          await firebaseService.saveTareaComision(updated);
+        }
+      }
+
+      // 2. Mark previously resolved tasks that are no longer selected as Pendiente
+      const previouslyResolved = (tareasComisiones || []).filter(x => x.minutaResolucionId === newMinuta.id);
+      for (const t of previouslyResolved) {
+        if (!selectedTareasIds.includes(t.id)) {
+          const reverted: any = {
+            ...t,
+            estado: 'Pendiente',
+            fechaResolucion: null,
+            minutaResolucionId: null
+          };
+          await firebaseService.saveTareaComision(reverted);
+        }
+      }
+
       setSelectedMinutaId(newMinuta.id);
       setShowForm(false);
 
@@ -344,6 +387,7 @@ export const MinutasComisiones: React.FC = () => {
         solicitudDescripcion: '',
         solicitudResponsables: []
       });
+      setSelectedTareasIds([]);
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || 'Error al guardar la minuta. Por favor intente de nuevo.');
@@ -372,6 +416,12 @@ export const MinutasComisiones: React.FC = () => {
       solicitudDescripcion: req?.descripcion || '',
       solicitudResponsables: [] // Can re-assign
     });
+
+    const resolvedInThisMinuta = (tareasComisiones || [])
+      .filter(t => t.minutaResolucionId === minuta.id)
+      .map(t => t.id);
+    setSelectedTareasIds(resolvedInThisMinuta);
+
     setShowForm(true);
   };
 
@@ -668,6 +718,91 @@ export const MinutasComisiones: React.FC = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Tareas Pendientes de Presidencia */}
+                {tasksForCommission.length > 0 && (
+                  <div className="space-y-4 pt-6 border-t border-slate-200/60 animate-in fade-in duration-300">
+                    <h5 className="font-extrabold text-slate-700 text-sm flex items-center justify-between">
+                      <span>Tareas Pendientes de Presidencia</span>
+                      <span className="bg-amber-100 text-amber-800 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">
+                        {tasksForCommission.filter(t => t.estado === 'Pendiente').length} Pendientes
+                      </span>
+                    </h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {tasksForCommission.map(t => {
+                        const isSelected = selectedTareasIds.includes(t.id);
+                        const urgencyColors = {
+                          Alta: 'bg-red-50 text-red-700 border-red-200',
+                          Media: 'bg-amber-50 text-amber-700 border-amber-200',
+                          Baja: 'bg-blue-50 text-blue-700 border-blue-200'
+                        };
+                        return (
+                          <div
+                            key={t.id}
+                            className={`border rounded-xl p-4 transition-all flex flex-col justify-between ${
+                              isSelected
+                                ? 'bg-emerald-50/40 border-emerald-300 shadow-sm'
+                                : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-center justify-between mb-2">
+                                <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border uppercase tracking-wider ${urgencyColors[t.urgency] || 'bg-slate-50 border-slate-200 text-slate-600'}`}>
+                                  Urgencia: {t.urgency}
+                                </span>
+                                {t.fechaLimite && (
+                                  <span className="text-[10px] font-medium text-slate-400">
+                                    Límite: {t.fechaLimite}
+                                  </span>
+                                )}
+                              </div>
+                              <h6 className="text-xs font-bold text-slate-800 leading-snug">{t.punto}</h6>
+                              <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">{t.descripcion}</p>
+                            </div>
+                            <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
+                              <span className={`text-[10px] font-semibold ${isSelected ? 'text-emerald-700 font-bold' : 'text-slate-400'}`}>
+                                {isSelected ? '✓ Agregado al debate' : 'Pendiente de tratar'}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (isSelected) {
+                                    setSelectedTareasIds(prev => prev.filter(id => id !== t.id));
+                                    setForm(prev => ({
+                                      ...prev,
+                                      puntos: prev.puntos.filter(p => p.punto !== `[Tarea Presidencia] ${t.punto}`)
+                                    }));
+                                  } else {
+                                    setSelectedTareasIds(prev => [...prev, t.id]);
+                                    setForm(prev => {
+                                      const cleanPuntos = (prev.puntos.length === 1 && prev.puntos[0].punto === "" && prev.puntos[0].discusion === "")
+                                        ? []
+                                        : prev.puntos;
+                                      return {
+                                        ...prev,
+                                        puntos: [
+                                          ...cleanPuntos,
+                                          { punto: `[Tarea Presidencia] ${t.punto}`, discusion: t.descripcion }
+                                        ]
+                                      };
+                                    });
+                                  }
+                                }}
+                                className={`text-[11px] font-black px-3 py-1.5 rounded-lg border transition-all cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                                    : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                                }`}
+                              >
+                                {isSelected ? 'Quitar de la Minuta' : 'Tratar en esta Minuta'}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

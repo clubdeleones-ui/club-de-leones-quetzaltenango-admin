@@ -49,11 +49,21 @@ export const parseStatutes = (rawText: string): StatuteSection[] => {
     return sections;
 };
 
+const removeAccents = (str: string): string => {
+    return str
+        .toLowerCase()
+        .replace(/[áäàâ]/g, 'a')
+        .replace(/[éëèê]/g, 'e')
+        .replace(/[íïìî]/g, 'i')
+        .replace(/[óöòô]/g, 'o')
+        .replace(/[úüùû]/g, 'u');
+};
+
 export const searchKeywords = (sections: StatuteSection[], query: string): StatuteSection[] => {
     if (!query.trim()) return [];
-    const lowerQuery = query.toLowerCase();
+    const cleanQuery = removeAccents(query);
     return sections.filter(s =>
-        s.text.toLowerCase().includes(lowerQuery) ||
-        (s.subText && s.subText.toLowerCase().includes(lowerQuery))
+        removeAccents(s.text).includes(cleanQuery) ||
+        (s.subText && removeAccents(s.subText).includes(cleanQuery))
     );
 };

@@ -209,6 +209,7 @@ export interface Solicitud {
   salonEsSocio?: boolean;
   salonTelefono?: string;
   salonEmail?: string;
+  salonNombreSolicitante?: string;
 }
 
 export interface VehiculoParqueo {
@@ -292,4 +293,58 @@ export interface SolicitudVoluntario {
   mensaje?: string;
   fechaRegistro: string;
   estado: 'Pendiente' | 'Aprobado' | 'Rechazado';
+}
+
+export interface AgendaPunto {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  origenTipo: 'manual' | 'solicitud';
+  origenId?: string; // ID de la solicitud vinculada, si existe
+  asignadoAComisionId?: string; // ID de la comisión asignada, si aplica
+  urgencia?: 'Alta' | 'Media' | 'Baja';
+  fechaLimite?: string;
+  comisionNombre?: string;
+  agregadoAActas?: boolean;
+}
+
+export interface ReunionAgenda {
+  id: string;
+  titulo: string;
+  fecha: string;
+  hora: string;
+  lugar: string;
+  puntos: AgendaPunto[];
+  estado: 'Borrador' | 'Finalizada';
+  fechaCreacion: string;
+  autor: string;
+  categoria?: 'protocolaria' | 'ordinaria' | 'extraordinaria' | 'comisiones';
+  codigo?: string;
+  presidencia?: string;
+}
+
+export interface TareaComision {
+  id: string;
+  comisionId: string;
+  agendaId?: string;
+  agendaPuntoId?: string;
+  punto: string;
+  descripcion: string;
+  fechaAsignacion: string;
+  fechaLimite?: string;
+  urgencia: 'Alta' | 'Media' | 'Baja';
+  estado: 'Pendiente' | 'Resuelta';
+  fechaResolucion?: string;
+  minutaResolucionId?: string;
+}
+
+export interface Asistencia {
+  id: string;
+  socioId: string;
+  socioNombre: string;
+  tipo: 'reunion' | 'actividad' | 'voluntariado';
+  eventoId: string;
+  eventoTitulo: string;
+  fecha: string;
+  asistio: boolean;
 }

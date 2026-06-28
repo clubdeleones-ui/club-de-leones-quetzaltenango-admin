@@ -9,10 +9,11 @@ import {
   getDoc,
   query,
   where,
-  limit
+  limit,
+  writeBatch
 } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda, Acta, HitoHistorico, SolicitudVoluntario } from "../types";
+import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda, Acta, HitoHistorico, SolicitudVoluntario, ReunionAgenda, TareaComision, Asistencia } from "../types";
 
 export const firebaseService = {
   // Upload candidate photo to Firebase Storage (Supports Base64 data_url format)
@@ -751,6 +752,120 @@ export const firebaseService = {
       await deleteDoc(docRef);
     } catch (error) {
       console.error("Error deleting volunteer request from Firestore:", error);
+      throw error;
+    }
+  },
+
+  // AGENDAS
+  getAgendas: async (): Promise<ReunionAgenda[]> => {
+    try {
+      const colRef = collection(db, "agendas");
+      const snapshot = await getDocs(colRef);
+      const list: ReunionAgenda[] = [];
+      snapshot.forEach(doc => {
+        list.push({ id: doc.id, ...doc.data() } as ReunionAgenda);
+      });
+      return list.sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime());
+    } catch (error) {
+      console.error("Error fetching agendas:", error);
+      throw error;
+    }
+  },
+
+  saveAgenda: async (agenda: ReunionAgenda): Promise<void> => {
+    try {
+      const { id, ...data } = agenda;
+      if (id) {
+        const docRef = doc(db, "agendas", id);
+        await setDoc(docRef, data, { merge: true });
+      } else {
+        const newDocRef = doc(collection(db, "agendas"));
+        await setDoc(newDocRef, { ...data, id: newDocRef.id }, { merge: true });
+      }
+    } catch (error) {
+      console.error("Error saving agenda:", error);
+      throw error;
+    }
+  },
+
+  deleteAgenda: async (id: string): Promise<void> => {
+    try {
+      const docRef = doc(db, "agendas", id);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting agenda:", error);
+      throw error;
+    }
+  },
+
+  // TAREAS COMISIONES
+  getTareasComisiones: async (): Promise<TareaComision[]> => {
+    try {
+      const colRef = collection(db, "tareas_comisiones");
+      const snapshot = await getDocs(colRef);
+      const list: TareaComision[] = [];
+      snapshot.forEach(doc => {
+        list.push({ id: doc.id, ...doc.data() } as TareaComision);
+      });
+      return list;
+    } catch (error) {
+      console.error("Error fetching tareas comisiones:", error);
+      throw error;
+    }
+  },
+
+  saveTareaComision: async (tarea: TareaComision): Promise<void> => {
+    try {
+      const { id, ...data } = tarea;
+      if (id) {
+        const docRef = doc(db, "tareas_comisiones", id);
+        await setDoc(docRef, data, { merge: true });
+      } else {
+        const newDocRef = doc(collection(db, "tareas_comisiones"));
+        await setDoc(newDocRef, { ...data, id: newDocRef.id }, { merge: true });
+      }
+    } catch (error) {
+      console.error("Error saving tarea comision:", error);
+      throw error;
+    }
+  },
+
+  deleteTareaComision: async (id: string): Promise<void> => {
+    try {
+      const docRef = doc(db, "tareas_comisiones", id);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting tarea comision:", error);
+      throw error;
+    }
+  },
+
+  getAsistencias: async (): Promise<Asistencia[]> => {
+    try {
+      const colRef = collection(db, "asistencias");
+      const list: Asistencia[] = [];
+      const querySnapshot = await getDocs(colRef);
+      querySnapshot.forEach((doc) => {
+        list.push({ id: doc.id, ...doc.data() } as Asistencia);
+      });
+      return list;
+    } catch (error) {
+      console.error("Error fetching asistencias:", error);
+      return [];
+    }
+  },
+
+  saveAsistenciasBatch: async (asistencias: Asistencia[]): Promise<void> => {
+    try {
+      const batch = writeBatch(db);
+      asistencias.forEach(a => {
+        const { id, ...data } = a;
+        const docRef = id ? doc(db, "asistencias", id) : doc(collection(db, "asistencias"));
+        batch.set(docRef, data, { merge: true });
+      });
+      await batch.commit();
+    } catch (error) {
+      console.error("Error saving asistencias batch:", error);
       throw error;
     }
   },

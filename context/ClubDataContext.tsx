@@ -20,7 +20,10 @@ import {
   HitoHistorico,
   RubroPresupuesto,
   FondoPresupuesto,
-  AsignacionComision
+  AsignacionComision,
+  ReunionAgenda,
+  TareaComision,
+  Asistencia
 } from '../types';
 import { 
   MOCK_SOCIOS, 
@@ -47,6 +50,9 @@ const KEYS = {
   RUBROS: 'club_leones_presupuestos_rubros',
   FONDOS: 'club_leones_presupuestos_fondos',
   ASIGNACIONES: 'club_leones_presupuestos_asignaciones',
+  REUNION_AGENDAS: 'club_leones_reunion_agendas',
+  TAREAS_COMISIONES: 'club_leones_tareas_comisiones',
+  ASISTENCIAS: 'club_leones_asistencias',
 };
 
 // Local storage helper
@@ -75,6 +81,9 @@ interface ClubDataContextType {
   rubros: RubroPresupuesto[];
   fondos: FondoPresupuesto[];
   asignaciones: AsignacionComision[];
+  agendas: ReunionAgenda[];
+  tareasComisiones: TareaComision[];
+  asistencias: Asistencia[];
   
   loading: {
     socios: boolean;
@@ -91,6 +100,9 @@ interface ClubDataContextType {
     rubros: boolean;
     fondos: boolean;
     asignaciones: boolean;
+    agendas: boolean;
+    tareasComisiones: boolean;
+    asistencias: boolean;
   };
 }
 
@@ -112,6 +124,9 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [rubros, setRubros] = useState<RubroPresupuesto[]>(() => getLocalData(KEYS.RUBROS, []));
   const [fondos, setFondos] = useState<FondoPresupuesto[]>(() => getLocalData(KEYS.FONDOS, []));
   const [asignaciones, setAsignaciones] = useState<AsignacionComision[]>(() => getLocalData(KEYS.ASIGNACIONES, []));
+  const [agendas, setAgendas] = useState<ReunionAgenda[]>(() => getLocalData(KEYS.REUNION_AGENDAS, []));
+  const [tareasComisiones, setTareasComisiones] = useState<TareaComision[]>(() => getLocalData(KEYS.TAREAS_COMISIONES, []));
+  const [asistencias, setAsistencias] = useState<Asistencia[]>(() => getLocalData(KEYS.ASISTENCIAS, []));
 
   const [loading, setLoading] = useState({
     socios: true,
@@ -128,6 +143,9 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     rubros: true,
     fondos: true,
     asignaciones: true,
+    agendas: true,
+    tareasComisiones: true,
+    asistencias: true,
   });
 
   // 2. Sync mock data to Firestore once if collection is empty
@@ -312,6 +330,39 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLoading(prev => ({ ...prev, asignaciones: false }));
     });
 
+    // 3o. Reunion Agendas
+    const unsubAgendas = onSnapshot(collection(db, 'agendas'), (snapshot) => {
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as ReunionAgenda);
+      setAgendas(list);
+      localStorage.setItem(KEYS.REUNION_AGENDAS, JSON.stringify(list));
+      setLoading(prev => ({ ...prev, agendas: false }));
+    }, (err) => {
+      console.error("Error subscribing to agendas:", err);
+      setLoading(prev => ({ ...prev, agendas: false }));
+    });
+
+    // 3p. Tareas Comisiones
+    const unsubTareasComisiones = onSnapshot(collection(db, 'tareas_comisiones'), (snapshot) => {
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as TareaComision);
+      setTareasComisiones(list);
+      localStorage.setItem(KEYS.TAREAS_COMISIONES, JSON.stringify(list));
+      setLoading(prev => ({ ...prev, tareasComisiones: false }));
+    }, (err) => {
+      console.error("Error subscribing to tareas_comisiones:", err);
+      setLoading(prev => ({ ...prev, tareasComisiones: false }));
+    });
+
+    // 3q. Asistencias
+    const unsubAsistencias = onSnapshot(collection(db, 'asistencias'), (snapshot) => {
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Asistencia);
+      setAsistencias(list);
+      localStorage.setItem(KEYS.ASISTENCIAS, JSON.stringify(list));
+      setLoading(prev => ({ ...prev, asistencias: false }));
+    }, (err) => {
+      console.error("Error subscribing to asistencias:", err);
+      setLoading(prev => ({ ...prev, asistencias: false }));
+    });
+
     return () => {
       unsubSocios();
       unsubPropuestas();
@@ -327,6 +378,9 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       unsubRubros();
       unsubFondos();
       unsubAsignaciones();
+      unsubAgendas();
+      unsubTareasComisiones();
+      unsubAsistencias();
     };
   }, []);
 
@@ -346,6 +400,9 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       rubros,
       fondos,
       asignaciones,
+      agendas,
+      tareasComisiones,
+      asistencias,
       loading
     }}>
       {children}

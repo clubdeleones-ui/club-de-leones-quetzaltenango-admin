@@ -16,7 +16,13 @@ import {
   UserRole,
   PropuestaSocio,
   Solicitud,
-  SolicitudVoluntario
+  SolicitudVoluntario,
+  Comision,
+  ReunionAgenda,
+  TareaComision,
+  AgendaPunto,
+  Asistencia,
+  MinutaComision
 } from '../types';
 import { firebaseService } from '../services/firebaseService';
 import { useClubData } from '../context/ClubDataContext';
@@ -55,6 +61,7 @@ import {
   AlertCircle,
   Hash,
   ChevronDown,
+  ChevronUp,
   Car,
   Archive,
   Camera,
@@ -64,9 +71,14 @@ import {
   Accessibility,
   XOctagon,
   Lock,
-  Star
+  Star,
+  ArrowUp,
+  ArrowDown,
+  Printer,
+  Trophy,
+  Crown
 } from 'lucide-react';
-import { generateActaPDF, generateActaCode, generateReciboPagoPDF } from '../utils/pdfGenerator';
+import { generateActaPDF, generateActaCode, generateReciboPagoPDF, generateAgendaPDF } from '../utils/pdfGenerator';
 import { FormattedActa } from '../components/FormattedActa';
 import { compressImageFile } from '../utils/imageCompressor';
 import { ParqueoManager } from '../components/ParqueoManager';
@@ -78,6 +90,7 @@ import { Inventario } from './Inventario';
 import { GaleriaAdmin } from './GaleriaAdmin';
 import { AgendaContactos } from './AgendaContactos';
 import { LineaTiempoAdmin } from './LineaTiempoAdmin';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const PUESTOS_PREDEFINIDOS = [
   'Presidente',
@@ -108,7 +121,7 @@ interface SuperAdminProps {
   onUpdateUser?: (user: Socio) => void;
 }
 
-type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas' | 'afiliacion' | 'inventario' | 'galeria_admin' | 'linea_tiempo_admin' | 'agenda_contactos' | 'presidencia';
+type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas' | 'afiliacion' | 'inventario' | 'galeria_admin' | 'linea_tiempo_admin' | 'agenda_contactos' | 'presidencia' | 'agendas_reunion' | 'ranking_lionistico';
 
 const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const { showAlert, showConfirm } = useModal();
@@ -120,15 +133,15 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const allowedTabs = useMemo(() => {
     switch (user.rol) {
       case UserRole.SUPER_ADMIN:
-        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario', 'galeria_admin', 'linea_tiempo_admin', 'agenda_contactos', 'presidencia'];
+        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario', 'galeria_admin', 'linea_tiempo_admin', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico'];
       case UserRole.TESORERO:
         return ['resumen', 'socios', 'cuotas', 'donaciones', 'parqueo', 'presupuestos', 'inventario', 'galeria_admin', 'linea_tiempo_admin'];
       case UserRole.SECRETARIO:
-        return ['resumen', 'socios', 'calendario', 'actas', 'comisiones', 'minutas', 'agenda_contactos', 'presidencia'];
+        return ['resumen', 'socios', 'calendario', 'actas', 'comisiones', 'minutas', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico'];
       case UserRole.ASESOR_SERVICIOS:
         return ['socios', 'calendario', 'beneficios', 'minutas'];
       case UserRole.PRESIDENTE_AFILIACION:
-        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'agenda_contactos', 'presidencia'];
+        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico'];
       default:
         return [];
     }
@@ -152,7 +165,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   useEffect(() => {
     const groups = [
       { category: 'Principal', items: ['resumen'] },
-      { category: 'Presidencia', items: ['presidencia'] },
+      { category: 'Presidencia', items: ['presidencia', 'agendas_reunion', 'ranking_lionistico'] },
       { category: 'Secretaría', items: ['actas', 'beneficios', 'calendario', 'comisiones'] },
       { category: 'Tesorería', items: ['cuotas', 'parqueo', 'donaciones', 'presupuestos'] },
       { category: 'Comité de Afiliación', items: ['socios', 'afiliacion'] },
@@ -204,6 +217,11 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     actividades: dbActividades,
     voluntarios: dbVoluntarios,
     actas: dbActas,
+    agendas: dbAgendas,
+    comisiones: dbComisiones,
+    tareasComisiones: dbTareasComisiones,
+    minutas: dbMinutas,
+    asistencias: dbAsistencias,
     loading: dbLoading
   } = useClubData();
 
@@ -213,6 +231,11 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const [actividades, setActividades] = useState<Actividad[]>(dbActividades);
   const [actas, setActas] = useState<Acta[]>(dbActas);
   const [voluntarios, setVoluntarios] = useState<SolicitudVoluntario[]>(dbVoluntarios);
+  const [agendas, setAgendas] = useState<ReunionAgenda[]>(dbAgendas || []);
+  const [comisiones, setComisiones] = useState<Comision[]>(dbComisiones || []);
+  const [tareasComisiones, setTareasComisiones] = useState<TareaComision[]>(dbTareasComisiones || []);
+  const [minutas, setMinutas] = useState<MinutaComision[]>(dbMinutas || []);
+  const [asistencias, setAsistencias] = useState<Asistencia[]>(dbAsistencias || []);
 
   useEffect(() => { setSocios(dbSocios); }, [dbSocios]);
   useEffect(() => { setPropuestas(dbPropuestas); }, [dbPropuestas]);
@@ -220,6 +243,11 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   useEffect(() => { setActividades(dbActividades); }, [dbActividades]);
   useEffect(() => { setActas(dbActas); }, [dbActas]);
   useEffect(() => { setVoluntarios(dbVoluntarios); }, [dbVoluntarios]);
+  useEffect(() => { setAgendas(dbAgendas || []); }, [dbAgendas]);
+  useEffect(() => { setComisiones(dbComisiones || []); }, [dbComisiones]);
+  useEffect(() => { setTareasComisiones(dbTareasComisiones || []); }, [dbTareasComisiones]);
+  useEffect(() => { setMinutas(dbMinutas || []); }, [dbMinutas]);
+  useEffect(() => { setAsistencias(dbAsistencias || []); }, [dbAsistencias]);
 
   // Sync global loading status
   useEffect(() => {
@@ -243,6 +271,74 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const [controlSolicitudesFilterType, setControlSolicitudesFilterType] = useState<'todos' | 'abiertas' | 'internas' | 'sillas' | 'salon'>('todos');
   const [controlSolicitudesFilterStatus, setControlSolicitudesFilterStatus] = useState<'todos' | 'Pendiente' | 'Aprobada' | 'Rechazada'>('todos');
   const [controlSolicitudesSearchQuery, setControlSolicitudesSearchQuery] = useState('');
+
+  // States para "Agenda Presidencia"
+  const [presidenciaSubTab, setPresidenciaSubTab] = useState<'solicitudes' | 'agendas'>('solicitudes');
+  const [rankingSubTab, setRankingSubTab] = useState<'socios' | 'comisiones' | 'asistencia'>('socios');
+  const [asistenciaEventTipo, setAsistenciaEventTipo] = useState<'reunion' | 'actividad'>('reunion');
+  const [asistenciaEventId, setAsistenciaEventId] = useState<string>('');
+  const [asistenciaChecked, setAsistenciaChecked] = useState<{[key: string]: boolean}>({});
+  const [asistenciaVoluntarioChecked, setAsistenciaVoluntarioChecked] = useState<{[key: string]: boolean}>({});
+  const [isSavingAsistencia, setIsSavingAsistencia] = useState<boolean>(false);
+  const [asistenciaSearchQuery, setAsistenciaSearchQuery] = useState<string>('');
+  const [rankingSearchQuery, setRankingSearchQuery] = useState<string>('');
+  
+  // Load existing attendance checkmarks when selected event is changed
+  useEffect(() => {
+    if (!asistenciaEventId) {
+      setAsistenciaChecked({});
+      setAsistenciaVoluntarioChecked({});
+      return;
+    }
+    const eventAtt = asistencias.filter(a => a.eventoId === asistenciaEventId);
+    if (eventAtt.length > 0) {
+      const checkedMap: {[key: string]: boolean} = {};
+      const volCheckedMap: {[key: string]: boolean} = {};
+      eventAtt.forEach(a => {
+        if (a.tipo === 'actividad') {
+          checkedMap[a.socioId] = a.asistio;
+        } else if (a.tipo === 'voluntariado') {
+          volCheckedMap[a.socioId] = a.asistio;
+        } else if (a.tipo === 'reunion') {
+          checkedMap[a.socioId] = a.asistio;
+        }
+      });
+      setAsistenciaChecked(checkedMap);
+      setAsistenciaVoluntarioChecked(volCheckedMap);
+    } else {
+      setAsistenciaChecked({});
+      setAsistenciaVoluntarioChecked({});
+    }
+  }, [asistenciaEventId, asistencias]);
+
+  const [showAgendaForm, setShowAgendaForm] = useState(false);
+  const [editingAgenda, setEditingAgenda] = useState<ReunionAgenda | null>(null);
+  const [agendaForm, setAgendaForm] = useState<{
+    id?: string;
+    titulo: string;
+    fecha: string;
+    hora: string;
+    lugar: string;
+    puntos: AgendaPunto[];
+    categoria: 'protocolaria' | 'ordinaria' | 'extraordinaria' | 'comisiones';
+    presidencia: string;
+  }>({
+    titulo: '',
+    fecha: '',
+    hora: '',
+    lugar: '',
+    puntos: [],
+    categoria: 'ordinaria',
+    presidencia: ''
+  });
+  const [isSavingAgenda, setIsSavingAgenda] = useState(false);
+  const [agendaFormError, setAgendaFormError] = useState('');
+  const [importFilterType, setImportFilterType] = useState<string>('');
+  const [importSelectedRequestId, setImportSelectedRequestId] = useState<string>('');
+  const [selectedComisionForPunto, setSelectedComisionForPunto] = useState<{[key: string]: string}>({});
+  const [urgenciaForPunto, setUrgenciaForPunto] = useState<{[key: string]: 'Alta' | 'Media' | 'Baja'}>({});
+  const [fechaLimiteForPunto, setFechaLimiteForPunto] = useState<{[key: string]: string}>({});
+  const [showComisionConfigForPunto, setShowComisionConfigForPunto] = useState<{[key: string]: boolean}>({});
 
   // Actividades Search & Sort
   const [actividadSearch, setActividadSearch] = useState('');
@@ -425,6 +521,33 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const [asistenciaSearch, setAsistenciaSearch] = useState('');
   const [selectedAgendaPointTab, setSelectedAgendaPointTab] = useState<'new' | number>('new');
   const [actaPreviewMode, setActaPreviewMode] = useState<'documento' | 'texto'>('documento');
+
+  const handleImportAgendaToActa = (agendaId: string) => {
+    const selected = (agendas || []).find(a => a.id === agendaId);
+    if (!selected) return;
+    
+    const newPuntos = selected.puntos
+      .filter(p => p.agregadoAActas !== false)
+      .map(p => ({
+        tema: p.titulo,
+        debate: p.descripcion || '',
+        acuerdo: '',
+        agendaContenido: p.descripcion || ''
+      }));
+    
+    setActaWizardData(prev => ({
+      ...prev,
+      titulo: selected.titulo,
+      lugar: selected.lugar,
+      puntosAgenda: newPuntos
+    }));
+    
+    if (newPuntos.length > 0) {
+      setSelectedAgendaPointTab(0);
+    }
+    
+    showAlert('Agenda Importada', `Se cargaron ${newPuntos.length} puntos de agenda de "${selected.titulo}" al creador de actas.`);
+  };
 
   const [showAddActividad, setShowAddActividad] = useState(false);
   const [showEditActividad, setShowEditActividad] = useState(false);
@@ -1318,6 +1441,1699 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     }
   };
 
+  // ================= AGENDAS DE REUNIÓN =================
+
+  const handleCreateAgenda = () => {
+    const defaultPresident = (socios || []).find(s => 
+      s.puesto?.toLowerCase().includes('presidente del club') || 
+      s.puesto?.toLowerCase() === 'presidente' || 
+      s.puesto?.toLowerCase().includes('presidente')
+    )?.nombre || 'Edwin Ernesto Pacheco López';
+
+    setEditingAgenda(null);
+    setAgendaForm({
+      titulo: '',
+      fecha: new Date().toISOString().split('T')[0],
+      hora: '08:00',
+      lugar: 'Sede del Club',
+      puntos: [],
+      categoria: 'ordinaria',
+      presidencia: defaultPresident
+    });
+    setAgendaFormError('');
+    setSelectedComisionForPunto({});
+    setUrgenciaForPunto({});
+    setFechaLimiteForPunto({});
+    setShowComisionConfigForPunto({});
+    setShowAgendaForm(true);
+  };
+
+  const handleEditAgenda = (agenda: ReunionAgenda) => {
+    const defaultPresident = (socios || []).find(s => 
+      s.puesto?.toLowerCase().includes('presidente del club') || 
+      s.puesto?.toLowerCase() === 'presidente' || 
+      s.puesto?.toLowerCase().includes('presidente')
+    )?.nombre || 'Edwin Ernesto Pacheco López';
+
+    setEditingAgenda(agenda);
+    setAgendaForm({
+      id: agenda.id,
+      titulo: agenda.titulo,
+      fecha: agenda.fecha,
+      hora: agenda.hora,
+      lugar: agenda.lugar,
+      puntos: [...agenda.puntos],
+      categoria: agenda.categoria || 'ordinaria',
+      presidencia: agenda.presidencia || defaultPresident
+    });
+    setAgendaFormError('');
+    
+    // Initialize points config states
+    const selCom: {[key: string]: string} = {};
+    const urg: {[key: string]: 'Alta' | 'Media' | 'Baja'} = {};
+    const flim: {[key: string]: string} = {};
+    const showCfg: {[key: string]: boolean} = {};
+    
+    agenda.puntos.forEach(p => {
+      if (p.asignadoAComisionId) {
+        selCom[p.id] = p.asignadoAComisionId;
+        urg[p.id] = p.urgencia || 'Media';
+        flim[p.id] = p.fechaLimite || '';
+        showCfg[p.id] = true;
+      }
+    });
+    
+    setSelectedComisionForPunto(selCom);
+    setUrgenciaForPunto(urg);
+    setFechaLimiteForPunto(flim);
+    setShowComisionConfigForPunto(showCfg);
+    
+    setShowAgendaForm(true);
+  };
+
+  const handleDeleteAgenda = async (id: string) => {
+    const confirmed = await showConfirm(
+      'Confirmar Eliminación',
+      '¿Estás seguro de eliminar esta agenda? Se eliminarán también las tareas de comisiones pendientes asociadas a ella.',
+      { type: 'danger', confirmText: 'Eliminar', cancelText: 'Cancelar' }
+    );
+    if (confirmed) {
+      try {
+        await firebaseService.deleteAgenda(id);
+        
+        // Also delete tasks of comisions associated with this agenda
+        const tasks = (tareasComisiones || []).filter(t => t.agendaId === id);
+        for (const t of tasks) {
+          await firebaseService.deleteTareaComision(t.id);
+        }
+        showAlert('Agenda Eliminada', 'La agenda se eliminó correctamente.');
+      } catch (err: any) {
+        console.error(err);
+        showAlert('Error', 'No se pudo eliminar la agenda.');
+      }
+    }
+  };
+
+  const handleSaveAgendaSubmit = async (estado: 'Borrador' | 'Finalizada') => {
+    if (!agendaForm.titulo.trim()) {
+      setAgendaFormError('Por favor, ingresa un título para la reunión.');
+      return;
+    }
+    if (!agendaForm.fecha) {
+      setAgendaFormError('Por favor, ingresa una fecha.');
+      return;
+    }
+    if (!agendaForm.hora) {
+      setAgendaFormError('Por favor, ingresa una hora.');
+      return;
+    }
+    if (!agendaForm.lugar.trim()) {
+      setAgendaFormError('Por favor, ingresa un lugar de reunión.');
+      return;
+    }
+    if (agendaForm.puntos.length === 0) {
+      setAgendaFormError('Por favor, agrega al menos un punto de agenda.');
+      return;
+    }
+    if (agendaForm.puntos.some(p => !p.titulo.trim())) {
+      setAgendaFormError('Todos los puntos de la agenda deben tener un título.');
+      return;
+    }
+    
+    setIsSavingAgenda(true);
+    setAgendaFormError('');
+    
+    try {
+      const agendaId = agendaForm.id || `agenda-${Date.now()}`;
+      
+      // Update points with comision data if set
+      const processedPuntos = agendaForm.puntos.map(p => {
+        const comId = selectedComisionForPunto[p.id];
+        const isAssigned = showComisionConfigForPunto[p.id] && comId;
+        const comision = isAssigned ? comisiones.find(c => c.id === comId) : undefined;
+        return {
+          ...p,
+          asignadoAComisionId: isAssigned ? comId : undefined,
+          comisionNombre: comision ? comision.nombre : undefined,
+          urgencia: isAssigned ? (urgenciaForPunto[p.id] || 'Media') : undefined,
+          fechaLimite: isAssigned ? (fechaLimiteForPunto[p.id] || undefined) : undefined,
+          agregadoAActas: p.agregadoAActas !== false // default is true
+        };
+      });
+      
+      const dateStr = agendaForm.fecha ? agendaForm.fecha.replace(/[^0-9]/g, '') : '';
+      let agendaCode = editingAgenda?.codigo;
+      
+      if (!agendaCode || !agendaCode.startsWith(`AG-${dateStr}-`)) {
+        const otherAgendas = (agendas || []).filter(a => a.id !== agendaId);
+        const correlative = otherAgendas.length + 1;
+        const padCorrelative = String(correlative).padStart(3, '0');
+        agendaCode = `AG-${dateStr}-${padCorrelative}`;
+      }
+      
+      const agendaObj: ReunionAgenda = {
+        id: agendaId,
+        titulo: agendaForm.titulo.trim(),
+        fecha: agendaForm.fecha,
+        hora: agendaForm.hora,
+        lugar: agendaForm.lugar.trim(),
+        puntos: processedPuntos,
+        estado: estado,
+        fechaCreacion: editingAgenda ? editingAgenda.fechaCreacion : new Date().toISOString().split('T')[0],
+        autor: user.nombre || 'Administrador',
+        categoria: agendaForm.categoria || 'ordinaria',
+        codigo: agendaCode,
+        presidencia: agendaForm.presidencia.trim() || 'Edwin Ernesto Pacheco López'
+      };
+      
+      await firebaseService.saveAgenda(agendaObj);
+      
+      // If Finalizada, create/sync commission tasks
+      if (estado === 'Finalizada') {
+        // Clean up old pending tasks first
+        const oldTasks = (tareasComisiones || []).filter(t => t.agendaId === agendaId && t.estado === 'Pendiente');
+        for (const ot of oldTasks) {
+          await firebaseService.deleteTareaComision(ot.id);
+        }
+        
+        // Write new tasks for points that are assigned to a commission
+        for (const pt of processedPuntos) {
+          if (pt.asignadoAComisionId) {
+            const task: TareaComision = {
+              id: `task-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              comisionId: pt.asignadoAComisionId,
+              agendaId: agendaId,
+              agendaPuntoId: pt.id,
+              punto: pt.titulo,
+              descripcion: pt.descripcion || '',
+              fechaAsignacion: new Date().toISOString().split('T')[0],
+              fechaLimite: pt.fechaLimite,
+              urgencia: pt.urgencia || 'Media',
+              estado: 'Pendiente'
+            };
+            await firebaseService.saveTareaComision(task);
+          }
+        }
+      }
+      
+      setShowAgendaForm(false);
+      showAlert('Éxito', `La agenda se guardó como ${estado} correctamente.`);
+    } catch (err: any) {
+      console.error(err);
+      setAgendaFormError(err.message || 'Error al guardar la agenda.');
+    } finally {
+      setIsSavingAgenda(false);
+    }
+  };
+
+  const handleImportSolicitud = (sol: Solicitud) => {
+    // Check if already imported
+    if (agendaForm.puntos.some(p => p.origenId === sol.id)) {
+      // Remove it
+      setAgendaForm(prev => ({
+        ...prev,
+        puntos: prev.puntos.filter(p => p.origenId !== sol.id)
+      }));
+      return;
+    }
+    
+    let tituloPunto = sol.nombre;
+    if (sol.tipo === 'sillas' && sol.nombreBeneficiario) {
+      tituloPunto = `Donación de Silla: ${sol.nombreBeneficiario}`;
+    } else if (sol.tipo === 'salon' && sol.salonNombreSolicitante) {
+      tituloPunto = `Préstamo de Salón: ${sol.salonNombreSolicitante}`;
+    } else if (sol.tipo === 'agenda' && sol.agendaNombrePunto) {
+      tituloPunto = sol.agendaNombrePunto;
+    }
+    
+    let descPunto = sol.descripcion || '';
+    if (sol.tipo === 'agenda' && sol.agendaContenido) {
+      descPunto = sol.agendaContenido;
+    }
+    
+    const nuevoPunto: AgendaPunto = {
+      id: `p-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      titulo: tituloPunto,
+      descripcion: descPunto,
+      origenTipo: 'solicitud',
+      origenId: sol.id,
+      agregadoAActas: true
+    };
+    
+    setAgendaForm(prev => ({
+      ...prev,
+      puntos: [...prev.puntos, nuevoPunto]
+    }));
+  };
+
+  const handleUpdatePuntoField = (id: string, field: keyof AgendaPunto, value: any) => {
+    setAgendaForm(prev => ({
+      ...prev,
+      puntos: prev.puntos.map(p => p.id === id ? { ...p, [field]: value } : p)
+    }));
+  };
+
+  const handleRemovePuntoField = (id: string) => {
+    setAgendaForm(prev => ({
+      ...prev,
+      puntos: prev.puntos.filter(p => p.id !== id)
+    }));
+  };
+
+  const handleMovePunto = (index: number, direction: 'up' | 'down') => {
+    const list = [...agendaForm.puntos];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= list.length) return;
+    
+    // Swap
+    const temp = list[index];
+    list[index] = list[targetIndex];
+    list[targetIndex] = temp;
+    
+    setAgendaForm(prev => ({
+      ...prev,
+      puntos: list
+    }));
+  };
+
+  const handleAddManualPunto = () => {
+    const nuevoPunto: AgendaPunto = {
+      id: `p-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      titulo: '',
+      descripcion: '',
+      origenTipo: 'manual',
+      agregadoAActas: true
+    };
+    setAgendaForm(prev => ({
+      ...prev,
+      puntos: [...prev.puntos, nuevoPunto]
+    }));
+  };
+
+  // Filter requests that can be imported to the agenda
+  const availableRequestsToImport = useMemo(() => {
+    return solicitudes.filter(sol => {
+      // Exclude rejected requests
+      if (sol.estado === 'Rechazado' || sol.estado === 'Rechazada') return false;
+      
+      // Exclude already imported requests
+      const isAlreadyImported = agendaForm.puntos.some(p => p.origenId === sol.id);
+      if (isAlreadyImported) return false;
+      
+      // Filter by selected category (if any)
+      if (importFilterType && sol.tipo !== importFilterType) return false;
+      
+      return true;
+    });
+  }, [solicitudes, agendaForm.puntos, importFilterType]);
+
+  const handleImportSelectedRequest = () => {
+    if (!importSelectedRequestId) return;
+    const req = solicitudes.find(r => r.id === importSelectedRequestId);
+    if (req) {
+      handleImportSolicitud(req);
+      setImportSelectedRequestId(''); // Reset selection after importing
+    }
+  };
+
+  const renderPresidenciaModulo = () => {
+    return (
+      <div className="space-y-6 w-full text-left">
+        {/* Sub-Tabs Navigation */}
+        <div className="flex border-b border-slate-200">
+          <button
+            type="button"
+            onClick={() => setPresidenciaSubTab('solicitudes')}
+            className={`py-3 px-6 text-sm font-black transition-all border-b-2 cursor-pointer ${
+              presidenciaSubTab === 'solicitudes'
+                ? 'border-blue-900 text-blue-900 font-extrabold'
+                : 'border-transparent text-slate-500 hover:text-blue-900'
+            }`}
+          >
+            Gestión de Solicitudes
+          </button>
+          <button
+            type="button"
+            onClick={() => setPresidenciaSubTab('agendas')}
+            className={`py-3 px-6 text-sm font-black transition-all border-b-2 cursor-pointer flex items-center space-x-2 ${
+              presidenciaSubTab === 'agendas'
+                ? 'border-blue-900 text-blue-900 font-extrabold'
+                : 'border-transparent text-slate-500 hover:text-blue-900'
+            }`}
+          >
+            <span>Agendas de Reunión</span>
+            <span className="bg-blue-100 text-blue-800 text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider">
+              Nuevo
+            </span>
+          </button>
+        </div>
+
+        {presidenciaSubTab === 'solicitudes' ? (
+          renderControlSolicitudesList()
+        ) : (
+          renderAgendasModulo()
+        )}
+      </div>
+    );
+  };
+
+  const renderAgendasModulo = () => {
+    if (showAgendaForm) {
+      return (
+        <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-sm space-y-6 animate-in fade-in duration-300">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div>
+              <h3 className="text-xl font-black text-blue-900">
+                {agendaForm.id ? 'Editar Agenda de Reunión' : 'Crear Agenda de Reunión'}
+              </h3>
+              <p className="text-xs text-slate-550 mt-1">
+                Define los detalles de la sesión, añade puntos de debate y asigna comisiones de trabajo.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAgendaForm(false)}
+              className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-black text-slate-550 hover:bg-slate-50 transition-all cursor-pointer flex items-center space-x-1.5 self-start"
+            >
+              <X size={14} />
+              <span>Cancelar</span>
+            </button>
+          </div>
+
+          {agendaFormError && (
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start space-x-3 text-red-700 text-sm animate-in fade-in">
+              <AlertCircle className="flex-shrink-0 mt-0.5 animate-bounce" size={18} />
+              <span className="font-semibold">{agendaFormError}</span>
+            </div>
+          )}
+
+          <div className="space-y-6">
+            {/* Información General */}
+            <div className="bg-slate-50 border border-slate-200/60 p-5 rounded-2xl space-y-4">
+              <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-2">Información General de la Sesión</h4>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest ml-1 mb-1 block">Título de la Reunión</label>
+                  <input
+                    type="text"
+                    required
+                    value={agendaForm.titulo}
+                    onChange={(e) => setAgendaForm({ ...agendaForm, titulo: e.target.value })}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent"
+                    placeholder="Ej. Sesión Ordinaria de Junta Directiva #15"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest ml-1 mb-1 block">Bajo la Presidencia de</label>
+                  <input
+                    type="text"
+                    required
+                    value={agendaForm.presidencia}
+                    onChange={(e) => setAgendaForm({ ...agendaForm, presidencia: e.target.value })}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent"
+                    placeholder="Ej. Edwin Ernesto Pacheco López"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div>
+                  <label className="text-[10px] font-black text-slate-455 uppercase tracking-widest ml-1 mb-1 block">Fecha</label>
+                  <input
+                    type="date"
+                    required
+                    value={agendaForm.fecha}
+                    onChange={(e) => setAgendaForm({ ...agendaForm, fecha: e.target.value })}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-455 uppercase tracking-widest ml-1 mb-1 block">Hora</label>
+                  <input
+                    type="time"
+                    required
+                    value={agendaForm.hora}
+                    onChange={(e) => setAgendaForm({ ...agendaForm, hora: e.target.value })}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-455 uppercase tracking-widest ml-1 mb-1 block">Lugar</label>
+                  <input
+                    type="text"
+                    required
+                    value={agendaForm.lugar}
+                    onChange={(e) => setAgendaForm({ ...agendaForm, lugar: e.target.value })}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent"
+                    placeholder="Ej. Sede del Club"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-455 uppercase tracking-widest ml-1 mb-1 block">Tipo de Agenda</label>
+                  <select
+                    value={agendaForm.categoria || 'ordinaria'}
+                    onChange={(e) => setAgendaForm({ ...agendaForm, categoria: e.target.value as any })}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent cursor-pointer"
+                  >
+                    <option value="ordinaria">📝 Ordinaria</option>
+                    <option value="extraordinaria">⚡ Extraordinaria</option>
+                    <option value="protocolaria">🍷 Protocolaria (Social)</option>
+                    <option value="comisiones">👥 Para Comisiones</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Sección de Importación Horizontal */}
+            <div className="bg-blue-50/30 border border-blue-200/50 p-5 rounded-2xl space-y-4">
+              <div>
+                <h4 className="font-extrabold text-blue-900 text-sm flex items-center space-x-1.5">
+                  <Layers size={14} className="text-blue-900" />
+                  <span>Importar desde Solicitudes / Puntos de Socios</span>
+                </h4>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Agrega temas de solicitudes aprobadas o propuestas de socios directamente a la agenda.
+                </p>
+              </div>
+
+              <div className="flex flex-col md:flex-row items-stretch md:items-end gap-3.5">
+                <div className="flex-1">
+                  <label className="text-[9px] font-black text-slate-450 uppercase tracking-widest ml-1 mb-1 block">Filtrar por Categoría</label>
+                  <select
+                    value={importFilterType}
+                    onChange={(e) => {
+                      setImportFilterType(e.target.value);
+                      setImportSelectedRequestId(''); // Reset on change
+                    }}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-blue-900 outline-none cursor-pointer"
+                  >
+                    <option value="">-- Todas las Categorías --</option>
+                    <option value="sillas">♿ Sillas de Ruedas</option>
+                    <option value="abiertas">🔓 Solicitudes Abiertas</option>
+                    <option value="internas">🔒 Solicitudes Internas</option>
+                    <option value="salon">🏛️ Salón y Parqueo</option>
+                    <option value="agenda">💬 Puntos de Agenda (Socios)</option>
+                  </select>
+                </div>
+
+                <div className="flex-[2]">
+                  <label className="text-[9px] font-black text-slate-455 uppercase tracking-widest ml-1 mb-1 block">Seleccione Solicitud / Propuesta</label>
+                  <select
+                    value={importSelectedRequestId}
+                    onChange={(e) => setImportSelectedRequestId(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-blue-900 outline-none cursor-pointer"
+                  >
+                    <option value="">
+                      {availableRequestsToImport.length === 0
+                        ? "No hay solicitudes disponibles para importar"
+                        : "-- Seleccione una opción para importar --"}
+                    </option>
+                    {availableRequestsToImport.map(r => {
+                      let label = r.nombre;
+                      if (r.tipo === 'sillas' && r.nombreBeneficiario) {
+                        label = `♿ Silla - Beneficiario: ${r.nombreBeneficiario}`;
+                      } else if (r.tipo === 'salon' && r.salonNombreSolicitante) {
+                        label = `🏛️ Salón/Parqueo - Solicitante: ${r.salonNombreSolicitante} (${r.salonDia})`;
+                      } else if (r.tipo === 'agenda' && r.agendaNombrePunto) {
+                        label = `💬 Agenda Socio: ${r.agendaNombrePunto} (${r.agendaSocioNombre || 'Socio'})`;
+                      } else {
+                        const typeLabels = { abiertas: '🔓 Abierta', internas: '🔒 Interna' };
+                        label = `${typeLabels[r.tipo] || r.tipo} - ${r.nombre}`;
+                      }
+                      if (label.length > 80) label = label.slice(0, 80) + '...';
+                      return (
+                        <option key={r.id} value={r.id}>{label}</option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleImportSelectedRequest}
+                  disabled={!importSelectedRequestId}
+                  className="px-5 py-2 bg-blue-900 hover:bg-blue-850 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-black rounded-xl transition-all flex items-center justify-center space-x-1.5 cursor-pointer h-[36px] md:self-end"
+                >
+                  <Plus size={14} />
+                  <span>Importar Punto</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Listado de Puntos */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <h4 className="font-extrabold text-blue-900 text-sm flex items-center space-x-2">
+                  <span className="bg-blue-100 text-blue-800 text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">1</span>
+                  <span>Puntos del Orden del Día ({agendaForm.puntos.length})</span>
+                </h4>
+                <button
+                  type="button"
+                  onClick={handleAddManualPunto}
+                  className="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-900 text-[11px] font-black rounded-lg transition-all flex items-center space-x-1 cursor-pointer"
+                >
+                  <Plus size={12} />
+                  <span>Añadir Punto Manual</span>
+                </button>
+              </div>
+
+              {agendaForm.puntos.length === 0 ? (
+                <div className="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center space-y-2 animate-in fade-in">
+                  <p className="text-xs text-slate-400 font-bold">La agenda no tiene puntos definidos aún.</p>
+                  <p className="text-[11px] text-slate-400">
+                    Usa el botón para añadir un punto manual o selecciona una solicitud arriba para importarla.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-1">
+                  {agendaForm.puntos.map((p, index) => {
+                    return (
+                      <div
+                        key={p.id}
+                        className="bg-slate-50 border border-slate-200/80 p-5 rounded-2xl relative space-y-4 shadow-sm animate-in slide-in-from-bottom-2 duration-300"
+                      >
+                        <div className="flex justify-between items-center border-b border-slate-200/50 pb-2">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-[10px] font-black bg-blue-900 text-white w-5 h-5 rounded-full flex items-center justify-center">
+                              {index + 1}
+                            </span>
+                            {p.origenTipo === 'solicitud' && (
+                              <span className="text-[9px] font-black bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                Vinculado a Solicitud
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <button
+                              type="button"
+                              disabled={index === 0}
+                              onClick={() => handleMovePunto(index, 'up')}
+                              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded disabled:opacity-30 cursor-pointer"
+                              title="Subir"
+                            >
+                              <ArrowUp size={12} />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={index === agendaForm.puntos.length - 1}
+                              onClick={() => handleMovePunto(index, 'down')}
+                              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded disabled:opacity-30 cursor-pointer"
+                              title="Bajar"
+                            >
+                              <ArrowDown size={12} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRemovePuntoField(p.id)}
+                              className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded cursor-pointer"
+                              title="Eliminar"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Título del Punto</label>
+                            <input
+                              type="text"
+                              required
+                              value={p.titulo}
+                              onChange={(e) => handleUpdatePuntoField(p.id, 'titulo', e.target.value)}
+                              className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-700 focus:ring-2 focus:ring-blue-900 outline-none"
+                              placeholder="Ej. Presentación del informe financiero mensual"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Descripción / Antecedentes</label>
+                            <textarea
+                              rows={2}
+                              value={p.descripcion}
+                              onChange={(e) => handleUpdatePuntoField(p.id, 'descripcion', e.target.value)}
+                              className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-blue-900 outline-none resize-none"
+                              placeholder="Breve contexto para informar a los miembros o secretarios en su posterior redacción..."
+                            />
+                          </div>
+
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                id={`toggle-comision-${p.id}`}
+                                checked={!!showComisionConfigForPunto[p.id]}
+                                onChange={(e) => {
+                                  const checked = e.target.checked;
+                                  setShowComisionConfigForPunto(prev => ({ ...prev, [p.id]: checked }));
+                                  if (checked) {
+                                    const firstCom = comisiones.filter(c => c.estado === 'Activa')[0]?.id || '';
+                                    setSelectedComisionForPunto(prev => ({ ...prev, [p.id]: firstCom }));
+                                    setUrgenciaForPunto(prev => ({ ...prev, [p.id]: 'Media' }));
+                                    setFechaLimiteForPunto(prev => ({ ...prev, [p.id]: new Date(Date.now() + 7 * 24 * 365 * 240).toISOString().split('T')[0] }));
+                                  } else {
+                                    setSelectedComisionForPunto(prev => { const c = { ...prev }; delete c[p.id]; return c; });
+                                    setUrgenciaForPunto(prev => { const c = { ...prev }; delete c[p.id]; return c; });
+                                    setFechaLimiteForPunto(prev => { const c = { ...prev }; delete c[p.id]; return c; });
+                                  }
+                                }}
+                                className="rounded text-blue-900 focus:ring-blue-900 w-4 h-4 cursor-pointer"
+                              />
+                              <label htmlFor={`toggle-comision-${p.id}`} className="text-xs font-bold text-slate-700 cursor-pointer">
+                                Asignar a una Comisión de Trabajo
+                              </label>
+                            </div>
+
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                id={`toggle-actas-${p.id}`}
+                                checked={p.agregadoAActas !== false}
+                                onChange={(e) => handleUpdatePuntoField(p.id, 'agregadoAActas', e.target.checked)}
+                                className="rounded text-blue-900 focus:ring-blue-900 w-4 h-4 cursor-pointer"
+                              />
+                              <label htmlFor={`toggle-actas-${p.id}`} className="text-xs font-bold text-slate-700 cursor-pointer">
+                                Pre-cargar en Libro de Actas
+                              </label>
+                            </div>
+                          </div>
+
+                          {showComisionConfigForPunto[p.id] && (
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-250/50 mt-2 pl-6 animate-in slide-in-from-top-1 duration-200">
+                              <div>
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Comisión</label>
+                                <select
+                                  value={selectedComisionForPunto[p.id] || ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setSelectedComisionForPunto(prev => ({ ...prev, [p.id]: val }));
+                                  }}
+                                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-blue-900 outline-none"
+                                >
+                                  <option value="">-- Seleccionar --</option>
+                                  {comisiones.filter(c => c.estado === 'Activa').map(c => (
+                                    <option key={c.id} value={c.id}>{c.nombre}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Urgencia</label>
+                                <select
+                                  value={urgenciaForPunto[p.id] || 'Media'}
+                                  onChange={(e) => {
+                                    const val = e.target.value as 'Alta' | 'Media' | 'Baja';
+                                    setUrgenciaForPunto(prev => ({ ...prev, [p.id]: val }));
+                                  }}
+                                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-blue-900 outline-none"
+                                >
+                                  <option value="Alta">Alta 🚨</option>
+                                  <option value="Media">Media ⚠️</option>
+                                  <option value="Baja">Baja 📋</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Fecha Límite</label>
+                                <input
+                                  type="date"
+                                  value={fechaLimiteForPunto[p.id] || ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setFechaLimiteForPunto(prev => ({ ...prev, [p.id]: val }));
+                                  }}
+                                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-blue-900 outline-none"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Botones de Envío */}
+            <div className="flex items-center justify-end space-x-3 pt-6 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={isSavingAgenda}
+                onClick={() => handleSaveAgendaSubmit('Borrador')}
+                className="px-5 py-3 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-black transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
+              >
+                {isSavingAgenda ? <Loader2 className="animate-spin" size={14} /> : null}
+                <span>Guardar Borrador</span>
+              </button>
+              <button
+                type="button"
+                disabled={isSavingAgenda}
+                onClick={() => handleSaveAgendaSubmit('Finalizada')}
+                className="px-6 py-3 bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/10 hover:shadow-lg transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
+              >
+                {isSavingAgenda ? <Loader2 className="animate-spin" size={14} /> : null}
+                <span>Publicar y Finalizar Agenda</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // List View of Agendas
+    const sortedAgendas = [...(agendas || [])].sort((a, b) => b.fecha.localeCompare(a.fecha));
+
+    const categoryConfig: {
+      [key: string]: {
+        label: string;
+        badgeClass: string;
+        borderClass: string;
+      }
+    } = {
+      ordinaria: {
+        label: '📝 Ordinaria',
+        badgeClass: 'bg-blue-50 text-blue-800 border-blue-200',
+        borderClass: 'border-t-4 border-t-blue-500 border-slate-200/80'
+      },
+      extraordinaria: {
+        label: '⚡ Extraordinaria',
+        badgeClass: 'bg-amber-50 text-amber-800 border-amber-200',
+        borderClass: 'border-t-4 border-t-amber-500 border-slate-200/80'
+      },
+      protocolaria: {
+        label: '🍷 Protocolaria',
+        badgeClass: 'bg-purple-50 text-purple-800 border-purple-200',
+        borderClass: 'border-t-4 border-t-purple-500 border-slate-200/80'
+      },
+      comisiones: {
+        label: '👥 De Comisión',
+        badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+        borderClass: 'border-t-4 border-t-emerald-500 border-slate-200/80'
+      }
+    };
+
+    return (
+      <div className="space-y-6 w-full text-left">
+        {/* Header section with Create Button */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm">
+          <div>
+            <h3 className="text-base font-black text-blue-900">Historial de Agendas de Reunión</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Consulte agendas registradas, descargue el documento oficial en PDF o elabore una nueva agenda desde cero.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleCreateAgenda}
+            className="px-5 py-3 bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/10 hover:shadow-lg transition-all flex items-center space-x-1.5 cursor-pointer self-start sm:self-center"
+          >
+            <Plus size={14} />
+            <span>Crear Agenda</span>
+          </button>
+        </div>
+
+        {sortedAgendas.length === 0 ? (
+          <div className="bg-white border border-slate-200/80 rounded-3xl p-12 text-center space-y-3 shadow-sm">
+            <div className="w-12 h-12 bg-blue-50 text-blue-900 rounded-2xl flex items-center justify-center mx-auto">
+              <FileText size={24} />
+            </div>
+            <h4 className="text-sm font-black text-slate-700">No hay agendas de reunión registradas</h4>
+            <p className="text-xs text-slate-450 max-w-sm mx-auto">
+              Comience por redactar la agenda para la próxima sesión del club. Podrá vincular propuestas de los socios e importarlas en un clic.
+            </p>
+            <button
+              type="button"
+              onClick={handleCreateAgenda}
+              className="px-4 py-2 border border-blue-900 text-blue-900 font-black text-xs rounded-xl hover:bg-blue-50 transition-all cursor-pointer inline-flex items-center space-x-1"
+            >
+              <Plus size={12} />
+              <span>Elaborar Primera Agenda</span>
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {sortedAgendas.map(agenda => {
+              const isFinal = agenda.estado === 'Finalizada';
+              const catCfg = categoryConfig[agenda.categoria || 'ordinaria'] || categoryConfig.ordinaria;
+              return (
+                <div
+                  key={agenda.id}
+                  className="bg-white border border-slate-200/80 hover:border-slate-300 hover:shadow-md transition-all rounded-[2rem] p-6 flex flex-col justify-between space-y-4 shadow-sm relative overflow-hidden text-left"
+                >
+                  {/* Decorative Subtle Accent Band Based on Category */}
+                  <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${
+                    agenda.categoria === 'protocolaria' 
+                      ? 'from-purple-500 to-indigo-500' 
+                      : agenda.categoria === 'extraordinaria' 
+                      ? 'from-amber-500 to-red-500' 
+                      : agenda.categoria === 'comisiones'
+                      ? 'from-teal-500 to-emerald-500'
+                      : 'from-blue-600 to-sky-600'
+                  }`} />
+
+                  <div className="space-y-4">
+                    {/* Top Row: Document Code and Category Badge */}
+                    <div className="flex items-center justify-between pt-1">
+                      <div className="flex items-center space-x-1.5 text-slate-700">
+                        <FileText size={13} className="text-slate-400" />
+                        <span className="text-[11px] font-black tracking-wider text-slate-800 uppercase">
+                          {agenda.codigo || 'AG-S/C'}
+                        </span>
+                      </div>
+                      <span className={`text-[9px] font-black border px-2.5 py-0.5 rounded-full uppercase tracking-wider ${catCfg.badgeClass}`}>
+                        {catCfg.label}
+                      </span>
+                    </div>
+
+                    {/* Title and Subtitle */}
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-black text-slate-800 tracking-tight leading-snug line-clamp-2" title={agenda.titulo}>
+                        {agenda.titulo}
+                      </h4>
+                      <div className="text-[10px] text-slate-400 font-bold flex flex-wrap gap-x-2 gap-y-0.5">
+                        <span>Por: <span className="text-slate-600 font-semibold">{agenda.autor}</span></span>
+                        <span>•</span>
+                        <span>Creada: <span className="text-slate-600 font-semibold">{agenda.fechaCreacion}</span></span>
+                      </div>
+                    </div>
+
+                    {/* Presidency Indicator */}
+                    {agenda.presidencia && (
+                      <div className="bg-slate-50/75 border border-slate-100 rounded-xl px-3 py-2 flex items-center space-x-2 text-[10px] text-slate-550">
+                        <span className="font-black text-slate-400 uppercase tracking-wider text-[8px] flex-shrink-0">Presidencia</span>
+                        <div className="h-3 w-px bg-slate-200" />
+                        <span className="font-bold text-slate-700 line-clamp-1">{agenda.presidencia}</span>
+                      </div>
+                    )}
+
+                    {/* Meeting Information */}
+                    <div className="border-t border-slate-100 pt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-[10.5px] font-bold text-slate-600">
+                      <div className="flex items-center space-x-1.5">
+                        <Calendar size={13} className="text-slate-400 flex-shrink-0" />
+                        <span className="line-clamp-1">{agenda.fecha}</span>
+                      </div>
+                      <div className="flex items-center space-x-1.5">
+                        <Clock size={13} className="text-slate-400 flex-shrink-0" />
+                        <span className="line-clamp-1">{agenda.hora}</span>
+                      </div>
+                      <div className="flex items-center space-x-1.5 col-span-2">
+                        <Building size={13} className="text-slate-400 flex-shrink-0" />
+                        <span className="line-clamp-1 text-slate-500 font-semibold">{agenda.lugar}</span>
+                      </div>
+                    </div>
+
+                    {/* Points Count */}
+                    <div className="flex items-center justify-between text-[11.5px] font-bold text-slate-500 pt-1">
+                      <span className="flex items-center space-x-1">
+                        <span>Puntos a Tratar:</span>
+                      </span>
+                      <span className="bg-blue-50 text-blue-900 px-2 py-0.5 rounded-full text-[10px] font-black border border-blue-100">
+                        {agenda.puntos.length} {agenda.puntos.length === 1 ? 'punto' : 'puntos'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Footer Actions */}
+                  <div className="pt-3.5 border-t border-slate-100 flex items-center justify-between gap-3">
+                    <div className="flex items-center space-x-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleEditAgenda(agenda)}
+                        className="p-2 text-slate-400 hover:text-blue-900 hover:bg-slate-50 border border-slate-200/60 rounded-xl transition-all cursor-pointer"
+                        title="Editar Agenda"
+                      >
+                        <Pencil size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteAgenda(agenda.id)}
+                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 border border-slate-200/60 hover:border-red-200 rounded-xl transition-all cursor-pointer"
+                        title="Eliminar Agenda"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center space-x-1.5">
+                      <button
+                        type="button"
+                        onClick={async () => await generateAgendaPDF(agenda, 'open')}
+                        className="px-3 py-1.5 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-[10px] font-black transition-all flex items-center space-x-1 hover:text-slate-800 cursor-pointer"
+                        title="Ver PDF"
+                      >
+                        <Printer size={11} />
+                        <span>Ver</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => await generateAgendaPDF(agenda, 'download')}
+                        className="px-3 py-1.5 bg-blue-900 text-white shadow-sm hover:bg-blue-950 rounded-xl text-[10px] font-black transition-all flex items-center space-x-1 cursor-pointer"
+                        title="Descargar PDF"
+                      >
+                        <Download size={11} />
+                        <span>Descargar</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ================= RANKING LIONÍSTICO LOGIC & VIEW =================
+
+  // 1. Memoized list of attendances. If empty, generate simulated data based on past agendas/activities
+  const asistenciasList = useMemo(() => {
+    if (asistencias.length > 0) return asistencias;
+
+    const simulated: Asistencia[] = [];
+    const pastAgendas = agendas.filter(a => a.estado === 'Finalizada');
+    const pastActividades = actividades;
+
+    socios.forEach((socio, sIdx) => {
+      const seed = socio.nombre.charCodeAt(0) + socio.nombre.charCodeAt(socio.nombre.length - 1);
+      
+      pastAgendas.forEach((agenda, aIdx) => {
+        const attended = (seed + aIdx) % 5 !== 0; // 80% attendance
+        simulated.push({
+          id: `mock-att-reunion-${socio.id}-${agenda.id}`,
+          socioId: socio.id,
+          socioNombre: socio.nombre,
+          tipo: 'reunion',
+          eventoId: agenda.id,
+          eventoTitulo: agenda.titulo,
+          fecha: agenda.fecha,
+          asistio: attended
+        });
+      });
+
+      pastActividades.forEach((act, actIdx) => {
+        const attended = (seed + actIdx) % 3 !== 0; // 66% attendance
+        simulated.push({
+          id: `mock-att-act-${socio.id}-${act.id}`,
+          socioId: socio.id,
+          socioNombre: socio.nombre,
+          tipo: 'actividad',
+          eventoId: act.id,
+          eventoTitulo: act.titulo,
+          fecha: act.fecha,
+          asistio: attended
+        });
+        
+        // Simulate active volunteering
+        if (attended && (seed + actIdx) % 2 === 0) {
+          simulated.push({
+            id: `mock-att-vol-${socio.id}-${act.id}`,
+            socioId: socio.id,
+            socioNombre: socio.nombre,
+            tipo: 'voluntariado',
+            eventoId: act.id,
+            eventoTitulo: act.titulo,
+            fecha: act.fecha,
+            asistio: true
+          });
+        }
+      });
+    });
+
+    return simulated;
+  }, [asistencias, agendas, actividades, socios]);
+
+  // 2. Compute individual Socio points and ranks
+  const sociosRankingData = useMemo(() => {
+    return socios.map(socio => {
+      const socioAsistencias = asistenciasList.filter(a => a.socioId === socio.id && a.asistio);
+      const reunionCount = socioAsistencias.filter(a => a.tipo === 'reunion').length;
+      const actividadCount = socioAsistencias.filter(a => a.tipo === 'actividad').length;
+      const voluntariadoCount = socioAsistencias.filter(a => a.tipo === 'voluntariado').length;
+
+      const ptsAsistencia = (reunionCount * 10) + (actividadCount * 15) + (voluntariadoCount * 20);
+
+      // Proposals & agenda points
+      const propuestasCount = propuestas.filter(p => 
+        p.proponente === socio.id || 
+        p.proponente.toLowerCase() === socio.nombre.toLowerCase()
+      ).length;
+      
+      const agendaPointsCount = solicitudes.filter(s => 
+        s.tipo === 'agenda' && 
+        (s.usuarioCreador === socio.correo || s.nombre === socio.nombre)
+      ).length;
+
+      const ptsPropuestas = (propuestasCount * 30) + (agendaPointsCount * 20);
+
+      // Commissions roles
+      const memberComisiones = comisiones.filter(c => c.miembros.includes(socio.id));
+      const comisionesCount = memberComisiones.length;
+      const coordinatorCount = memberComisiones.filter(c => c.coordinador === socio.id).length;
+      
+      const ptsLiderazgo = (comisionesCount * 20) + (coordinatorCount * 15);
+
+      // Cuotas compliance
+      let ptsCuotas = 0;
+      if (socio.estadoCuotas === 'Al día') ptsCuotas = 100;
+      else if (socio.estadoCuotas === 'Pendiente') ptsCuotas = 50;
+
+      const totalScore = ptsAsistencia + ptsPropuestas + ptsLiderazgo + ptsCuotas;
+
+      return {
+        socio,
+        metrics: {
+          reuniones: reunionCount,
+          actividades: actividadCount,
+          voluntariado: voluntariadoCount,
+          propuestas: propuestasCount,
+          puntosAgenda: agendaPointsCount,
+          comisiones: comisionesCount,
+          coordinator: coordinatorCount === 1,
+          cuotasStatus: socio.estadoCuotas
+        },
+        scores: {
+          asistencia: ptsAsistencia,
+          propuestas: ptsPropuestas,
+          liderazgo: ptsLiderazgo,
+          cuotas: ptsCuotas
+        },
+        totalScore
+      };
+    }).sort((a, b) => b.totalScore - a.totalScore);
+  }, [socios, asistenciasList, propuestas, solicitudes, comisiones]);
+
+  // 3. Compute Commission points and ranks
+  const comisionesRankingData = useMemo(() => {
+    return comisiones.map(comision => {
+      const meetingsCount = minutas.filter(m => m.comisionId === comision.id).length;
+      const resolvedTasksCount = tareasComisiones.filter(t => 
+        t.comisionId === comision.id && 
+        t.estado === 'Resuelta'
+      ).length;
+
+      const totalScore = (meetingsCount * 15) + (resolvedTasksCount * 25);
+      const coordinator = socios.find(s => s.id === comision.coordinador);
+
+      return {
+        comision,
+        coordinatorName: coordinator ? coordinator.nombre : 'No asignado',
+        meetingsCount,
+        resolvedTasksCount,
+        totalScore
+      };
+    }).sort((a, b) => b.totalScore - a.totalScore);
+  }, [comisiones, minutas, tareasComisiones, socios]);
+
+  // 4. Save manually logged attendance batch to Firebase
+  const handleSaveAsistencia = async () => {
+    if (!asistenciaEventId) {
+      alert("Por favor, selecciona un evento.");
+      return;
+    }
+    setIsSavingAsistencia(true);
+    try {
+      const selectedEvent = asistenciaEventTipo === 'reunion'
+        ? agendas.find(a => a.id === asistenciaEventId)
+        : actividades.find(a => a.id === asistenciaEventId);
+        
+      if (!selectedEvent) throw new Error("Evento no encontrado.");
+
+      const attendancesToSave: Asistencia[] = [];
+      socios.forEach(socio => {
+        if (asistenciaEventTipo === 'reunion') {
+          const existing = asistencias.find(a => a.eventoId === asistenciaEventId && a.socioId === socio.id && a.tipo === 'reunion');
+          attendancesToSave.push({
+            id: existing?.id || `att-reunion-${asistenciaEventId}-${socio.id}`,
+            socioId: socio.id,
+            socioNombre: socio.nombre,
+            tipo: 'reunion',
+            eventoId: asistenciaEventId,
+            eventoTitulo: selectedEvent.titulo,
+            fecha: selectedEvent.fecha,
+            asistio: !!asistenciaChecked[socio.id]
+          });
+        } else {
+          const existingAct = asistencias.find(a => a.eventoId === asistenciaEventId && a.socioId === socio.id && a.tipo === 'actividad');
+          attendancesToSave.push({
+            id: existingAct?.id || `att-act-${asistenciaEventId}-${socio.id}`,
+            socioId: socio.id,
+            socioNombre: socio.nombre,
+            tipo: 'actividad',
+            eventoId: asistenciaEventId,
+            eventoTitulo: selectedEvent.titulo,
+            fecha: selectedEvent.fecha,
+            asistio: !!asistenciaChecked[socio.id]
+          });
+
+          const existingVol = asistencias.find(a => a.eventoId === asistenciaEventId && a.socioId === socio.id && a.tipo === 'voluntariado');
+          attendancesToSave.push({
+            id: existingVol?.id || `att-vol-${asistenciaEventId}-${socio.id}`,
+            socioId: socio.id,
+            socioNombre: socio.nombre,
+            tipo: 'voluntariado',
+            eventoId: asistenciaEventId,
+            eventoTitulo: selectedEvent.titulo,
+            fecha: selectedEvent.fecha,
+            asistio: !!asistenciaVoluntarioChecked[socio.id]
+          });
+        }
+      });
+
+      await firebaseService.saveAsistenciasBatch(attendancesToSave);
+      showAlert("Éxito", "La asistencia ha sido guardada en la base de datos.");
+    } catch (e: any) {
+      console.error(e);
+      alert(e.message || "Error al registrar la asistencia.");
+    } finally {
+      setIsSavingAsistencia(false);
+    }
+  };
+
+  // 5. Render Ranking Module View
+  const renderRankingLionistico = () => {
+    // Quick statistics
+    const topSocio = sociosRankingData[0];
+    const topComision = comisionesRankingData[0];
+    
+    // Average attendance rate
+    const totalRecords = asistenciasList.length;
+    const attendedRecords = asistenciasList.filter(a => a.asistio).length;
+    const averageAttendance = totalRecords > 0 ? Math.round((attendedRecords / totalRecords) * 100) : 84;
+
+    // Filter members for leaderboard table search
+    const filteredSociosRank = sociosRankingData.filter(item => 
+      item.socio.nombre.toLowerCase().includes(rankingSearchQuery.toLowerCase())
+    );
+
+    return (
+      <div className="space-y-6 w-full text-left">
+        {/* Banner Hero header */}
+        <div className="relative bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl overflow-hidden border border-slate-800">
+          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px]" />
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-2 max-w-xl">
+              <div className="inline-flex items-center space-x-2 bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase">
+                <Trophy size={12} className="animate-pulse" />
+                <span>Rendimiento y Liderazgo</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white leading-tight">
+                Ranking Lionístico Oficial
+              </h2>
+              <p className="text-xs text-blue-100/80 font-medium">
+                Monitoreo automático del compromiso en el club. Se evalúa asistencia en reuniones, voluntariados, propuestas legislativas y cumplimiento de aportaciones.
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-3 w-full md:w-auto">
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10 text-center min-w-[110px]">
+                <span className="text-[9px] font-black text-blue-200 uppercase tracking-wider block">Socio Líder</span>
+                <span className="text-xs font-black text-white mt-1 block truncate max-w-[90px] mx-auto">
+                  {topSocio ? topSocio.socio.nombre.split(' ')[0] : 'S/D'}
+                </span>
+                <span className="text-[10px] font-bold text-yellow-400 mt-0.5 block">{topSocio ? topSocio.totalScore : 0} pts</span>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10 text-center min-w-[110px]">
+                <span className="text-[9px] font-black text-blue-200 uppercase tracking-wider block">Comisión Top</span>
+                <span className="text-xs font-black text-white mt-1 block truncate max-w-[90px] mx-auto">
+                  {topComision ? topComision.comision.nombre.split(' ')[0] : 'S/D'}
+                </span>
+                <span className="text-[10px] font-bold text-yellow-400 mt-0.5 block">{topComision ? topComision.totalScore : 0} pts</span>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10 text-center min-w-[110px]">
+                <span className="text-[9px] font-black text-blue-200 uppercase tracking-wider block">Asistencia Gral.</span>
+                <span className="text-xl font-black text-white mt-0.5 block">{averageAttendance}%</span>
+                <span className="text-[8px] font-bold text-emerald-400 mt-0.5 block">Nivel Óptimo</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Sub-tabs navigator */}
+        <div className="flex border-b border-slate-200">
+          <button
+            type="button"
+            onClick={() => setRankingSubTab('socios')}
+            className={`py-3 px-6 text-sm font-black transition-all border-b-2 cursor-pointer flex items-center space-x-1.5 ${
+              rankingSubTab === 'socios'
+                ? 'border-blue-900 text-blue-900 font-extrabold'
+                : 'border-transparent text-slate-500 hover:text-blue-900'
+            }`}
+          >
+            <Trophy size={14} />
+            <span>Ranking de Socios</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setRankingSubTab('comisiones')}
+            className={`py-3 px-6 text-sm font-black transition-all border-b-2 cursor-pointer flex items-center space-x-1.5 ${
+              rankingSubTab === 'comisiones'
+                ? 'border-blue-900 text-blue-900 font-extrabold'
+                : 'border-transparent text-slate-500 hover:text-blue-900'
+            }`}
+          >
+            <Users size={14} />
+            <span>Desempeño de Comisiones</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setRankingSubTab('asistencia')}
+            className={`py-3 px-6 text-sm font-black transition-all border-b-2 cursor-pointer flex items-center space-x-1.5 ${
+              rankingSubTab === 'asistencia'
+                ? 'border-blue-900 text-blue-900 font-extrabold'
+                : 'border-transparent text-slate-500 hover:text-blue-900'
+            }`}
+          >
+            <Calendar size={14} />
+            <span>Registrar Asistencia</span>
+          </button>
+        </div>
+
+        {/* Sub-tab 1: Ranking de Socios */}
+        {rankingSubTab === 'socios' && (
+          <div className="space-y-8 animate-in fade-in duration-300">
+            {/* Podium View for Top 3 */}
+            <div className="bg-slate-50 border border-slate-200/50 rounded-3xl p-6 sm:p-8 flex flex-col items-center">
+              <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest text-center mb-6">Podio de Honor del Club</h3>
+              
+              <div className="flex items-end justify-center gap-4 sm:gap-8 max-w-md w-full pt-12 pb-4">
+                {/* 2nd Place */}
+                {sociosRankingData[1] && (
+                  <div className="flex flex-col items-center flex-1">
+                    <div className="relative">
+                      <div className="w-16 h-16 rounded-full border-4 border-slate-300 overflow-hidden bg-slate-200 shadow-md">
+                        {sociosRankingData[1].socio.foto ? (
+                          <img src={sociosRankingData[1].socio.foto} alt="2nd" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-lg font-black text-slate-500 uppercase">
+                            {sociosRankingData[1].socio.nombre.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-slate-400">
+                        <Crown size={22} />
+                      </div>
+                      <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-slate-400 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-black shadow-sm">
+                        2
+                      </span>
+                    </div>
+                    <span className="text-xs font-black text-slate-750 mt-4 text-center truncate max-w-[80px] block">
+                      {sociosRankingData[1].socio.nombre.split(' ')[0]}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-450 mt-0.5">{sociosRankingData[1].totalScore} pts</span>
+                    {/* Podium pillar */}
+                    <div className="w-16 sm:w-20 bg-slate-300/40 border border-slate-300/70 h-24 rounded-t-2xl mt-4 flex items-center justify-center">
+                      <span className="text-slate-400/80 font-black text-xl">II</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* 1st Place */}
+                {sociosRankingData[0] && (
+                  <div className="flex flex-col items-center flex-1 -mt-8">
+                    <div className="relative">
+                      <div className="w-20 h-20 rounded-full border-4 border-yellow-400 overflow-hidden bg-slate-200 shadow-lg ring-4 ring-yellow-400/10">
+                        {sociosRankingData[0].socio.foto ? (
+                          <img src={sociosRankingData[0].socio.foto} alt="1st" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-2xl font-black text-slate-500 uppercase">
+                            {sociosRankingData[0].socio.nombre.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-yellow-500">
+                        <Crown size={28} className="animate-bounce" />
+                      </div>
+                      <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-yellow-400 text-slate-900 rounded-full w-6 h-6 flex items-center justify-center text-[11px] font-black shadow-md">
+                        1
+                      </span>
+                    </div>
+                    <span className="text-sm font-black text-slate-800 mt-4 text-center truncate max-w-[100px] block">
+                      {sociosRankingData[0].socio.nombre.split(' ')[0]}
+                    </span>
+                    <span className="text-xs font-black text-yellow-600 mt-0.5">{sociosRankingData[0].totalScore} pts</span>
+                    {/* Podium pillar */}
+                    <div className="w-20 sm:w-24 bg-gradient-to-b from-yellow-300/30 to-yellow-400/10 border border-yellow-400/40 h-32 rounded-t-2xl mt-4 flex items-center justify-center shadow-inner">
+                      <span className="text-yellow-500/80 font-black text-2xl">I</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3rd Place */}
+                {sociosRankingData[2] && (
+                  <div className="flex flex-col items-center flex-1">
+                    <div className="relative">
+                      <div className="w-16 h-16 rounded-full border-4 border-amber-600 overflow-hidden bg-slate-200 shadow-md">
+                        {sociosRankingData[2].socio.foto ? (
+                          <img src={sociosRankingData[2].socio.foto} alt="3rd" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-lg font-black text-slate-500 uppercase">
+                            {sociosRankingData[2].socio.nombre.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-amber-700">
+                        <Crown size={22} />
+                      </div>
+                      <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-amber-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-black shadow-sm">
+                        3
+                      </span>
+                    </div>
+                    <span className="text-xs font-black text-slate-750 mt-4 text-center truncate max-w-[80px] block">
+                      {sociosRankingData[2].socio.nombre.split(' ')[0]}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-450 mt-0.5">{sociosRankingData[2].totalScore} pts</span>
+                    {/* Podium pillar */}
+                    <div className="w-16 sm:w-20 bg-amber-600/10 border border-amber-600/30 h-18 rounded-t-2xl mt-4 flex items-center justify-center">
+                      <span className="text-amber-700/80 font-black text-xl">III</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Leaderboard Table List */}
+            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">Tabla de Clasificación</h4>
+                
+                {/* Search box */}
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                  <input
+                    type="text"
+                    value={rankingSearchQuery}
+                    onChange={(e) => setRankingSearchQuery(e.target.value)}
+                    placeholder="Buscar por nombre..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div className="overflow-x-auto border border-slate-100 rounded-2xl">
+                <table className="w-full text-xs font-bold text-slate-700 border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 text-[10px] font-black uppercase tracking-wider text-left">
+                      <th className="py-4 px-5 w-16 text-center">Rango</th>
+                      <th className="py-4 px-4">Socio</th>
+                      <th className="py-4 px-4 text-center">Asistencia</th>
+                      <th className="py-4 px-4 text-center">Propuestas</th>
+                      <th className="py-4 px-4 text-center">Comisiones</th>
+                      <th className="py-4 px-4 text-center">Aportes</th>
+                      <th className="py-4 px-5 text-right w-24">Puntaje</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredSociosRank.map((item, idx) => {
+                      const rankingIndex = sociosRankingData.findIndex(s => s.socio.id === item.socio.id) + 1;
+                      return (
+                        <tr key={item.socio.id} className="border-b border-slate-100/70 hover:bg-slate-50/50 transition-colors">
+                          <td className="py-4 px-5 text-center">
+                            <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full font-black text-[10px] ${
+                              rankingIndex === 1 
+                                ? 'bg-yellow-100 text-yellow-800' 
+                                : rankingIndex === 2 
+                                ? 'bg-slate-100 text-slate-800' 
+                                : rankingIndex === 3 
+                                ? 'bg-amber-100 text-amber-800' 
+                                : 'bg-slate-50 text-slate-600'
+                            }`}>
+                              #{rankingIndex}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-200 flex-shrink-0">
+                                {item.socio.foto ? (
+                                  <img src={item.socio.foto} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-xs font-black text-slate-500 uppercase">
+                                    {item.socio.nombre.charAt(0)}
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <span className="font-black text-slate-800 text-[13px] block leading-snug">{item.socio.nombre}</span>
+                                <span className="text-[10px] font-semibold text-slate-400 block">{item.socio.puesto || 'Socio Activo'}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <div className="inline-flex flex-col items-center">
+                              <span className="font-extrabold text-slate-800">{item.metrics.reuniones + item.metrics.actividades} asistencias</span>
+                              <span className="text-[9px] text-slate-400">{item.scores.asistencia} pts</span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <div className="inline-flex flex-col items-center">
+                              <span className="font-extrabold text-slate-800">{item.metrics.propuestas + item.metrics.puntosAgenda} props</span>
+                              <span className="text-[9px] text-slate-400">{item.scores.propuestas} pts</span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <div className="inline-flex flex-col items-center">
+                              <span className="font-extrabold text-slate-800">{item.metrics.comisiones} participadas</span>
+                              <span className="text-[9px] text-slate-400">{item.scores.liderazgo} pts</span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                              item.metrics.cuotasStatus === 'Al día' 
+                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
+                                : item.metrics.cuotasStatus === 'Pendiente'
+                                ? 'bg-amber-50 text-amber-800 border border-amber-250'
+                                : 'bg-red-50 text-red-800 border border-red-200'
+                            }`}>
+                              {item.metrics.cuotasStatus}
+                            </span>
+                          </td>
+                          <td className="py-4 px-5 text-right font-black text-slate-900 text-sm">
+                            {item.totalScore} <span className="text-[9px] text-slate-400 font-bold block">puntos</span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Sub-tab 2: Desempeño de Comisiones */}
+        {rankingSubTab === 'comisiones' && (
+          <div className="space-y-8 animate-in fade-in duration-300">
+            {/* Recharts Bar Chart */}
+            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-4">
+              <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Producción Legislativa y Resultados</h4>
+              
+              <div className="w-full h-80 pt-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={comisionesRankingData.map(item => ({
+                      name: item.comision.nombre.length > 15 ? item.comision.nombre.substring(0, 15) + '...' : item.comision.nombre,
+                      'Reuniones (Minutas)': item.meetingsCount,
+                      'Tareas Resueltas': item.resolvedTasksCount
+                    }))}
+                    layout="vertical"
+                    margin={{ top: 10, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <XAxis type="number" stroke="#94a3b8" style={{ fontSize: '10px' }} />
+                    <YAxis dataKey="name" type="category" stroke="#94a3b8" style={{ fontSize: '10px', fontWeight: 'bold' }} width={120} />
+                    <Tooltip contentStyle={{ background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '11px', fontWeight: 'bold' }} />
+                    <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
+                    <Bar dataKey="Reuniones (Minutas)" fill="#1b365d" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="Tareas Resueltas" fill="#10b981" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Commissions List cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {comisionesRankingData.map((item, idx) => (
+                <div key={item.comision.id} className="bg-white border border-slate-200/80 hover:shadow-md transition-all rounded-[2rem] p-6 space-y-4 shadow-sm relative overflow-hidden text-left">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-900 to-indigo-900" />
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black bg-blue-50 text-blue-900 border border-blue-200 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      Comisión #{idx + 1}
+                    </span>
+                    <span className="text-sm font-black text-yellow-600">{item.totalScore} pts</span>
+                  </div>
+
+                  <div>
+                    <h4 className="text-base font-black text-slate-800 tracking-tight leading-snug">{item.comision.nombre}</h4>
+                    <p className="text-xs text-slate-500 mt-1 line-clamp-2">{item.comision.proposito}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3 text-center">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Reuniones</span>
+                      <span className="text-xl font-black text-slate-850 mt-1 block">{item.meetingsCount}</span>
+                      <span className="text-[9px] font-bold text-slate-400 mt-0.5 block">Minutas firmadas</span>
+                    </div>
+                    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3 text-center">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Resultados</span>
+                      <span className="text-xl font-black text-emerald-600 mt-1 block">{item.resolvedTasksCount}</span>
+                      <span className="text-[9px] font-bold text-emerald-400 mt-0.5 block">Tareas resueltas</span>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-100 pt-3 flex items-center justify-between text-[11px] font-bold text-slate-500">
+                    <span>Coordinador:</span>
+                    <span className="text-slate-800 font-extrabold">{item.coordinatorName}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Sub-tab 3: Registrar Asistencia Form */}
+        {rankingSubTab === 'asistencia' && (
+          <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6 animate-in fade-in duration-300">
+            <div>
+              <h3 className="text-lg font-black text-blue-900">Controlador de Asistencia</h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Selecciona un evento del club (sesiones de agenda finalizadas o actividades generales de servicio) y marca la participación de los socios.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 border border-slate-200/50 p-5 rounded-2xl">
+              <div>
+                <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest ml-1 mb-1 block">Tipo de Evento</label>
+                <select
+                  value={asistenciaEventTipo}
+                  onChange={(e) => {
+                    setAsistenciaEventTipo(e.target.value as any);
+                    setAsistenciaEventId('');
+                  }}
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent cursor-pointer"
+                >
+                  <option value="reunion">📝 Sesión de Agenda (Finalizada)</option>
+                  <option value="actividad">🤝 Actividad de Servicio / Voluntariado</option>
+                </select>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="text-[10px] font-black text-slate-450 uppercase tracking-widest ml-1 mb-1 block">Seleccionar Evento Específico</label>
+                <select
+                  value={asistenciaEventId}
+                  onChange={(e) => setAsistenciaEventId(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent cursor-pointer"
+                >
+                  <option value="">-- Selecciona el evento a registrar --</option>
+                  {asistenciaEventTipo === 'reunion' ? (
+                    agendas.filter(a => a.estado === 'Finalizada').map(a => (
+                      <option key={a.id} value={a.id}>{a.fecha} - {a.titulo}</option>
+                    ))
+                  ) : (
+                    actividades.map(a => (
+                      <option key={a.id} value={a.id}>{a.fecha} - {a.titulo}</option>
+                    ))
+                  )}
+                </select>
+              </div>
+            </div>
+
+            {asistenciaEventId ? (
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-3">
+                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">Lista de Socios</h4>
+                  
+                  {/* Checklist search box */}
+                  <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                    <input
+                      type="text"
+                      value={asistenciaSearchQuery}
+                      onChange={(e) => setAsistenciaSearchQuery(e.target.value)}
+                      placeholder="Filtrar socio..."
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto p-1">
+                  {socios.filter(s => s.nombre.toLowerCase().includes(asistenciaSearchQuery.toLowerCase())).map(socio => (
+                    <div key={socio.id} className="bg-slate-50/50 border border-slate-200/60 rounded-2xl p-4 flex flex-col justify-between space-y-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-200 flex-shrink-0">
+                          {socio.foto ? (
+                            <img src={socio.foto} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-xs font-black text-slate-500 uppercase">
+                              {socio.nombre.charAt(0)}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <span className="font-extrabold text-slate-800 text-xs block truncate max-w-[130px]">{socio.nombre}</span>
+                          <span className="text-[9px] text-slate-450 uppercase tracking-wider block font-bold">{socio.puesto || 'Socio'}</span>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-slate-200/50 pt-3 flex items-center justify-between gap-2">
+                        {/* Attendance Toggle */}
+                        <label className="flex items-center space-x-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={!!asistenciaChecked[socio.id]}
+                            onChange={(e) => setAsistenciaChecked({ ...asistenciaChecked, [socio.id]: e.target.checked })}
+                            className="w-4 h-4 rounded text-blue-900 border-slate-300 focus:ring-blue-900 cursor-pointer"
+                          />
+                          <span className="text-[10px] font-black text-slate-600 uppercase tracking-wide">Asistió</span>
+                        </label>
+
+                        {/* Volunteering Toggle (Only visible for activity events) */}
+                        {asistenciaEventTipo === 'actividad' && (
+                          <label className="flex items-center space-x-2 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={!!asistenciaVoluntarioChecked[socio.id]}
+                              onChange={(e) => setAsistenciaVoluntarioChecked({ ...asistenciaVoluntarioChecked, [socio.id]: e.target.checked })}
+                              className="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-600 cursor-pointer"
+                            />
+                            <span className="text-[10px] font-black text-slate-600 uppercase tracking-wide">Voluntario Activo</span>
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="pt-4 border-t border-slate-100 flex items-center justify-end">
+                  <button
+                    type="button"
+                    disabled={isSavingAsistencia}
+                    onClick={handleSaveAsistencia}
+                    className="px-6 py-3 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black shadow-md shadow-blue-900/10 hover:shadow-lg transition-all flex items-center space-x-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSavingAsistencia ? (
+                      <>
+                        <Loader2 className="animate-spin" size={14} />
+                        <span>Guardando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check size={14} />
+                        <span>Guardar Asistencia</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-slate-50 border border-slate-200/40 rounded-2xl p-10 text-center text-slate-400">
+                <span className="text-xs font-bold">Selecciona un tipo de evento y un evento de la lista para gestionar la asistencia.</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderControlSolicitudesList = () => {
     // Filter list
     const filteredList = solicitudes.filter(sol => {
@@ -2009,7 +3825,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               {
                 category: 'Presidencia',
                 items: [
-                  { id: 'presidencia', label: 'Gestión de Solicitudes', icon: Layers }
+                  { id: 'presidencia', label: 'Gestión de Solicitudes', icon: Layers },
+                  { id: 'agendas_reunion', label: 'Agendas de Reunión', icon: FileText },
+                  { id: 'ranking_lionistico', label: 'Ranking Lionístico', icon: Trophy }
                 ]
               },
               {
@@ -2144,7 +3962,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     { id: 'galeria_admin', label: 'Gestión de Galería', icon: Camera },
                     { id: 'linea_tiempo_admin', label: 'Línea de Tiempo', icon: Clock },
                     { id: 'agenda_contactos', label: 'Agenda de Contactos', icon: BookUser },
-                    { id: 'presidencia', label: 'Gestión de Solicitudes', icon: Layers }
+                    { id: 'presidencia', label: 'Gestión de Solicitudes', icon: Layers },
+                    { id: 'agendas_reunion', label: 'Agendas de Reunión', icon: FileText },
+                    { id: 'ranking_lionistico', label: 'Ranking Lionístico', icon: Trophy }
                   ].find(t => t.id === activeTab);
                   if (currentTab) {
                     const Icon = currentTab.icon;
@@ -2170,7 +3990,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     { id: 'galeria_admin', label: 'Gestión de Galería' },
                     { id: 'linea_tiempo_admin', label: 'Línea de Tiempo' },
                     { id: 'agenda_contactos', label: 'Agenda de Contactos' },
-                    { id: 'presidencia', label: 'Gestión de Solicitudes' }
+                    { id: 'presidencia', label: 'Gestión de Solicitudes' },
+                    { id: 'agendas_reunion', label: 'Agendas de Reunión' },
+                    { id: 'ranking_lionistico', label: 'Ranking Lionístico' }
                   ].find(t => t.id === activeTab)?.label}
                 </span>
               </div>
@@ -2189,7 +4011,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   {
                     category: 'Presidencia',
                     items: [
-                      { id: 'presidencia', label: 'Gestión de Solicitudes', icon: Layers }
+                      { id: 'presidencia', label: 'Gestión de Solicitudes', icon: Layers },
+                      { id: 'agendas_reunion', label: 'Agendas de Reunión', icon: FileText },
+                      { id: 'ranking_lionistico', label: 'Ranking Lionístico', icon: Trophy }
                     ]
                   },
                   {
@@ -4142,7 +5966,47 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   <div className="py-2">
                     {actaWizardStep === 'datos' && (
                       <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 max-w-3xl mx-auto">
-                        <div className="bg-slate-50/50 rounded-3xl p-4 sm:p-8 space-y-6 border border-slate-100/60 shadow-sm">
+                        <div className="bg-slate-50/50 rounded-3xl p-4 sm:p-8 space-y-6 border border-slate-100/60 shadow-sm text-left">
+                          
+                          {/* Importar Agenda de Reunión */}
+                          <div className="bg-amber-50/60 border border-amber-200/80 p-5 rounded-2xl space-y-3">
+                            <label className="block text-xs font-black text-amber-900 uppercase tracking-widest">
+                              ¿Deseas pre-cargar una Agenda de Reunión?
+                            </label>
+                            <p className="text-[11px] text-slate-550 leading-relaxed">
+                              Si el presidente finalizó la agenda de esta reunión, puedes seleccionarla a continuación para auto-completar el título, lugar de sesión y cargar todos sus puntos de debate.
+                            </p>
+                            <select
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  handleImportAgendaToActa(e.target.value);
+                                  e.target.value = ""; // reset
+                                }
+                              }}
+                              className="w-full px-4 py-2.5 bg-white border border-amber-250/65 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none text-xs font-semibold text-slate-700 cursor-pointer"
+                            >
+                              <option value="">-- Seleccionar Agenda para Importar --</option>
+                              {(agendas || [])
+                                .filter(a => a.estado === 'Finalizada')
+                                .filter(a => {
+                                  const cat = a.categoria || 'ordinaria';
+                                  if (actaWizardData.categoria === 'Ordinaria') {
+                                    return cat === 'ordinaria';
+                                  }
+                                  if (actaWizardData.categoria === 'Extraordinaria') {
+                                    return cat === 'extraordinaria';
+                                  }
+                                  if (actaWizardData.categoria === 'Reunión de Comisión') {
+                                    return cat === 'comisiones';
+                                  }
+                                  return false;
+                                })
+                                .map(a => (
+                                  <option key={a.id} value={a.id}>{a.fecha} - {a.titulo}</option>
+                                ))}
+                            </select>
+                          </div>
+
                           <div>
                             <label className="block text-sm font-bold text-slate-700 mb-2">Título de la Sesión</label>
                             <input 
@@ -5509,6 +7373,12 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           )}
           {activeTab === 'presidencia' && (
             renderControlSolicitudesList()
+          )}
+          {activeTab === 'agendas_reunion' && (
+            renderAgendasModulo()
+          )}
+          {activeTab === 'ranking_lionistico' && (
+            renderRankingLionistico()
           )}
         </main>
       </div>
