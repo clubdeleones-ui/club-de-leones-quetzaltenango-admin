@@ -76,7 +76,10 @@ import {
   ArrowDown,
   Printer,
   Trophy,
-  Crown
+  Crown,
+  ShieldCheck,
+  Settings,
+  Key
 } from 'lucide-react';
 import { generateActaPDF, generateActaCode, generateReciboPagoPDF, generateAgendaPDF } from '../utils/pdfGenerator';
 import { FormattedActa } from '../components/FormattedActa';
@@ -90,50 +93,37 @@ import { Inventario } from './Inventario';
 import { GaleriaAdmin } from './GaleriaAdmin';
 import { AgendaContactos } from './AgendaContactos';
 import { LineaTiempoAdmin } from './LineaTiempoAdmin';
+import { AsignacionFunciones } from './AsignacionFunciones';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
-const PUESTOS_PREDEFINIDOS = [
-  'Presidente',
-  'Primer Vicepresidente',
-  'Segundo Vicepresidente',
-  'Secretario',
-  'Tesorero',
-  'Asesor de Servicio',
-  'Asesor de Mercadotecnia',
-  'Presidente de Afiliación',
-  'Vocal 1',
-  'Vocal 2',
-  'Socio Regular'
-];
 
-const ROLES_LIST = [
-  { value: UserRole.SOCIO, label: 'Socio Regular' },
-  { value: UserRole.SUPER_ADMIN, label: 'Super Administrador' },
-  { value: UserRole.SECRETARIO, label: 'Secretario' },
-  { value: UserRole.TESORERO, label: 'Tesorero' },
-  { value: UserRole.ASESOR_SERVICIOS, label: 'Asesor de Servicios' },
-  { value: UserRole.PRESIDENTE_AFILIACION, label: 'Presidente de Afiliación' },
-  { value: UserRole.DONANTE, label: 'Donante' }
-];
 
 interface SuperAdminProps {
   user: Socio;
   onUpdateUser?: (user: Socio) => void;
 }
 
-type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas' | 'afiliacion' | 'inventario' | 'galeria_admin' | 'linea_tiempo_admin' | 'agenda_contactos' | 'presidencia' | 'agendas_reunion' | 'ranking_lionistico';
+type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas' | 'afiliacion' | 'inventario' | 'galeria_admin' | 'linea_tiempo_admin' | 'agenda_contactos' | 'presidencia' | 'agendas_reunion' | 'ranking_lionistico' | 'asignacion_funciones';
 
 const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const { showAlert, showConfirm } = useModal();
+  const { rolesConfig, puestosList } = useClubData();
+  
   const alert = (msg: string) => {
     showAlert("Notificación", msg);
   };
 
-  // Dynamic Tab Access based on Role
+  // Dynamic Tab Access based on Role Configuration
   const allowedTabs = useMemo(() => {
+    const matchedConfig = rolesConfig.find(r => r.id === user.rol);
+    if (matchedConfig) {
+      return matchedConfig.allowedTabs || [];
+    }
+
+    // Fallback switch check
     switch (user.rol) {
       case UserRole.SUPER_ADMIN:
-        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario', 'galeria_admin', 'linea_tiempo_admin', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico'];
+        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario', 'galeria_admin', 'linea_tiempo_admin', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico', 'asignacion_funciones'];
       case UserRole.TESORERO:
         return ['resumen', 'socios', 'cuotas', 'donaciones', 'parqueo', 'presupuestos', 'inventario', 'galeria_admin', 'linea_tiempo_admin'];
       case UserRole.SECRETARIO:
@@ -145,7 +135,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
       default:
         return [];
     }
-  }, [user.rol]);
+  }, [user.rol, rolesConfig]);
 
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     const saved = sessionStorage.getItem('super_admin_active_tab');
@@ -164,7 +154,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   // Auto-expand category based on activeTab
   useEffect(() => {
     const groups = [
-      { category: 'Principal', items: ['resumen'] },
+      { category: 'Principal', items: ['resumen', 'asignacion_funciones'] },
       { category: 'Presidencia', items: ['presidencia', 'agendas_reunion', 'ranking_lionistico'] },
       { category: 'Secretaría', items: ['actas', 'comisiones'] },
       { category: 'Comité de Mercadeo', items: ['calendario', 'beneficios'] },
@@ -3820,7 +3810,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               {
                 category: 'Principal',
                 items: [
-                  { id: 'resumen', label: 'Resumen General', icon: TrendingUp }
+                  { id: 'resumen', label: 'Resumen General', icon: TrendingUp },
+                  { id: 'asignacion_funciones', label: 'Asignación Funciones', icon: Settings }
                 ]
               },
               {
@@ -3953,6 +3944,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 {(() => {
                   const currentTab = [
                     { id: 'resumen', label: 'Resumen General', icon: TrendingUp },
+                    { id: 'asignacion_funciones', label: 'Asignación Funciones', icon: Settings },
                     { id: 'socios', label: 'Gestión de Socios', icon: Users },
                     { id: 'calendario', label: 'Actividades', icon: Calendar },
                     { id: 'cuotas', label: 'Control de Cuotas', icon: CreditCard },
@@ -3981,6 +3973,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 <span>
                   {[
                     { id: 'resumen', label: 'Resumen General' },
+                    { id: 'asignacion_funciones', label: 'Asignación Funciones' },
                     { id: 'socios', label: 'Gestión de Socios' },
                     { id: 'calendario', label: 'Actividades' },
                     { id: 'cuotas', label: 'Control de Cuotas' },
@@ -4011,7 +4004,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   {
                     category: 'Principal',
                     items: [
-                      { id: 'resumen', label: 'Resumen General', icon: TrendingUp }
+                      { id: 'resumen', label: 'Resumen General', icon: TrendingUp },
+                      { id: 'asignacion_funciones', label: 'Asignación Funciones', icon: Settings }
                     ]
                   },
                   {
@@ -4179,8 +4173,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                       className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold bg-white"
                     >
                       <option value="Todos">Rol: Todos</option>
-                      {ROLES_LIST.map(r => (
-                        <option key={r.value} value={r.value}>{r.label}</option>
+                      {rolesConfig.map(r => (
+                        <option key={r.id} value={r.id}>{r.label}</option>
                       ))}
                     </select>
                   </div>
@@ -7391,6 +7385,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           {activeTab === 'ranking_lionistico' && (
             renderRankingLionistico()
           )}
+          {activeTab === 'asignacion_funciones' && (
+            <AsignacionFunciones />
+          )}
         </main>
       </div>
 
@@ -7594,12 +7591,21 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                         <span>Puesto Principal *</span>
                       </label>
                       <select 
-                        value={editSocioForm.puesto || 'Socio Regular'}
-                        onChange={e => setEditSocioForm(prev => ({ ...prev, puesto: e.target.value }))}
+                        value={editSocioForm.puesto || ''}
+                        onChange={e => {
+                          const val = e.target.value;
+                          const matchedP = puestosList.find(p => p.nombre === val);
+                          setEditSocioForm(prev => ({ 
+                            ...prev, 
+                            puesto: val,
+                            rol: matchedP ? matchedP.rolAsociado : prev.rol
+                          }));
+                        }}
                         className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold bg-white"
                       >
-                        {PUESTOS_PREDEFINIDOS.map(p => (
-                          <option key={p} value={p}>{p}</option>
+                        <option value="">Seleccione puesto...</option>
+                        {puestosList.map(p => (
+                          <option key={p.id} value={p.nombre}>{p.nombre}</option>
                         ))}
                       </select>
                     </div>
@@ -7608,12 +7614,12 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                         <span>Rol del Sistema (Permisos) *</span>
                       </label>
                       <select 
-                        value={editSocioForm.rol || UserRole.SOCIO}
-                        onChange={e => setEditSocioForm(prev => ({ ...prev, rol: e.target.value as UserRole }))}
+                        value={editSocioForm.rol || 'SOCIO'}
+                        onChange={e => setEditSocioForm(prev => ({ ...prev, rol: e.target.value }))}
                         className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold bg-white"
                       >
-                        {ROLES_LIST.map(r => (
-                          <option key={r.value} value={r.value}>{r.label}</option>
+                        {rolesConfig.map(r => (
+                          <option key={r.id} value={r.id}>{r.label}</option>
                         ))}
                       </select>
                     </div>
@@ -7673,8 +7679,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                         defaultValue=""
                       >
                         <option value="" disabled>Seleccionar cargo adicional...</option>
-                        {PUESTOS_PREDEFINIDOS.map(p => (
-                          <option key={p} value={p}>{p}</option>
+                        {puestosList.map(p => (
+                          <option key={p.id} value={p.nombre}>{p.nombre}</option>
                         ))}
                       </select>
                       <button

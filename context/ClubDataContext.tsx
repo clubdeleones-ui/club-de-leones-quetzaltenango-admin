@@ -4,7 +4,10 @@ import {
   collection, 
   onSnapshot, 
   query, 
-  orderBy 
+  orderBy,
+  doc,
+  setDoc,
+  deleteDoc
 } from 'firebase/firestore';
 import { 
   Socio, 
@@ -33,6 +36,33 @@ import {
   MOCK_GALERIA 
 } from '../constants';
 import { firebaseService } from '../services/firebaseService';
+
+export const DEFAULT_ROLES_CONFIG = [
+  { id: 'SUPER_ADMIN', label: 'Super Administrador', allowedTabs: ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario', 'galeria_admin', 'linea_tiempo_admin', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico', 'asignacion_funciones'] },
+  { id: 'SECRETARIO', label: 'Secretario', allowedTabs: ['resumen', 'socios', 'calendario', 'actas', 'comisiones', 'minutas', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico'] },
+  { id: 'TESORERO', label: 'Tesorero', allowedTabs: ['resumen', 'socios', 'cuotas', 'donaciones', 'parqueo', 'presupuestos', 'inventario', 'galeria_admin', 'linea_tiempo_admin'] },
+  { id: 'ASESOR_SERVICIOS', label: 'Asesor de Servicios', allowedTabs: ['socios', 'calendario', 'beneficios', 'minutas'] },
+  { id: 'PRESIDENTE_AFILIACION', label: 'Presidente de Afiliación', allowedTabs: ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico'] },
+  { id: 'SOCIO', label: 'Socio Regular', allowedTabs: [] },
+  { id: 'DONANTE', label: 'Donante', allowedTabs: [] }
+];
+
+export const DEFAULT_PUESTOS = [
+  { id: 'presidente', nombre: 'Presidente', rolAsociado: 'SUPER_ADMIN' },
+  { id: 'primer-vicepresidente', nombre: 'Primer Vicepresidente', rolAsociado: 'SUPER_ADMIN' },
+  { id: 'segundo-vicepresidente', nombre: 'Segundo Vicepresidente', rolAsociado: 'SUPER_ADMIN' },
+  { id: 'secretario', nombre: 'Secretario', rolAsociado: 'SECRETARIO' },
+  { id: 'tesorero', nombre: 'Tesorero', rolAsociado: 'TESORERO' },
+  { id: 'asesor-de-servicio', nombre: 'Asesor de Servicio', rolAsociado: 'ASESOR_SERVICIOS' },
+  { id: 'asesor-de-mercadotecnia', nombre: 'Asesor de Mercadotecnia', rolAsociado: 'ASESOR_SERVICIOS' },
+  { id: 'presidente-de-afiliacion', nombre: 'Presidente de Afiliación', rolAsociado: 'PRESIDENTE_AFILIACION' },
+  { id: 'vocal-1', nombre: 'Vocal 1', rolAsociado: 'SOCIO' },
+  { id: 'vocal-2', nombre: 'Vocal 2', rolAsociado: 'SOCIO' },
+  { id: 'socio-regular', nombre: 'Socio Regular', rolAsociado: 'SOCIO' },
+  { id: 'club-leo', nombre: 'Club Leo', rolAsociado: 'SOCIO' },
+  { id: 'donante', nombre: 'Donante', rolAsociado: 'DONANTE' },
+  { id: 'administrador-principal', nombre: 'Administrador Principal', rolAsociado: 'SUPER_ADMIN' }
+];
 
 // Unified Cache Keys
 const KEYS = {
@@ -85,6 +115,13 @@ interface ClubDataContextType {
   tareasComisiones: TareaComision[];
   asistencias: Asistencia[];
   
+  rolesConfig: any[];
+  puestosList: any[];
+  saveRoleConfig: (roleId: string, label: string, allowedTabs: string[]) => Promise<void>;
+  deleteRoleConfig: (roleId: string) => Promise<void>;
+  savePuesto: (puestoId: string, nombre: string, rolAsociado: string) => Promise<void>;
+  deletePuesto: (puestoId: string) => Promise<void>;
+
   loading: {
     socios: boolean;
     propuestas: boolean;
@@ -127,6 +164,8 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [agendas, setAgendas] = useState<ReunionAgenda[]>(() => getLocalData(KEYS.REUNION_AGENDAS, []));
   const [tareasComisiones, setTareasComisiones] = useState<TareaComision[]>(() => getLocalData(KEYS.TAREAS_COMISIONES, []));
   const [asistencias, setAsistencias] = useState<Asistencia[]>(() => getLocalData(KEYS.ASISTENCIAS, []));
+  const [rolesConfig, setRolesConfig] = useState<any[]>(() => getLocalData('club_leones_roles_config', DEFAULT_ROLES_CONFIG));
+  const [puestosList, setPuestosList] = useState<any[]>(() => getLocalData('club_leones_puestos_list', DEFAULT_PUESTOS));
 
   const [loading, setLoading] = useState({
     socios: true,
@@ -363,6 +402,34 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLoading(prev => ({ ...prev, asistencias: false }));
     });
 
+    const unsubRoles = onSnapshot(collection(db, 'config_roles'), (snapshot) => {
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      if (list.length === 0) {
+        DEFAULT_ROLES_CONFIG.forEach(async (role) => {
+          await setDoc(doc(db, 'config_roles', role.id), { label: role.label, allowedTabs: role.allowedTabs });
+        });
+      } else {
+        setRolesConfig(list);
+        localStorage.setItem('club_leones_roles_config', JSON.stringify(list));
+      }
+    }, (err) => {
+      console.error("Error subscribing to config_roles:", err);
+    });
+
+    const unsubPuestos = onSnapshot(collection(db, 'config_puestos'), (snapshot) => {
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      if (list.length === 0) {
+        DEFAULT_PUESTOS.forEach(async (puesto) => {
+          await setDoc(doc(db, 'config_puestos', puesto.id), { nombre: puesto.nombre, rolAsociado: puesto.rolAsociado });
+        });
+      } else {
+        setPuestosList(list);
+        localStorage.setItem('club_leones_puestos_list', JSON.stringify(list));
+      }
+    }, (err) => {
+      console.error("Error subscribing to config_puestos:", err);
+    });
+
     return () => {
       unsubSocios();
       unsubPropuestas();
@@ -381,8 +448,30 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       unsubAgendas();
       unsubTareasComisiones();
       unsubAsistencias();
+      unsubRoles();
+      unsubPuestos();
     };
   }, []);
+
+  const saveRoleConfig = async (roleId: string, label: string, allowedTabs: string[]) => {
+    const docRef = doc(db, 'config_roles', roleId);
+    await setDoc(docRef, { label, allowedTabs });
+  };
+
+  const deleteRoleConfig = async (roleId: string) => {
+    const docRef = doc(db, 'config_roles', roleId);
+    await deleteDoc(docRef);
+  };
+
+  const savePuesto = async (puestoId: string, nombre: string, rolAsociado: string) => {
+    const docRef = doc(db, 'config_puestos', puestoId);
+    await setDoc(docRef, { nombre, rolAsociado });
+  };
+
+  const deletePuesto = async (puestoId: string) => {
+    const docRef = doc(db, 'config_puestos', puestoId);
+    await deleteDoc(docRef);
+  };
 
   return (
     <ClubDataContext.Provider value={{
@@ -403,6 +492,12 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       agendas,
       tareasComisiones,
       asistencias,
+      rolesConfig,
+      puestosList,
+      saveRoleConfig,
+      deleteRoleConfig,
+      savePuesto,
+      deletePuesto,
       loading
     }}>
       {children}

@@ -25,8 +25,9 @@ export interface Socio {
   id: string;
   nombre: string;
   correo: string;
-  rol: UserRole;
+  rol: UserRole | string;
   puesto?: string;
+  password?: string;
   puestosAdicionales?: string[];   // Cargos o comisiones adicionales
   codigoSocio?: string;            // Código único de identificación del socio
   estadoCuotas: 'Al día' | 'Pendiente' | 'En mora';

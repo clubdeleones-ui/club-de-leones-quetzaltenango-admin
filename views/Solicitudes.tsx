@@ -250,7 +250,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     showAlert("Notificación", msg);
   };
 
-  const { solicitudes: dbSolicitudes, socios, loading } = useClubData();
+  const { solicitudes: dbSolicitudes, socios, loading, rolesConfig } = useClubData();
   const [activeTab, setActiveTab] = useState<'abiertas' | 'sillas' | 'internas' | 'agenda' | 'cartas' | 'salon' | null>(null);
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>(dbSolicitudes);
   const [isLoading, setIsLoading] = useState(true);
@@ -415,6 +415,10 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   // Check if logged in user is admin
   const isAdministrative = useMemo(() => {
     if (!user) return false;
+    const config = rolesConfig.find(r => r.id === user.rol);
+    if (config) {
+      return config.allowedTabs && config.allowedTabs.length > 0;
+    }
     return (
       user.rol === UserRole.SUPER_ADMIN ||
       user.rol === UserRole.TESORERO ||
@@ -422,7 +426,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       user.rol === UserRole.ASESOR_SERVICIOS ||
       user.rol === UserRole.PRESIDENTE_AFILIACION
     );
-  }, [user]);
+  }, [user, rolesConfig]);
 
   // Check if user is allowed to access internal requests (any logged-in user EXCEPT Donor)
   const hasInternalAccess = useMemo(() => {

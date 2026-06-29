@@ -93,7 +93,7 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
   };
 
   // Load proposals and socios from unified global context
-  const { propuestas: dbPropuestas, socios: dbSocios } = useClubData();
+  const { propuestas: dbPropuestas, socios: dbSocios, rolesConfig } = useClubData();
 
   const [propuestas, setPropuestas] = useState<PropuestaSocio[]>(dbPropuestas);
   const [socios, setSocios] = useState<Socio[]>(dbSocios);
@@ -174,7 +174,14 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
 
   // Fetching and cache persistence are managed by the root ClubDataContext provider
 
-  const canEditPropuestas = user?.rol === UserRole.SUPER_ADMIN || user?.rol === UserRole.PRESIDENTE_AFILIACION;
+  const canEditPropuestas = useMemo(() => {
+    if (!user) return false;
+    const config = rolesConfig?.find((r: any) => r.id === user.rol);
+    if (config) {
+      return config.allowedTabs?.includes('afiliacion') || false;
+    }
+    return user?.rol === UserRole.SUPER_ADMIN || user?.rol === UserRole.PRESIDENTE_AFILIACION;
+  }, [user, rolesConfig]);
 
   const handleAprobarPropuesta = async (propuesta: PropuestaSocio) => {
     if (!canEditPropuestas) return;

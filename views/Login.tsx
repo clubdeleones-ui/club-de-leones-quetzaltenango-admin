@@ -34,9 +34,28 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isQrLoggingIn, setIsQrLoggingIn] = useState(false);
   const [qrLoginError, setQrLoginError] = useState<string | null>(null);
+  const [availablePuestos, setAvailablePuestos] = useState<string[]>(PUESTOS_LOGIN);
   
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    const fetchPuestos = async () => {
+      try {
+        const list = await firebaseService.getSocios();
+        const unique = Array.from(new Set(
+          list.map(s => s.puesto).filter((p): p is string => !!p)
+        ));
+        if (unique.length > 0) {
+          unique.sort();
+          setAvailablePuestos(unique);
+        }
+      } catch (err) {
+        console.error("Error loading dynamic login positions:", err);
+      }
+    };
+    fetchPuestos();
+  }, []);
 
   useEffect(() => {
     const hashQuery = window.location.hash.split('?')[1];
@@ -143,18 +162,35 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       puesto === 'Presidente' || 
       puesto === 'Administrador Principal';
 
-    const isCorrectPassword = 
-      (isSuperAdminPuesto && password === 'Nuevadirectiva2627!') ||
-      (!isSuperAdminPuesto && password === '123456');
+    const expectedPassword = user?.password || (isSuperAdminPuesto ? 'Nuevadirectiva2627!' : '123456');
+    const isCorrectPassword = password === expectedPassword;
 
     if (user && isCorrectPassword) {
       onLogin(user);
-      const isAdministrative = 
-        user.rol === UserRole.SUPER_ADMIN || 
-        user.rol === UserRole.TESORERO || 
-        user.rol === UserRole.SECRETARIO || 
-        user.rol === UserRole.ASESOR_SERVICIOS ||
-        user.rol === UserRole.PRESIDENTE_AFILIACION;
+      
+      let isAdministrative = false;
+      try {
+        const saved = localStorage.getItem('club_leones_roles_config');
+        if (saved) {
+          const config = JSON.parse(saved);
+          const roleDetails = config.find((r: any) => r.id === user.rol);
+          if (roleDetails) {
+            isAdministrative = roleDetails.allowedTabs && roleDetails.allowedTabs.length > 0;
+          }
+        }
+      } catch (e) {
+        console.error("Error reading roles config on login:", e);
+      }
+
+      if (!isAdministrative) {
+        isAdministrative = 
+          user.rol === UserRole.SUPER_ADMIN || 
+          user.rol === UserRole.TESORERO || 
+          user.rol === UserRole.SECRETARIO || 
+          user.rol === UserRole.ASESOR_SERVICIOS ||
+          user.rol === UserRole.PRESIDENTE_AFILIACION;
+      }
+
       if (isAdministrative) {
         navigate('/admin');
       } else {
@@ -163,8 +199,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     } else {
       setError(
         isSuperAdminPuesto 
-          ? 'Contraseña incorrecta para el cargo administrativo principal.' 
-          : 'Contraseña incorrecta para el cargo seleccionado.'
+          ? 'Contraseña incorrecta para el cargo administrativo principal o el socio no existe.' 
+          : 'Contraseña incorrecta para el cargo seleccionado o el socio no existe.'
       );
     }
   };
@@ -228,7 +264,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               required
             >
               <option value="" disabled>Seleccione su cargo...</option>
-              {PUESTOS_LOGIN.map((p) => (
+              {availablePuestos.map((p) => (
                 <option key={p} value={p}>
                   {p}
                 </option>
