@@ -16,7 +16,8 @@ import {
   Info,
   Gift,
   DollarSign,
-  Clock
+  Clock,
+  HeartHandshake
 } from 'lucide-react';
 import { AuthState, UserRole } from '../types';
 import { googleService } from '../services/googleService';
@@ -85,7 +86,8 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
     
     const items = [
       { label: 'Mi Panel', path: '/dashboard', icon: User },
-      { label: 'Estatutos', path: '/estatutos', icon: ShieldCheck }
+      { label: 'Estatutos', path: '/estatutos', icon: ShieldCheck },
+      { label: 'Estrategia Retención', path: '/retencion', icon: HeartHandshake }
     ];
     
     if (auth.user.rol !== UserRole.DONANTE) {
