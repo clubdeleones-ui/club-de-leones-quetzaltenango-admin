@@ -508,92 +508,94 @@ export const AsignacionFunciones: React.FC = () => {
 
       {/* TAB 2: ROLES & MODULES */}
       {activeSubTab === 'roles' && (
-        <div className="grid grid-col-1 lg:grid-cols-3 gap-8">
-          {/* List of Roles */}
-          <div className="lg:col-span-1 bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-[2rem] p-6 shadow-sm space-y-6 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-black text-blue-900">Roles del Sistema</h3>
+        <div className="space-y-6">
+          {/* SECCIÓN SUPERIOR: Selector de Rol y Creación (Horizontal) */}
+          <div className="bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-[2rem] p-6 shadow-sm space-y-4">
+            <div className="flex flex-col md:flex-row gap-4 items-start md:items-end justify-between">
+              <div className="flex-1 w-full max-w-md">
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-wider mb-2">
+                  Seleccionar Rol del Sistema
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    value={selectedRole?.id || ''}
+                    onChange={e => {
+                      const matched = rolesConfig.find(r => r.id === e.target.value);
+                      setSelectedRole(matched || null);
+                    }}
+                    className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-1 focus:ring-blue-500 bg-white text-slate-700 font-bold"
+                  >
+                    <option value="" disabled>Seleccione un rol de la lista...</option>
+                    {rolesConfig.map(role => (
+                      <option key={role.id} value={role.id}>{role.label} ({role.id})</option>
+                    ))}
+                  </select>
+
+                  {selectedRole && selectedRole.id !== 'SUPER_ADMIN' && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteRole(selectedRole.id)}
+                      className="bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-700 px-3.5 rounded-xl border border-red-200 flex items-center justify-center transition-all"
+                      title="Eliminar este rol"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
               <button
-                onClick={() => setIsAddingRole(!isAddingRole)}
-                className="bg-blue-900 text-white text-xs font-black p-2 rounded-xl flex items-center gap-1 hover:bg-blue-800 transition-all"
+                onClick={() => {
+                  setIsAddingRole(!isAddingRole);
+                  if (!isAddingRole) {
+                    setNewRoleId('');
+                    setNewRoleName('');
+                  }
+                }}
+                className="w-full md:w-auto bg-blue-900 hover:bg-blue-800 text-white text-xs font-black py-3 px-5 rounded-xl flex items-center justify-center gap-1.5 transition-all h-[42px] self-stretch md:self-auto"
               >
-                {isAddingRole ? <X size={14} /> : <Plus size={14} />} Nuevo
+                {isAddingRole ? <X size={14} /> : <Plus size={14} />} 
+                {isAddingRole ? 'Cancelar Nuevo Rol' : 'Crear Nuevo Rol'}
               </button>
             </div>
 
-            {/* ADD ROLE FORM */}
+            {/* FORMULARIO DE NUEVO ROL (Inline Horizontal) */}
             {isAddingRole && (
-              <form onSubmit={handleAddNewRole} className="p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-3 animate-in slide-in-from-top-3 duration-250">
-                <div>
-                  <label className="block text-xs font-bold text-slate-550 mb-1">ID Único (Ej: VOCALES)</label>
+              <form onSubmit={handleAddNewRole} className="p-5 bg-slate-50/50 border border-slate-200/60 rounded-2xl flex flex-col md:flex-row gap-4 items-end animate-in slide-in-from-top-3 duration-250">
+                <div className="flex-1 w-full">
+                  <label className="block text-xs font-bold text-slate-500 mb-1">ID Único (Ej: VOCALES)</label>
                   <input
                     type="text"
                     required
                     placeholder="VOCALES"
                     value={newRoleId}
                     onChange={e => setNewRoleId(e.target.value)}
-                    className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-1 focus:ring-blue-500 bg-white text-slate-700 font-bold"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-550 mb-1">Nombre Descriptivo</label>
+                <div className="flex-1 w-full">
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Nombre Descriptivo</label>
                   <input
                     type="text"
                     required
                     placeholder="Vocales y Comisiones"
                     value={newRoleName}
                     onChange={e => setNewRoleName(e.target.value)}
-                    className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                    className="w-full px-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-1 focus:ring-blue-500 bg-white text-slate-700 font-bold"
                   />
                 </div>
                 <button
                   type="submit"
-                  className="w-full bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black py-2 rounded-lg transition-all"
+                  className="w-full md:w-auto bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black py-2.5 px-6 rounded-xl transition-all h-[38px]"
                 >
                   Confirmar y Guardar
                 </button>
               </form>
             )}
-
-            <div className="space-y-2">
-              {rolesConfig.map(role => (
-                <div
-                  key={role.id}
-                  onClick={() => setSelectedRole(role)}
-                  className={`p-4 rounded-2xl border transition-all cursor-pointer flex justify-between items-center ${
-                    selectedRole && selectedRole.id === role.id
-                      ? 'bg-blue-50/70 border-blue-200 shadow-sm'
-                      : 'bg-white hover:bg-slate-50/50 border-slate-200/60'
-                  }`}
-                >
-                  <div>
-                    <h4 className="font-extrabold text-blue-900 text-sm">{role.label}</h4>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{role.id}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="bg-slate-100 text-slate-600 text-[10px] font-black px-2 py-0.5 rounded-full">
-                      {role.allowedTabs?.length || 0} tabs
-                    </span>
-                    {role.id !== 'SUPER_ADMIN' && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteRole(role.id);
-                        }}
-                        className="text-red-400 hover:text-red-600 p-1"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
 
-          {/* Configuration Grid */}
-          <div className="lg:col-span-2 bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-[2rem] p-6 shadow-sm space-y-6">
+          {/* SECCIÓN INFERIOR: Configuración de Módulos (Grid) */}
+          <div className="bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-[2rem] p-6 shadow-sm space-y-6">
             {selectedRole ? (
               <div className="space-y-6">
                 <div>
@@ -605,7 +607,7 @@ export const AsignacionFunciones: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {AVAILABLE_TABS.map(tab => {
                     const hasAccess = selectedRole.allowedTabs?.includes(tab.id);
                     return (
@@ -637,7 +639,7 @@ export const AsignacionFunciones: React.FC = () => {
             ) : (
               <div className="h-64 flex flex-col items-center justify-center text-slate-400 space-y-3">
                 <ShieldCheck size={48} className="text-slate-300" />
-                <p className="font-semibold">Seleccione un rol de la lista para gestionar sus permisos y módulos visibles.</p>
+                <p className="font-semibold text-sm">Seleccione un rol de la lista superior para gestionar sus permisos y módulos visibles.</p>
               </div>
             )}
           </div>
@@ -646,15 +648,15 @@ export const AsignacionFunciones: React.FC = () => {
 
       {/* TAB 3: PUESTOS MANAGEMENT */}
       {activeSubTab === 'puestos' && (
-        <div className="grid grid-col-1 lg:grid-cols-3 gap-8">
-          {/* Create or Edit Position Form */}
-          <div className="lg:col-span-1 bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-[2rem] p-6 shadow-sm space-y-6">
+        <div className="space-y-6">
+          {/* SECCIÓN SUPERIOR: Formulario de Puesto (Horizontal) */}
+          <div className="bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-[2rem] p-6 shadow-sm space-y-4">
             <h3 className="text-lg font-black text-blue-900">
               {editingPuestoId ? 'Editar Puesto' : 'Crear Puesto del Club'}
             </h3>
 
-            <form onSubmit={handleSavePuesto} className="space-y-4">
-              <div>
+            <form onSubmit={handleSavePuesto} className="flex flex-col md:flex-row gap-4 items-end">
+              <div className="flex-1 w-full">
                 <label className="block text-xs font-bold text-slate-550 mb-1">Nombre del Puesto</label>
                 <input
                   type="text"
@@ -662,32 +664,29 @@ export const AsignacionFunciones: React.FC = () => {
                   placeholder="Ej: Vocal de Actividades"
                   value={newPuestoName}
                   onChange={e => setNewPuestoName(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-1 focus:ring-blue-500 bg-white text-slate-700"
+                  className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-1 focus:ring-blue-500 bg-white text-slate-700 font-bold"
                 />
               </div>
 
-              <div>
+              <div className="flex-1 w-full">
                 <label className="block text-xs font-bold text-slate-550 mb-1">Rol del Sistema Vinculado</label>
                 <select
                   required
                   value={newPuestoRole}
                   onChange={e => setNewPuestoRole(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-1 focus:ring-blue-500 bg-white text-slate-700"
+                  className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm font-semibold outline-none focus:ring-1 focus:ring-blue-500 bg-white text-slate-700 font-bold"
                 >
                   <option value="" disabled>Seleccione un rol...</option>
                   {rolesConfig.map(role => (
                     <option key={role.id} value={role.id}>{role.label}</option>
                   ))}
                 </select>
-                <p className="text-[10px] text-slate-400 font-medium mt-1">
-                  Cuando asignes este puesto a un socio, heredará automáticamente los permisos de este rol.
-                </p>
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3 w-full md:w-auto flex-shrink-0">
                 <button
                   type="submit"
-                  className="flex-1 bg-blue-900 hover:bg-blue-800 text-white text-xs font-black py-2.5 rounded-xl transition-all"
+                  className="flex-1 md:flex-none bg-blue-900 hover:bg-blue-800 text-white text-xs font-black py-3 px-6 rounded-xl transition-all whitespace-nowrap h-[38px] flex items-center justify-center"
                 >
                   {editingPuestoId ? 'Guardar Cambios' : 'Crear Puesto'}
                 </button>
@@ -699,17 +698,20 @@ export const AsignacionFunciones: React.FC = () => {
                       setNewPuestoName('');
                       setNewPuestoRole('');
                     }}
-                    className="bg-slate-200 hover:bg-slate-350 text-slate-700 text-xs font-black py-2.5 rounded-xl transition-all px-4"
+                    className="bg-slate-200 hover:bg-slate-355 text-slate-750 text-xs font-black py-3 px-5 rounded-xl transition-all h-[38px] flex items-center justify-center border border-slate-300"
                   >
                     Cancelar
                   </button>
                 )}
               </div>
             </form>
+            <p className="text-[10px] text-slate-400 font-medium">
+              Cuando asignes este puesto a un socio, heredará automáticamente los permisos y accesos del rol de sistema vinculado.
+            </p>
           </div>
 
-          {/* List of Puestos */}
-          <div className="lg:col-span-2 bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-[2rem] p-6 shadow-sm space-y-6">
+          {/* SECCIÓN INFERIOR: Listado de Puestos (Tabla) */}
+          <div className="bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-[2rem] p-6 shadow-sm space-y-6">
             <h3 className="text-lg font-black text-blue-900">Listado de Puestos</h3>
             
             <div className="overflow-x-auto rounded-2xl border border-slate-100">
