@@ -34,6 +34,21 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
     // Clipboard feedback
     const [copiedId, setCopiedId] = useState<string | null>(null);
 
+    // Share popover state
+    const [openShareId, setOpenShareId] = useState<string | null>(null);
+
+    // Close share popover when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as HTMLElement;
+            if (!target.closest('.share-popover-container')) {
+                setOpenShareId(null);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     // Volunteer modal states
     const [selectedActForVol, setSelectedActForVol] = useState<Actividad | null>(null);
     const [isVolModalOpen, setIsVolModalOpen] = useState(false);
@@ -69,7 +84,26 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
     };
 
     // Social share triggers
-    const handleShare = (act: Actividad, network: 'whatsapp' | 'facebook' | 'twitter' | 'copy') => {
+    const handleShareClick = async (act: Actividad) => {
+        const shareUrl = window.location.origin + '/#/actividades';
+        const shareText = `¡Te invito a participar en la actividad de Club de Leones Quetzaltenango: "${act.titulo}"! 📅 Fecha: ${act.fecha}. 📍 Lugar: ${act.lugar}.`;
+
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: act.titulo,
+                    text: shareText,
+                    url: shareUrl
+                });
+            } catch (err) {
+                console.log("Web Share API used or canceled:", err);
+            }
+        } else {
+            setOpenShareId(openShareId === act.id ? null : act.id);
+        }
+    };
+
+    const executeShare = (act: Actividad, network: 'whatsapp' | 'facebook' | 'copy') => {
         const shareUrl = window.location.origin + '/#/actividades';
         const shareText = `¡Te invito a participar en la actividad de Club de Leones Quetzaltenango: "${act.titulo}"! 📅 Fecha: ${act.fecha}. 📍 Lugar: ${act.lugar}.`;
 
@@ -79,9 +113,6 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
         } else if (network === 'facebook') {
             const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
             window.open(url, '_blank', 'noopener,noreferrer');
-        } else if (network === 'twitter') {
-            const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
-            window.open(url, '_blank', 'noopener,noreferrer');
         } else if (network === 'copy') {
             const fullText = `${shareText}\n\nEnlace del evento: ${shareUrl}`;
             navigator.clipboard.writeText(fullText).then(() => {
@@ -89,6 +120,7 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                 setTimeout(() => setCopiedId(null), 2500);
             });
         }
+        setOpenShareId(null);
     };
 
     // Filtered activities list
@@ -253,56 +285,54 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
 
                                         {/* Sharing Bar & Action Button */}
                                         <div className="space-y-4 pt-4 border-t border-slate-100">
-                                            {/* Specialized Social Share Row */}
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center">
-                                                    <Share2 size={12} className="mr-1.5" />
-                                                    Compartir
-                                                </span>
-                                                <div className="flex items-center space-x-1.5">
-                                                    {/* WhatsApp */}
-                                                    <button
-                                                        onClick={() => handleShare(act, 'whatsapp')}
-                                                        className="w-8 h-8 rounded-full bg-emerald-50 hover:bg-emerald-500 hover:text-white text-emerald-600 flex items-center justify-center transition-all shadow-sm"
-                                                        title="Compartir por WhatsApp"
-                                                    >
-                                                        <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24">
-                                                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.062 5.248 5.309 0 11.77 0c3.13 0 6.073 1.22 8.283 3.43 2.21 2.21 3.427 5.153 3.427 8.284 0 6.462-5.247 11.71-11.71 11.71-2.007 0-3.978-.517-5.719-1.498L0 24zm6.59-2.031c1.6.953 3.56 1.458 5.56 1.46 5.375 0 9.75-4.373 9.75-9.75 0-2.595-1.01-5.035-2.83-6.858-1.821-1.82-4.26-2.83-6.86-2.83-5.378 0-9.75 4.372-9.75 9.75 0 2.012.524 3.986 1.524 5.589l-.999 3.65 3.755-.985zM17.43 15.65c-.32-.16-1.89-.93-2.18-1.04-.29-.11-.5-.16-.71.16-.21.32-.82 1.04-1 1.25-.18.21-.36.24-.68.08-.32-.16-1.34-.49-2.55-1.57-.94-.84-1.58-1.87-1.76-2.18-.18-.32-.02-.49.14-.65.15-.14.32-.32.48-.48.16-.16.21-.27.32-.48.11-.21.05-.4-.03-.56-.08-.16-.71-1.7-.97-2.34-.26-.62-.52-.53-.71-.54-.18-.01-.39-.01-.6-.01s-.55.08-.84.4c-.29.32-1.1 1.08-1.1 2.63s1.12 3.05 1.28 3.25c.16.2 2.2 3.35 5.33 4.7 1.86.8 2.94.86 4 .7.6-.09 1.89-.77 2.15-1.52.26-.75.26-1.4.18-1.52-.09-.12-.3-.24-.62-.4z"/>
-                                                        </svg>
-                                                    </button>
-                                                    {/* Facebook */}
-                                                    <button
-                                                        onClick={() => handleShare(act, 'facebook')}
-                                                        className="w-8 h-8 rounded-full bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 flex items-center justify-center transition-all shadow-sm"
-                                                        title="Compartir en Facebook"
-                                                    >
-                                                        <svg className="w-4.5 h-4.5 fill-current" viewBox="0 0 24 24">
-                                                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                                                        </svg>
-                                                    </button>
-                                                    {/* Twitter / X */}
-                                                    <button
-                                                        onClick={() => handleShare(act, 'twitter')}
-                                                        className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-700 flex items-center justify-center transition-all shadow-sm"
-                                                        title="Compartir en Twitter/X"
-                                                    >
-                                                        <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                                                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                                                        </svg>
-                                                    </button>
-                                                    {/* Copy Link */}
-                                                    <button
-                                                        onClick={() => handleShare(act, 'copy')}
-                                                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm ${
-                                                            copiedId === act.id 
-                                                                ? 'bg-emerald-500 text-white hover:bg-emerald-600' 
-                                                                : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-                                                        }`}
-                                                        title="Copiar datos y enlace"
-                                                    >
-                                                        {copiedId === act.id ? <Check size={14} /> : <Copy size={14} />}
-                                                    </button>
-                                                </div>
+                                            {/* Share Button & Popover */}
+                                            <div className="share-popover-container relative">
+                                                <button
+                                                    onClick={() => handleShareClick(act)}
+                                                    className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold py-3.5 px-6 rounded-2xl transition-all shadow-sm active:scale-98 flex items-center justify-center space-x-2 text-sm"
+                                                >
+                                                    <Share2 size={16} />
+                                                    <span>Compartir Actividad</span>
+                                                </button>
+
+                                                {/* Animated share dropdown/popover when open */}
+                                                {openShareId === act.id && (
+                                                    <div className="absolute right-0 left-0 bottom-full mb-3 bg-white text-slate-800 rounded-[1.5rem] shadow-2xl border border-slate-100 py-3 px-3 z-30 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                                        <div className="flex flex-col space-y-1">
+                                                            <button
+                                                                onClick={() => executeShare(act, 'whatsapp')}
+                                                                className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-emerald-50 rounded-xl transition-all duration-200 group w-full text-left"
+                                                            >
+                                                                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                                                                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                                                                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.062 5.248 5.309 0 11.77 0c3.13 0 6.073 1.22 8.283 3.43 2.21 2.21 3.427 5.153 3.427 8.284 0 6.462-5.247 11.71-11.71 11.71-2.007 0-3.978-.517-5.719-1.498L0 24zm6.59-2.031c1.6.953 3.56 1.458 5.56 1.46 5.375 0 9.75-4.373 9.75-9.75 0-2.595-1.01-5.035-2.83-6.858-1.821-1.82-4.26-2.83-6.86-2.83-5.378 0-9.75 4.372-9.75 9.75 0 2.012.524 3.986 1.524 5.589l-.999 3.65 3.755-.985zM17.43 15.65c-.32-.16-1.89-.93-2.18-1.04-.29-.11-.5-.16-.71.16-.21.32-.82 1.04-1 1.25-.18.21-.36.24-.68.08-.32-.16-1.34-.49-2.55-1.57-.94-.84-1.58-1.87-1.76-2.18-.18-.32-.02-.49.14-.65.15-.14.32-.32.48-.48.16-.16.21-.27.32-.48.11-.21.05-.4-.03-.56-.08-.16-.71-1.7-.97-2.34-.26-.62-.52-.53-.71-.54-.18-.01-.39-.01-.6-.01s-.55.08-.84.4c-.29.32-1.1 1.08-1.1 2.63s1.12 3.05 1.28 3.25c.16.2 2.2 3.35 5.33 4.7 1.86.8 2.94.86 4 .7.6-.09 1.89-.77 2.15-1.52.26-.75.26-1.4.18-1.52-.09-.12-.3-.24-.62-.4z"/>
+                                                                    </svg>
+                                                                </div>
+                                                                <span>WhatsApp</span>
+                                                            </button>
+                                                            <button
+                                                                onClick={() => executeShare(act, 'facebook')}
+                                                                className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-blue-50 rounded-xl transition-all duration-200 group w-full text-left"
+                                                            >
+                                                                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                                                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                                                                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                                                                    </svg>
+                                                                </div>
+                                                                <span>Facebook</span>
+                                                            </button>
+                                                            <button
+                                                                onClick={() => executeShare(act, 'copy')}
+                                                                className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 rounded-xl transition-all duration-200 group w-full text-left"
+                                                            >
+                                                                <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-600 flex items-center justify-center group-hover:bg-slate-200 transition-colors">
+                                                                    <Copy size={16} />
+                                                                </div>
+                                                                <span>{copiedId === act.id ? '¡Enlace copiado!' : 'Copiar Enlace'}</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {/* Donation CTA */}
