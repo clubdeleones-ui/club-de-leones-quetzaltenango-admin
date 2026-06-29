@@ -324,98 +324,106 @@ export const AsignacionFunciones: React.FC = () => {
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-slate-100">
-            <table className="w-full text-left border-collapse min-w-[700px]">
-              <thead>
-                <tr className="bg-slate-50/80 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                  <th className="py-4 px-6">Socio</th>
-                  <th className="py-4 px-6">Puesto del Club</th>
-                  <th className="py-4 px-6">Rol de Sistema</th>
-                  <th className="py-4 px-6">Contraseña de Acceso</th>
-                  <th className="py-4 px-6 text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100/60 text-sm font-semibold text-slate-700">
-                {filteredSocios.map(socio => {
-                  const currentPass = editingPasswords[socio.id] !== undefined ? editingPasswords[socio.id] : (socio.password || '');
-                  const showPass = visiblePasswords[socio.id];
-                  
-                  return (
-                    <tr key={socio.id} className="hover:bg-slate-50/30 transition-colors">
-                      <td className="py-4 px-6 flex items-center gap-3">
-                        <img
-                          src={socio.foto || 'https://picsum.photos/seed/default/200/200'}
-                          alt={socio.nombre}
-                          className="w-10 h-10 rounded-full object-cover border border-slate-100"
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filteredSocios.map(socio => {
+              const currentPass = editingPasswords[socio.id] !== undefined ? editingPasswords[socio.id] : (socio.password || '');
+              const showPass = visiblePasswords[socio.id];
+              
+              return (
+                <div 
+                  key={socio.id} 
+                  className="bg-white border border-slate-200/75 rounded-3xl p-5 shadow-sm hover:shadow-md hover:border-indigo-150 transition-all flex flex-col justify-between space-y-4"
+                >
+                  {/* Fila 1: Perfil */}
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={socio.foto || 'https://picsum.photos/seed/default/200/200'}
+                      alt={socio.nombre}
+                      className="w-12 h-12 rounded-full object-cover border border-slate-100 flex-shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <div className="font-extrabold text-blue-900 truncate" title={socio.nombre}>
+                        {socio.nombre}
+                      </div>
+                      <div className="text-xs text-slate-400 font-medium truncate" title={socio.correo}>
+                        {socio.correo}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Fila 2: Selectores de Puesto y Rol */}
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
+                        Puesto del Club
+                      </label>
+                      <select
+                        value={socio.puesto || ''}
+                        onChange={(e) => handleSocioPuestoChange(socio.id, e.target.value)}
+                        className="w-full py-2 px-2.5 border border-slate-200 rounded-xl text-xs font-bold bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500"
+                      >
+                        <option value="">Sin puesto</option>
+                        {puestosList.map(p => (
+                          <option key={p.id} value={p.nombre}>{p.nombre}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
+                        Rol de Sistema
+                      </label>
+                      <select
+                        value={socio.rol || 'SOCIO'}
+                        onChange={(e) => handleSocioRoleChange(socio.id, e.target.value)}
+                        className="w-full py-2 px-2.5 border border-slate-200 rounded-xl text-xs font-bold bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500"
+                      >
+                        {rolesConfig.map(r => (
+                          <option key={r.id} value={r.id}>{r.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Fila 3: Contraseña y Guardar */}
+                  <div className="flex gap-3 items-end pt-1">
+                    <div className="flex-1 relative">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
+                        Contraseña de Acceso
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-2.5 text-slate-400" size={14} />
+                        <input
+                          type={showPass ? "text" : "password"}
+                          value={currentPass}
+                          placeholder="123456 (Defecto)"
+                          onChange={(e) => handlePasswordChangeLocal(socio.id, e.target.value)}
+                          className="w-full pl-8 pr-8 py-2 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-1 focus:ring-blue-500 bg-slate-50/50 text-slate-700"
                         />
-                        <div>
-                          <div className="font-extrabold text-blue-900">{socio.nombre}</div>
-                          <div className="text-xs text-slate-400 font-medium">{socio.correo}</div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <select
-                          value={socio.puesto || ''}
-                          onChange={(e) => handleSocioPuestoChange(socio.id, e.target.value)}
-                          className="py-1.5 px-3 border border-slate-200 rounded-lg text-xs font-extrabold outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-                        >
-                          <option value="">Sin puesto</option>
-                          {puestosList.map(p => (
-                            <option key={p.id} value={p.nombre}>{p.nombre}</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="py-4 px-6">
-                        <select
-                          value={socio.rol || 'SOCIO'}
-                          onChange={(e) => handleSocioRoleChange(socio.id, e.target.value)}
-                          className="py-1.5 px-3 border border-slate-200 rounded-lg text-xs font-extrabold outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-                        >
-                          {rolesConfig.map(r => (
-                            <option key={r.id} value={r.id}>{r.label}</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="relative max-w-[150px]">
-                          <Lock className="absolute left-2.5 top-2.5 text-slate-400" size={14} />
-                          <input
-                            type={showPass ? "text" : "password"}
-                            value={currentPass}
-                            placeholder="123456 (Defecto)"
-                            onChange={(e) => handlePasswordChangeLocal(socio.id, e.target.value)}
-                            className="w-full pl-7 pr-7 py-1.5 border border-slate-200 rounded-lg text-xs outline-none focus:ring-1 focus:ring-blue-500 bg-slate-50/50"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => togglePasswordVisibility(socio.id)}
-                            className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
-                          >
-                            {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
-                          </button>
-                        </div>
-                      </td>
-                      <td className="py-4 px-6 text-center">
                         <button
-                          onClick={() => handleSaveSocioCredentials(socio)}
-                          className="bg-emerald-500 hover:bg-emerald-600 text-white py-1.5 px-3 rounded-lg text-xs font-black inline-flex items-center gap-1 transition-all"
+                          type="button"
+                          onClick={() => togglePasswordVisibility(socio.id)}
+                          className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
                         >
-                          <Save size={13} /> Guardar
+                          {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
                         </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {filteredSocios.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="py-10 text-center text-slate-400 font-medium">
-                      No se encontraron socios que coincidan con la búsqueda.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleSaveSocioCredentials(socio)}
+                      className="bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white py-2 px-3.5 rounded-xl text-xs font-black inline-flex items-center gap-1.5 transition-all shadow-sm shadow-emerald-500/10 h-[34px] flex-shrink-0"
+                    >
+                      <Save size={14} /> Guardar
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
+          {filteredSocios.length === 0 && (
+            <div className="py-12 text-center text-slate-400 font-semibold bg-slate-50/30 rounded-2xl border border-dashed border-slate-200">
+              No se encontraron socios que coincidan con la búsqueda.
+            </div>
+          )}
         </div>
       )}
 
