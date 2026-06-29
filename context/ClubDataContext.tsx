@@ -459,8 +459,23 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const deleteRoleConfig = async (roleId: string) => {
+    // 1. Eliminar el documento del rol
     const docRef = doc(db, 'config_roles', roleId);
     await deleteDoc(docRef);
+
+    // 2. Actualizar puestos vinculados a este rol para que tengan 'SOCIO' por defecto
+    const puestosToUpdate = puestosList.filter(p => p.rolAsociado === roleId);
+    for (const p of puestosToUpdate) {
+      const puestoRef = doc(db, 'config_puestos', p.id);
+      await setDoc(puestoRef, { nombre: p.nombre, rolAsociado: 'SOCIO' });
+    }
+
+    // 3. Actualizar socios vinculados a este rol para que tengan 'SOCIO' por defecto
+    const sociosToUpdate = socios.filter(s => s.rol === roleId);
+    for (const s of sociosToUpdate) {
+      const updatedSocio = { ...s, rol: 'SOCIO' };
+      await firebaseService.saveSocio(updatedSocio);
+    }
   };
 
   const savePuesto = async (puestoId: string, nombre: string, rolAsociado: string) => {

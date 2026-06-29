@@ -198,6 +198,7 @@ export const AsignacionFunciones: React.FC = () => {
       async () => {
         try {
           await deleteRoleConfig(roleId);
+          setSelectedRole(null);
           showAlert("Éxito", "Rol eliminado exitosamente.");
         } catch (err) {
           showAlert("Error", "Error al eliminar el rol.");
