@@ -94,29 +94,30 @@ export const AsignacionFunciones: React.FC = () => {
   const handleSaveSocioCredentials = async (socio: any) => {
     const customPassword = editingPasswords[socio.id];
     
-    showConfirm(
+    const confirmed = await showConfirm(
       "Confirmar actualización",
-      `¿Desea actualizar las funciones y credenciales del socio ${socio.nombre}?`,
-      async () => {
-        try {
-          const updatedSocio = {
-            ...socio,
-            puesto: socio.puesto || '',
-            rol: socio.rol || '',
-          };
-          
-          if (customPassword !== undefined) {
-            updatedSocio.password = customPassword;
-          }
-          
-          await firebaseService.saveSocio(updatedSocio);
-          showAlert("Éxito", "Funciones y credenciales actualizadas con éxito.");
-        } catch (err) {
-          console.error(err);
-          showAlert("Error", "Ocurrió un error al guardar los datos del socio.");
-        }
-      }
+      `¿Desea actualizar las funciones y credenciales del socio ${socio.nombre}?`
     );
+    
+    if (confirmed) {
+      try {
+        const updatedSocio = {
+          ...socio,
+          puesto: socio.puesto || '',
+          rol: socio.rol || '',
+        };
+        
+        if (customPassword !== undefined) {
+          updatedSocio.password = customPassword;
+        }
+        
+        await firebaseService.saveSocio(updatedSocio);
+        showAlert("Éxito", "Funciones y credenciales actualizadas con éxito.");
+      } catch (err) {
+        console.error(err);
+        showAlert("Error", "Ocurrió un error al guardar los datos del socio.");
+      }
+    }
   };
 
   const handleSocioPuestoChange = (socioId: string, puestoName: string) => {
@@ -192,19 +193,20 @@ export const AsignacionFunciones: React.FC = () => {
       return;
     }
     
-    showConfirm(
+    const confirmed = await showConfirm(
       "Eliminar Rol",
-      `¿Está seguro de que desea eliminar el rol ${roleId}? Los socios asignados a este rol perderán sus accesos.`,
-      async () => {
-        try {
-          await deleteRoleConfig(roleId);
-          setSelectedRole(null);
-          showAlert("Éxito", "Rol eliminado exitosamente.");
-        } catch (err) {
-          showAlert("Error", "Error al eliminar el rol.");
-        }
-      }
+      `¿Está seguro de que desea eliminar el rol ${roleId}? Los socios asignados a este rol perderán sus accesos.`
     );
+    
+    if (confirmed) {
+      try {
+        await deleteRoleConfig(roleId);
+        setSelectedRole(null);
+        showAlert("Éxito", "Rol eliminado exitosamente.");
+      } catch (err) {
+        showAlert("Error", "Error al eliminar el rol.");
+      }
+    }
   };
 
   const handleToggleTabAccess = async (role: any, tabId: string) => {
@@ -249,18 +251,19 @@ export const AsignacionFunciones: React.FC = () => {
   };
 
   const handleDeletePuesto = async (puestoId: string) => {
-    showConfirm(
+    const confirmed = await showConfirm(
       "Eliminar Puesto",
-      "¿Está seguro de que desea eliminar este puesto administrativo?",
-      async () => {
-        try {
-          await deletePuesto(puestoId);
-          showAlert("Éxito", "Puesto eliminado con éxito.");
-        } catch (err) {
-          showAlert("Error", "Error al eliminar el puesto.");
-        }
-      }
+      "¿Está seguro de que desea eliminar este puesto administrativo?"
     );
+    
+    if (confirmed) {
+      try {
+        await deletePuesto(puestoId);
+        showAlert("Éxito", "Puesto eliminado con éxito.");
+      } catch (err) {
+        showAlert("Error", "Error al eliminar el puesto.");
+      }
+    }
   };
 
   const handleEditPuestoClick = (puesto: any) => {
