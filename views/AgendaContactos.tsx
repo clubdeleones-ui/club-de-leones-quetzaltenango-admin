@@ -13,6 +13,8 @@ export const AgendaContactos: React.FC = () => {
   const [contactos, setContactos] = useState<ContactoAgenda[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 6;
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ContactoAgenda | null>(null);
@@ -32,6 +34,11 @@ export const AgendaContactos: React.FC = () => {
   useEffect(() => {
     fetchContactos();
   }, []);
+
+  // Reiniciar a página 1 al cambiar el término de búsqueda
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   // Cerrar el dropdown si se hace clic afuera
   useEffect(() => {
@@ -109,10 +116,24 @@ export const AgendaContactos: React.FC = () => {
     }
   };
 
-  const filteredContactos = contactos.filter(c => 
-    c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.organizacion.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.campoTrabajo.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredContactos = contactos.filter(c => {
+    const search = searchTerm.toLowerCase();
+    const nombre = (c.nombre || '').toLowerCase();
+    const organizacion = (c.organizacion || '').toLowerCase();
+    const campoTrabajo = (c.campoTrabajo || '').toLowerCase();
+    const referencia = (c.referencia || '').toLowerCase();
+    const telefono = (c.telefono || '').toLowerCase();
+    return nombre.includes(search) || 
+           organizacion.includes(search) || 
+           campoTrabajo.includes(search) || 
+           referencia.includes(search) || 
+           telefono.includes(search);
+  });
+
+  const totalPages = Math.ceil(filteredContactos.length / ITEMS_PER_PAGE);
+  const paginatedContactos = filteredContactos.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
   );
 
   return (
@@ -152,88 +173,130 @@ export const AgendaContactos: React.FC = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-700"></div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6" ref={dropdownRef}>
-          {filteredContactos.length === 0 ? (
-            <div className="col-span-full text-center py-12 bg-white rounded-3xl border border-dashed border-slate-300">
-              <BookUser size={48} className="mx-auto text-slate-300 mb-4" />
-              <p className="text-slate-500 text-lg font-medium">No se encontraron contactos.</p>
-            </div>
-          ) : (
-            filteredContactos.map((contacto) => (
-              <div key={contacto.id} className="bg-white rounded-[2rem] p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow relative group flex flex-col justify-between h-full">
-                <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button 
-                    onClick={() => openModal(contacto)}
-                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"
-                  >
-                    <Edit2 size={16} />
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(contacto.id)}
-                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-
-                <div>
-                  <div className="w-14 h-14 bg-gradient-to-br from-emerald-100 to-teal-50 rounded-full flex items-center justify-center text-emerald-700 font-black text-xl mb-4 shadow-inner border border-emerald-200/50">
-                    {contacto.nombre.charAt(0).toUpperCase()}
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" ref={dropdownRef}>
+            {filteredContactos.length === 0 ? (
+              <div className="col-span-full text-center py-12 bg-white rounded-3xl border border-dashed border-slate-300">
+                <BookUser size={48} className="mx-auto text-slate-300 mb-4" />
+                <p className="text-slate-500 text-lg font-medium">No se encontraron contactos.</p>
+              </div>
+            ) : (
+              paginatedContactos.map((contacto) => (
+                <div key={contacto.id} className="bg-white rounded-[2rem] p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow relative group flex flex-col justify-between h-full">
+                  <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                      onClick={() => openModal(contacto)}
+                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(contacto.id)}
+                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
-                  <h3 className="text-xl font-extrabold text-slate-800 pr-16 leading-tight">{contacto.nombre}</h3>
-                  <p className="text-emerald-700 font-bold text-sm mb-4">{contacto.campoTrabajo || 'Sin campo de trabajo'}</p>
 
-                  <div className="space-y-3 mt-4">
-                    <div className="flex items-start text-sm">
-                      <Building2 size={16} className="text-slate-400 mr-2.5 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-0.5">Organización</span>
-                        <span className="font-semibold text-slate-700">{contacto.organizacion || 'Independiente'}</span>
-                      </div>
+                  <div>
+                    <div className="w-14 h-14 bg-gradient-to-br from-emerald-100 to-teal-50 rounded-full flex items-center justify-center text-emerald-700 font-black text-xl mb-4 shadow-inner border border-emerald-200/50">
+                      {contacto.nombre.charAt(0).toUpperCase()}
                     </div>
-                    {contacto.referencia && (
+                    <h3 className="text-xl font-extrabold text-slate-800 pr-16 leading-tight">{contacto.nombre}</h3>
+                    <p className="text-emerald-700 font-bold text-sm mb-4">{contacto.campoTrabajo || 'Sin campo de trabajo'}</p>
+
+                    <div className="space-y-3 mt-4">
                       <div className="flex items-start text-sm">
-                        <CheckCircle size={16} className="text-slate-400 mr-2.5 mt-0.5 flex-shrink-0" />
+                        <Building2 size={16} className="text-slate-400 mr-2.5 mt-0.5 flex-shrink-0" />
                         <div>
-                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-0.5">Referencia</span>
-                          <span className="font-semibold text-slate-700">{contacto.referencia}</span>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-0.5">Organización</span>
+                          <span className="font-semibold text-slate-700">{contacto.organizacion || 'Independiente'}</span>
                         </div>
                       </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-6 pt-4 border-t border-slate-100 relative">
-                  <div className="mb-4">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Teléfono Directo</span>
-                    <div className="flex items-center text-slate-700 font-black text-lg tracking-tight">
-                      <Smartphone size={18} className="mr-2 text-emerald-600" />
-                      {contacto.telefono}
+                      {contacto.referencia && (
+                        <div className="flex items-start text-sm">
+                          <CheckCircle size={16} className="text-slate-400 mr-2.5 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-0.5">Referencia</span>
+                            <span className="font-semibold text-slate-700">{contacto.referencia}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  
-                  {/* Action Buttons - Mobile Optimized */}
-                  <div className="grid grid-cols-2 gap-2 mt-auto w-full">
-                    <a 
-                      href={`tel:${contacto.telefono.replace(/\D/g, '')}`}
-                      className="flex items-center justify-center py-2.5 px-2 bg-blue-50 text-blue-700 rounded-xl font-bold hover:bg-blue-100 transition-colors active:scale-95 text-[11px] sm:text-xs md:text-sm"
-                    >
-                      <Phone size={16} className="mr-1.5 flex-shrink-0" />
-                      <span className="truncate">Llamar</span>
-                    </a>
-                    <a 
-                      href={`https://wa.me/${contacto.telefono.replace(/\D/g, '')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center py-2.5 px-2 bg-emerald-50 text-emerald-700 rounded-xl font-bold hover:bg-emerald-100 transition-colors active:scale-95 text-[11px] sm:text-xs md:text-sm"
-                    >
-                      <MessageCircle size={16} className="mr-1.5 flex-shrink-0" />
-                      <span className="truncate">WhatsApp</span>
-                    </a>
+
+                  <div className="mt-6 pt-4 border-t border-slate-100 relative">
+                    <div className="mb-4">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Teléfono Directo</span>
+                      <div className="flex items-center text-slate-700 font-black text-lg tracking-tight">
+                        <Smartphone size={18} className="mr-2 text-emerald-600" />
+                        {contacto.telefono}
+                      </div>
+                    </div>
+                    
+                    {/* Action Buttons - Mobile Optimized */}
+                    <div className="grid grid-cols-2 gap-2 mt-auto w-full">
+                      <a 
+                        href={`tel:${contacto.telefono.replace(/\D/g, '')}`}
+                        className="flex items-center justify-center py-2.5 px-2 bg-blue-50 text-blue-700 rounded-xl font-bold hover:bg-blue-100 transition-colors active:scale-95 text-[11px] sm:text-xs md:text-sm"
+                      >
+                        <Phone size={16} className="mr-1.5 flex-shrink-0" />
+                        <span className="truncate">Llamar</span>
+                      </a>
+                      <a 
+                        href={`https://wa.me/${contacto.telefono.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center py-2.5 px-2 bg-emerald-50 text-emerald-700 rounded-xl font-bold hover:bg-emerald-100 transition-colors active:scale-95 text-[11px] sm:text-xs md:text-sm"
+                      >
+                        <MessageCircle size={16} className="mr-1.5 flex-shrink-0" />
+                        <span className="truncate">WhatsApp</span>
+                      </a>
+                    </div>
                   </div>
                 </div>
+              ))
+            )}
+          </div>
+
+          {/* Controles de Paginación */}
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 pt-5 mt-4 bg-white p-6 rounded-[2rem] border border-slate-200/65 shadow-sm">
+              <span className="text-xs font-bold text-slate-400">
+                Mostrando {Math.min(filteredContactos.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)}-{Math.min(filteredContactos.length, currentPage * ITEMS_PER_PAGE)} de {filteredContactos.length} contactos
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3.5 py-1.5 border border-slate-200 rounded-xl text-xs font-black text-slate-655 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  Anterior
+                </button>
+                <div className="flex gap-1">
+                  {Array.from({ length: totalPages }).map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setCurrentPage(i + 1)}
+                      className={`w-8 h-8 rounded-xl text-xs font-black transition-all ${
+                        currentPage === i + 1
+                          ? 'bg-emerald-700 text-white shadow-sm'
+                          : 'border border-slate-200 text-slate-655 bg-white hover:bg-slate-50'
+                      }`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3.5 py-1.5 border border-slate-200 rounded-xl text-xs font-black text-slate-655 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  Siguiente
+                </button>
               </div>
-            ))
+            </div>
           )}
         </div>
       )}
