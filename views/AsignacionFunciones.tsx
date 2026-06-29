@@ -16,7 +16,8 @@ import {
   Lock, 
   Eye, 
   EyeOff,
-  UserCheck
+  UserCheck,
+  Crown
 } from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
 
@@ -58,6 +59,13 @@ export const AsignacionFunciones: React.FC = () => {
 
   const [activeSubTab, setActiveSubTab] = useState<'socios' | 'roles' | 'puestos'>('socios');
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 6;
+
+  // Reset to page 1 on search
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
   
   // States for passwords visible per socio
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
@@ -151,6 +159,14 @@ export const AsignacionFunciones: React.FC = () => {
       (s.rol || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [socios, searchTerm]);
+
+  // Paginated members list
+  const paginatedSocios = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredSocios.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredSocios, currentPage]);
+
+  const totalPages = Math.ceil(filteredSocios.length / ITEMS_PER_PAGE);
 
   // Roles functions
   const handleAddNewRole = async (e: React.FormEvent) => {
@@ -324,30 +340,52 @@ export const AsignacionFunciones: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredSocios.map(socio => {
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {paginatedSocios.map(socio => {
               const currentPass = editingPasswords[socio.id] !== undefined ? editingPasswords[socio.id] : (socio.password || '');
               const showPass = visiblePasswords[socio.id];
+              const isDirectiva = socio.rol && socio.rol !== 'SOCIO';
               
               return (
                 <div 
                   key={socio.id} 
-                  className="bg-white border border-slate-200/75 rounded-3xl p-5 shadow-sm hover:shadow-md hover:border-indigo-150 transition-all flex flex-col justify-between space-y-4"
+                  className={`border rounded-3xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4 ${
+                    isDirectiva 
+                      ? 'bg-gradient-to-br from-amber-50/30 to-amber-100/10 border-amber-300 hover:border-amber-400' 
+                      : 'bg-white border-slate-200/75 hover:border-slate-350'
+                  }`}
                 >
-                  {/* Fila 1: Perfil */}
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={socio.foto || 'https://picsum.photos/seed/default/200/200'}
-                      alt={socio.nombre}
-                      className="w-12 h-12 rounded-full object-cover border border-slate-100 flex-shrink-0"
-                    />
-                    <div className="min-w-0">
-                      <div className="font-extrabold text-blue-900 truncate" title={socio.nombre}>
-                        {socio.nombre}
+                  {/* Fila 1: Perfil y Distintivo */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <img
+                        src={socio.foto || 'https://picsum.photos/seed/default/200/200'}
+                        alt={socio.nombre}
+                        className={`w-12 h-12 rounded-full object-cover flex-shrink-0 border-2 ${
+                          isDirectiva ? 'border-amber-300' : 'border-slate-100'
+                        }`}
+                      />
+                      <div className="min-w-0">
+                        <div className="font-extrabold text-blue-900 truncate" title={socio.nombre}>
+                          {socio.nombre}
+                        </div>
+                        <div className="text-xs text-slate-400 font-medium truncate" title={socio.correo}>
+                          {socio.correo}
+                        </div>
                       </div>
-                      <div className="text-xs text-slate-400 font-medium truncate" title={socio.correo}>
-                        {socio.correo}
-                      </div>
+                    </div>
+
+                    {/* Código de Color / Badge */}
+                    <div className="flex-shrink-0">
+                      {isDirectiva ? (
+                        <span className="bg-amber-100 text-amber-800 text-[10px] font-black px-2.5 py-1 rounded-full border border-amber-250 flex items-center gap-1">
+                          <Crown size={11} className="text-amber-600" /> Directiva
+                        </span>
+                      ) : (
+                        <span className="bg-slate-100 text-slate-650 text-[10px] font-black px-2.5 py-1 rounded-full border border-slate-200 flex items-center gap-1">
+                          <Users size={11} className="text-slate-500" /> Socio Regular
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -402,7 +440,7 @@ export const AsignacionFunciones: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => togglePasswordVisibility(socio.id)}
-                          className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                          className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-650"
                         >
                           {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
                         </button>
@@ -419,6 +457,47 @@ export const AsignacionFunciones: React.FC = () => {
               );
             })}
           </div>
+
+          {/* Controles de Paginación */}
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 pt-5 mt-4">
+              <span className="text-xs font-bold text-slate-400">
+                Mostrando {Math.min(filteredSocios.length, (currentPage - 1) * ITEMS_PER_PAGE + 1)}-{Math.min(filteredSocios.length, currentPage * ITEMS_PER_PAGE)} de {filteredSocios.length} socios
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3.5 py-1.5 border border-slate-200 rounded-xl text-xs font-black text-slate-600 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  Anterior
+                </button>
+                <div className="flex gap-1">
+                  {Array.from({ length: totalPages }).map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setCurrentPage(i + 1)}
+                      className={`w-8 h-8 rounded-xl text-xs font-black transition-all ${
+                        currentPage === i + 1
+                          ? 'bg-blue-900 text-white shadow-sm'
+                          : 'border border-slate-200 text-slate-650 bg-white hover:bg-slate-50'
+                      }`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3.5 py-1.5 border border-slate-200 rounded-xl text-xs font-black text-slate-600 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          )}
+
           {filteredSocios.length === 0 && (
             <div className="py-12 text-center text-slate-400 font-semibold bg-slate-50/30 rounded-2xl border border-dashed border-slate-200">
               No se encontraron socios que coincidan con la búsqueda.
