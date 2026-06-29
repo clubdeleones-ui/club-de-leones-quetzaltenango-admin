@@ -96,7 +96,11 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                     url: shareUrl
                 });
             } catch (err) {
-                console.log("Web Share API used or canceled:", err);
+                console.log("Web Share API failed or canceled, falling back:", err);
+                const isUserAbort = err instanceof Error && err.name === 'AbortError';
+                if (!isUserAbort) {
+                    setOpenShareId(openShareId === act.id ? null : act.id);
+                }
             }
         } else {
             setOpenShareId(openShareId === act.id ? null : act.id);
@@ -237,10 +241,10 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                             {filteredActividades.map(act => (
                                 <article 
                                     key={act.id} 
-                                    className="bg-white rounded-[2.5rem] border border-slate-200/70 overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 group flex flex-col h-full"
+                                    className="bg-white rounded-[2.5rem] border border-slate-200/70 shadow-sm hover:shadow-2xl transition-all duration-300 group flex flex-col h-full relative"
                                 >
                                     {/* Poster / Image Header */}
-                                    <div className="relative aspect-video w-full overflow-hidden bg-slate-100 border-b border-slate-150">
+                                    <div className="relative aspect-video w-full overflow-hidden rounded-t-[2.5rem] bg-slate-100 border-b border-slate-150">
                                         <img 
                                             src={act.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800'} 
                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
