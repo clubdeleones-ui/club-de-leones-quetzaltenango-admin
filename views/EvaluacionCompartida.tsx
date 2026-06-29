@@ -420,7 +420,7 @@ export const EvaluacionCompartida: React.FC = () => {
                     <CheckCircle size={32} className="text-emerald-500 mx-auto" />
                     <h4 className="font-black text-sm">¡Muchas gracias por tu opinión!</h4>
                     <p className="text-xs text-emerald-700 font-medium leading-relaxed">
-                      Tu retroalimentación ha sido enviada de forma completamente anónima y será evaluada por el Comité de Afiliación del club.
+                      Tu retroalimentación ha sido enviada de forma completamente anónima y será evaluada por el equipo de Propuestas de Socios del club.
                     </p>
                     <button 
                       onClick={() => setSubmittedId(null)}
@@ -670,7 +670,7 @@ export const EvaluacionCompartida: React.FC = () => {
                   <CheckCircle size={24} className="text-emerald-500 mx-auto" />
                   <h4 className="font-black text-xs">¡Muchas gracias por tu opinión!</h4>
                   <p className="text-[10px] text-emerald-700 font-medium leading-relaxed">
-                    Tu retroalimentación ha sido enviada de forma completamente anónima y será evaluada por el Comité de Afiliación del club.
+                    Tu retroalimentación ha sido enviada de forma completamente anónima y será evaluada por el equipo de Propuestas de Socios del club.
                   </p>
                   <button 
                     onClick={() => setSubmittedId(null)}

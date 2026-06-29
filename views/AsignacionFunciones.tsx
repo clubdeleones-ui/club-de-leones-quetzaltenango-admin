@@ -35,7 +35,7 @@ const AVAILABLE_TABS = [
   { id: 'donaciones', label: 'Donaciones Recibidas' },
   { id: 'presupuestos', label: 'Presupuestos' },
   { id: 'socios', label: 'Gestión de Socios' },
-  { id: 'afiliacion', label: 'Comité de Afiliación' },
+  { id: 'afiliacion', label: 'Propuestas de Socios' },
   { id: 'minutas', label: 'Minutas de Comisiones' },
   { id: 'inventario', label: 'Inventario' },
   { id: 'galeria_admin', label: 'Gestión de Galería' },

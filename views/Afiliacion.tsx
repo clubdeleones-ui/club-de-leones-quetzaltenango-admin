@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MOCK_PROPUESTAS } from '../constants';
 import { Socio, PropuestaSocio, UserRole } from '../types';
 import { firebaseService } from '../services/firebaseService';
@@ -253,7 +253,7 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
     <div className="space-y-8 animate-in fade-in duration-500 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <h2 className="text-3xl font-black text-blue-900">Comité de Afiliación</h2>
+          <h2 className="text-3xl font-black text-blue-900">Propuestas de Socios</h2>
           <p className="text-sm font-bold text-slate-500 mt-1 uppercase tracking-wider">Gestión y Aprobación de Candidatos</p>
         </div>
         {canEditPropuestas && (

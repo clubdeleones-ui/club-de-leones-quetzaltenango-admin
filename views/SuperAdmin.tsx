@@ -159,7 +159,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
       { category: 'Secretaría', items: ['actas', 'comisiones'] },
       { category: 'Comité de Mercadeo', items: ['calendario', 'beneficios'] },
       { category: 'Tesorería', items: ['cuotas', 'parqueo', 'donaciones', 'presupuestos'] },
-      { category: 'Comité de Afiliación', items: ['socios', 'afiliacion'] },
+      { category: 'Propuestas de Socios', items: ['socios', 'afiliacion'] },
       { category: 'Comité de Servicio', items: ['minutas'] },
       { category: 'Comité de Patrimonio', items: ['inventario', 'galeria_admin', 'linea_tiempo_admin'] },
       { category: 'Comité de Gestión', items: ['agenda_contactos'] }
@@ -3846,10 +3846,10 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 ]
               },
               {
-                category: 'Comité de Afiliación',
+                category: 'Propuestas de Socios',
                 items: [
                   { id: 'socios', label: 'Gestión de Socios', icon: Users },
-                  { id: 'afiliacion', label: 'Comité de Afiliación', icon: UserCheck }
+                  { id: 'afiliacion', label: 'Propuestas de Socios', icon: UserCheck }
                 ]
               },
               {
@@ -3955,7 +3955,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     { id: 'presupuestos', label: 'Presupuestos', icon: DollarSign },
                     { id: 'comisiones', label: 'Gestión de Comisiones', icon: Briefcase },
                     { id: 'minutas', label: 'Minutas de Comisiones', icon: FileText },
-                    { id: 'afiliacion', label: 'Comité de Afiliación', icon: UserCheck },
+                    { id: 'afiliacion', label: 'Propuestas de Socios', icon: UserCheck },
                     { id: 'inventario', label: 'Inventario', icon: Archive },
                     { id: 'galeria_admin', label: 'Gestión de Galería', icon: Camera },
                     { id: 'linea_tiempo_admin', label: 'Línea de Tiempo', icon: Clock },
@@ -3984,7 +3984,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     { id: 'presupuestos', label: 'Presupuestos' },
                     { id: 'comisiones', label: 'Gestión de Comisiones' },
                     { id: 'minutas', label: 'Minutas de Comisiones' },
-                    { id: 'afiliacion', label: 'Comité de Afiliación' },
+                    { id: 'afiliacion', label: 'Propuestas de Socios' },
                     { id: 'inventario', label: 'Inventario' },
                     { id: 'galeria_admin', label: 'Gestión de Galería' },
                     { id: 'linea_tiempo_admin', label: 'Línea de Tiempo' },
@@ -4040,10 +4040,10 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     ]
                   },
                   {
-                    category: 'Comité de Afiliación',
+                    category: 'Propuestas de Socios',
                     items: [
                       { id: 'socios', label: 'Gestión de Socios', icon: Users },
-                      { id: 'afiliacion', label: 'Comité de Afiliación', icon: UserCheck }
+                      { id: 'afiliacion', label: 'Propuestas de Socios', icon: UserCheck }
                     ]
                   },
                   {
