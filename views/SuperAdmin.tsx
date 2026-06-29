@@ -166,8 +166,8 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     const groups = [
       { category: 'Principal', items: ['resumen'] },
       { category: 'Presidencia', items: ['presidencia', 'agendas_reunion', 'ranking_lionistico'] },
-      { category: 'Secretaría', items: ['actas', 'beneficios', 'comisiones'] },
-      { category: 'Comité de Mercadeo', items: ['calendario'] },
+      { category: 'Secretaría', items: ['actas', 'comisiones'] },
+      { category: 'Comité de Mercadeo', items: ['calendario', 'beneficios'] },
       { category: 'Tesorería', items: ['cuotas', 'parqueo', 'donaciones', 'presupuestos'] },
       { category: 'Comité de Afiliación', items: ['socios', 'afiliacion'] },
       { category: 'Comité de Servicio', items: ['minutas'] },
@@ -3835,14 +3835,14 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 category: 'Secretaría',
                 items: [
                   { id: 'actas', label: 'Libro de Actas', icon: FileText },
-                  { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
                   { id: 'comisiones', label: 'Gestión de Comisiones', icon: Briefcase }
                 ]
               },
               {
                 category: 'Comité de Mercadeo',
                 items: [
-                  { id: 'calendario', label: 'Actividades', icon: Calendar }
+                  { id: 'calendario', label: 'Actividades', icon: Calendar },
+                  { id: 'beneficios', label: 'Beneficios a Socios', icon: Award }
                 ]
               },
               {
@@ -4026,14 +4026,14 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     category: 'Secretaría',
                     items: [
                       { id: 'actas', label: 'Libro de Actas', icon: FileText },
-                      { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
                       { id: 'comisiones', label: 'Gestión de Comisiones', icon: Briefcase }
                     ]
                   },
                   {
                     category: 'Comité de Mercadeo',
                     items: [
-                      { id: 'calendario', label: 'Actividades', icon: Calendar }
+                      { id: 'calendario', label: 'Actividades', icon: Calendar },
+                      { id: 'beneficios', label: 'Beneficios a Socios', icon: Award }
                     ]
                   },
                   {
