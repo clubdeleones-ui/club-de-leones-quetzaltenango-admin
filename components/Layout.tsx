@@ -409,77 +409,47 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
 
       {/* Redes del Club Section */}
       {isPublicRoute && (
-        <section className="bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-950 py-12 text-white border-t border-blue-800/40 relative overflow-hidden">
+        <section className="bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-950 py-10 text-white border-t border-blue-800/40 relative overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(253,224,71,0.05),transparent_40%)]" />
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <div className="text-center max-w-2xl mx-auto mb-10 space-y-3">
-              <h2 className="text-3xl font-black tracking-tight bg-gradient-to-r from-white via-slate-100 to-yellow-300 bg-clip-text text-transparent">
-                Redes del Club
-              </h2>
-              <p className="text-slate-350 text-sm font-semibold leading-relaxed">
-                Acompáñanos en nuestras plataformas digitales para mantenerte al día con nuestras actividades de servicio y proyectos comunitarios.
-              </p>
-            </div>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 flex flex-col items-center">
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-center bg-gradient-to-r from-white via-slate-100 to-yellow-300 bg-clip-text text-transparent mb-6 uppercase tracking-wider">
+              Síguenos en nuestras redes
+            </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              {/* Facebook Card */}
+            <div className="flex items-center justify-center gap-8 sm:gap-12">
+              {/* Facebook Button */}
               <a
                 href="https://www.facebook.com/clubdeleonesdequetzaltenango"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group relative bg-white/5 backdrop-blur-md hover:bg-blue-600/10 rounded-[2rem] p-8 border border-white/10 hover:border-blue-500/30 transition-all duration-305 flex flex-col items-center text-center shadow-lg hover:shadow-blue-500/10 hover:-translate-y-1.5"
+                className="group relative flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-[1.5rem] bg-white/5 border border-white/10 hover:border-blue-500/40 hover:bg-blue-600/10 transition-all duration-300 shadow-lg hover:shadow-blue-500/25 active:scale-95"
               >
-                <div className="w-16 h-16 rounded-2xl bg-blue-600/10 text-blue-400 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center mb-5 transition-all duration-300 shadow-md group-hover:shadow-blue-500/30">
-                  <Facebook size={28} className="transition-transform duration-300 group-hover:scale-110" />
-                </div>
-                <h3 className="text-lg font-black text-white mb-2 tracking-tight group-hover:text-blue-400 transition-colors">Facebook</h3>
-                <p className="text-slate-450 text-xs font-semibold leading-relaxed">
-                  Sigue nuestras transmisiones en vivo, fotos de eventos y comunicados oficiales.
-                </p>
-                <span className="mt-5 text-[10px] font-black uppercase tracking-wider text-blue-400 group-hover:underline">
-                  Ver Página &rarr;
-                </span>
+                <div className="absolute inset-0 rounded-[1.5rem] bg-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10" />
+                <Facebook size={26} className="text-slate-300 group-hover:text-blue-400 transition-all duration-300 group-hover:scale-115" />
               </a>
 
-              {/* Instagram Card */}
+              {/* Instagram Button */}
               <a
                 href="https://www.instagram.com/clubdeleonesxela"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group relative bg-white/5 backdrop-blur-md hover:bg-pink-600/10 rounded-[2rem] p-8 border border-white/10 hover:border-pink-500/30 transition-all duration-305 flex flex-col items-center text-center shadow-lg hover:shadow-pink-500/10 hover:-translate-y-1.5"
+                className="group relative flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-[1.5rem] bg-white/5 border border-white/10 hover:border-pink-500/40 hover:bg-pink-600/10 transition-all duration-300 shadow-lg hover:shadow-pink-500/25 active:scale-95"
               >
-                <div className="w-16 h-16 rounded-2xl bg-pink-600/10 text-pink-400 group-hover:bg-gradient-to-tr group-hover:from-yellow-500 group-hover:via-pink-500 group-hover:to-purple-600 group-hover:text-white flex items-center justify-center mb-5 transition-all duration-300 shadow-md group-hover:shadow-pink-500/30">
-                  <Instagram size={28} className="transition-transform duration-300 group-hover:scale-110" />
-                </div>
-                <h3 className="text-lg font-black text-white mb-2 tracking-tight group-hover:text-pink-400 transition-colors">Instagram</h3>
-                <p className="text-slate-455 text-xs font-semibold leading-relaxed">
-                  Galerías visuales de actividades de impacto y la vida interna de nuestro club.
-                </p>
-                <span className="mt-5 text-[10px] font-black uppercase tracking-wider text-pink-400 group-hover:underline">
-                  Ver Perfil &rarr;
-                </span>
+                <div className="absolute inset-0 rounded-[1.5rem] bg-gradient-to-tr from-yellow-500/10 via-pink-500/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10" />
+                <Instagram size={26} className="text-slate-300 group-hover:text-pink-400 transition-all duration-300 group-hover:scale-115" />
               </a>
 
-              {/* TikTok Card */}
+              {/* TikTok Button */}
               <a
                 href="https://www.tiktok.com/@clubdeleonesxela"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group relative bg-white/5 backdrop-blur-md hover:bg-slate-850/20 rounded-[2rem] p-8 border border-white/10 hover:border-teal-500/30 transition-all duration-305 flex flex-col items-center text-center shadow-lg hover:shadow-teal-500/10 hover:-translate-y-1.5"
+                className="group relative flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-[1.5rem] bg-white/5 border border-white/10 hover:border-teal-500/40 hover:bg-slate-800/20 transition-all duration-300 shadow-lg hover:shadow-teal-500/25 active:scale-95"
               >
-                <div className="w-16 h-16 rounded-2xl bg-white/10 text-white group-hover:bg-black group-hover:text-white flex items-center justify-center mb-5 transition-all duration-300 shadow-md group-hover:shadow-teal-500/30 border border-white/10 group-hover:border-black relative">
-                  <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm bg-gradient-to-r from-cyan-400 via-transparent to-red-400 -z-10" />
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 448 512" className="w-7 h-7 transition-transform duration-300 group-hover:scale-110">
-                    <path d="M448,209.91a210.06,210.06,0,0,1-122.77-39.25V349.38A162.55,162.55,0,1,1,185,188.31V278.2a74.62,74.62,0,1,0,52.23,71.18V0l88,0a121.18,121.18,0,0,0,1.86,22.17h0A122.18,122.18,0,0,0,381,102.39a121.43,121.43,0,0,0,67,20.14Z"/>
-                  </svg>
-                </div>
-                <h3 className="text-lg font-black text-white mb-2 tracking-tight group-hover:text-teal-400 transition-colors">TikTok</h3>
-                <p className="text-slate-456 text-xs font-semibold leading-relaxed">
-                  Videos cortos y resúmenes dinámicos de nuestras obras en la comunidad.
-                </p>
-                <span className="mt-5 text-[10px] font-black uppercase tracking-wider text-teal-400 group-hover:underline">
-                  Ver Videos &rarr;
-                </span>
+                <div className="absolute inset-0 rounded-[1.5rem] opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm bg-gradient-to-r from-cyan-400/20 via-transparent to-red-400/20 -z-10" />
+                <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 448 512" className="w-6 h-6 text-slate-300 group-hover:text-teal-400 transition-all duration-305 group-hover:scale-115">
+                  <path d="M448,209.91a210.06,210.06,0,0,1-122.77-39.25V349.38A162.55,162.55,0,1,1,185,188.31V278.2a74.62,74.62,0,1,0,52.23,71.18V0l88,0a121.18,121.18,0,0,0,1.86,22.17h0A122.18,122.18,0,0,0,381,102.39a121.43,121.43,0,0,0,67,20.14Z"/>
+                </svg>
               </a>
             </div>
           </div>
