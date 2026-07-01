@@ -948,7 +948,50 @@ export const firebaseService = {
         fotoSede: "https://images.unsplash.com/photo-1590001155093-a3c66ab0c3ff?auto=format&fit=crop&w=800&q=80",
         fotoSedeEtiqueta: "Sede Oficial",
         fotoSedeDescripcion: "Teatro Municipal de Quetzaltenango",
-        inscripcionesAbiertas: false
+        inscripcionesAbiertas: false,
+        actividadesCulturales: [
+          {
+            id: "act_1",
+            title: "Gala Folclórica y Marimba",
+            description: "Una noche inolvidable celebrando la herencia musical de Guatemala con la tradicional marimba de conciertos y danzas representativas.",
+            iconName: "Music",
+            time: "Viernes 20 de Marzo, 19:00 hrs"
+          },
+          {
+            id: "act_2",
+            title: "Desfile Leonístico de Delegaciones",
+            description: "El orgullo de lucir nuestros chalecos y estandartes en un recorrido lleno de alegría por las principales avenidas de la ciudad sede.",
+            iconName: "Flag",
+            time: "Sábado 21 de Marzo, 09:00 hrs"
+          },
+          {
+            id: "act_3",
+            title: "Festival del Café y Antojitos Altenses",
+            description: "Degustación del auténtico café de las zonas cafetaleras y la exquisita repostería local tradicional que distingue al altiplano.",
+            iconName: "Coffee",
+            time: "Sábado 21 de Marzo, 16:30 hrs"
+          }
+        ],
+        experienciasUnicas: [
+          {
+            id: "exp_1",
+            title: "Foro de Liderazgo D3",
+            desc: "Conferencias magistrales impartidas por líderes de LCI sobre el futuro del servicio humanitario y el desarrollo de nuevas habilidades de impacto comunitario.",
+            badge: "Liderazgo"
+          },
+          {
+            id: "exp_2",
+            title: "Intercambio Tradicional de Pines",
+            desc: "La emblemática tradición leonística donde estrechamos lazos de amistad coleccionando e intercambiando pines representativos de clubes de todo el distrito.",
+            badge: "Hermandad"
+          },
+          {
+            id: "exp_3",
+            title: "Proyecto de Servicio en Vivo",
+            desc: "Dejaremos una huella duradera en la comunidad anfitriona realizando una obra de servicio colectivo durante el fin de semana de la convención.",
+            badge: "Servicio"
+          }
+        ]
       };
     } catch (error) {
       console.error("Error fetching convencion config from Firestore:", error);
@@ -960,7 +1003,50 @@ export const firebaseService = {
         fotoSede: "https://images.unsplash.com/photo-1590001155093-a3c66ab0c3ff?auto=format&fit=crop&w=800&q=80",
         fotoSedeEtiqueta: "Sede Oficial",
         fotoSedeDescripcion: "Teatro Municipal de Quetzaltenango",
-        inscripcionesAbiertas: false
+        inscripcionesAbiertas: false,
+        actividadesCulturales: [
+          {
+            id: "act_1",
+            title: "Gala Folclórica y Marimba",
+            description: "Una noche inolvidable celebrando la herencia musical de Guatemala con la tradicional marimba de conciertos y danzas representativas.",
+            iconName: "Music",
+            time: "Viernes 20 de Marzo, 19:00 hrs"
+          },
+          {
+            id: "act_2",
+            title: "Desfile Leonístico de Delegaciones",
+            description: "El orgullo de lucir nuestros chalecos y estandartes en un recorrido lleno de alegría por las principales avenidas de la ciudad sede.",
+            iconName: "Flag",
+            time: "Sábado 21 de Marzo, 09:00 hrs"
+          },
+          {
+            id: "act_3",
+            title: "Festival del Café y Antojitos Altenses",
+            description: "Degustación del auténtico café de las zonas cafetaleras y la exquisita repostería local tradicional que distingue al altiplano.",
+            iconName: "Coffee",
+            time: "Sábado 21 de Marzo, 16:30 hrs"
+          }
+        ],
+        experienciasUnicas: [
+          {
+            id: "exp_1",
+            title: "Foro de Liderazgo D3",
+            desc: "Conferencias magistrales impartidas por líderes de LCI sobre el futuro del servicio humanitario y el desarrollo de nuevas habilidades de impacto comunitario.",
+            badge: "Liderazgo"
+          },
+          {
+            id: "exp_2",
+            title: "Intercambio Tradicional de Pines",
+            desc: "La emblemática tradición leonística donde estrechamos lazos de amistad coleccionando e intercambiando pines representativos de clubes de todo el distrito.",
+            badge: "Hermandad"
+          },
+          {
+            id: "exp_3",
+            title: "Proyecto de Servicio en Vivo",
+            desc: "Dejaremos una huella duradera en la comunidad anfitriona realizando una obra de servicio colectivo durante el fin de semana de la convención.",
+            badge: "Servicio"
+          }
+        ]
       };
     }
   },

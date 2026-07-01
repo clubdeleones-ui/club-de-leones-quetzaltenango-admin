@@ -146,44 +146,18 @@ export default function Convencion() {
     }
   };
 
-  const culturalActivities = [
-    {
-      title: "Gala Folclórica y Marimba",
-      description: "Una noche inolvidable celebrando la herencia musical de Guatemala con la tradicional marimba de conciertos y danzas representativas.",
-      icon: Music,
-      time: "Viernes 20 de Marzo, 19:00 hrs"
-    },
-    {
-      title: "Desfile Leonístico de Delegaciones",
-      description: "El orgullo de lucir nuestros chalecos y estandartes en un recorrido lleno de alegría por las principales avenidas de la ciudad sede.",
-      icon: Flag,
-      time: "Sábado 21 de Marzo, 09:00 hrs"
-    },
-    {
-      title: "Festival del Café y Antojitos Altenses",
-      description: "Degustación del auténtico café de las zonas cafetaleras y la exquisita repostería local tradicional que distingue al altiplano.",
-      icon: Coffee,
-      time: "Sábado 21 de Marzo, 16:30 hrs"
+  const getIconComponent = (iconName: string) => {
+    switch (iconName) {
+      case 'Music': return Music;
+      case 'Flag': return Flag;
+      case 'Coffee': return Coffee;
+      case 'Award': return Award;
+      case 'Sparkles': return Sparkles;
+      case 'Clock': return Clock;
+      case 'Users': return Users;
+      default: return Sparkles;
     }
-  ];
-
-  const uniqueExperiences = [
-    {
-      title: "Foro de Liderazgo D3",
-      desc: "Conferencias magistrales impartidas por líderes de LCI sobre el futuro del servicio humanitario y el desarrollo de nuevas habilidades de impacto comunitario.",
-      badge: "Liderazgo"
-    },
-    {
-      title: "Intercambio Tradicional de Pines",
-      desc: "La emblemática tradición leonística donde estrechamos lazos de amistad coleccionando e intercambiando pines representativos de clubes de todo el distrito.",
-      badge: "Hermandad"
-    },
-    {
-      title: "Proyecto de Servicio en Vivo",
-      desc: "Dejaremos una huella duradera en la comunidad anfitriona realizando una obra de servicio colectivo durante el fin de semana de la convención.",
-      badge: "Servicio"
-    }
-  ];
+  };
 
   // Helper to format Spanish date
   const formatFriendlyDate = (dateStr: string) => {
@@ -334,11 +308,11 @@ export default function Convencion() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12 sm:mt-16">
-            {culturalActivities.map((act, index) => {
-              const Icon = act.icon;
+            {(config.actividadesCulturales || []).map((act, index) => {
+              const Icon = getIconComponent(act.iconName);
               return (
                 <div 
-                  key={index} 
+                  key={act.id || index} 
                   className="group relative bg-white/5 border border-white/10 hover:border-yellow-500/30 rounded-3xl p-6 transition-all duration-300 hover:-translate-y-2 hover:bg-white/10 flex flex-col justify-between shadow-lg"
                 >
                   <div className="space-y-4">
@@ -377,9 +351,9 @@ export default function Convencion() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {uniqueExperiences.map((exp, index) => (
+          {(config.experienciasUnicas || []).map((exp, index) => (
             <div 
-              key={index}
+              key={exp.id || index}
               className="bg-white border border-slate-100 hover:border-slate-200 rounded-[2rem] p-8 shadow-xl shadow-slate-100/50 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between"
             >
               <div className="space-y-4">

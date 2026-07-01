@@ -381,6 +381,21 @@ export interface CategoriaInventario {
   prefix: string;
 }
 
+export interface ConvencionActividad {
+  id: string;
+  title: string;
+  description: string;
+  time: string;
+  iconName: string;
+}
+
+export interface ConvencionExperiencia {
+  id: string;
+  title: string;
+  desc: string;
+  badge: string;
+}
+
 export interface ConvencionConfig {
   titulo: string;
   lema: string;
@@ -390,6 +405,8 @@ export interface ConvencionConfig {
   fotoSedeEtiqueta?: string;
   fotoSedeDescripcion?: string;
   inscripcionesAbiertas: boolean;
+  actividadesCulturales?: ConvencionActividad[];
+  experienciasUnicas?: ConvencionExperiencia[];
 }
 
 export interface ConvencionRegistro {
