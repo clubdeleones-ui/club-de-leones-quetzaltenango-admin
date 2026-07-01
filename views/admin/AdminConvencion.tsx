@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Save, 
   Users, 
@@ -7,13 +7,15 @@ import {
   Search, 
   Sparkles, 
   Clock, 
-  Image, 
+  Image as ImageIcon, 
   FileText, 
   CheckCircle,
   AlertCircle,
-  Loader2
+  Loader2,
+  UploadCloud
 } from 'lucide-react';
 import { firebaseService } from '../../services/firebaseService';
+import { compressImageFile, validateImageFile } from '../../utils/imageCompressor';
 import { ConvencionConfig, ConvencionRegistro } from '../../types';
 
 export function AdminConvencion() {
@@ -33,12 +35,17 @@ export function AdminConvencion() {
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
         const dbConfig = await firebaseService.getConvencionConfig();
         setConfig(dbConfig);
+        setImagePreview(dbConfig.fotoSede);
         
         const dbRegistros = await firebaseService.getConvencionRegistros();
         setRegistros(dbRegistros);
@@ -68,18 +75,52 @@ export function AdminConvencion() {
     }));
   };
 
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const validation = validateImageFile(file);
+      if (!validation.valid) {
+        setErrorMsg(validation.error || "Archivo de imagen inválido");
+        return;
+      }
+      setImageFile(file);
+      // Create local preview immediately
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setImagePreview(ev.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setSuccessMsg('');
     setErrorMsg('');
     try {
-      await firebaseService.saveConvencionConfig(config);
+      let finalUrl = config.fotoSede;
+
+      // Upload new image if selected
+      if (imageFile) {
+        const compressedBase64 = await compressImageFile(imageFile, 1200, 1200, 0.8);
+        finalUrl = await firebaseService.uploadConvencionImage(compressedBase64);
+      }
+
+      const updatedConfig: ConvencionConfig = {
+        ...config,
+        fotoSede: finalUrl
+      };
+
+      await firebaseService.saveConvencionConfig(updatedConfig);
+      setConfig(updatedConfig);
+      setImageFile(null);
+
       setSuccessMsg("¡Configuración de la convención guardada exitosamente!");
       setTimeout(() => setSuccessMsg(''), 4000);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error al guardar configuración:", error);
-      setErrorMsg("No se pudo guardar la configuración.");
+      setErrorMsg(error.message || "No se pudo guardar la configuración.");
     } finally {
       setSaving(false);
     }
@@ -256,25 +297,52 @@ export function AdminConvencion() {
                 </div>
               </div>
 
-              {/* Foto Sede */}
+              {/* Foto Sede - Cargador de Firebase Storage */}
               <div className="md:col-span-2 space-y-2">
-                <label className="text-xs font-extrabold uppercase tracking-wider text-slate-500" htmlFor="fotoSede">URL de la Foto de la Sede</label>
-                <div className="relative">
-                  <input 
-                    type="text" 
-                    id="fotoSede"
-                    name="fotoSede"
-                    value={config.fotoSede}
-                    onChange={handleConfigChange}
-                    placeholder="https://ejemplo.com/imagen.jpg"
-                    className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl px-4 py-3 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
-                  />
-                </div>
-                {config.fotoSede && (
-                  <div className="mt-3 relative w-48 h-32 rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
-                    <img src={config.fotoSede} alt="Vista previa de sede" className="w-full h-full object-cover" />
+                <label className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Fotografía de la Sede</label>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageChange}
+                  accept="image/*"
+                  className="hidden"
+                />
+                
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
+                  {/* Dropzone / Upload button */}
+                  <div className="sm:col-span-6">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full h-36 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 hover:border-blue-900 bg-slate-50/50 hover:bg-slate-50 rounded-2xl transition-all group cursor-pointer"
+                    >
+                      <UploadCloud className="w-10 h-10 text-slate-400 group-hover:text-blue-900 transition-colors" />
+                      <span className="mt-2 text-xs font-black text-slate-700 group-hover:text-blue-900 transition-colors uppercase tracking-wider">
+                        {imageFile ? 'Cambiar Imagen' : 'Subir Imagen Sede'}
+                      </span>
+                      <span className="text-[10px] text-slate-400 mt-1">Formatos: JPG, PNG. Máx. 10MB</span>
+                    </button>
                   </div>
-                )}
+
+                  {/* Image Preview Container */}
+                  <div className="sm:col-span-6 flex flex-col items-center sm:items-start justify-center">
+                    {imagePreview ? (
+                      <div className="relative w-full h-36 rounded-2xl overflow-hidden border border-slate-200 shadow-md">
+                        <img src={imagePreview} alt="Sede de Convención" className="w-full h-full object-cover" />
+                        {imageFile && (
+                          <div className="absolute top-2 right-2 bg-yellow-500 text-blue-955 text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider shadow">
+                            Por guardar
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="w-full h-36 rounded-2xl bg-slate-100 flex flex-col items-center justify-center text-slate-400 border border-slate-200">
+                        <ImageIcon size={28} />
+                        <span className="text-[10px] font-bold mt-1">Sin fotografía seleccionada</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Checkbox Inscripciones Abiertas */}
@@ -397,9 +465,9 @@ export function AdminConvencion() {
               </div>
             ) : (
               <div className="text-center py-16 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                <FileText className="w-12 h-12 text-slate-350 mx-auto" />
+                <FileText className="w-12 h-12 text-slate-355 mx-auto" />
                 <p className="mt-4 text-slate-800 font-extrabold text-base">No hay pre-registros encontrados</p>
-                <p className="text-xs text-slate-500 mt-1">Los socios que se registren en la landing page aparecerán listados aquí.</p>
+                <p className="text-xs text-slate-550 mt-1">Los socios que se registren en la landing page aparecerán listados aquí.</p>
               </div>
             )}
           </div>

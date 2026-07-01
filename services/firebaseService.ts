@@ -997,4 +997,19 @@ export const firebaseService = {
       return [];
     }
   },
+
+  uploadConvencionImage: async (base64Data: string): Promise<string> => {
+    try {
+      if (!base64Data.startsWith('data:image')) {
+        return base64Data;
+      }
+      const uniqueName = `sede_${Date.now()}`;
+      const storageRef = ref(storage, `convencion/${uniqueName}`);
+      await uploadString(storageRef, base64Data, 'data_url');
+      return await getDownloadURL(storageRef);
+    } catch (error: any) {
+      console.error("Error al subir foto de convención a Firebase Storage:", error);
+      throw new Error(`Error de subida de imagen: ${error.message || error}`);
+    }
+  },
 };
