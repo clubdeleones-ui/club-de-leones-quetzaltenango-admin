@@ -73,7 +73,27 @@ export default function Convencion() {
 
   // Countdown timer logic based on dynamic config date
   useEffect(() => {
-    const targetDate = new Date(`${config.fechaEvento}T${config.horaEvento}`).getTime();
+    const parseTargetDate = () => {
+      try {
+        if (!config.fechaEvento) return 0;
+        const dateParts = config.fechaEvento.split('-'); // ["2026", "03", "19"]
+        const timeParts = (config.horaEvento || "00:00:00").split(':'); // ["08", "00", "00"]
+        
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1; // 0-indexed
+        const day = parseInt(dateParts[2], 10);
+        const hours = parseInt(timeParts[0] || "0", 10);
+        const minutes = parseInt(timeParts[1] || "0", 10);
+        const seconds = parseInt(timeParts[2] || "0", 10);
+        
+        return new Date(year, month, day, hours, minutes, seconds).getTime();
+      } catch (e) {
+        console.error("Error parsing date:", e);
+        return 0;
+      }
+    };
+
+    const targetDate = parseTargetDate();
 
     const calculateCountdown = () => {
       const now = new Date().getTime();
@@ -284,8 +304,12 @@ export default function Convencion() {
                 className="w-full h-80 object-cover rounded-[1.5rem]"
               />
               <div className="absolute bottom-6 left-6 right-6 bg-slate-955/80 backdrop-blur-md p-4 rounded-xl text-white">
-                <p className="text-xs font-black uppercase text-yellow-400 tracking-wider">Histórico y Cultural</p>
-                <p className="font-bold text-sm mt-1">Sede Oficial de la Convención</p>
+                <p className="text-xs font-black uppercase text-yellow-400 tracking-wider">
+                  {config.fotoSedeEtiqueta || "Histórico y Cultural"}
+                </p>
+                <p className="font-bold text-sm mt-1">
+                  {config.fotoSedeDescripcion || "Sede Oficial de la Convención"}
+                </p>
               </div>
             </div>
           </div>

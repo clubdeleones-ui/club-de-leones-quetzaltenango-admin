@@ -387,6 +387,8 @@ export interface ConvencionConfig {
   fechaEvento: string;
   horaEvento: string;
   fotoSede: string;
+  fotoSedeEtiqueta?: string;
+  fotoSedeDescripcion?: string;
   inscripcionesAbiertas: boolean;
 }
 

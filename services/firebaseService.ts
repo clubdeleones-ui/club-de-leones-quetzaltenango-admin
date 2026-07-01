@@ -946,6 +946,8 @@ export const firebaseService = {
         fechaEvento: "2026-03-19",
         horaEvento: "08:00:00",
         fotoSede: "https://images.unsplash.com/photo-1590001155093-a3c66ab0c3ff?auto=format&fit=crop&w=800&q=80",
+        fotoSedeEtiqueta: "Sede Oficial",
+        fotoSedeDescripcion: "Teatro Municipal de Quetzaltenango",
         inscripcionesAbiertas: false
       };
     } catch (error) {
@@ -956,6 +958,8 @@ export const firebaseService = {
         fechaEvento: "2026-03-19",
         horaEvento: "08:00:00",
         fotoSede: "https://images.unsplash.com/photo-1590001155093-a3c66ab0c3ff?auto=format&fit=crop&w=800&q=80",
+        fotoSedeEtiqueta: "Sede Oficial",
+        fotoSedeDescripcion: "Teatro Municipal de Quetzaltenango",
         inscripcionesAbiertas: false
       };
     }

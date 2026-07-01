@@ -26,6 +26,8 @@ export function AdminConvencion() {
     fechaEvento: '',
     horaEvento: '',
     fotoSede: '',
+    fotoSedeEtiqueta: '',
+    fotoSedeDescripcion: '',
     inscripcionesAbiertas: false
   });
   const [registros, setRegistros] = useState<ConvencionRegistro[]>([]);
@@ -44,7 +46,11 @@ export function AdminConvencion() {
       setLoading(true);
       try {
         const dbConfig = await firebaseService.getConvencionConfig();
-        setConfig(dbConfig);
+        setConfig({
+          ...dbConfig,
+          fotoSedeEtiqueta: dbConfig.fotoSedeEtiqueta || 'Sede Oficial',
+          fotoSedeDescripcion: dbConfig.fotoSedeDescripcion || 'Teatro Municipal de Quetzaltenango'
+        });
         setImagePreview(dbConfig.fotoSede);
         
         const dbRegistros = await firebaseService.getConvencionRegistros();
@@ -343,6 +349,35 @@ export function AdminConvencion() {
                     )}
                   </div>
                 </div>
+              </div>
+
+
+              {/* Etiqueta Foto Sede */}
+              <div className="space-y-2">
+                <label className="text-xs font-extrabold uppercase tracking-wider text-slate-500" htmlFor="fotoSedeEtiqueta">Etiqueta sobre la foto de la sede</label>
+                <input 
+                  type="text" 
+                  id="fotoSedeEtiqueta"
+                  name="fotoSedeEtiqueta"
+                  value={config.fotoSedeEtiqueta || ''}
+                  onChange={handleConfigChange}
+                  placeholder="Ej. Sede Oficial"
+                  className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl px-4 py-3 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
+                />
+              </div>
+
+              {/* Descripción Foto Sede */}
+              <div className="space-y-2">
+                <label className="text-xs font-extrabold uppercase tracking-wider text-slate-500" htmlFor="fotoSedeDescripcion">Descripción de la foto de la sede</label>
+                <input 
+                  type="text" 
+                  id="fotoSedeDescripcion"
+                  name="fotoSedeDescripcion"
+                  value={config.fotoSedeDescripcion || ''}
+                  onChange={handleConfigChange}
+                  placeholder="Ej. Teatro Municipal de Quetzaltenango"
+                  className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl px-4 py-3 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
+                />
               </div>
 
               {/* Checkbox Inscripciones Abiertas */}
