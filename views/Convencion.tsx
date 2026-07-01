@@ -132,7 +132,7 @@ const REGION_ZONES: { region: string; color: string; zonas: string[] }[] = [
 
 const CARGO_OPTIONS = [
   { value: 'Socio', label: 'Socio Regular', icon: '🦁' },
-  { value: 'Presidente', label: 'Presidente de Club', icon: '👑' },
+  { value: 'Presidente', label: 'Presidente de Club', icon: '🔨' },
   { value: 'Secretario', label: 'Secretario', icon: '📝' },
   { value: 'Tesorero', label: 'Tesorero', icon: '💰' },
   { value: 'Gobernador', label: 'Gobernador / Vicegobernador', icon: '🏛️' },
@@ -578,7 +578,7 @@ export default function Convencion() {
       </section>
 
       {/* Pre-registro Form Section */}
-      <section id="pre-inscripcion" className="py-20 bg-gradient-to-br from-blue-900 to-indigo-950 text-white relative overflow-hidden border-t border-yellow-500/20">
+      <section id="pre-inscripcion" className="py-20 bg-gradient-to-br from-blue-900 to-indigo-950 text-white relative overflow-visible border-t border-yellow-500/20">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(253,224,71,0.05),transparent_40%)]" />
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="bg-blue-950/70 backdrop-blur-lg border border-white/10 rounded-[2.5rem] p-8 sm:p-12 shadow-2xl">
