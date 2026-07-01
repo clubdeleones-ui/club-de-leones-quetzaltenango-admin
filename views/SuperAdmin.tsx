@@ -98,6 +98,7 @@ import { AsignacionFunciones } from './AsignacionFunciones';
 import { AdminActas } from './admin/AdminActas';
 import { AdminCuotas } from './admin/AdminCuotas';
 import { AdminCalendario } from './admin/AdminCalendario';
+import { AdminConvencion } from './admin/AdminConvencion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
 
 const CATEGORIAS_MODULOS = [
@@ -113,7 +114,8 @@ const CATEGORIAS_MODULOS = [
     items: [
       { id: 'presidencia', label: 'Gestión de Solicitudes', icon: Layers },
       { id: 'agendas_reunion', label: 'Agendas de Reunión', icon: FileText },
-      { id: 'ranking_lionistico', label: 'Ranking Lionístico', icon: Trophy }
+      { id: 'ranking_lionistico', label: 'Ranking Lionístico', icon: Trophy },
+      { id: 'convencion_admin', label: 'Configuración Convención', icon: Award }
     ]
   },
   {
@@ -227,7 +229,7 @@ interface SuperAdminProps {
   onUpdateUser?: (user: Socio) => void;
 }
 
-type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas' | 'afiliacion' | 'inventario' | 'galeria_admin' | 'linea_tiempo_admin' | 'agenda_contactos' | 'presidencia' | 'agendas_reunion' | 'ranking_lionistico' | 'asignacion_funciones';
+type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas' | 'afiliacion' | 'inventario' | 'galeria_admin' | 'linea_tiempo_admin' | 'agenda_contactos' | 'presidencia' | 'agendas_reunion' | 'ranking_lionistico' | 'asignacion_funciones' | 'convencion_admin';
 
 const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const { showAlert, showConfirm } = useModal();
@@ -247,7 +249,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     // Fallback switch check
     switch (user.rol) {
       case UserRole.SUPER_ADMIN:
-        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario', 'galeria_admin', 'linea_tiempo_admin', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico', 'asignacion_funciones'];
+        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario', 'galeria_admin', 'linea_tiempo_admin', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico', 'asignacion_funciones', 'convencion_admin'];
       case UserRole.TESORERO:
         return ['resumen', 'socios', 'cuotas', 'donaciones', 'parqueo', 'presupuestos', 'inventario', 'galeria_admin', 'linea_tiempo_admin'];
       case UserRole.SECRETARIO:
@@ -5356,6 +5358,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           )}
           {activeTab === 'asignacion_funciones' && (
             <AsignacionFunciones />
+          )}
+          {activeTab === 'convencion_admin' && (
+            <AdminConvencion />
           )}
         </main>
       </div>

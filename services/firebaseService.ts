@@ -13,7 +13,7 @@ import {
   writeBatch
 } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda, Acta, HitoHistorico, SolicitudVoluntario, ReunionAgenda, TareaComision, Asistencia, BienInventario, CategoriaInventario } from "../types";
+import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda, Acta, HitoHistorico, SolicitudVoluntario, ReunionAgenda, TareaComision, Asistencia, BienInventario, CategoriaInventario, ConvencionConfig, ConvencionRegistro } from "../types";
 
 export const firebaseService = {
   // Upload candidate photo to Firebase Storage (Supports Base64 data_url format)
@@ -929,6 +929,72 @@ export const firebaseService = {
     } catch (error) {
       console.error("Error saving category in Firestore:", error);
       throw error;
+    }
+  },
+
+  // --- CONVENCION METHODS ---
+  getConvencionConfig: async (): Promise<ConvencionConfig> => {
+    try {
+      const docRef = doc(db, "convencion_config", "config");
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return docSnap.data() as ConvencionConfig;
+      }
+      return {
+        titulo: "Distrito D3 Guatemala",
+        lema: "Rugiendo con fuerza, sirviendo con amor y uniendo voluntades por nuestra nación",
+        fechaEvento: "2026-03-19",
+        horaEvento: "08:00:00",
+        fotoSede: "https://images.unsplash.com/photo-1590001155093-a3c66ab0c3ff?auto=format&fit=crop&w=800&q=80",
+        inscripcionesAbiertas: false
+      };
+    } catch (error) {
+      console.error("Error fetching convencion config from Firestore:", error);
+      return {
+        titulo: "Distrito D3 Guatemala",
+        lema: "Rugiendo con fuerza, sirviendo con amor y uniendo voluntades por nuestra nación",
+        fechaEvento: "2026-03-19",
+        horaEvento: "08:00:00",
+        fotoSede: "https://images.unsplash.com/photo-1590001155093-a3c66ab0c3ff?auto=format&fit=crop&w=800&q=80",
+        inscripcionesAbiertas: false
+      };
+    }
+  },
+
+  saveConvencionConfig: async (config: ConvencionConfig): Promise<void> => {
+    try {
+      const docRef = doc(db, "convencion_config", "config");
+      const cleanData = JSON.parse(JSON.stringify(config));
+      await setDoc(docRef, cleanData);
+    } catch (error) {
+      console.error("Error saving convencion config in Firestore:", error);
+      throw error;
+    }
+  },
+
+  saveConvencionRegistro: async (registro: ConvencionRegistro): Promise<void> => {
+    try {
+      const docRef = doc(db, "convencion_registros", registro.id);
+      const cleanData = JSON.parse(JSON.stringify(registro));
+      await setDoc(docRef, cleanData);
+    } catch (error) {
+      console.error("Error saving convencion registration in Firestore:", error);
+      throw error;
+    }
+  },
+
+  getConvencionRegistros: async (): Promise<ConvencionRegistro[]> => {
+    try {
+      const colRef = collection(db, "convencion_registros");
+      const snapshot = await getDocs(colRef);
+      const list: ConvencionRegistro[] = [];
+      snapshot.forEach(doc => {
+        list.push(doc.data() as ConvencionRegistro);
+      });
+      return list.sort((a, b) => new Date(b.fechaRegistro).getTime() - new Date(a.fechaRegistro).getTime());
+    } catch (error) {
+      console.error("Error fetching convencion registrations from Firestore:", error);
+      return [];
     }
   },
 };

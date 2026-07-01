@@ -154,6 +154,18 @@ service cloud.firestore {
                    && (request.resource.data.estado in ['Activo', 'Completado']);
     }
 
+    match /convencion_config/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'titulo', false)
+                   && isValidString(request.resource.data, 'lema', false);
+    }
+
+    match /convencion_registros/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'nombre', false)
+                   && isValidString(request.resource.data, 'email', false);
+    }
+
     // --- GENERAL COMPATIBILITY CATCH-ALL ---
     // Regla de compatibilidad para otros desarrollos en el proyecto parqueo-cueva (Válido hasta finales de 2027)
     // Se restringe para no interceptar ni relajar las reglas de las colecciones del Club de Leones declaradas arriba.
@@ -164,7 +176,7 @@ service cloud.firestore {
           'solicitudes_voluntarios', 'galeria', 'linea_tiempo', 'comisiones', 
           'minutas', 'agenda', 'agendas', 'tareas_comisiones', 'asistencias', 
           'presupuestos_rubros', 'presupuestos_fondos', 'presupuestos_asignaciones', 
-          'config_roles', 'config_puestos', 'parqueo'
+          'config_roles', 'config_puestos', 'parqueo', 'convencion_config', 'convencion_registros'
         ]);
     }
   }

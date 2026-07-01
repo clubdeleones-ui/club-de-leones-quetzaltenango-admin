@@ -380,3 +380,23 @@ export interface CategoriaInventario {
   label: string;
   prefix: string;
 }
+
+export interface ConvencionConfig {
+  titulo: string;
+  lema: string;
+  fechaEvento: string;
+  horaEvento: string;
+  fotoSede: string;
+  inscripcionesAbiertas: boolean;
+}
+
+export interface ConvencionRegistro {
+  id: string;
+  nombre: string;
+  email: string;
+  telefono: string;
+  club: string;
+  cargo: string;
+  distrito: string;
+  fechaRegistro: string;
+}
