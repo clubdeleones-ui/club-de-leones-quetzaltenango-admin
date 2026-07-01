@@ -350,7 +350,7 @@ export function AdminConvencion() {
   const handleExportCSV = () => {
     if (registros.length === 0) return;
     
-    const headers = ["Nombre Completo", "Email", "Telefono", "Club", "Cargo", "Distrito", "Fecha Registro"];
+    const headers = ["Nombre Completo", "Email", "Telefono", "Club", "Cargo", "Zona", "Fecha Registro"];
     const csvRows = [
       headers.join(','),
       ...filteredRegistros.map(r => [
@@ -811,7 +811,7 @@ export function AdminConvencion() {
                         <th className="px-6 py-4">Contacto</th>
                         <th className="px-6 py-4">Club de procedencia</th>
                         <th className="px-6 py-4">Cargo</th>
-                        <th className="px-6 py-4">Distrito</th>
+                        <th className="px-6 py-4">Zona</th>
                         <th className="px-6 py-4">Fecha Registro</th>
                       </tr>
                     </thead>

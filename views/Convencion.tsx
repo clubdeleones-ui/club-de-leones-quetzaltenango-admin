@@ -26,6 +26,101 @@ interface CountdownState {
   seconds: number;
 }
 
+const ZONAS_CLUBS: Record<string, string[]> = {
+  'Zona A-1': [
+    'Guatemala Central',
+    'Guatemala Tikal',
+    'Guatemala Utatlán',
+    'Guatemala Leo - León',
+    'Mixco',
+    'Otro Club'
+  ],
+  'Zona A-2': [
+    'Guatemala 63',
+    'Guatemala China',
+    'Guatemala Nuevo Centenario',
+    'Guatemala Quiché',
+    'Otro Club'
+  ],
+  'Zona A-3': [
+    'Guatemala Humanitaria',
+    'Guatemala Nueva Era',
+    'Guatemala Nueva Generación China',
+    'Guatemala Reforma',
+    'Guatemala Sacatepéquez',
+    'Otro Club'
+  ],
+  'Zona B-1': [
+    'Acatenango Centenario',
+    'Antigua',
+    'Chimaltenango',
+    'Cotzumalguapa L C',
+    'Escuintla',
+    'Escuintla Universitario Susana de Maldonado',
+    'Otro Club'
+  ],
+  'Zona B-2': [
+    'Cotzumalguapa Profesionales',
+    'Granados',
+    'Guatemala 4 x 4 Off Road',
+    'San Lucas Sacatepéquez',
+    'Santa Cruz el Chol',
+    'Tiquisate',
+    'Otro Club'
+  ],
+  'Zona C-1': [
+    'Huehuetenango',
+    'Quetzaltenango',
+    'Salcajá',
+    'San Cristóbal Totonicapán',
+    'Santa Cruz del Quiché',
+    'Otro Club'
+  ],
+  'Zona C-2': [
+    'Catarina El Sitio',
+    'Malacatán',
+    'San Pedro Sacatepéquez Valle de la Esmeralda',
+    'San Rafael Pie de la Cuesta',
+    'Otro Club'
+  ],
+  'Zona C-3': [
+    'Coatepeque',
+    'Retalhuleu',
+    'Otro Club'
+  ],
+  'Zona C-4': [
+    'Coatepeque Universitario',
+    'Flores y Génova',
+    'La Blanca',
+    'Mazatenango Suchitepéquez',
+    'Otro Club'
+  ],
+  'Zona D-1': [
+    'Chiquimula',
+    'Chiquimulilla',
+    'Jalpatagua Servidores de la Humanidad',
+    'Jutiapa',
+    'Jutiapa Damas del Centenario',
+    'Otro Club'
+  ],
+  'Zona D-2': [
+    'Cobán Alta Verapaz',
+    'Salamá',
+    'San Jerónimo',
+    'Otro Club'
+  ],
+  'Zona D-3': [
+    'Jalapa',
+    'Mataquescuintla',
+    'Monjas',
+    'Santa Cruz Naranjo',
+    'Otro Club'
+  ],
+  'Otro / Internacional': [
+    'Otro Club'
+  ]
+};
+
 export default function Convencion() {
   const [config, setConfig] = useState<ConvencionConfig>({
     titulo: 'Distrito D3 Guatemala',
@@ -47,11 +142,13 @@ export default function Convencion() {
     nombre: '',
     email: '',
     telefono: '',
-    club: '',
+    club: 'Guatemala Central',
     cargo: 'Socio',
-    distrito: 'D3 Guatemala'
+    distrito: 'Zona A-1'
   });
 
+  const [telefonoDigitos, setTelefonoDigitos] = useState('');
+  const [customClub, setCustomClub] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -125,14 +222,74 @@ export default function Convencion() {
     });
   };
 
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 8);
+    setTelefonoDigitos(val);
+    setForm(prev => ({
+      ...prev,
+      telefono: val ? `+502${val}` : ''
+    }));
+  };
+
+  const handleZoneChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedZone = e.target.value;
+    const defaultClub = ZONAS_CLUBS[selectedZone]?.[0] || '';
+    setForm(prev => ({
+      ...prev,
+      distrito: selectedZone,
+      club: defaultClub
+    }));
+    setCustomClub('');
+  };
+
+  const handleClubChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedClub = e.target.value;
+    setForm(prev => ({
+      ...prev,
+      club: selectedClub
+    }));
+    if (selectedClub !== 'Otro Club') {
+      setCustomClub('');
+    }
+  };
+
+  const handleResetForm = () => {
+    setForm({
+      nombre: '',
+      email: '',
+      telefono: '',
+      club: 'Guatemala Central',
+      cargo: 'Socio',
+      distrito: 'Zona A-1'
+    });
+    setTelefonoDigitos('');
+    setCustomClub('');
+    setIsSubmitted(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (telefonoDigitos.length !== 8) {
+      alert("Por favor, ingresa un número de teléfono válido de 8 dígitos.");
+      return;
+    }
+    
+    const finalClub = (form.distrito === 'Otro / Internacional' || form.club === 'Otro Club') 
+      ? customClub.trim() 
+      : form.club;
+
+    if ((form.distrito === 'Otro / Internacional' || form.club === 'Otro Club') && !finalClub) {
+      alert("Por favor, ingresa el nombre de tu club.");
+      return;
+    }
+
     setLoading(true);
     
     try {
       const nuevoRegistro: ConvencionRegistro = {
         id: `reg_${Date.now()}`,
         ...form,
+        club: finalClub,
         fechaRegistro: new Date().toISOString()
       };
       
@@ -436,35 +593,24 @@ export default function Convencion() {
                       {/* Teléfono */}
                       <div className="space-y-2">
                         <label className="text-xs font-extrabold uppercase tracking-wider text-slate-350" htmlFor="telefono">Teléfono / WhatsApp</label>
-                        <input 
-                          type="tel" 
-                          id="telefono"
-                          name="telefono"
-                          value={form.telefono}
-                          onChange={handleChange}
-                          required
-                          placeholder="Ej. +502 5555 1234"
-                          className="w-full bg-blue-900/50 border border-white/15 focus:border-yellow-500 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/20 transition-all placeholder:text-slate-555"
-                        />
+                        <div className="flex items-center bg-blue-900/50 border border-white/15 focus-within:border-yellow-500 rounded-2xl focus-within:ring-2 focus-within:ring-yellow-500/20 transition-all overflow-hidden">
+                          <span className="bg-white/10 px-4 py-3.5 text-white text-sm font-bold border-r border-white/15 select-none">
+                            +502
+                          </span>
+                          <input 
+                            type="text" 
+                            id="telefono"
+                            name="telefono"
+                            value={telefonoDigitos}
+                            onChange={handlePhoneChange}
+                            required
+                            maxLength={8}
+                            placeholder="12345678"
+                            className="w-full bg-transparent px-4 py-3.5 text-white text-sm focus:outline-none placeholder:text-slate-555"
+                          />
+                        </div>
                       </div>
 
-                      {/* Club */}
-                      <div className="space-y-2">
-                        <label className="text-xs font-extrabold uppercase tracking-wider text-slate-350" htmlFor="club">Club de Leones de Pertenencia</label>
-                        <input 
-                          type="text" 
-                          id="club"
-                          name="club"
-                          value={form.club}
-                          onChange={handleChange}
-                          required
-                          placeholder="Ej. Club de Leones Quetzaltenango"
-                          className="w-full bg-blue-900/50 border border-white/15 focus:border-yellow-500 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/20 transition-all placeholder:text-slate-555"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       {/* Cargo */}
                       <div className="space-y-2">
                         <label className="text-xs font-extrabold uppercase tracking-wider text-slate-350" htmlFor="cargo">Cargo Leonístico Actual</label>
@@ -473,7 +619,7 @@ export default function Convencion() {
                           name="cargo"
                           value={form.cargo}
                           onChange={handleChange}
-                          className="w-full bg-blue-950 border border-white/15 focus:border-yellow-500 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/20 transition-all"
+                          className="w-full bg-blue-955 border border-white/15 focus:border-yellow-500 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/20 transition-all"
                         >
                           <option value="Socio">Socio Regular</option>
                           <option value="Presidente">Presidente de Club</option>
@@ -484,23 +630,83 @@ export default function Convencion() {
                           <option value="Otro">Otro Cargo</option>
                         </select>
                       </div>
+                    </div>
 
-                      {/* Distrito */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      {/* Zona (distrito en base de datos) */}
                       <div className="space-y-2">
-                        <label className="text-xs font-extrabold uppercase tracking-wider text-slate-350" htmlFor="distrito">Distrito</label>
+                        <label className="text-xs font-extrabold uppercase tracking-wider text-slate-350" htmlFor="distrito">Zona a la que pertenece</label>
                         <select 
                           id="distrito"
                           name="distrito"
                           value={form.distrito}
-                          onChange={handleChange}
-                          className="w-full bg-blue-950 border border-white/15 focus:border-yellow-500 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/20 transition-all"
+                          onChange={handleZoneChange}
+                          className="w-full bg-blue-955 border border-white/15 focus:border-yellow-500 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/20 transition-all"
                         >
-                          <option value="D3 Guatemala">D3 (Guatemala)</option>
-                          <option value="D1">D1</option>
-                          <option value="D2">D2</option>
-                          <option value="D4">D4</option>
-                          <option value="Otro Distrito">Otro Distrito / Internacional</option>
+                          <optgroup label="Región A">
+                            <option value="Zona A-1">Zona A-1</option>
+                            <option value="Zona A-2">Zona A-2</option>
+                            <option value="Zona A-3">Zona A-3</option>
+                          </optgroup>
+                          <optgroup label="Región B">
+                            <option value="Zona B-1">Zona B-1</option>
+                            <option value="Zona B-2">Zona B-2</option>
+                          </optgroup>
+                          <optgroup label="Región C">
+                            <option value="Zona C-1">Zona C-1</option>
+                            <option value="Zona C-2">Zona C-2</option>
+                            <option value="Zona C-3">Zona C-3</option>
+                            <option value="Zona C-4">Zona C-4</option>
+                          </optgroup>
+                          <optgroup label="Región D">
+                            <option value="Zona D-1">Zona D-1</option>
+                            <option value="Zona D-2">Zona D-2</option>
+                            <option value="Zona D-3">Zona D-3</option>
+                          </optgroup>
+                          <option value="Otro / Internacional">Otro / Internacional</option>
                         </select>
+                      </div>
+
+                      {/* Club de Leones de Pertenencia */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-extrabold uppercase tracking-wider text-slate-350" htmlFor="club">Club de Leones de Pertenencia</label>
+                        {form.distrito === 'Otro / Internacional' ? (
+                          <input 
+                            type="text" 
+                            id="club"
+                            name="club"
+                            value={customClub}
+                            onChange={(e) => setCustomClub(e.target.value)}
+                            required
+                            placeholder="Ej. Club de Leones Internacional"
+                            className="w-full bg-blue-900/50 border border-white/15 focus:border-yellow-500 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/20 transition-all placeholder:text-slate-555"
+                          />
+                        ) : (
+                          <>
+                            <select 
+                              id="club"
+                              name="club"
+                              value={form.club}
+                              onChange={handleClubChange}
+                              className="w-full bg-blue-955 border border-white/15 focus:border-yellow-500 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/20 transition-all"
+                            >
+                              {(ZONAS_CLUBS[form.distrito] || []).map((c) => (
+                                <option key={c} value={c}>{c}</option>
+                              ))}
+                            </select>
+                            {form.club === 'Otro Club' && (
+                              <input 
+                                type="text" 
+                                id="customClub"
+                                value={customClub}
+                                onChange={(e) => setCustomClub(e.target.value)}
+                                required
+                                placeholder="Escribe el nombre de tu Club"
+                                className="w-full bg-blue-900/50 border border-white/15 focus:border-yellow-500 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/20 transition-all placeholder:text-slate-555 mt-2"
+                              />
+                            )}
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -533,7 +739,7 @@ export default function Convencion() {
                   </p>
                   <div className="pt-6">
                     <button 
-                      onClick={() => setIsSubmitted(false)}
+                      onClick={handleResetForm}
                       className="text-xs font-extrabold uppercase tracking-wider text-yellow-400 hover:text-yellow-500 border border-yellow-500/25 px-5 py-2.5 rounded-xl bg-yellow-500/5 transition-colors"
                     >
                       Registrar a otro socio
