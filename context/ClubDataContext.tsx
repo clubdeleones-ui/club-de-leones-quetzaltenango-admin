@@ -39,11 +39,11 @@ import {
 import { firebaseService } from '../services/firebaseService';
 
 export const DEFAULT_ROLES_CONFIG = [
-  { id: 'SUPER_ADMIN', label: 'Super Administrador', allowedTabs: ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario', 'galeria_admin', 'linea_tiempo_admin', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico', 'asignacion_funciones'], orden: 0 },
+  { id: 'SUPER_ADMIN', label: 'Super Administrador', allowedTabs: ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario', 'galeria_admin', 'linea_tiempo_admin', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico', 'asignacion_funciones', 'convencion_admin'], orden: 0 },
   { id: 'SECRETARIO', label: 'Secretario', allowedTabs: ['resumen', 'socios', 'calendario', 'actas', 'comisiones', 'minutas', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico'], orden: 1 },
   { id: 'TESORERO', label: 'Tesorero', allowedTabs: ['resumen', 'socios', 'cuotas', 'donaciones', 'parqueo', 'presupuestos', 'inventario', 'galeria_admin', 'linea_tiempo_admin'], orden: 2 },
   { id: 'ASESOR_SERVICIOS', label: 'Asesor de Servicios', allowedTabs: ['socios', 'calendario', 'beneficios', 'minutas'], orden: 3 },
-  { id: 'PRESIDENTE_AFILIACION', label: 'Presidente de Afiliación', allowedTabs: ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico'], orden: 4 },
+  { id: 'PRESIDENTE_AFILIACION', label: 'Presidente de Afiliación', allowedTabs: ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico', 'convencion_admin'], orden: 4 },
   { id: 'SOCIO', label: 'Socio Regular', allowedTabs: [], orden: 5 },
   { id: 'DONANTE', label: 'Donante', allowedTabs: [], orden: 6 }
 ];
@@ -450,6 +450,16 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           await setDoc(doc(db, 'config_roles', role.id), { label: role.label, allowedTabs: role.allowedTabs, orden: role.orden });
         });
       } else {
+        // Dynamic migration: Ensure SUPER_ADMIN and PRESIDENTE_AFILIACION have 'convencion_admin'
+        list.forEach(async (role: any) => {
+          if (role.id === 'SUPER_ADMIN' || role.id === 'PRESIDENTE_AFILIACION') {
+            if (role.allowedTabs && !role.allowedTabs.includes('convencion_admin')) {
+              const updatedTabs = [...role.allowedTabs, 'convencion_admin'];
+              await setDoc(doc(db, 'config_roles', role.id), { label: role.label, allowedTabs: updatedTabs, orden: role.orden }, { merge: true });
+            }
+          }
+        });
+
         list.sort((a: any, b: any) => (a.orden ?? 999) - (b.orden ?? 999));
         setRolesConfig(list);
         localStorage.setItem('club_leones_roles_config', JSON.stringify(list));
