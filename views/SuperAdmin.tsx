@@ -1755,14 +1755,21 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
         const comId = selectedComisionForPunto[p.id];
         const isAssigned = showComisionConfigForPunto[p.id] && comId;
         const comision = isAssigned ? comisiones.find(c => c.id === comId) : undefined;
-        return {
-          ...p,
-          asignadoAComisionId: isAssigned ? comId : undefined,
-          comisionNombre: comision ? comision.nombre : undefined,
-          urgencia: isAssigned ? (urgenciaForPunto[p.id] || 'Media') : undefined,
-          fechaLimite: isAssigned ? (fechaLimiteForPunto[p.id] || undefined) : undefined,
-          agregadoAActas: p.agregadoAActas !== false // default is true
+        const punto: Record<string, any> = {
+          id: p.id,
+          titulo: p.titulo,
+          descripcion: p.descripcion || '',
+          origenTipo: p.origenTipo || 'manual',
+          agregadoAActas: p.agregadoAActas !== false
         };
+        if (p.origenId) punto.origenId = p.origenId;
+        if (isAssigned && comId) {
+          punto.asignadoAComisionId = comId;
+          if (comision) punto.comisionNombre = comision.nombre;
+          punto.urgencia = urgenciaForPunto[p.id] || 'Media';
+          if (fechaLimiteForPunto[p.id]) punto.fechaLimite = fechaLimiteForPunto[p.id];
+        }
+        return punto;
       });
       
       const dateStr = agendaForm.fecha ? agendaForm.fecha.replace(/[^0-9]/g, '') : '';
