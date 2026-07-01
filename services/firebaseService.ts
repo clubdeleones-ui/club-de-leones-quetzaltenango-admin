@@ -1003,8 +1003,8 @@ export const firebaseService = {
       if (!base64Data.startsWith('data:image')) {
         return base64Data;
       }
-      const uniqueName = `sede_${Date.now()}`;
-      const storageRef = ref(storage, `convencion/${uniqueName}`);
+      const uniqueName = `sede_convencion_${Date.now()}`;
+      const storageRef = ref(storage, `galeria/${uniqueName}`);
       await uploadString(storageRef, base64Data, 'data_url');
       return await getDownloadURL(storageRef);
     } catch (error: any) {
