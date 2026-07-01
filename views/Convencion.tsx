@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   MapPin, 
   Calendar, 
@@ -13,8 +13,10 @@ import {
   Send,
   Flag,
   ChevronRight,
+  ChevronDown,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  Check
 } from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
 import { ConvencionConfig, ConvencionRegistro } from '../types';
@@ -121,6 +123,23 @@ const ZONAS_CLUBS: Record<string, string[]> = {
   ]
 };
 
+const REGION_ZONES: { region: string; color: string; zonas: string[] }[] = [
+  { region: 'Región A', color: 'from-blue-500 to-blue-600', zonas: ['Zona A-1', 'Zona A-2', 'Zona A-3'] },
+  { region: 'Región B', color: 'from-emerald-500 to-emerald-600', zonas: ['Zona B-1', 'Zona B-2'] },
+  { region: 'Región C', color: 'from-amber-500 to-amber-600', zonas: ['Zona C-1', 'Zona C-2', 'Zona C-3', 'Zona C-4'] },
+  { region: 'Región D', color: 'from-rose-500 to-rose-600', zonas: ['Zona D-1', 'Zona D-2', 'Zona D-3'] },
+];
+
+const CARGO_OPTIONS = [
+  { value: 'Socio', label: 'Socio Regular', icon: '🦁' },
+  { value: 'Presidente', label: 'Presidente de Club', icon: '👑' },
+  { value: 'Secretario', label: 'Secretario', icon: '📝' },
+  { value: 'Tesorero', label: 'Tesorero', icon: '💰' },
+  { value: 'Gobernador', label: 'Gobernador / Vicegobernador', icon: '🏛️' },
+  { value: 'Leo', label: 'Socio Leo', icon: '🌟' },
+  { value: 'Otro', label: 'Otro Cargo', icon: '🔷' },
+];
+
 export default function Convencion() {
   const [config, setConfig] = useState<ConvencionConfig>({
     titulo: 'Distrito D3 Guatemala',
@@ -152,6 +171,27 @@ export default function Convencion() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+
+  // Custom dropdown states
+  const [openDropdown, setOpenDropdown] = useState<'cargo' | 'zona' | 'club' | null>(null);
+  const cargoRef = useRef<HTMLDivElement>(null);
+  const zonaRef = useRef<HTMLDivElement>(null);
+  const clubRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        cargoRef.current && !cargoRef.current.contains(e.target as Node) &&
+        zonaRef.current && !zonaRef.current.contains(e.target as Node) &&
+        clubRef.current && !clubRef.current.contains(e.target as Node)
+      ) {
+        setOpenDropdown(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Load config from Firestore on mount
   useEffect(() => {
@@ -231,8 +271,7 @@ export default function Convencion() {
     }));
   };
 
-  const handleZoneChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedZone = e.target.value;
+  const handleZoneSelect = (selectedZone: string) => {
     const defaultClub = ZONAS_CLUBS[selectedZone]?.[0] || '';
     setForm(prev => ({
       ...prev,
@@ -240,10 +279,10 @@ export default function Convencion() {
       club: defaultClub
     }));
     setCustomClub('');
+    setOpenDropdown(null);
   };
 
-  const handleClubChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedClub = e.target.value;
+  const handleClubSelect = (selectedClub: string) => {
     setForm(prev => ({
       ...prev,
       club: selectedClub
@@ -251,6 +290,15 @@ export default function Convencion() {
     if (selectedClub !== 'Otro Club') {
       setCustomClub('');
     }
+    setOpenDropdown(null);
+  };
+
+  const handleCargoSelect = (selectedCargo: string) => {
+    setForm(prev => ({
+      ...prev,
+      cargo: selectedCargo
+    }));
+    setOpenDropdown(null);
   };
 
   const handleResetForm = () => {
@@ -611,65 +659,95 @@ export default function Convencion() {
                         </div>
                       </div>
 
-                      {/* Cargo */}
-                      <div className="space-y-2">
-                        <label className="text-xs font-extrabold uppercase tracking-wider text-slate-350" htmlFor="cargo">Cargo Leonístico Actual</label>
-                        <select 
-                          id="cargo"
-                          name="cargo"
-                          value={form.cargo}
-                          onChange={handleChange}
-                          className="w-full bg-blue-955 border border-white/15 focus:border-yellow-500 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/20 transition-all"
-                        >
-                          <option value="Socio">Socio Regular</option>
-                          <option value="Presidente">Presidente de Club</option>
-                          <option value="Secretario">Secretario</option>
-                          <option value="Tesorero">Tesorero</option>
-                          <option value="Gobernador">Gobernador / Vicegobernador</option>
-                          <option value="Leo">Socio Leo</option>
-                          <option value="Otro">Otro Cargo</option>
-                        </select>
+                      {/* Cargo — Custom Dropdown */}
+                      <div className="space-y-2" ref={cargoRef}>
+                        <label className="text-xs font-extrabold uppercase tracking-wider text-slate-350">Cargo Leonístico Actual</label>
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => setOpenDropdown(openDropdown === 'cargo' ? null : 'cargo')}
+                            className={`w-full flex items-center justify-between bg-blue-900/50 border ${openDropdown === 'cargo' ? 'border-yellow-500 ring-2 ring-yellow-500/20' : 'border-white/15'} rounded-2xl px-4 py-3.5 text-white text-sm transition-all text-left`}
+                          >
+                            <span className="flex items-center space-x-2">
+                              <span>{CARGO_OPTIONS.find(c => c.value === form.cargo)?.icon}</span>
+                              <span>{CARGO_OPTIONS.find(c => c.value === form.cargo)?.label || form.cargo}</span>
+                            </span>
+                            <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 ${openDropdown === 'cargo' ? 'rotate-180' : ''}`} />
+                          </button>
+                          {openDropdown === 'cargo' && (
+                            <div className="absolute z-50 mt-2 w-full rounded-2xl border border-white/15 bg-blue-950/95 backdrop-blur-xl shadow-2xl shadow-black/40 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                              {CARGO_OPTIONS.map((opt) => (
+                                <button
+                                  key={opt.value}
+                                  type="button"
+                                  onClick={() => handleCargoSelect(opt.value)}
+                                  className={`w-full flex items-center justify-between px-4 py-3 text-sm transition-colors text-left ${form.cargo === opt.value ? 'bg-yellow-500/15 text-yellow-400' : 'text-white hover:bg-white/10'}`}
+                                >
+                                  <span className="flex items-center space-x-3">
+                                    <span className="text-base">{opt.icon}</span>
+                                    <span className="font-semibold">{opt.label}</span>
+                                  </span>
+                                  {form.cargo === opt.value && <Check size={16} className="text-yellow-400" />}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      {/* Zona (distrito en base de datos) */}
-                      <div className="space-y-2">
-                        <label className="text-xs font-extrabold uppercase tracking-wider text-slate-350" htmlFor="distrito">Zona a la que pertenece</label>
-                        <select 
-                          id="distrito"
-                          name="distrito"
-                          value={form.distrito}
-                          onChange={handleZoneChange}
-                          className="w-full bg-blue-955 border border-white/15 focus:border-yellow-500 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/20 transition-all"
-                        >
-                          <optgroup label="Región A">
-                            <option value="Zona A-1">Zona A-1</option>
-                            <option value="Zona A-2">Zona A-2</option>
-                            <option value="Zona A-3">Zona A-3</option>
-                          </optgroup>
-                          <optgroup label="Región B">
-                            <option value="Zona B-1">Zona B-1</option>
-                            <option value="Zona B-2">Zona B-2</option>
-                          </optgroup>
-                          <optgroup label="Región C">
-                            <option value="Zona C-1">Zona C-1</option>
-                            <option value="Zona C-2">Zona C-2</option>
-                            <option value="Zona C-3">Zona C-3</option>
-                            <option value="Zona C-4">Zona C-4</option>
-                          </optgroup>
-                          <optgroup label="Región D">
-                            <option value="Zona D-1">Zona D-1</option>
-                            <option value="Zona D-2">Zona D-2</option>
-                            <option value="Zona D-3">Zona D-3</option>
-                          </optgroup>
-                          <option value="Otro / Internacional">Otro / Internacional</option>
-                        </select>
+                      {/* Zona — Custom Dropdown */}
+                      <div className="space-y-2" ref={zonaRef}>
+                        <label className="text-xs font-extrabold uppercase tracking-wider text-slate-350">Zona a la que pertenece</label>
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => setOpenDropdown(openDropdown === 'zona' ? null : 'zona')}
+                            className={`w-full flex items-center justify-between bg-blue-900/50 border ${openDropdown === 'zona' ? 'border-yellow-500 ring-2 ring-yellow-500/20' : 'border-white/15'} rounded-2xl px-4 py-3.5 text-white text-sm transition-all text-left`}
+                          >
+                            <span>{form.distrito}</span>
+                            <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 ${openDropdown === 'zona' ? 'rotate-180' : ''}`} />
+                          </button>
+                          {openDropdown === 'zona' && (
+                            <div className="absolute z-50 mt-2 w-full rounded-2xl border border-white/15 bg-blue-950/95 backdrop-blur-xl shadow-2xl shadow-black/40 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-72 overflow-y-auto">
+                              {REGION_ZONES.map((rg) => (
+                                <div key={rg.region}>
+                                  <div className={`px-4 py-2 bg-gradient-to-r ${rg.color} text-white text-[10px] font-black uppercase tracking-widest sticky top-0`}>
+                                    🏛️ {rg.region}
+                                  </div>
+                                  {rg.zonas.map((z) => (
+                                    <button
+                                      key={z}
+                                      type="button"
+                                      onClick={() => handleZoneSelect(z)}
+                                      className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors text-left ${form.distrito === z ? 'bg-yellow-500/15 text-yellow-400' : 'text-white hover:bg-white/10'}`}
+                                    >
+                                      <span className="font-semibold">{z}</span>
+                                      {form.distrito === z && <Check size={14} className="text-yellow-400" />}
+                                    </button>
+                                  ))}
+                                </div>
+                              ))}
+                              {/* Otro / Internacional */}
+                              <div className="border-t border-white/10">
+                                <button
+                                  type="button"
+                                  onClick={() => handleZoneSelect('Otro / Internacional')}
+                                  className={`w-full flex items-center justify-between px-4 py-3 text-sm transition-colors text-left ${form.distrito === 'Otro / Internacional' ? 'bg-yellow-500/15 text-yellow-400' : 'text-white hover:bg-white/10'}`}
+                                >
+                                  <span className="font-semibold">🌎 Otro / Internacional</span>
+                                  {form.distrito === 'Otro / Internacional' && <Check size={14} className="text-yellow-400" />}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
-                      {/* Club de Leones de Pertenencia */}
-                      <div className="space-y-2">
-                        <label className="text-xs font-extrabold uppercase tracking-wider text-slate-350" htmlFor="club">Club de Leones de Pertenencia</label>
+                      {/* Club de Leones de Pertenencia — Custom Dropdown */}
+                      <div className="space-y-2" ref={clubRef}>
+                        <label className="text-xs font-extrabold uppercase tracking-wider text-slate-350">Club de Leones de Pertenencia</label>
                         {form.distrito === 'Otro / Internacional' ? (
                           <input 
                             type="text" 
@@ -683,17 +761,31 @@ export default function Convencion() {
                           />
                         ) : (
                           <>
-                            <select 
-                              id="club"
-                              name="club"
-                              value={form.club}
-                              onChange={handleClubChange}
-                              className="w-full bg-blue-955 border border-white/15 focus:border-yellow-500 rounded-2xl px-4 py-3.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/20 transition-all"
-                            >
-                              {(ZONAS_CLUBS[form.distrito] || []).map((c) => (
-                                <option key={c} value={c}>{c}</option>
-                              ))}
-                            </select>
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onClick={() => setOpenDropdown(openDropdown === 'club' ? null : 'club')}
+                                className={`w-full flex items-center justify-between bg-blue-900/50 border ${openDropdown === 'club' ? 'border-yellow-500 ring-2 ring-yellow-500/20' : 'border-white/15'} rounded-2xl px-4 py-3.5 text-white text-sm transition-all text-left`}
+                              >
+                                <span>{form.club}</span>
+                                <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 ${openDropdown === 'club' ? 'rotate-180' : ''}`} />
+                              </button>
+                              {openDropdown === 'club' && (
+                                <div className="absolute z-50 mt-2 w-full rounded-2xl border border-white/15 bg-blue-950/95 backdrop-blur-xl shadow-2xl shadow-black/40 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-60 overflow-y-auto">
+                                  {(ZONAS_CLUBS[form.distrito] || []).map((c) => (
+                                    <button
+                                      key={c}
+                                      type="button"
+                                      onClick={() => handleClubSelect(c)}
+                                      className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors text-left ${form.club === c ? 'bg-yellow-500/15 text-yellow-400' : 'text-white hover:bg-white/10'} ${c === 'Otro Club' ? 'border-t border-white/10 italic text-slate-300' : ''}`}
+                                    >
+                                      <span className="font-semibold">{c === 'Otro Club' ? '✏️ Otro Club...' : c}</span>
+                                      {form.club === c && <Check size={14} className="text-yellow-400" />}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                             {form.club === 'Otro Club' && (
                               <input 
                                 type="text" 
