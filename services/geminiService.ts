@@ -15,9 +15,9 @@ export class GeminiService {
     const context = actas.map(a => `Fecha: ${a.fecha} - Título: ${a.titulo}: ${a.contenido}`).join("\n\n");
     
     try {
-      // Use gemini-3-flash-preview for basic text tasks like summarization
+      // Use gemini-2.5-flash for basic text tasks like summarization
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.5-flash',
         contents: `Eres un asistente administrativo del Club de Leones de Quetzaltenango. 
         Basado en las siguientes actas de reuniones:
         

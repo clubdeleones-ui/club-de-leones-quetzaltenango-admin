@@ -3,6 +3,7 @@ import { Socio, UserRole, Solicitud, Responsable } from '../types';
 import { firebaseService } from '../services/firebaseService';
 import { useModal } from '../context/ModalContext';
 import { useClubData } from '../context/ClubDataContext';
+import { validateImageFile, compressPngSignature } from '../utils/imageCompressor';
 import { 
   Plus, 
   Trash2, 
@@ -31,7 +32,8 @@ import {
   Building,
   DollarSign,
   AlertTriangle,
-  Layers
+  Layers,
+  Save
 } from 'lucide-react';
 import { generateCartaOficialPDF, formatFechaCarta } from '../utils/pdfGenerator';
 
@@ -358,6 +360,123 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   const [cartaFirmaPuesto, setCartaFirmaPuesto] = useState('Presidente del Club');
   const [cartaFirmaImg, setCartaFirmaImg] = useState<string | null>(null);
 
+  // Drafts states and handlers
+  const [drafts, setDrafts] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('club_leones_carta_drafts');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const handleSaveDraft = () => {
+    if (!cartaDestinatario.trim() && !cartaAsunto.trim()) {
+      alert("Por favor, ingrese al menos un destinatario o asunto para identificar el borrador.");
+      return;
+    }
+    const newDraft = {
+      id: `draft-${Date.now()}`,
+      fecha: cartaFecha,
+      institucion: cartaInstitucion,
+      destinatario: cartaDestinatario,
+      cargo: cartaCargo,
+      saludo: cartaSaludo,
+      asunto: cartaAsunto,
+      cuerpo: cartaCuerpo,
+      firmanteSelector,
+      firmaNombre: cartaFirmaNombre,
+      firmaPuesto: cartaFirmaPuesto,
+      firmaImg: cartaFirmaImg
+    };
+    const updated = [newDraft, ...drafts];
+    setDrafts(updated);
+    localStorage.setItem('club_leones_carta_drafts', JSON.stringify(updated));
+    alert("Borrador guardado exitosamente.");
+  };
+
+  const loadDraft = (d: any) => {
+    setCartaFecha(d.fecha);
+    setCartaInstitucion(d.institucion);
+    setCartaDestinatario(d.destinatario);
+    setCartaCargo(d.cargo);
+    setCartaSaludo(d.saludo);
+    setCartaAsunto(d.asunto);
+    setCartaCuerpo(d.cuerpo);
+    setFirmanteSelector(d.firmanteSelector);
+    setCartaFirmaNombre(d.firmaNombre);
+    setCartaFirmaPuesto(d.firmaPuesto);
+    setCartaFirmaImg(d.firmaImg);
+    alert("Borrador cargado.");
+  };
+
+  const deleteDraft = (id: string) => {
+    if (!window.confirm("¿Está seguro de eliminar este borrador?")) return;
+    const updated = drafts.filter(d => d.id !== id);
+    setDrafts(updated);
+    localStorage.setItem('club_leones_carta_drafts', JSON.stringify(updated));
+  };
+
+  // Helper to split document text into letter-sized pages
+  const getSimulatedPages = () => {
+    // US Letter limit is 254 mm
+    let page1Remaining = 254 - 42 - 10 - 20 - 8;
+    if (cartaCargo) page1Remaining -= 5.5;
+    if (cartaInstitucion) page1Remaining -= 5.5;
+    if (cartaAsunto) {
+      const lines = Math.ceil((cartaAsunto.length + 8) / 75);
+      page1Remaining -= (4 + (lines * 5.5));
+    }
+    
+    const page2Limit = 228;
+    const page1Elements: any[] = [];
+    const page2Elements: any[] = [];
+    let currentY = 0;
+    let isPage2 = false;
+
+    const rawLines = cartaCuerpo.split('\n');
+    rawLines.forEach((line) => {
+      const trimmed = line.trim();
+      let elemH = 0;
+      if (trimmed === '') {
+        elemH = 4;
+      } else {
+        const charsPerLine = 85;
+        const linesCount = Math.max(1, Math.ceil(trimmed.length / charsPerLine));
+        elemH = (linesCount * 5.8) + 2;
+      }
+
+      if (!isPage2) {
+        if (currentY + elemH > page1Remaining) {
+          isPage2 = true;
+          currentY = 0;
+          page2Elements.push({ type: 'paragraph', text: trimmed });
+          currentY += elemH;
+        } else {
+          page1Elements.push({ type: 'paragraph', text: trimmed });
+          currentY += elemH;
+        }
+      } else {
+        page2Elements.push({ type: 'paragraph', text: trimmed });
+        currentY += elemH;
+      }
+    });
+
+    const sigH = 40;
+    if (!isPage2) {
+      if (currentY + sigH > page1Remaining) {
+        isPage2 = true;
+        page2Elements.push({ type: 'signature' });
+      } else {
+        page1Elements.push({ type: 'signature' });
+      }
+    } else {
+      page2Elements.push({ type: 'signature' });
+    }
+
+    return { page1Elements, page2Elements, hasPage2: isPage2 };
+  };
+
   // Form State para Puntos de Agenda
   const [agendaSocioNombre, setAgendaSocioNombre] = useState('');
   const [agendaNombrePunto, setAgendaNombrePunto] = useState('');
@@ -370,18 +489,21 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     }
   }, [user]);
 
-  const handleFirmaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFirmaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert("La imagen de la firma no debe superar los 2MB.");
+      const validation = validateImageFile(file, 5 * 1024 * 1024); // Support uploading files up to 5MB, then compress
+      if (!validation.valid) {
+        alert(validation.error || "Firma inválida");
         return;
       }
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setCartaFirmaImg(event.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressedBase64 = await compressPngSignature(file);
+        setCartaFirmaImg(compressedBase64);
+      } catch (err) {
+        console.error("Error compressing signature image:", err);
+        alert("Ocurrió un error al procesar la firma.");
+      }
     }
   };
 
@@ -1877,7 +1999,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                 }, 'download');
               }}
               disabled={!cartaDestinatario.trim() || !cartaCuerpo.trim()}
-              className="sm:col-span-6 bg-blue-900 hover:bg-blue-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-extrabold px-4 py-3 rounded-xl transition-all shadow-md shadow-blue-900/10 flex items-center justify-center space-x-2 text-sm active:scale-[0.98]"
+              className="sm:col-span-4 bg-blue-900 hover:bg-blue-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-extrabold px-4 py-3 rounded-xl transition-all shadow-md shadow-blue-900/10 flex items-center justify-center space-x-2 text-sm active:scale-[0.98]"
             >
               <FileText size={16} />
               <span>Descargar PDF</span>
@@ -1900,10 +2022,20 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                 }, 'open');
               }}
               disabled={!cartaDestinatario.trim() || !cartaCuerpo.trim()}
-              className="sm:col-span-4 bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:bg-slate-50 disabled:text-slate-350 disabled:cursor-not-allowed font-extrabold px-4 py-3 rounded-xl transition-all border border-slate-200 flex items-center justify-center space-x-2 text-sm active:scale-[0.98]"
+              className="sm:col-span-3 bg-slate-100 hover:bg-slate-200 text-slate-700 disabled:bg-slate-50 disabled:text-slate-350 disabled:cursor-not-allowed font-extrabold px-4 py-3 rounded-xl transition-all border border-slate-200 flex items-center justify-center space-x-2 text-sm active:scale-[0.98]"
               title="Abrir Vista de Impresión"
             >
               <span>Previsualizar</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSaveDraft}
+              className="sm:col-span-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold px-4 py-3 rounded-xl transition-all border border-slate-200 flex items-center justify-center space-x-2 text-sm active:scale-[0.98]"
+              title="Guardar Borrador en este navegador"
+            >
+              <Save size={16} className="text-slate-655" />
+              <span>Guardar Borrador</span>
             </button>
 
             <button
@@ -1938,111 +2070,221 @@ Club de Leones de Quetzaltenango`;
               <Copy size={16} />
             </button>
           </div>
+
+          {/* Listado de Borradores Guardados */}
+          {drafts.length > 0 && (
+            <div className="pt-4 border-t border-slate-100 space-y-2">
+              <h4 className="text-xs font-black text-slate-450 uppercase tracking-widest flex items-center">
+                <Save size={12} className="mr-1.5 text-slate-400" />
+                Borradores Guardados ({drafts.length})
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {drafts.map(d => (
+                  <div key={d.id} className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs hover:border-slate-300 transition-all">
+                    <div className="min-w-0 flex-1 mr-2 cursor-pointer text-left" onClick={() => loadDraft(d)}>
+                      <p className="font-extrabold text-slate-700 truncate">{d.destinatario || '(Sin destinatario)'}</p>
+                      <p className="text-[10px] text-slate-450 font-semibold truncate mt-0.5">{d.asunto || '(Sin asunto)'} - {d.fecha}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => deleteDraft(d.id)}
+                      className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 transition-colors flex-shrink-0"
+                      title="Eliminar borrador"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Vista Previa En Vivo (Live Preview) */}
-        <div className="bg-slate-100/50 rounded-3xl border border-slate-200/60 p-4 sm:p-6 space-y-4 w-full overflow-hidden">
+        <div className="bg-slate-100/50 rounded-3xl border border-slate-200/60 p-4 sm:p-6 space-y-6 w-full overflow-hidden">
           <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">
-            Vista Previa en Tiempo Real
+            Vista Previa en Tiempo Real (US Letter)
           </h3>
           
-          {/* Hoja de Papel Membretado simulada */}
-          <div className="bg-white shadow-xl rounded-2xl border border-slate-200 p-5 sm:p-12 min-h-[700px] flex flex-col justify-between font-serif text-slate-800 relative overflow-hidden text-[11px] sm:text-sm">
+          {(() => {
+            const { page1Elements, page2Elements, hasPage2 } = getSimulatedPages();
             
-            {/* Cabecera oficial decorativa */}
-            <div className="absolute top-0 left-0 right-0">
-              <div className="bg-blue-900 h-3 w-full"></div>
-              <div className="bg-yellow-500 h-0.5 w-full"></div>
-            </div>
+            const renderParagraph = (text: string) => {
+              const isBullet = text.startsWith('•') || text.startsWith('-') || text.startsWith('*');
+              const isNumbered = /^\d+\./.test(text);
 
-            <div className="space-y-6">
-              {/* Membrete del Club */}
-              <div className="flex items-center space-x-3 pb-4 border-b border-slate-100 mt-2">
-                <img 
-                  src="/images/logo.png"
-                  alt="Logo Club de Leones"
-                  className="w-10 h-10 object-contain flex-shrink-0"
-                  onError={(e) => {
-                    e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%231b365d"/><circle cx="50" cy="50" r="41" fill="none" stroke="%23eab308" stroke-width="3"/><text x="50" y="65" font-family="Helvetica" font-weight="bold" font-size="45" fill="%23eab308" text-anchor="middle">L</text></svg>';
-                  }}
-                />
-                <div>
-                  <h4 className="text-blue-900 font-sans font-black text-xs sm:text-sm tracking-tight leading-none">
-                    CLUB DE LEONES DE QUETZALTENANGO
-                  </h4>
-                  <p className="text-amber-600 font-sans font-black text-[9px] tracking-wider mt-0.5">
-                    NOSOTROS SERVIMOS
-                  </p>
+              if (isBullet) {
+                const bulletText = text.replace(/^[•\-\*]\s*/, '');
+                return (
+                  <div className="flex items-start space-x-2 pl-4 text-justify my-1">
+                    <span className="font-bold text-blue-900">•</span>
+                    <span className="flex-1 text-xs sm:text-[13px] leading-relaxed">{bulletText}</span>
+                  </div>
+                );
+              } else if (isNumbered) {
+                const match = text.match(/^(\d+\.)\s*(.*)/);
+                const numberPrefix = match ? match[1] : '1.';
+                const numberText = match ? match[2] : text;
+                return (
+                  <div className="flex items-start space-x-2 pl-4 text-justify my-1">
+                    <span className="font-bold text-blue-900">{numberPrefix}</span>
+                    <span className="flex-1 text-xs sm:text-[13px] leading-relaxed">{numberText}</span>
+                  </div>
+                );
+              } else if (text === '') {
+                return <div className="h-2"></div>;
+              } else {
+                return <p className="text-justify my-1.5 leading-relaxed text-xs sm:text-[13px]">{text}</p>;
+              }
+            };
+
+            const renderSignatureBlock = () => {
+              return (
+                <div className="pt-6 space-y-4 text-left">
+                  <div className="space-y-1">
+                    <p className="text-slate-500 text-[10px] sm:text-xs italic">Atentamente,</p>
+                    {cartaFirmaImg && (
+                      <div className="my-2 relative group w-28 h-12">
+                        <img src={cartaFirmaImg} alt="Firma Digital" className="h-full object-contain" />
+                        <button
+                          type="button"
+                          onClick={handleClearFirma}
+                          className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Quitar firma"
+                        >
+                          <X size={8} />
+                        </button>
+                      </div>
+                    )}
+                    <div className="pt-2 border-t border-slate-100 max-w-[220px]">
+                      <p className="font-sans font-bold text-[10px] sm:text-xs text-blue-900 leading-tight">{cartaFirmaNombre}</p>
+                      <p className="font-sans text-[8px] sm:text-[9px] text-slate-400 font-semibold leading-tight">{cartaFirmaPuesto}</p>
+                    </div>
+                  </div>
+
+                  {/* Sello Oficial */}
+                  <div className="flex justify-center pt-2">
+                    <div className="border border-dashed border-amber-600/60 rounded px-4 py-1 text-[8px] font-sans font-bold text-amber-600 tracking-wider bg-amber-50/50">
+                      SELLO OFICIAL - CLUB DE LEONES QX
+                    </div>
+                  </div>
                 </div>
-              </div>
+              );
+            };
 
-              {/* Fecha */}
-              <div className="text-right text-slate-500 text-xs italic font-sans">
-                {cartaFecha ? formatFechaCarta(cartaFecha) : '...'}
-              </div>
+            return (
+              <div className="space-y-6 w-full">
+                
+                {/* Página 1 */}
+                <div className="bg-white shadow-xl rounded-2xl border border-slate-200 p-6 sm:p-12 aspect-[8.5/11] w-full max-w-[680px] mx-auto flex flex-col justify-between font-serif text-slate-800 relative overflow-hidden text-[11px] sm:text-xs text-left">
+                  <div className="absolute top-0 left-0 right-0">
+                    <div className="bg-blue-900 h-3 w-full"></div>
+                    <div className="bg-yellow-500 h-0.5 w-full"></div>
+                  </div>
 
-              {/* Destinatario */}
-              <div className="space-y-0.5 leading-snug">
-                <p className="font-bold text-blue-900">{cartaDestinatario || '[Nombre del Destinatario]'}</p>
-                <p className="text-slate-500 italic font-sans text-xs">{cartaCargo || '[Cargo/Puesto]'}</p>
-                <p className="font-bold text-slate-700">{cartaInstitucion || '[Institución/Empresa]'}</p>
-                <p className="text-slate-400">Presente.</p>
-              </div>
+                  <div className="space-y-4">
+                    {/* Membrete del Club */}
+                    <div className="flex items-center space-x-3 pb-3 border-b border-slate-100 mt-2">
+                      <img 
+                        src="/images/logo.png"
+                        alt="Logo Club de Leones"
+                        className="w-10 h-10 object-contain flex-shrink-0"
+                        onError={(e) => {
+                          e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%231b365d"/><circle cx="50" cy="50" r="41" fill="none" stroke="%23eab308" stroke-width="3"/><text x="50" y="65" font-family="Helvetica" font-weight="bold" font-size="45" fill="%23eab308" text-anchor="middle">L</text></svg>';
+                        }}
+                      />
+                      <div>
+                        <h4 className="text-blue-900 font-sans font-black text-[9px] sm:text-[10px] tracking-tight leading-none">
+                          CLUB DE LEONES DE QUETZALTENANGO
+                        </h4>
+                        <p className="text-amber-600 font-sans font-black text-[7px] sm:text-[8px] tracking-wider mt-0.5">
+                          NOSOTROS SERVIMOS
+                        </p>
+                      </div>
+                    </div>
 
-              {/* Asunto */}
-              {cartaAsunto && (
-                <div className="font-sans font-black text-xs text-blue-950 bg-blue-50/50 p-2.5 rounded-lg border border-blue-100/50">
-                  ASUNTO: {cartaAsunto.toUpperCase()}
+                    {/* Fecha */}
+                    <div className="text-right text-slate-500 text-[10px] italic font-sans">
+                      {cartaFecha ? formatFechaCarta(cartaFecha) : '...'}
+                    </div>
+
+                    {/* Destinatario */}
+                    <div className="space-y-0.5 leading-snug">
+                      <p className="font-bold text-blue-900">{cartaDestinatario || '[Nombre del Destinatario]'}</p>
+                      <p className="text-slate-550 italic font-sans text-[10px]">{cartaCargo || '[Cargo/Puesto]'}</p>
+                      <p className="font-bold text-slate-700">{cartaInstitucion || '[Institución/Empresa]'}</p>
+                      <p className="text-slate-400">Presente.</p>
+                    </div>
+
+                    {/* Asunto */}
+                    {cartaAsunto && (
+                      <div className="font-sans font-black text-[10px] text-blue-950 bg-blue-50/50 p-2 rounded-lg border border-blue-100/50">
+                        ASUNTO: {cartaAsunto.toUpperCase()}
+                      </div>
+                    )}
+
+                    {/* Saludo */}
+                    <div className="text-slate-655 font-semibold">
+                      {cartaSaludo || '[Saludo Inicial]'}
+                    </div>
+
+                    {/* Cuerpo */}
+                    <div className="text-slate-700 space-y-1.5">
+                      {page1Elements.map((elem, idx) => {
+                        if (elem.type === 'paragraph') {
+                          return renderParagraph(elem.text);
+                        } else if (elem.type === 'signature') {
+                          return renderSignatureBlock();
+                        }
+                        return null;
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Pie de Página */}
+                  <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-[8px] sm:text-[9px] text-slate-400 font-sans font-semibold mt-4">
+                    <span>Nosotros Servimos - Lions Clubs International</span>
+                    <span>Página 1 de {hasPage2 ? '2' : '1'}</span>
+                  </div>
                 </div>
-              )}
 
-              {/* Saludo */}
-              <div className="text-slate-655 font-medium">
-                {cartaSaludo || '[Saludo Inicial]'}
-              </div>
+                {/* Página 2 (Opcional) */}
+                {hasPage2 && (
+                  <div className="bg-white shadow-xl rounded-2xl border border-slate-200 p-6 sm:p-12 aspect-[8.5/11] w-full max-w-[680px] mx-auto flex flex-col justify-between font-serif text-slate-800 relative overflow-hidden text-[11px] sm:text-xs text-left animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    <div className="absolute top-0 left-0 right-0">
+                      <div className="bg-blue-900 h-2.5 w-full"></div>
+                      <div className="bg-yellow-500 h-0.5 w-full"></div>
+                    </div>
 
-              {/* Cuerpo */}
-              <div className="text-slate-700 leading-relaxed space-y-3 font-normal whitespace-pre-line text-xs sm:text-[13px] text-justify">
-                {cartaCuerpo || (
-                  <span className="text-slate-350 italic">
-                    El cuerpo de la carta redactado en el formulario se previsualizará en esta área respetando los párrafos y alineaciones del formato oficial...
-                  </span>
-                )}
-              </div>
-            </div>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center text-[9px] text-slate-400 font-sans font-bold pb-2 border-b border-slate-100 mt-2">
+                        <span>Carta Oficial - Página 2</span>
+                      </div>
 
-            {/* Firma y Cierre */}
-            <div className="pt-8 space-y-8">
-              <div className="space-y-1">
-                <p className="text-slate-500 text-xs italic">Atentamente,</p>
-                {cartaFirmaImg && (
-                  <div className="my-2 relative group w-32 h-14">
-                    <img src={cartaFirmaImg} alt="Firma Digital" className="h-full object-contain" />
-                    <button
-                      type="button"
-                      onClick={handleClearFirma}
-                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Quitar firma"
-                    >
-                      <X size={8} />
-                    </button>
+                      {/* Cuerpo Página 2 */}
+                      <div className="text-slate-700 space-y-1.5">
+                        {page2Elements.map((elem, idx) => {
+                          if (elem.type === 'paragraph') {
+                            return renderParagraph(elem.text);
+                          } else if (elem.type === 'signature') {
+                            return renderSignatureBlock();
+                          }
+                          return null;
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Pie de Página */}
+                    <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-[8px] sm:text-[9px] text-slate-400 font-sans font-semibold mt-4">
+                      <span>Nosotros Servimos - Lions Clubs International</span>
+                      <span>Página 2 de 2</span>
+                    </div>
                   </div>
                 )}
-                <div className="pt-2 border-t border-slate-100 max-w-[220px]">
-                  <p className="font-sans font-bold text-xs text-blue-900">{cartaFirmaNombre}</p>
-                  <p className="font-sans text-[10px] text-slate-400 font-semibold">{cartaFirmaPuesto}</p>
-                </div>
-              </div>
 
-              {/* Sello simulado */}
-              <div className="flex justify-center pt-2">
-                <div className="border border-dashed border-amber-600/60 rounded px-4 py-1 text-[8px] font-sans font-bold text-amber-600 tracking-wider bg-amber-50/10">
-                  SELLO OFICIAL - CLUB DE LEONES QX
-                </div>
               </div>
-            </div>
-
-          </div>
+            );
+          })()}
         </div>
       </div>
     );

@@ -349,3 +349,34 @@ export interface Asistencia {
   fecha: string;
   asistio: boolean;
 }
+
+export interface BienInventario {
+  id: string;
+  codigo: string;
+  nombre: string;
+  categoria: string;
+  cantidad: number;
+  unidadMedida: string;
+  estado: 'excelente' | 'bueno' | 'regular' | 'dañado' | 'en_reparacion';
+  ubicacion: string;
+  responsableNombre: string;
+  valorEstimado?: number;
+  fechaAdquisicion?: string;
+  esDonacion: boolean;
+  donanteNombre?: string;
+  imagenUrl?: string;
+  notas?: string;
+  historial?: {
+    id: string;
+    fecha: string;
+    tipo: 'registro' | 'mantenimiento' | 'actualizacion_estado' | 'prestamo' | 'donado';
+    descripcion: string;
+    usuario: string;
+  }[];
+}
+
+export interface CategoriaInventario {
+  id: string;
+  label: string;
+  prefix: string;
+}

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Camera, Plus, Edit2, Trash2, X, UploadCloud, Save, ImageIcon, Calendar, Tag } from 'lucide-react';
 import { GaleriaItem } from '../types';
 import { firebaseService } from '../services/firebaseService';
-import { compressImageFile } from '../utils/imageCompressor';
+import { compressImageFile, validateImageFile } from '../utils/imageCompressor';
 import { useModal } from '../context/ModalContext';
 
 const CATEGORIAS_GALERIA = [
@@ -83,6 +83,11 @@ export const GaleriaAdmin: React.FC = () => {
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      const validation = validateImageFile(file);
+      if (!validation.valid) {
+        alert(validation.error || "Imagen inválida");
+        return;
+      }
       setImageFile(file);
       // Create local preview immediately
       const reader = new FileReader();

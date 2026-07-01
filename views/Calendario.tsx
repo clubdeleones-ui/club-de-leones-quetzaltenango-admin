@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar as CalendarIcon, ExternalLink, Info, Loader2, MapPin, Clock, Heart, Share2, Check, Copy, Search, Filter, UserPlus } from 'lucide-react';
+import { Calendar as CalendarIcon, ExternalLink, Info, Loader2, MapPin, Clock, Heart, Share2, Check, Copy, Search, Filter, UserPlus, X } from 'lucide-react';
 import { googleService } from '../services/googleService';
 import { firebaseService } from '../services/firebaseService';
 import { useClubData } from '../context/ClubDataContext';
@@ -30,6 +30,17 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
     // Search and filtering
     const [searchTerm, setSearchTerm] = useState('');
     const [filterScope, setFilterScope] = useState<'todos' | 'publicas' | 'privadas'>('todos');
+
+    // Limit of displayed activities
+    const [limit, setLimit] = useState(6);
+
+    // Zoomed image modal state
+    const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+
+    // Reset limit when search or filter changes
+    useEffect(() => {
+        setLimit(6);
+    }, [searchTerm, filterScope]);
 
     // Clipboard feedback
     const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -148,6 +159,31 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
         return matchesSearch;
     });
 
+    // Sort by date descending (most recent first)
+    const sortedActividades = React.useMemo(() => {
+        return [...filteredActividades].sort((a, b) => {
+            const dateA = new Date(a.fecha.replace(' ', 'T')).getTime();
+            const dateB = new Date(b.fecha.replace(' ', 'T')).getTime();
+            return dateB - dateA;
+        });
+    }, [filteredActividades]);
+
+    // Slice to display limit (up to 6, then up to 18)
+    const displayedActividades = React.useMemo(() => {
+        return sortedActividades.slice(0, limit);
+    }, [sortedActividades, limit]);
+
+    // Helper to determine if an activity date is past
+    const isActividadFinalizada = (fechaStr: string) => {
+        try {
+            const normalized = fechaStr.includes('T') ? fechaStr : fechaStr.replace(' ', 'T');
+            const eventDate = new Date(normalized);
+            return eventDate.getTime() < Date.now();
+        } catch (e) {
+            return false;
+        }
+    };
+
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Header */}
@@ -236,135 +272,110 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                             <Loader2 className="animate-spin text-blue-900 mb-4" size={48} />
                             <p className="text-slate-550 font-extrabold text-base">Cargando cartelera de actividades...</p>
                         </div>
-                    ) : filteredActividades.length > 0 ? (
-                        <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {filteredActividades.map(act => (
-                                <article 
-                                    key={act.id} 
-                                    className="bg-white rounded-[2.5rem] border border-slate-200/70 shadow-sm hover:shadow-2xl transition-all duration-300 group flex flex-col h-full relative"
-                                >
-                                    {/* Poster / Image Header */}
-                                    <div className="relative aspect-video w-full overflow-hidden rounded-t-[2.5rem] bg-slate-100 border-b border-slate-150">
-                                        <img 
-                                            src={act.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800'} 
-                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                                            alt={act.titulo}
-                                        />
-                                        
-                                        {/* Status Tag Overlay */}
-                                        <div className="absolute top-4 left-4 z-10 flex flex-wrap gap-1.5">
-                                            <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm border ${
-                                                act.publica 
-                                                    ? 'bg-emerald-500/90 backdrop-blur-sm text-white border-emerald-400/30' 
-                                                    : 'bg-blue-900/90 backdrop-blur-sm text-white border-blue-800/30'
-                                            }`}>
-                                                {act.publica ? 'Público' : 'Solo Socios'}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Card Content Body */}
-                                    <div className="p-6 md:p-8 flex flex-col flex-grow justify-between space-y-6">
-                                        <div className="space-y-4">
-                                            {/* Date, Time & Place widgets */}
-                                            <div className="space-y-2">
-                                                <div className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                                    <Clock size={14} className="mr-2 text-yellow-600 shrink-0" />
-                                                    <span>{act.fecha}</span>
-                                                </div>
-                                                <div className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                                    <MapPin size={14} className="mr-2 text-blue-900 shrink-0" />
-                                                    <span className="truncate">{act.lugar}</span>
+                    ) : displayedActividades.length > 0 ? (
+                        <div className="space-y-12">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                {displayedActividades.map(act => {
+                                    const isFinalizada = isActividadFinalizada(act.fecha);
+                                    return (
+                                        <article 
+                                            key={act.id} 
+                                            className="bg-white rounded-[2.5rem] border border-slate-200/70 shadow-sm hover:shadow-2xl transition-all duration-300 group flex flex-col h-full relative"
+                                        >
+                                            {/* Poster / Image Header */}
+                                            <div 
+                                                className="relative aspect-video w-full overflow-hidden rounded-t-[2.5rem] bg-slate-100 border-b border-slate-150 cursor-zoom-in"
+                                                onClick={() => setZoomedImage(act.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800')}
+                                            >
+                                                <img 
+                                                    src={act.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800'} 
+                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                                                    alt={act.titulo}
+                                                />
+                                                
+                                                {/* Status Tag Overlay */}
+                                                <div className="absolute top-4 left-4 z-10 flex flex-wrap gap-1.5">
+                                                    <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm border ${
+                                                        act.publica 
+                                                            ? 'bg-emerald-500/90 backdrop-blur-sm text-white border-emerald-400/30' 
+                                                            : 'bg-blue-900/90 backdrop-blur-sm text-white border-blue-800/30'
+                                                    }`}>
+                                                        {act.publica ? 'Público' : 'Solo Socios'}
+                                                    </span>
+                                                    {isFinalizada && (
+                                                        <span className="text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm border bg-red-600/95 backdrop-blur-sm text-white border-red-500/30">
+                                                            Actividad Finalizada
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
 
-                                            {/* Title & Description */}
-                                            <h3 className="font-extrabold text-2xl text-slate-800 leading-tight group-hover:text-blue-900 transition-colors">
-                                                {act.titulo}
-                                            </h3>
-                                            <p className="text-slate-600 text-sm leading-relaxed text-justify whitespace-pre-line">
-                                                {act.descripcion}
-                                            </p>
-                                        </div>
-
-                                        {/* Sharing Bar & Action Button */}
-                                        <div className="space-y-4 pt-4 border-t border-slate-100">
-                                            {/* Share Button & Popover */}
-                                            <div className="share-popover-container relative">
-                                                <button
-                                                    onClick={() => handleShareClick(act)}
-                                                    className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold py-3.5 px-6 rounded-2xl transition-all shadow-sm active:scale-98 flex items-center justify-center space-x-2 text-sm"
-                                                >
-                                                    <Share2 size={16} />
-                                                    <span>Compartir Actividad</span>
-                                                </button>
-
-                                                {/* Animated share dropdown/popover when open */}
-                                                {openShareId === act.id && (
-                                                    <div className="absolute right-0 left-0 bottom-full mb-3 bg-white text-slate-800 rounded-[1.5rem] shadow-2xl border border-slate-100 py-3 px-3 z-30 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                                                        <div className="flex flex-col space-y-1">
-                                                            <button
-                                                                onClick={() => executeShare(act, 'whatsapp')}
-                                                                className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-emerald-50 rounded-xl transition-all duration-200 group w-full text-left"
-                                                            >
-                                                                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-colors">
-                                                                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                                                                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.062 5.248 5.309 0 11.77 0c3.13 0 6.073 1.22 8.283 3.43 2.21 2.21 3.427 5.153 3.427 8.284 0 6.462-5.247 11.71-11.71 11.71-2.007 0-3.978-.517-5.719-1.498L0 24zm6.59-2.031c1.6.953 3.56 1.458 5.56 1.46 5.375 0 9.75-4.373 9.75-9.75 0-2.595-1.01-5.035-2.83-6.858-1.821-1.82-4.26-2.83-6.86-2.83-5.378 0-9.75 4.372-9.75 9.75 0 2.012.524 3.986 1.524 5.589l-.999 3.65 3.755-.985zM17.43 15.65c-.32-.16-1.89-.93-2.18-1.04-.29-.11-.5-.16-.71.16-.21.32-.82 1.04-1 1.25-.18.21-.36.24-.68.08-.32-.16-1.34-.49-2.55-1.57-.94-.84-1.58-1.87-1.76-2.18-.18-.32-.02-.49.14-.65.15-.14.32-.32.48-.48.16-.16.21-.27.32-.48.11-.21.05-.4-.03-.56-.08-.16-.71-1.7-.97-2.34-.26-.62-.52-.53-.71-.54-.18-.01-.39-.01-.6-.01s-.55.08-.84.4c-.29.32-1.1 1.08-1.1 2.63s1.12 3.05 1.28 3.25c.16.2 2.2 3.35 5.33 4.7 1.86.8 2.94.86 4 .7.6-.09 1.89-.77 2.15-1.52.26-.75.26-1.4.18-1.52-.09-.12-.3-.24-.62-.4z"/>
-                                                                    </svg>
-                                                                </div>
-                                                                <span>WhatsApp</span>
-                                                            </button>
-                                                            <button
-                                                                onClick={() => executeShare(act, 'facebook')}
-                                                                className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-blue-50 rounded-xl transition-all duration-200 group w-full text-left"
-                                                            >
-                                                                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                                                                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                                                                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                                                                    </svg>
-                                                                </div>
-                                                                <span>Facebook</span>
-                                                            </button>
-                                                            <button
-                                                                onClick={() => executeShare(act, 'copy')}
-                                                                className="flex items-center space-x-3 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 rounded-xl transition-all duration-200 group w-full text-left"
-                                                            >
-                                                                <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-600 flex items-center justify-center group-hover:bg-slate-200 transition-colors">
-                                                                    <Copy size={16} />
-                                                                </div>
-                                                                <span>{copiedId === act.id ? '¡Enlace copiado!' : 'Copiar Enlace'}</span>
-                                                            </button>
+                                            {/* Card Content Body */}
+                                            <div className="p-6 md:p-8 flex flex-col flex-grow justify-between space-y-6">
+                                                <div className="space-y-4">
+                                                    {/* Date, Time & Place widgets */}
+                                                    <div className="space-y-2">
+                                                        <div className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                                            <Clock size={14} className="mr-2 text-yellow-600 shrink-0" />
+                                                            <span>{act.fecha}</span>
+                                                        </div>
+                                                        <div className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                                            <MapPin size={14} className="mr-2 text-blue-900 shrink-0" />
+                                                            <span className="truncate">{act.lugar}</span>
                                                         </div>
                                                     </div>
-                                                )}
+
+                                                    {/* Title & Description */}
+                                                    <h3 className="font-extrabold text-2xl text-slate-800 leading-tight group-hover:text-blue-900 transition-colors">
+                                                        {act.titulo}
+                                                    </h3>
+                                                    <p className="text-slate-600 text-sm leading-relaxed text-justify whitespace-pre-line font-medium">
+                                                        {act.descripcion}
+                                                    </p>
+                                                </div>
+
+                                                {/* Action Buttons */}
+                                                <div className="space-y-4 pt-4 border-t border-slate-100">
+                                                    {/* Donation CTA */}
+                                                    {act.conBotonDonacion && (
+                                                        <button
+                                                            onClick={() => handleDonateClick(act)}
+                                                            className="w-full bg-gradient-to-r from-rose-500 via-pink-600 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white font-extrabold py-3.5 px-6 rounded-2xl transition-all shadow-md hover:shadow-xl active:scale-98 flex items-center justify-center space-x-2 text-sm"
+                                                        >
+                                                            <Heart size={16} className="fill-current" />
+                                                            <span>Apoyar con Donación</span>
+                                                        </button>
+                                                    )}
+
+                                                    {/* Volunteer CTA */}
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedActForVol(act);
+                                                            setIsVolModalOpen(true);
+                                                        }}
+                                                        className="w-full bg-blue-900 hover:bg-blue-800 text-white font-extrabold py-3.5 px-6 rounded-2xl transition-all shadow-md hover:shadow-xl active:scale-98 flex items-center justify-center space-x-2 text-sm"
+                                                    >
+                                                        <UserPlus size={16} />
+                                                        <span>Me apunto como voluntario</span>
+                                                    </button>
+                                                </div>
                                             </div>
+                                        </article>
+                                    );
+                                })}
+                            </div>
 
-                                            {/* Donation CTA */}
-                                            {act.conBotonDonacion && (
-                                                <button
-                                                    onClick={() => handleDonateClick(act)}
-                                                    className="w-full bg-gradient-to-r from-rose-500 via-pink-600 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white font-extrabold py-3.5 px-6 rounded-2xl transition-all shadow-md hover:shadow-xl active:scale-98 flex items-center justify-center space-x-2 text-sm"
-                                                >
-                                                    <Heart size={16} className="fill-current" />
-                                                    <span>Apoyar con Donación</span>
-                                                </button>
-                                            )}
-
-                                            {/* Volunteer CTA */}
-                                            <button
-                                                onClick={() => {
-                                                    setSelectedActForVol(act);
-                                                    setIsVolModalOpen(true);
-                                                }}
-                                                className="w-full bg-blue-900 hover:bg-blue-800 text-white font-extrabold py-3.5 px-6 rounded-2xl transition-all shadow-md hover:shadow-xl active:scale-98 flex items-center justify-center space-x-2 text-sm"
-                                            >
-                                                <UserPlus size={16} />
-                                                <span>Me apunto como voluntario</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </article>
-                            ))}
+                            {/* Load More Button */}
+                            {sortedActividades.length > limit && limit === 6 && (
+                                <div className="flex justify-center mt-12">
+                                    <button
+                                        onClick={() => setLimit(18)}
+                                        className="bg-blue-900 hover:bg-blue-800 text-white font-extrabold py-4 px-8 rounded-2xl transition-all shadow-md hover:shadow-xl active:scale-95 text-sm"
+                                    >
+                                        Ver actividades antiguas
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="p-16 text-center bg-slate-50 rounded-[2.5rem] border-2 border-dashed border-slate-200">
@@ -428,6 +439,27 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                     actividadId={selectedActForVol.id}
                     actividadTitulo={selectedActForVol.titulo}
                 />
+            )}
+
+            {/* Zoomed Image Modal */}
+            {zoomedImage && (
+                <div 
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-md cursor-zoom-out animate-in fade-in duration-200"
+                    onClick={() => setZoomedImage(null)}
+                >
+                    <button 
+                        type="button"
+                        onClick={() => setZoomedImage(null)} 
+                        className="absolute top-6 right-6 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-3 rounded-full transition-all"
+                    >
+                        <X size={24} />
+                    </button>
+                    <img 
+                        src={zoomedImage} 
+                        className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200" 
+                        alt="Zoomed Actividad" 
+                    />
+                </div>
             )}
         </div>
     );

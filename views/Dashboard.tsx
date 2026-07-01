@@ -34,7 +34,7 @@ import {
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { MOCK_DONACIONES, MOCK_SOCIOS } from '../constants';
 import { generateDiplomaDonacionPDF } from '../utils/pdfGenerator';
-import { compressImageFile } from '../utils/imageCompressor';
+import { compressImageFile, validateImageFile } from '../utils/imageCompressor';
 import { firebaseService } from '../services/firebaseService';
 import { useModal } from '../context/ModalContext';
 
@@ -172,6 +172,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
   const handleEditSocioPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      setSocioSaveError(validation.error || "Imagen inválida");
+      return;
+    }
     try {
       const compressed = await compressImageFile(file, 400, 400, 0.7);
       setEditFoto(compressed);

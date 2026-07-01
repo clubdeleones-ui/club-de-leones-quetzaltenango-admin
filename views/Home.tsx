@@ -1,11 +1,126 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar as CalendarIcon, MapPin, ArrowRight, ShieldCheck, Heart, Users, Clock, Share2, Check, Copy, Loader2, UserPlus } from 'lucide-react';
+import { 
+  Calendar as CalendarIcon, 
+  MapPin, 
+  ArrowRight, 
+  ShieldCheck, 
+  Heart, 
+  Users, 
+  Clock, 
+  Share2, 
+  Check, 
+  Copy, 
+  Loader2, 
+  UserPlus,
+  Leaf,
+  Eye,
+  Activity,
+  CloudRain,
+  Utensils,
+  Handshake,
+  Smile,
+  Award,
+  X,
+  ChevronLeft,
+  ChevronRight
+} from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
 import { useClubData } from '../context/ClubDataContext';
 import { Actividad } from '../types';
 import { MOCK_ACTIVIDADES } from '../constants';
 import { InscripcionVoluntarioModal } from '../components/InscripcionVoluntarioModal';
+
+const CAUSAS_GLOBALES = [
+  {
+    id: 'cancer',
+    title: 'Cáncer infantil',
+    desc: 'Brindamos apoyo a las necesidades de los niños y las familias afectadas por el cáncer infantil.',
+    color: 'from-amber-400 to-yellow-600',
+    textColor: 'text-yellow-650',
+    bgColor: 'bg-amber-50/30',
+    iconColor: 'text-amber-500',
+    iconBg: 'bg-amber-100',
+    icon: Award,
+  },
+  {
+    id: 'diabetes',
+    title: 'Diabetes',
+    desc: 'Trabajamos para reducir la prevalencia de la diabetes y mejorar la calidad de vida de los diabéticos.',
+    color: 'from-sky-400 to-blue-600',
+    textColor: 'text-blue-650',
+    bgColor: 'bg-sky-50/30',
+    iconColor: 'text-sky-500',
+    iconBg: 'bg-sky-100',
+    icon: Activity,
+  },
+  {
+    id: 'desastre',
+    title: 'Auxilio en casos de desastre',
+    desc: 'Actuamos para satisfacer las necesidades inmediatas y brindar apoyo a largo plazo a las comunidades devastadas por los desastres naturales.',
+    color: 'from-blue-600 to-indigo-900',
+    textColor: 'text-indigo-650',
+    bgColor: 'bg-indigo-50/30',
+    iconColor: 'text-indigo-500',
+    iconBg: 'bg-indigo-100',
+    icon: CloudRain,
+  },
+  {
+    id: 'ambiente',
+    title: 'Medio ambiente',
+    desc: 'Encontramos formas de proteger el medio ambiente con el fin de crear comunidades más saludables y un mundo más sostenible.',
+    color: 'from-emerald-400 to-green-700',
+    textColor: 'text-emerald-650',
+    bgColor: 'bg-emerald-50/30',
+    iconColor: 'text-emerald-500',
+    iconBg: 'bg-emerald-100',
+    icon: Leaf,
+  },
+  {
+    id: 'humanitario',
+    title: 'Esfuerzos humanitarios',
+    desc: 'Identificamos las necesidades más cruciales del mundo y proporcionamos ayuda humanitaria donde más se necesite.',
+    color: 'from-rose-400 to-red-700',
+    textColor: 'text-rose-650',
+    bgColor: 'bg-rose-50/30',
+    iconColor: 'text-rose-500',
+    iconBg: 'bg-rose-100',
+    icon: Handshake,
+  },
+  {
+    id: 'hambre',
+    title: 'Hambre',
+    desc: 'Nos esforzamos por mejorar la seguridad alimentaria y el acceso a alimentos nutritivos para ayudar a mitigar el hambre.',
+    color: 'from-orange-400 to-red-650',
+    textColor: 'text-orange-650',
+    bgColor: 'bg-orange-50/30',
+    iconColor: 'text-orange-500',
+    iconBg: 'bg-orange-100',
+    icon: Utensils,
+  },
+  {
+    id: 'vision',
+    title: 'Visión',
+    desc: 'Ayudamos a prevenir la ceguera evitable y mejorar la calidad de vida de las personas invidentes o con discapacidad visual.',
+    color: 'from-purple-400 to-fuchsia-700',
+    textColor: 'text-purple-650',
+    bgColor: 'bg-purple-50/30',
+    iconColor: 'text-purple-500',
+    iconBg: 'bg-purple-100',
+    icon: Eye,
+  },
+  {
+    id: 'juventud',
+    title: 'Juventud',
+    desc: 'Apoyamos a los jóvenes para que tomen decisiones positivas, lleven una vida sana y productiva y se conviertan en líderes del servicio.',
+    color: 'from-teal-400 to-cyan-700',
+    textColor: 'text-teal-650',
+    bgColor: 'bg-teal-50/30',
+    iconColor: 'text-teal-500',
+    iconBg: 'bg-teal-100',
+    icon: Smile,
+  }
+];
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -13,11 +128,12 @@ const Home: React.FC = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedActForVol, setSelectedActForVol] = useState<Actividad | null>(null);
   const [isVolModalOpen, setIsVolModalOpen] = useState(false);
+  const [selectedCausaIndex, setSelectedCausaIndex] = useState<number>(0);
 
   const actividades = React.useMemo(() => {
     const publicSorted = dbActividades
       .filter(a => a.publica)
-      .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+      .sort((a, b) => new Date(b.fecha.replace(' ', 'T')).getTime() - new Date(a.fecha.replace(' ', 'T')).getTime());
     return publicSorted.length > 0 ? publicSorted : MOCK_ACTIVIDADES.filter(a => a.publica);
   }, [dbActividades]);
 
@@ -226,121 +342,224 @@ const Home: React.FC = () => {
           </div>
         ) : actividades.length > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {actividades.slice(0, 2).map((act) => (
-              <article 
-                key={act.id} 
-                className="bg-white rounded-[2.5rem] border border-slate-200/70 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col h-full"
-              >
-                {/* Poster Image */}
-                <div className="relative aspect-video w-full overflow-hidden bg-slate-100 border-b border-slate-150">
-                  <img 
-                    src={act.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800'} 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                    alt={act.titulo}
-                  />
-                  <div className="absolute top-4 left-4 z-10">
-                    <span className="text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm bg-emerald-500/90 backdrop-blur-sm text-white border border-emerald-400/30">
-                      Público
-                    </span>
-                  </div>
-                </div>
+            {/* Interactive 8 Causes Card (Carousel) */}
+            {(() => {
+              const activeCausa = CAUSAS_GLOBALES[selectedCausaIndex];
+              const prevIndex = selectedCausaIndex === 0 ? CAUSAS_GLOBALES.length - 1 : selectedCausaIndex - 1;
+              const prevCausa = CAUSAS_GLOBALES[prevIndex];
+              const nextIndex = selectedCausaIndex === CAUSAS_GLOBALES.length - 1 ? 0 : selectedCausaIndex + 1;
+              const nextCausa = CAUSAS_GLOBALES[nextIndex];
+              
+              const ActiveIcon = activeCausa.icon;
+              const PrevIcon = prevCausa.icon;
+              const NextIcon = nextCausa.icon;
 
-                {/* Body Details */}
-                <div className="p-6 md:p-8 flex flex-col flex-grow justify-between space-y-6">
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <div className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider">
-                        <Clock size={13} className="mr-2 text-yellow-600 shrink-0" />
-                        <span>{act.fecha}</span>
+              const handlePrev = (e: React.MouseEvent) => {
+                e.stopPropagation();
+                setSelectedCausaIndex(prev => (prev === 0 ? CAUSAS_GLOBALES.length - 1 : prev - 1));
+              };
+
+              const handleNext = (e: React.MouseEvent) => {
+                e.stopPropagation();
+                setSelectedCausaIndex(prev => (prev === CAUSAS_GLOBALES.length - 1 ? 0 : prev + 1));
+              };
+
+              const handleSelectCausa = (idx: number, e: React.MouseEvent) => {
+                e.stopPropagation();
+                setSelectedCausaIndex(idx);
+              };
+
+              return (
+                <article className={`rounded-[2.5rem] border border-slate-200/70 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col h-full bg-white`}>
+                  {/* Aspect-Video Header displaying the Carousel */}
+                  <div className="relative aspect-video w-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 via-blue-950 to-slate-950 p-5 flex flex-col justify-between items-center overflow-hidden shrink-0 select-none">
+                    {/* Background glow indicating active cause color */}
+                    <div className={`absolute inset-0 opacity-30 bg-gradient-to-br ${activeCausa.color} blur-3xl scale-125 transition-all duration-700 pointer-events-none`} />
+                    
+                    {/* Header text overlay */}
+                    <div className="w-full flex items-center justify-between text-white/40 text-[9px] font-black uppercase tracking-widest relative z-10">
+                      <span>Áreas de Servicio</span>
+                      <span>Lions International</span>
+                    </div>
+
+                    {/* Main Row: Prev Preview, Prev Arrow, Main Large Icon, Next Arrow, Next Preview */}
+                    <div className="flex items-center justify-between w-full relative z-10 flex-grow max-w-[290px] sm:max-w-[340px]">
+                      {/* Left side preview and arrow */}
+                      <div className="flex items-center space-x-1.5 md:space-x-2">
+                        <div 
+                          onClick={(e) => handleSelectCausa(prevIndex, e)}
+                          className={`w-9 h-9 rounded-full bg-gradient-to-br ${prevCausa.color} text-white/30 flex items-center justify-center scale-90 cursor-pointer hover:scale-95 transition-all duration-300 opacity-20 hover:opacity-40 shrink-0`}
+                          title={prevCausa.title}
+                        >
+                          <PrevIcon size={16} />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handlePrev}
+                          className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 text-white/80 flex items-center justify-center transition-all active:scale-90"
+                          title="Anterior"
+                        >
+                          <ChevronLeft size={20} className="stroke-[2.5]" />
+                        </button>
                       </div>
-                      <div className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider">
-                        <MapPin size={13} className="mr-2 text-blue-900 shrink-0" />
-                        <span className="truncate">{act.lugar}</span>
+
+                      {/* Main Active Icon */}
+                      <div className="flex flex-col items-center">
+                        <div className={`w-18 h-18 sm:w-22 sm:h-22 rounded-full flex items-center justify-center transition-all duration-500 bg-gradient-to-br ${activeCausa.color} text-white shadow-[0_0_35px_rgba(255,255,255,0.2)] ring-8 ring-white/10 relative`}>
+                          <ActiveIcon size={34} className="stroke-[2.2] animate-pulse duration-1000" />
+                        </div>
+                        <span className="mt-2.5 text-[10px] font-black text-white uppercase tracking-widest text-center max-w-[130px] truncate">
+                          {activeCausa.title}
+                        </span>
+                      </div>
+
+                      {/* Right side arrow and preview */}
+                      <div className="flex items-center space-x-1.5 md:space-x-2">
+                        <button
+                          type="button"
+                          onClick={handleNext}
+                          className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 text-white/80 flex items-center justify-center transition-all active:scale-90"
+                          title="Siguiente"
+                        >
+                          <ChevronRight size={20} className="stroke-[2.5]" />
+                        </button>
+                        <div 
+                          onClick={(e) => handleSelectCausa(nextIndex, e)}
+                          className={`w-9 h-9 rounded-full bg-gradient-to-br ${nextCausa.color} text-white/30 flex items-center justify-center scale-90 cursor-pointer hover:scale-95 transition-all duration-300 opacity-20 hover:opacity-40 shrink-0`}
+                          title={nextCausa.title}
+                        >
+                          <NextIcon size={16} />
+                        </div>
                       </div>
                     </div>
 
-                    <h3 className="font-extrabold text-xl md:text-2xl text-slate-800 leading-tight group-hover:text-blue-900 transition-colors">
-                      {act.titulo}
-                    </h3>
-                    <p className="text-slate-655 text-xs md:text-sm leading-relaxed text-justify line-clamp-3 whitespace-pre-line">
-                      {act.descripcion}
-                    </p>
+                    {/* Dots Indicator */}
+                    <div className="flex space-x-1.5 relative z-10">
+                      {CAUSAS_GLOBALES.map((_, idx) => {
+                        const isSelected = selectedCausaIndex === idx;
+                        return (
+                          <button
+                            key={idx}
+                            onClick={(e) => handleSelectCausa(idx, e)}
+                            className={`h-1.5 rounded-full transition-all duration-300 ${
+                              isSelected ? 'w-5 bg-white' : 'w-1.5 bg-white/35 hover:bg-white/55'
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  {/* Share & Donate buttons */}
-                  <div className="space-y-4 pt-4 border-t border-slate-100">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 flex items-center">
-                        <Share2 size={11} className="mr-1.5" />
-                        Compartir
-                      </span>
-                      <div className="flex items-center space-x-1.5">
-                        <button
-                          onClick={() => handleShare(act, 'whatsapp')}
-                          className="w-8 h-8 rounded-full bg-emerald-50 hover:bg-emerald-500 hover:text-white text-emerald-600 flex items-center justify-center transition-all shadow-sm"
-                          title="Compartir por WhatsApp"
-                        >
-                          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.062 5.248 5.309 0 11.77 0c3.13 0 6.073 1.22 8.283 3.43 2.21 2.21 3.427 5.153 3.427 8.284 0 6.462-5.247 11.71-11.71 11.71-2.007 0-3.978-.517-5.719-1.498L0 24zm6.59-2.031c1.6.953 3.56 1.458 5.56 1.46 5.375 0 9.75-4.373 9.75-9.75 0-2.595-1.01-5.035-2.83-6.858-1.821-1.82-4.26-2.83-6.86-2.83-5.378 0-9.75 4.372-9.75 9.75 0 2.012.524 3.986 1.524 5.589l-.999 3.65 3.755-.985zM17.43 15.65c-.32-.16-1.89-.93-2.18-1.04-.29-.11-.5-.16-.71.16-.21.32-.82 1.04-1 1.25-.18.21-.36.24-.68.08-.32-.16-1.34-.49-2.55-1.57-.94-.84-1.58-1.87-1.76-2.18-.18-.32-.02-.49.14-.65.15-.14.32-.32.48-.48.16-.16.21-.27.32-.48.11-.21.05-.4-.03-.56-.08-.16-.71-1.7-.97-2.34-.26-.62-.52-.53-.71-.54-.18-.01-.39-.01-.6-.01s-.55.08-.84.4c-.29.32-1.1 1.08-1.1 2.63s1.12 3.05 1.28 3.25c.16.2 2.2 3.35 5.33 4.7 1.86.8 2.94.86 4 .7.6-.09 1.89-.77 2.15-1.52.26-.75.26-1.4.18-1.52-.09-.12-.3-.24-.62-.4z"/>
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleShare(act, 'facebook')}
-                          className="w-8 h-8 rounded-full bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-700 flex items-center justify-center transition-all shadow-sm"
-                          title="Compartir en Facebook"
-                        >
-                          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleShare(act, 'twitter')}
-                          className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-700 flex items-center justify-center transition-all shadow-sm"
-                          title="Compartir en Twitter/X"
-                        >
-                          <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleShare(act, 'copy')}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shadow-sm ${
-                            copiedId === act.id 
-                              ? 'bg-emerald-500 text-white hover:bg-emerald-600' 
-                              : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-                          }`}
-                          title="Copiar datos y enlace"
-                        >
-                          {copiedId === act.id ? <Check size={12} /> : <Copy size={12} />}
-                        </button>
+                  {/* Body details of the selected cause */}
+                  <div className={`p-6 md:p-8 flex flex-col flex-grow justify-between space-y-5 transition-colors duration-500 ${activeCausa.bgColor}`}>
+                    <div className="space-y-4 flex-grow">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm border bg-white text-slate-800 border-white/50`}>
+                          Causas Globales
+                        </span>
+                        <span className="text-[10px] font-extrabold text-slate-400">Lions International</span>
                       </div>
+
+                      {/* Brief description explaining the 8 causes */}
+                      <p className="text-slate-500 text-xs md:text-sm font-semibold leading-relaxed border-l-2 border-slate-300 pl-3 italic">
+                        Lions International cuenta con 8 causas globales prioritarias de las cuales derivan la mayoría de nuestras actividades y proyectos de servicio comunitario.
+                      </p>
+
+                      <h3 className={`font-extrabold text-xl md:text-2xl leading-tight transition-colors duration-500 ${activeCausa.textColor}`}>
+                        {activeCausa.title}
+                      </h3>
+                      
+                      <p className="text-slate-600 text-xs md:text-sm leading-relaxed text-justify transition-all duration-500 font-medium whitespace-pre-line">
+                        {activeCausa.desc}
+                      </p>
                     </div>
 
-                    {act.conBotonDonacion && (
+                    <div className="pt-4 border-t border-slate-150 mt-auto">
                       <button
-                        onClick={() => handleDonateClick(act)}
-                        className="w-full bg-gradient-to-r from-rose-500 via-pink-600 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white font-extrabold py-3 px-4 rounded-2xl transition-all shadow-md hover:shadow-lg active:scale-98 flex items-center justify-center space-x-1.5 text-xs"
+                        onClick={() => navigate('/actividades')}
+                        className="w-full bg-slate-100 hover:bg-blue-900 hover:text-white text-slate-705 font-extrabold py-3 px-4 rounded-2xl transition-all shadow-sm flex items-center justify-center space-x-1.5 text-xs"
                       >
-                        <Heart size={14} className="fill-current" />
-                        <span>Apoyar con Donación</span>
+                        <span>Conoce Nuestras Actividades</span>
+                        <ArrowRight size={14} />
                       </button>
-                    )}
-
-                    {/* Volunteer CTA */}
-                    <button
-                      onClick={() => {
-                        setSelectedActForVol(act);
-                        setIsVolModalOpen(true);
-                      }}
-                      className="w-full bg-blue-900 hover:bg-blue-800 text-white font-extrabold py-3 px-4 rounded-2xl transition-all shadow-md hover:shadow-lg active:scale-98 flex items-center justify-center space-x-1.5 text-xs"
-                    >
-                      <UserPlus size={14} />
-                      <span>Me apunto como voluntario</span>
-                    </button>
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })()}
+
+            {/* The single most recent activity card */}
+            {(() => {
+              const act = actividades[0];
+              return (
+                <article 
+                  key={act.id} 
+                  className="bg-white rounded-[2.5rem] border border-slate-200/70 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col h-full"
+                >
+                  {/* Poster Image */}
+                  <div className="relative aspect-video w-full overflow-hidden bg-slate-100 border-b border-slate-150">
+                    <img 
+                      src={act.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800'} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                      alt={act.titulo}
+                    />
+                    <div className="absolute top-4 left-4 z-10">
+                      <span className="text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm bg-emerald-500/90 backdrop-blur-sm text-white border border-emerald-400/30">
+                        Actividad Más Reciente
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Body Details */}
+                  <div className="p-6 md:p-8 flex flex-col flex-grow justify-between space-y-6">
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider">
+                          <Clock size={13} className="mr-2 text-yellow-600 shrink-0" />
+                          <span>{act.fecha}</span>
+                        </div>
+                        <div className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider">
+                          <MapPin size={13} className="mr-2 text-blue-900 shrink-0" />
+                          <span className="truncate">{act.lugar}</span>
+                        </div>
+                      </div>
+
+                      <h3 className="font-extrabold text-xl md:text-2xl text-slate-800 leading-tight group-hover:text-blue-900 transition-colors">
+                        {act.titulo}
+                      </h3>
+                      <p className="text-slate-655 text-xs md:text-sm leading-relaxed text-justify line-clamp-3 whitespace-pre-line font-medium">
+                        {act.descripcion}
+                      </p>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="space-y-4 pt-4 border-t border-slate-100">
+                      {act.conBotonDonacion && (
+                        <button
+                          onClick={() => handleDonateClick(act)}
+                          className="w-full bg-gradient-to-r from-rose-500 via-pink-600 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white font-extrabold py-3.5 px-6 rounded-2xl transition-all shadow-md hover:shadow-lg active:scale-98 flex items-center justify-center space-x-1.5 text-xs"
+                        >
+                          <Heart size={14} className="fill-current" />
+                          <span>Apoyar con Donación</span>
+                        </button>
+                      )}
+
+                      {/* Volunteer CTA */}
+                      <button
+                        onClick={() => {
+                          setSelectedActForVol(act);
+                          setIsVolModalOpen(true);
+                        }}
+                        className="w-full bg-blue-900 hover:bg-blue-800 text-white font-extrabold py-3.5 px-6 rounded-2xl transition-all shadow-md hover:shadow-lg active:scale-98 flex items-center justify-center space-x-1.5 text-xs"
+                      >
+                        <UserPlus size={14} />
+                        <span>Me apunto como voluntario</span>
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })()}
           </div>
         ) : (
           <div className="p-12 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">

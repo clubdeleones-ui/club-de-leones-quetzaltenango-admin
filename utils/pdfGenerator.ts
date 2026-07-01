@@ -1287,6 +1287,11 @@ export const generateCartaOficialPDF = async (
       doc.setTextColor(148, 163, 184); // Slate-400
       doc.text(`Carta Oficial - Página ${doc.internal.pages.length - 1}`, margin, 18);
       
+      // Restore standard body text font style and color (Times, Normal, 11pt, slate-700)
+      doc.setFont('times', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(51, 65, 85);
+      
       y = 26; // Reset Y coordinate
     }
   };
@@ -1298,17 +1303,59 @@ export const generateCartaOficialPDF = async (
       return;
     }
 
-    doc.setFont('times', 'normal');
-    doc.setFontSize(11);
-    doc.setTextColor(51, 65, 85);
+    const isBullet = trimmedLine.startsWith('•') || trimmedLine.startsWith('-') || trimmedLine.startsWith('*');
+    const isNumbered = /^\d+\./.test(trimmedLine);
 
-    const splitLines = doc.splitTextToSize(trimmedLine, contentWidth);
-    splitLines.forEach((subLine: string) => {
+    if (isBullet) {
+      const bulletText = trimmedLine.replace(/^[•\-\*]\s*/, '');
+      doc.setFont('times', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(51, 65, 85);
+      
       checkPageOverflow(6);
-      doc.text(subLine, margin, y, { align: 'justify' });
-      y += 5.8;
-    });
-    y += 2;
+      doc.text('•', margin + 4, y);
+      
+      doc.setFont('times', 'normal');
+      const splitBullet = doc.splitTextToSize(bulletText, contentWidth - 8);
+      splitBullet.forEach((subLine: string) => {
+        checkPageOverflow(6);
+        doc.text(subLine, margin + 8, y, { align: 'justify' });
+        y += 5.8;
+      });
+      y += 1.5;
+    } else if (isNumbered) {
+      const match = trimmedLine.match(/^(\d+\.)\s*(.*)/);
+      const numberPrefix = match ? match[1] : '1.';
+      const numberText = match ? match[2] : trimmedLine;
+      
+      doc.setFont('times', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(51, 65, 85);
+      
+      checkPageOverflow(6);
+      doc.text(numberPrefix, margin + 4, y);
+      
+      doc.setFont('times', 'normal');
+      const splitNumber = doc.splitTextToSize(numberText, contentWidth - 8);
+      splitNumber.forEach((subLine: string) => {
+        checkPageOverflow(6);
+        doc.text(subLine, margin + 8, y, { align: 'justify' });
+        y += 5.8;
+      });
+      y += 1.5;
+    } else {
+      doc.setFont('times', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(51, 65, 85);
+
+      const splitLines = doc.splitTextToSize(trimmedLine, contentWidth);
+      splitLines.forEach((subLine: string) => {
+        checkPageOverflow(6);
+        doc.text(subLine, margin, y, { align: 'justify' });
+        y += 5.8;
+      });
+      y += 2;
+    }
   });
 
   // Space before signature

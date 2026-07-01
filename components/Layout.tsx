@@ -19,7 +19,8 @@ import {
   Clock,
   HeartHandshake,
   Facebook,
-  Instagram
+  Instagram,
+  Award
 } from 'lucide-react';
 import { AuthState, UserRole } from '../types';
 import { googleService } from '../services/googleService';
@@ -42,6 +43,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
     '/actividades',
     '/galeria',
     '/historia',
+    '/convencion',
     '/socios',
     '/solicitudes',
     '/donar',
@@ -87,9 +89,9 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
   const navItems = [
     { label: 'Inicio', path: '/', icon: Home, public: true },
     { label: 'Actividades', path: '/actividades', icon: Calendar, public: true },
+    { label: 'Convención', path: '/convencion', icon: Award, public: true },
     { label: 'Galería', path: '/galeria', icon: Image, public: true },
     { label: 'Historia', path: '/historia', icon: Clock, public: true },
-    { label: 'Directorio', path: '/socios', icon: Users, public: true },
     { label: 'Solicitudes', path: '/solicitudes', icon: FileText, public: true },
   ];
 
@@ -98,6 +100,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
     
     const items = [
       { label: 'Mi Panel', path: '/dashboard', icon: User },
+      { label: 'Directorio', path: '/socios', icon: Users },
       { label: 'Estatutos', path: '/estatutos', icon: ShieldCheck },
       { label: 'Estrategia Retención', path: '/retencion', icon: HeartHandshake }
     ];

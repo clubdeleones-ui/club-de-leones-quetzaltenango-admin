@@ -2,22 +2,170 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Colecciones del Club de Leones (Permitir lectura y escritura pública indefinidamente)
+
+    // Helper functions for validating data types
+    function isValidString(data, field, optional) {
+      return !(field in data) ? optional : data[field] is string;
+    }
+    
+    function isValidNumber(data, field, optional) {
+      return !(field in data) ? optional : data[field] is number;
+    }
+
+    function isValidBool(data, field, optional) {
+      return !(field in data) ? optional : data[field] is bool;
+    }
+    
+    function isValidList(data, field, optional) {
+      return !(field in data) ? optional : data[field] is list;
+    }
+
+    // --- RULES FOR CLUB DE LEONES COLLECTIONS ---
+
     match /propuestas/{document} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'nombreCandidato', false)
+                   && isValidString(request.resource.data, 'correoCandidato', false)
+                   && (request.resource.data.estado in ['Pendiente', 'Aprobado', 'Rechazado']);
     }
     
     match /socios/{document} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'nombre', false)
+                   && isValidString(request.resource.data, 'correo', false)
+                   && (request.resource.data.rol in [
+                        'SUPER_ADMIN', 'TESORERO', 'SECRETARIO', 
+                        'ASESOR_SERVICIOS', 'PRESIDENTE_AFILIACION', 
+                        'SOCIO', 'DONANTE', 'GUEST'
+                      ])
+                   && (request.resource.data.estadoCuotas in ['Al día', 'Pendiente', 'En mora'])
+                   && isValidNumber(request.resource.data, 'montoPendiente', false);
     }
 
     match /actas/{document} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'titulo', false)
+                   && isValidString(request.resource.data, 'fecha', false)
+                   && isValidString(request.resource.data, 'contenido', false)
+                   && isValidString(request.resource.data, 'autor', false);
     }
 
+    match /actividades/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'titulo', false)
+                   && isValidString(request.resource.data, 'fecha', false)
+                   && isValidString(request.resource.data, 'lugar', false)
+                   && isValidBool(request.resource.data, 'publica', false);
+    }
+
+    match /solicitudes/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'nombre', false)
+                   && isValidString(request.resource.data, 'tipo', false)
+                   && (request.resource.data.estado in ['Pendiente', 'Aprobada', 'Rechazada']);
+    }
+
+    match /solicitudes_voluntarios/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'nombre', false)
+                   && isValidString(request.resource.data, 'correo', false)
+                   && isValidString(request.resource.data, 'telefono', false)
+                   && (request.resource.data.estado in ['Pendiente', 'Aprobado', 'Rechado', 'Rechazado']);
+    }
+
+    match /galeria/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'titulo', false)
+                   && isValidString(request.resource.data, 'fecha', false)
+                   && isValidString(request.resource.data, 'url', false);
+    }
+
+    match /linea_tiempo/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'titulo', false)
+                   && isValidString(request.resource.data, 'fecha', false);
+    }
+
+    match /comisiones/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'nombre', false);
+    }
+
+    match /minutas/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'titulo', false)
+                   && isValidString(request.resource.data, 'comisionId', false);
+    }
+
+    match /agenda/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'nombre', false);
+    }
+
+    match /agendas/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'titulo', false)
+                   && (request.resource.data.estado in ['Borrador', 'Publicada', 'Finalizada']);
+    }
+
+    match /tareas_comisiones/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'titulo', false)
+                   && isValidString(request.resource.data, 'comisionId', false);
+    }
+
+    match /asistencias/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'eventoId', false);
+    }
+
+    match /presupuestos_rubros/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'nombre', false);
+    }
+
+    match /presupuestos_fondos/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'nombre', false);
+    }
+
+    match /presupuestos_asignaciones/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'rubroId', false)
+                   && isValidString(request.resource.data, 'fondoId', false)
+                   && isValidNumber(request.resource.data, 'monto', false);
+    }
+
+    match /config_roles/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'id', false)
+                   && isValidList(request.resource.data, 'allowedTabs', true);
+    }
+
+    match /config_puestos/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'id', false);
+    }
+
+    match /parqueo/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'numeroPlaca', false)
+                   && isValidBool(request.resource.data, 'isExtranjera', false)
+                   && (request.resource.data.estado in ['Activo', 'Completado']);
+    }
+
+    // --- GENERAL COMPATIBILITY CATCH-ALL ---
     // Regla de compatibilidad para otros desarrollos en el proyecto parqueo-cueva (Válido hasta finales de 2027)
+    // Se restringe para no interceptar ni relajar las reglas de las colecciones del Club de Leones declaradas arriba.
     match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2027, 12, 31);
+      allow read, write: if request.time < timestamp.date(2027, 12, 31)
+        && !(request.path[4] in [
+          'propuestas', 'socios', 'actas', 'actividades', 'solicitudes', 
+          'solicitudes_voluntarios', 'galeria', 'linea_tiempo', 'comisiones', 
+          'minutas', 'agenda', 'agendas', 'tareas_comisiones', 'asistencias', 
+          'presupuestos_rubros', 'presupuestos_fondos', 'presupuestos_asignaciones', 
+          'config_roles', 'config_puestos', 'parqueo'
+        ]);
     }
   }
 }

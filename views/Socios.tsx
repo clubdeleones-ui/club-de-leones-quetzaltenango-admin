@@ -18,13 +18,27 @@ interface SociosProps {
 }
 
 const Socios: React.FC<SociosProps> = ({ user }) => {
-  const { socios } = useClubData();
+  const { socios, rolesConfig } = useClubData();
 
   const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; title: string } | null>(null);
 
   const sociosActivos = React.useMemo(() => {
-    return socios.filter(s => s.estatus !== 'Inactive');
-  }, [socios]);
+    const rolesOrderMap: Record<string, number> = {};
+    rolesConfig.forEach((r, idx) => {
+      rolesOrderMap[r.id] = r.orden !== undefined ? r.orden : idx;
+    });
+
+    return [...socios]
+      .filter(s => s.estatus !== 'Inactive')
+      .sort((a, b) => {
+        const orderA = rolesOrderMap[a.rol || ''] ?? 999;
+        const orderB = rolesOrderMap[b.rol || ''] ?? 999;
+        if (orderA !== orderB) {
+          return orderA - orderB;
+        }
+        return a.nombre.localeCompare(b.nombre);
+      });
+  }, [socios, rolesConfig]);
 
   return (
     <div className="space-y-10 max-w-7xl mx-auto px-4 md:px-8 py-8 animate-in fade-in duration-700">

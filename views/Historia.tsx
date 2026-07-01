@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, MapPin, Search, ChevronDown } from 'lucide-react';
+import { Clock, MapPin, Search, ChevronDown, X } from 'lucide-react';
 import { HitoHistorico } from '../types';
 import { firebaseService } from '../services/firebaseService';
 
@@ -8,6 +8,12 @@ export const Historia: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'Todos' | 'Club de Leones' | 'Ciudad de Quetzaltenango'>('Todos');
   const [searchTerm, setSearchTerm] = useState('');
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
+  const [expandedHitos, setExpandedHitos] = useState<Record<string, boolean>>({});
+
+  const toggleExpand = (id: string) => {
+    setExpandedHitos(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   useEffect(() => {
     const fetchHitos = async () => {
@@ -131,13 +137,21 @@ export const Historia: React.FC = () => {
                   {/* Tarjeta de Contenido */}
                   <div className="w-full md:w-5/12 ml-4 md:ml-0 bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
                     {hito.imagenUrl && (
-                      <div className="h-48 md:h-64 w-full overflow-hidden relative">
+                      <div 
+                        className="h-48 md:h-64 w-full overflow-hidden relative cursor-zoom-in group/img"
+                        onClick={() => setZoomImage(hito.imagenUrl)}
+                      >
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10"></div>
                         <img 
                           src={hito.imagenUrl} 
                           alt={hito.titulo} 
-                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-115"
                         />
+                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity duration-300 flex items-center justify-center z-20">
+                          <span className="bg-white/10 backdrop-blur-md text-white border border-white/20 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest scale-90 group-hover/img:scale-100 transition-all duration-300">
+                            Hacer Zoom
+                          </span>
+                        </div>
                         <div className="absolute bottom-4 left-4 z-20">
                           <span className={`px-3 py-1 rounded-full text-xs font-bold shadow-sm backdrop-blur-md ${
                             isClub ? 'bg-blue-900/80 text-yellow-400' : 'bg-amber-600/80 text-white'
@@ -162,12 +176,59 @@ export const Historia: React.FC = () => {
                         <Clock size={16} />
                         <span>{hito.fecha}</span>
                       </div>
-                      <p className="text-slate-600 leading-relaxed text-base">{hito.descripcion}</p>
+                      
+                      {(() => {
+                        const isExpanded = !!expandedHitos[hito.id];
+                        return (
+                          <div>
+                            <p className={`text-slate-600 leading-relaxed text-base whitespace-pre-line ${isExpanded ? '' : 'line-clamp-4'}`}>
+                              {hito.descripcion}
+                            </p>
+                            {hito.descripcion.length > 180 && (
+                              <button
+                                type="button"
+                                onClick={() => toggleExpand(hito.id)}
+                                className="mt-3.5 text-sm font-black text-blue-900 hover:text-blue-800 transition-all flex items-center gap-1.5 focus:outline-none"
+                              >
+                                <span>{isExpanded ? 'Ver menos' : 'Leer completa'}</span>
+                                <ChevronDown size={15} className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Zoom de Imagen */}
+      {zoomImage && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300"
+          onClick={() => setZoomImage(null)}
+        >
+          <div className="absolute top-4 right-4 z-50">
+            <button 
+              onClick={() => setZoomImage(null)}
+              className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all active:scale-95 border border-white/10 shadow-lg cursor-pointer"
+            >
+              <X size={24} />
+            </button>
+          </div>
+          <div 
+            className="relative max-w-4xl w-full max-h-[85vh] overflow-hidden rounded-3xl border border-white/10 shadow-2xl animate-in zoom-in-95 duration-300"
+            onClick={e => e.stopPropagation()}
+          >
+            <img 
+              src={zoomImage} 
+              alt="Hito Histórico" 
+              className="w-full h-full object-contain max-h-[85vh] mx-auto bg-slate-900/40"
+            />
           </div>
         </div>
       )}

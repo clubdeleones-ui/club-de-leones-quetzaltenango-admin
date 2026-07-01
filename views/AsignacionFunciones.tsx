@@ -17,7 +17,9 @@ import {
   Eye, 
   EyeOff,
   UserCheck,
-  Crown
+  Crown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
 
@@ -51,6 +53,7 @@ export const AsignacionFunciones: React.FC = () => {
     puestosList,
     saveRoleConfig,
     deleteRoleConfig,
+    saveRolesOrder,
     savePuesto,
     deletePuesto
   } = useClubData();
@@ -154,12 +157,26 @@ export const AsignacionFunciones: React.FC = () => {
 
   // Filtered members list
   const filteredSocios = useMemo(() => {
-    return socios.filter(s => 
-      s.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (s.puesto || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (s.rol || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [socios, searchTerm]);
+    const rolesOrderMap: Record<string, number> = {};
+    rolesConfig.forEach((r, idx) => {
+      rolesOrderMap[r.id] = r.orden !== undefined ? r.orden : idx;
+    });
+
+    return [...socios]
+      .filter(s => 
+        s.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (s.puesto || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (s.rol || '').toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .sort((a, b) => {
+        const orderA = rolesOrderMap[a.rol || ''] ?? 999;
+        const orderB = rolesOrderMap[b.rol || ''] ?? 999;
+        if (orderA !== orderB) {
+          return orderA - orderB;
+        }
+        return a.nombre.localeCompare(b.nombre);
+      });
+  }, [socios, searchTerm, rolesConfig]);
 
   // Paginated members list
   const paginatedSocios = useMemo(() => {
@@ -228,6 +245,28 @@ export const AsignacionFunciones: React.FC = () => {
       setSelectedRole(prev => prev && prev.id === role.id ? { ...prev, allowedTabs: updatedTabs } : prev);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleMoveRole = async (idx: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? idx - 1 : idx + 1;
+    if (newIndex < 0 || newIndex >= rolesConfig.length) return;
+
+    const newRoles = [...rolesConfig];
+    const temp = newRoles[idx];
+    newRoles[idx] = newRoles[newIndex];
+    newRoles[newIndex] = temp;
+
+    const orderedList = newRoles.map((role, orderIdx) => ({
+      id: role.id,
+      orden: orderIdx
+    }));
+
+    try {
+      await saveRolesOrder(orderedList);
+    } catch (err) {
+      console.error("Error updating roles order:", err);
+      showAlert("Error", "No se pudo actualizar el orden de los roles.");
     }
   };
 
@@ -598,54 +637,132 @@ export const AsignacionFunciones: React.FC = () => {
             )}
           </div>
 
-          {/* SECCIÓN INFERIOR: Configuración de Módulos (Grid) */}
-          <div className="bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-[2rem] p-6 shadow-sm space-y-6">
-            {selectedRole ? (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-xl font-extrabold text-blue-900">
-                    Configuración de Módulos Visibles: <span className="text-yellow-600">{selectedRole.label}</span>
-                  </h3>
-                  <p className="text-xs text-slate-400 font-medium mt-1">
-                    Activa o desactiva qué secciones de administración serán visibles para los usuarios asignados a este rol.
-                  </p>
-                </div>
+          {/* SECCIÓN INFERIOR: Configuración de Módulos y Orden de Roles (Grid) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            {/* PANEL DE ORDENACIÓN (1 Columna) */}
+            <div className="bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-[2rem] p-6 shadow-sm space-y-4">
+              <div>
+                <h3 className="text-lg font-extrabold text-blue-900 flex items-center gap-1.5">
+                  <Crown className="text-yellow-500" size={20} />
+                  <span>Orden Jerárquico</span>
+                </h3>
+                <p className="text-xs text-slate-400 font-semibold mt-1">
+                  Usa las flechas para ordenar los roles manualmente. El orden superior determina la prioridad en todo el sistema (menú de inicio de sesión, listados, fichas, etc.).
+                </p>
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {AVAILABLE_TABS.map(tab => {
-                    const hasAccess = selectedRole.allowedTabs?.includes(tab.id);
-                    return (
-                      <div
-                        key={tab.id}
-                        onClick={() => handleToggleTabAccess(selectedRole, tab.id)}
-                        className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
-                          hasAccess
-                            ? 'bg-emerald-50/40 border-emerald-200/80 shadow-sm'
-                            : 'bg-slate-50/20 border-slate-100 hover:border-slate-200'
-                        }`}
-                      >
-                        <div className="pr-2">
-                          <span className={`text-sm font-extrabold ${hasAccess ? 'text-emerald-800' : 'text-slate-650'}`}>
-                            {tab.label}
-                          </span>
-                          <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{tab.id}</div>
-                        </div>
-
-                        {/* TOGGLE SWITCH STYLE */}
-                        <div className={`w-10 h-5 rounded-full p-0.5 transition-colors duration-200 ${hasAccess ? 'bg-emerald-500' : 'bg-slate-200'}`}>
-                          <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ${hasAccess ? 'translate-x-5' : 'translate-x-0'}`} />
-                        </div>
+              <div className="space-y-2">
+                {rolesConfig.map((role, idx) => {
+                  const isFirst = idx === 0;
+                  const isLast = idx === rolesConfig.length - 1;
+                  const isSelected = selectedRole?.id === role.id;
+                  return (
+                    <div
+                      key={role.id}
+                      onClick={() => setSelectedRole(role)}
+                      className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between group ${
+                        isSelected 
+                          ? 'bg-blue-50/70 border-blue-200 shadow-sm' 
+                          : 'bg-slate-50/30 border-slate-100 hover:border-slate-200'
+                      }`}
+                    >
+                      <div className="truncate pr-2">
+                        <p className={`text-xs font-bold truncate ${isSelected ? 'text-blue-900 font-black' : 'text-slate-700'}`}>
+                          {role.label}
+                        </p>
+                        <span className="text-[9px] font-mono text-slate-400 uppercase">{role.id}</span>
                       </div>
-                    );
-                  })}
+
+                      {/* Ordering arrow controls */}
+                      <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                        <button
+                          type="button"
+                          disabled={isFirst}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMoveRole(idx, 'up');
+                          }}
+                          className={`p-1.5 rounded-lg transition-all ${
+                            isFirst 
+                              ? 'text-slate-300 cursor-not-allowed' 
+                              : 'text-slate-500 hover:bg-slate-100 hover:text-slate-850 active:scale-90'
+                          }`}
+                          title="Subir prioridad"
+                        >
+                          <ArrowUp size={14} className="stroke-[2.5]" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isLast}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMoveRole(idx, 'down');
+                          }}
+                          className={`p-1.5 rounded-lg transition-all ${
+                            isLast 
+                              ? 'text-slate-300 cursor-not-allowed' 
+                              : 'text-slate-500 hover:bg-slate-100 hover:text-slate-850 active:scale-90'
+                          }`}
+                          title="Bajar prioridad"
+                        >
+                          <ArrowDown size={14} className="stroke-[2.5]" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* PANEL DE MÓDULOS (2 Columnas) */}
+            <div className="lg:col-span-2 bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-[2rem] p-6 shadow-sm space-y-6">
+              {selectedRole ? (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-xl font-extrabold text-blue-900">
+                      Configuración de Módulos Visibles: <span className="text-yellow-600">{selectedRole.label}</span>
+                    </h3>
+                    <p className="text-xs text-slate-400 font-medium mt-1">
+                      Activa o desactiva qué secciones de administración serán visibles para los usuarios asignados a este rol.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {AVAILABLE_TABS.map(tab => {
+                      const hasAccess = selectedRole.allowedTabs?.includes(tab.id);
+                      return (
+                        <div
+                          key={tab.id}
+                          onClick={() => handleToggleTabAccess(selectedRole, tab.id)}
+                          className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                            hasAccess
+                              ? 'bg-emerald-50/40 border-emerald-200/80 shadow-sm'
+                              : 'bg-slate-50/20 border-slate-100 hover:border-slate-200'
+                          }`}
+                        >
+                          <div className="pr-2">
+                            <span className={`text-sm font-extrabold ${hasAccess ? 'text-emerald-800' : 'text-slate-650'}`}>
+                              {tab.label}
+                            </span>
+                            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{tab.id}</div>
+                          </div>
+
+                          {/* TOGGLE SWITCH STYLE */}
+                          <div className={`w-10 h-5 rounded-full p-0.5 transition-colors duration-200 ${hasAccess ? 'bg-emerald-500' : 'bg-slate-200'}`}>
+                            <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ${hasAccess ? 'translate-x-5' : 'translate-x-0'}`} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="h-64 flex flex-col items-center justify-center text-slate-400 space-y-3">
-                <ShieldCheck size={48} className="text-slate-300" />
-                <p className="font-semibold text-sm">Seleccione un rol de la lista superior para gestionar sus permisos y módulos visibles.</p>
-              </div>
-            )}
+              ) : (
+                <div className="h-64 flex flex-col items-center justify-center text-slate-400 space-y-3">
+                  <ShieldCheck size={48} className="text-slate-300" />
+                  <p className="font-semibold text-sm">Seleccione un rol de la lista superior para gestionar sus permisos y módulos visibles.</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

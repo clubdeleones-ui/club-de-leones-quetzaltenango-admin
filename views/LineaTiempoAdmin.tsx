@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, X, UploadCloud, Save, Clock, MapPin, Search } from 'lucide-react';
 import { HitoHistorico } from '../types';
 import { firebaseService } from '../services/firebaseService';
-import { compressImageFile } from '../utils/imageCompressor';
+import { compressImageFile, validateImageFile } from '../utils/imageCompressor';
 import { useModal } from '../context/ModalContext';
 
 export const LineaTiempoAdmin: React.FC = () => {
@@ -88,6 +88,11 @@ export const LineaTiempoAdmin: React.FC = () => {
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      const validation = validateImageFile(file);
+      if (!validation.valid) {
+        alert(validation.error || "Imagen inválida");
+        return;
+      }
       setImageFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {

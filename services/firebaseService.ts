@@ -13,7 +13,7 @@ import {
   writeBatch
 } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda, Acta, HitoHistorico, SolicitudVoluntario, ReunionAgenda, TareaComision, Asistencia } from "../types";
+import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda, Acta, HitoHistorico, SolicitudVoluntario, ReunionAgenda, TareaComision, Asistencia, BienInventario, CategoriaInventario } from "../types";
 
 export const firebaseService = {
   // Upload candidate photo to Firebase Storage (Supports Base64 data_url format)
@@ -866,6 +866,68 @@ export const firebaseService = {
       await batch.commit();
     } catch (error) {
       console.error("Error saving asistencias batch:", error);
+      throw error;
+    }
+  },
+
+  getBienesInventario: async (): Promise<BienInventario[]> => {
+    try {
+      const colRef = collection(db, "inventario");
+      const snapshot = await getDocs(colRef);
+      const list: BienInventario[] = [];
+      snapshot.forEach(doc => {
+        list.push({ id: doc.id, ...doc.data() } as BienInventario);
+      });
+      return list;
+    } catch (error) {
+      console.error("Error fetching inventario from Firestore:", error);
+      return [];
+    }
+  },
+
+  saveBienInventario: async (bien: BienInventario): Promise<void> => {
+    try {
+      const docRef = doc(db, "inventario", bien.id);
+      const cleanData = JSON.parse(JSON.stringify(bien));
+      await setDoc(docRef, cleanData);
+    } catch (error) {
+      console.error("Error saving bien in Firestore:", error);
+      throw error;
+    }
+  },
+
+  deleteBienInventario: async (id: string): Promise<void> => {
+    try {
+      const docRef = doc(db, "inventario", id);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting bien from Firestore:", error);
+      throw error;
+    }
+  },
+
+  getCategoriasInventario: async (): Promise<CategoriaInventario[]> => {
+    try {
+      const colRef = collection(db, "categorias_inventario");
+      const snapshot = await getDocs(colRef);
+      const list: CategoriaInventario[] = [];
+      snapshot.forEach(doc => {
+        list.push({ id: doc.id, ...doc.data() } as CategoriaInventario);
+      });
+      return list;
+    } catch (error) {
+      console.error("Error fetching categorias from Firestore:", error);
+      return [];
+    }
+  },
+
+  saveCategoriaInventario: async (cat: CategoriaInventario): Promise<void> => {
+    try {
+      const docRef = doc(db, "categorias_inventario", cat.id);
+      const cleanData = JSON.parse(JSON.stringify(cat));
+      await setDoc(docRef, cleanData);
+    } catch (error) {
+      console.error("Error saving category in Firestore:", error);
       throw error;
     }
   },

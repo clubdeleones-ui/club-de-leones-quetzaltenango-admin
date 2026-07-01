@@ -4,7 +4,7 @@ import { Socio, PropuestaSocio, UserRole } from '../types';
 import { firebaseService } from '../services/firebaseService';
 import { useModal } from '../context/ModalContext';
 import { useClubData } from '../context/ClubDataContext';
-import { compressImageFile } from '../utils/imageCompressor';
+import { compressImageFile, validateImageFile } from '../utils/imageCompressor';
 import { generateCartasInvitacionPDF } from '../utils/pdfGenerator';
 import { 
   Mail, 
@@ -155,6 +155,11 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
   const handleProposalImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && editingPropuesta) {
+      const validation = validateImageFile(file);
+      if (!validation.valid) {
+        showAlert("Error de validación", validation.error || "Imagen inválida");
+        return;
+      }
       setIsCompressingPhoto(true);
       try {
         const compressedBase64 = await compressImageFile(file, 800, 800, 0.7);

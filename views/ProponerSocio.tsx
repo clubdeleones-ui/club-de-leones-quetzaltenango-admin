@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { UserRole, PropuestaSocio } from '../types';
 import { firebaseService } from '../services/firebaseService';
 import { useModal } from '../context/ModalContext';
-import { compressImageFile } from '../utils/imageCompressor';
+import { compressImageFile, validateImageFile } from '../utils/imageCompressor';
 import { 
   UserPlus, 
   ArrowLeft, 
@@ -72,6 +72,11 @@ const ProponerSocio: React.FC = () => {
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      const validation = validateImageFile(file);
+      if (!validation.valid) {
+        showAlert("Error de validación", validation.error || "Imagen inválida");
+        return;
+      }
       setCompressing(true);
       try {
         const compressedBase64 = await compressImageFile(file, 800, 800, 0.7);

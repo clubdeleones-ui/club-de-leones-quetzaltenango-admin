@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { 
   MOCK_SOCIOS, 
   MOCK_ACTIVIDADES, 
@@ -83,7 +84,7 @@ import {
 } from 'lucide-react';
 import { generateActaPDF, generateActaCode, generateReciboPagoPDF, generateAgendaPDF } from '../utils/pdfGenerator';
 import { FormattedActa } from '../components/FormattedActa';
-import { compressImageFile } from '../utils/imageCompressor';
+import { compressImageFile, validateImageFile } from '../utils/imageCompressor';
 import { ParqueoManager } from '../components/ParqueoManager';
 import { Presupuestos } from './Presupuestos';
 import { Comisiones } from './Comisiones';
@@ -94,9 +95,132 @@ import { GaleriaAdmin } from './GaleriaAdmin';
 import { AgendaContactos } from './AgendaContactos';
 import { LineaTiempoAdmin } from './LineaTiempoAdmin';
 import { AsignacionFunciones } from './AsignacionFunciones';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { AdminActas } from './admin/AdminActas';
+import { AdminCuotas } from './admin/AdminCuotas';
+import { AdminCalendario } from './admin/AdminCalendario';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
 
+const CATEGORIAS_MODULOS = [
+  {
+    category: 'Principal',
+    items: [
+      { id: 'resumen', label: 'Resumen General', icon: TrendingUp },
+      { id: 'asignacion_funciones', label: 'Asignación Funciones', icon: Settings }
+    ]
+  },
+  {
+    category: 'Presidencia',
+    items: [
+      { id: 'presidencia', label: 'Gestión de Solicitudes', icon: Layers },
+      { id: 'agendas_reunion', label: 'Agendas de Reunión', icon: FileText },
+      { id: 'ranking_lionistico', label: 'Ranking Lionístico', icon: Trophy }
+    ]
+  },
+  {
+    category: 'Secretaría',
+    items: [
+      { id: 'actas', label: 'Libro de Actas', icon: FileText },
+      { id: 'comisiones', label: 'Gestión de Comisiones', icon: Briefcase }
+    ]
+  },
+  {
+    category: 'Comité de Mercadeo',
+    items: [
+      { id: 'calendario', label: 'Actividades', icon: Calendar },
+      { id: 'beneficios', label: 'Beneficios a Socios', icon: Award }
+    ]
+  },
+  {
+    category: 'Tesorería',
+    items: [
+      { id: 'cuotas', label: 'Control de Cuotas', icon: CreditCard },
+      { id: 'parqueo', label: 'Gestión de Parqueo', icon: Car },
+      { id: 'donaciones', label: 'Donaciones Recibidas', icon: Gift },
+      { id: 'presupuestos', label: 'Presupuestos', icon: DollarSign }
+    ]
+  },
+  {
+    category: 'Comité de Afiliación',
+    items: [
+      { id: 'socios', label: 'Gestión de Socios', icon: Users },
+      { id: 'afiliacion', label: 'Propuestas de Socios', icon: UserCheck }
+    ]
+  },
+  {
+    category: 'Comité de Servicio',
+    items: [
+      { id: 'minutas', label: 'Minutas de Comisiones', icon: FileText }
+    ]
+  },
+  {
+    category: 'Comité de Patrimonio',
+    items: [
+      { id: 'inventario', label: 'Inventario', icon: Archive },
+      { id: 'galeria_admin', label: 'Gestión de Galería', icon: Camera },
+      { id: 'linea_tiempo_admin', label: 'Línea de Tiempo', icon: Clock }
+    ]
+  },
+  {
+    category: 'Comité de Gestión',
+    items: [
+      { id: 'agenda_contactos', label: 'Agenda de Contactos', icon: BookUser }
+    ]
+  }
+];
 
+const TEMA_COLOR_MAP: { [key: string]: 'blue' | 'emerald' | 'purple' | 'amber' | 'indigo' | 'orange' } = {
+  abiertas: 'emerald',
+  sillas: 'blue',
+  salon: 'amber',
+  internas: 'purple',
+  agenda: 'indigo'
+};
+
+const THEME_ACCENTS: {
+  [key: string]: {
+    border: string;
+    bg: string;
+    text: string;
+    badge: string;
+  }
+} = {
+  blue: {
+    border: 'border-blue-200',
+    bg: 'bg-blue-50/50',
+    text: 'text-blue-600',
+    badge: 'bg-blue-50 text-blue-700 border-blue-200'
+  },
+  emerald: {
+    border: 'border-emerald-200',
+    bg: 'bg-emerald-50/50',
+    text: 'text-emerald-600',
+    badge: 'bg-emerald-50 text-emerald-700 border-emerald-200'
+  },
+  purple: {
+    border: 'border-purple-200',
+    bg: 'bg-purple-50/50',
+    text: 'text-purple-600',
+    badge: 'bg-purple-50 text-purple-700 border-purple-200'
+  },
+  amber: {
+    border: 'border-amber-200',
+    bg: 'bg-amber-50/50',
+    text: 'text-amber-600',
+    badge: 'bg-amber-50 text-amber-750 border-amber-200'
+  },
+  indigo: {
+    border: 'border-indigo-200',
+    bg: 'bg-indigo-50/50',
+    text: 'text-indigo-600',
+    badge: 'bg-indigo-50 text-indigo-700 border-indigo-200'
+  },
+  orange: {
+    border: 'border-orange-200',
+    bg: 'bg-orange-50/50',
+    text: 'text-orange-600',
+    badge: 'bg-orange-50 text-orange-700 border-orange-200'
+  }
+};
 
 interface SuperAdminProps {
   user: Socio;
@@ -137,12 +261,23 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     }
   }, [user.rol, rolesConfig]);
 
-  const [activeTab, setActiveTab] = useState<TabType>(() => {
-    const saved = sessionStorage.getItem('super_admin_active_tab');
-    if (saved) return saved as TabType;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = useMemo<TabType>(() => {
+    const queryTab = searchParams.get('tab') as TabType;
+    if (queryTab) return queryTab;
+    const saved = sessionStorage.getItem('super_admin_active_tab') as TabType;
+    if (saved) return saved;
     if (user.rol === UserRole.ASESOR_SERVICIOS) return 'calendario';
     return 'resumen';
-  });
+  }, [searchParams, user.rol]);
+
+  const setActiveTab = (tab: TabType) => {
+    setSearchParams(prev => {
+      prev.set('tab', tab);
+      return prev;
+    });
+    sessionStorage.setItem('super_admin_active_tab', tab);
+  };
 
   useEffect(() => {
     sessionStorage.setItem('super_admin_active_tab', activeTab);
@@ -150,6 +285,23 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>('Principal');
+  const [moduleSearchQuery, setModuleSearchQuery] = useState('');
+
+  // Filtrar categorías y expandir dinámicamente si hay búsqueda
+  const filteredCategorias = useMemo(() => {
+    if (!moduleSearchQuery.trim()) return CATEGORIAS_MODULOS;
+    const queryStr = moduleSearchQuery.toLowerCase();
+    return CATEGORIAS_MODULOS.map(group => {
+      const matchedItems = group.items.filter(item => 
+        item.label.toLowerCase().includes(queryStr) || 
+        group.category.toLowerCase().includes(queryStr)
+      );
+      return {
+        ...group,
+        items: matchedItems
+      };
+    }).filter(group => group.items.length > 0);
+  }, [moduleSearchQuery]);
 
   // Auto-expand category based on activeTab
   useEffect(() => {
@@ -159,7 +311,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
       { category: 'Secretaría', items: ['actas', 'comisiones'] },
       { category: 'Comité de Mercadeo', items: ['calendario', 'beneficios'] },
       { category: 'Tesorería', items: ['cuotas', 'parqueo', 'donaciones', 'presupuestos'] },
-      { category: 'Propuestas de Socios', items: ['socios', 'afiliacion'] },
+      { category: 'Comité de Afiliación', items: ['socios', 'afiliacion'] },
       { category: 'Comité de Servicio', items: ['minutas'] },
       { category: 'Comité de Patrimonio', items: ['inventario', 'galeria_admin', 'linea_tiempo_admin'] },
       { category: 'Comité de Gestión', items: ['agenda_contactos'] }
@@ -715,6 +867,45 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const totalDonaciones = useMemo(() => donaciones.reduce((sum, d) => sum + d.monto, 0), [donaciones]);
   const totalCuotasPendientes = useMemo(() => socios.reduce((sum, s) => sum + s.montoPendiente, 0), [socios]);
   const sociosAlDia = useMemo(() => socios.filter(s => s.estadoCuotas === 'Al día').length, [socios]);
+
+  // Estadísticas para gráficos del Resumen General
+  const solicitudesStats = useMemo(() => {
+    const typesMap: {[key: string]: number} = {
+      abiertas: 0,
+      sillas: 0,
+      salon: 0,
+      internas: 0,
+      agenda: 0
+    };
+    solicitudes.forEach(s => {
+      if (typesMap[s.tipo] !== undefined) {
+        typesMap[s.tipo]++;
+      }
+    });
+    return [
+      { name: 'Sillas Ruedas', cantidad: typesMap.sillas, color: '#3b82f6' },
+      { name: 'Salón/Parqueo', cantidad: typesMap.salon, color: '#f59e0b' },
+      { name: 'Ayuda Abierta', cantidad: typesMap.abiertas, color: '#10b981' },
+      { name: 'Internas', cantidad: typesMap.internas, color: '#8b5cf6' },
+      { name: 'Puntos Agenda', cantidad: typesMap.agenda, color: '#6366f1' }
+    ];
+  }, [solicitudes]);
+
+  const cuotasStats = useMemo(() => {
+    let alDia = 0;
+    let pendiente = 0;
+    let enMora = 0;
+    socios.forEach(s => {
+      if (s.estadoCuotas === 'Al día') alDia++;
+      else if (s.estadoCuotas === 'Pendiente') pendiente++;
+      else if (s.estadoCuotas === 'En mora') enMora++;
+    });
+    return [
+      { name: 'Al día', value: alDia, color: '#10b981' },
+      { name: 'Pendiente', value: pendiente, color: '#f59e0b' },
+      { name: 'En mora', value: enMora, color: '#ef4444' }
+    ];
+  }, [socios]);
   
   // Handle proposals approval and rejection
   const handleAprobarPropuesta = async (propuestaId: string) => {
@@ -3578,6 +3769,11 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
   const handleEditSocioPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      setSocioSaveError(validation.error || "Imagen inválida");
+      return;
+    }
     try {
       const compressed = await compressImageFile(file, 400, 400, 0.7);
       setEditSocioForm(prev => ({ ...prev, foto: compressed }));
@@ -3801,311 +3997,264 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Navigation Sidebar */}
         <aside className="hidden lg:block w-[19rem] flex-shrink-0">
-          <nav className="bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-[2.5rem] p-5 shadow-sm space-y-2 sticky top-28 max-h-[85vh] overflow-y-auto custom-scrollbar">
-            <div className="text-sm font-black text-slate-400 uppercase tracking-wider px-4 mb-4 flex items-center">
-              <span className="w-2 h-2 rounded-full bg-yellow-500 mr-2"></span>
-              Navegación Módulos
+          <nav className="bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-[2.5rem] p-5 shadow-md space-y-4 sticky top-28 max-h-[85vh] overflow-y-auto custom-scrollbar">
+            <div className="text-xs font-black text-slate-450 uppercase tracking-widest px-2 mb-2 flex items-center justify-between">
+              <span className="flex items-center">
+                <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 mr-2 shadow-sm animate-pulse"></span>
+                Módulos
+              </span>
+              {moduleSearchQuery && (
+                <span className="text-[10px] text-blue-900 bg-blue-50 px-2 py-0.5 rounded-md font-bold">
+                  {filteredCategorias.reduce((acc, cat) => acc + cat.items.filter(item => allowedTabs.includes(item.id)).length, 0)} encontrados
+                </span>
+              )}
             </div>
-            {[
-              {
-                category: 'Principal',
-                items: [
-                  { id: 'resumen', label: 'Resumen General', icon: TrendingUp },
-                  { id: 'asignacion_funciones', label: 'Asignación Funciones', icon: Settings }
-                ]
-              },
-              {
-                category: 'Presidencia',
-                items: [
-                  { id: 'presidencia', label: 'Gestión de Solicitudes', icon: Layers },
-                  { id: 'agendas_reunion', label: 'Agendas de Reunión', icon: FileText },
-                  { id: 'ranking_lionistico', label: 'Ranking Lionístico', icon: Trophy }
-                ]
-              },
-              {
-                category: 'Secretaría',
-                items: [
-                  { id: 'actas', label: 'Libro de Actas', icon: FileText },
-                  { id: 'comisiones', label: 'Gestión de Comisiones', icon: Briefcase }
-                ]
-              },
-              {
-                category: 'Comité de Mercadeo',
-                items: [
-                  { id: 'calendario', label: 'Actividades', icon: Calendar },
-                  { id: 'beneficios', label: 'Beneficios a Socios', icon: Award }
-                ]
-              },
-              {
-                category: 'Tesorería',
-                items: [
-                  { id: 'cuotas', label: 'Control de Cuotas', icon: CreditCard },
-                  { id: 'parqueo', label: 'Gestión de Parqueo', icon: Car },
-                  { id: 'donaciones', label: 'Donaciones Recibidas', icon: Gift },
-                  { id: 'presupuestos', label: 'Presupuestos', icon: DollarSign }
-                ]
-              },
-              {
-                category: 'Propuestas de Socios',
-                items: [
-                  { id: 'socios', label: 'Gestión de Socios', icon: Users },
-                  { id: 'afiliacion', label: 'Propuestas de Socios', icon: UserCheck }
-                ]
-              },
-              {
-                category: 'Comité de Servicio',
-                items: [
-                  { id: 'minutas', label: 'Minutas de Comisiones', icon: FileText }
-                ]
-              },
-              {
-                category: 'Comité de Patrimonio',
-                items: [
-                  { id: 'inventario', label: 'Inventario', icon: Archive },
-                  { id: 'galeria_admin', label: 'Gestión de Galería', icon: Camera },
-                  { id: 'linea_tiempo_admin', label: 'Línea de Tiempo', icon: Clock }
-                ]
-              },
-              {
-                category: 'Comité de Gestión',
-                items: [
-                  { id: 'agenda_contactos', label: 'Agenda de Contactos', icon: BookUser }
-                ]
-              }
-            ].map(group => {
-              const visibleItems = group.items.filter(tab => allowedTabs.includes(tab.id));
-              if (visibleItems.length === 0) return null;
-              
-              const isExpanded = expandedCategory === group.category;
-              
-              return (
-                <div key={group.category} className="mb-2 border border-slate-100/50 rounded-2xl overflow-hidden shadow-sm bg-white">
-                  <button
-                    onClick={() => setExpandedCategory(isExpanded ? null : group.category)}
-                    className={`w-full flex items-center justify-between px-4 py-3.5 transition-colors ${
-                      isExpanded ? 'bg-blue-50/50' : 'bg-white hover:bg-slate-50'
-                    }`}
-                  >
-                    <div 
-                      className="text-sm font-black text-slate-500 uppercase tracking-tight flex items-center whitespace-nowrap overflow-hidden text-ellipsis flex-1 pr-1"
-                      title={group.category}
+
+            {/* Buscador de Módulos */}
+            <div className="relative px-1">
+              <Search size={14} className="absolute left-4 top-3 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Buscar módulo..."
+                value={moduleSearchQuery}
+                onChange={(e) => setModuleSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-900 focus:bg-white focus:border-transparent transition-all shadow-inner"
+              />
+              {moduleSearchQuery && (
+                <button 
+                  onClick={() => setModuleSearchQuery('')}
+                  className="absolute right-3.5 top-2.5 p-1 text-slate-400 hover:text-slate-650 hover:bg-slate-100 rounded-md transition-all"
+                >
+                  <X size={10} />
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              {filteredCategorias.map(group => {
+                const visibleItems = group.items.filter(tab => allowedTabs.includes(tab.id));
+                if (visibleItems.length === 0) return null;
+                
+                const isExpanded = moduleSearchQuery.trim() !== '' || expandedCategory === group.category;
+                
+                return (
+                  <div key={group.category} className="border border-slate-100/70 rounded-2xl overflow-hidden shadow-sm bg-white hover:border-slate-200/60 transition-all">
+                    <button
+                      onClick={() => setExpandedCategory(isExpanded ? null : group.category)}
+                      className={`w-full flex items-center justify-between px-4 py-3 transition-colors ${
+                        isExpanded ? 'bg-blue-50/40 border-b border-slate-100/10' : 'bg-white hover:bg-slate-50'
+                      }`}
                     >
-                      <span className={`flex-shrink-0 w-1.5 h-1.5 rounded-full mr-2 transition-colors ${isExpanded ? 'bg-blue-500' : 'bg-slate-300'}`}></span>
-                      {group.category}
-                    </div>
-                    <ChevronDown size={14} className={`text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
-                  </button>
-                  
-                  <div className={`transition-all duration-300 overflow-hidden ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                    <div className="p-2 space-y-1 bg-slate-50/30">
-                      {visibleItems.map(tab => {
-                        const Icon = tab.icon;
-                        const active = activeTab === tab.id;
-                        return (
-                          <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id as TabType)}
-                            className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold transition-all duration-200 ${
-                              getTabStyles(tab.id, active)
-                            }`}
-                          >
-                            <Icon 
-                              size={16} 
-                              className={`transition-colors flex-shrink-0 ${
-                                active 
-                                  ? 'text-white' 
-                                  : 'text-slate-400 group-hover:text-blue-600'
-                              }`} 
-                            />
-                            <span className="text-sm truncate text-left flex-1" title={tab.label}>{tab.label}</span>
-                          </button>
-                        );
-                      })}
+                      <div 
+                        className="text-[11px] font-black text-slate-500 uppercase tracking-wider flex items-center whitespace-nowrap overflow-hidden text-ellipsis flex-1 pr-1"
+                        title={group.category}
+                      >
+                        <span className={`flex-shrink-0 w-1.5 h-1.5 rounded-full mr-2 transition-colors ${isExpanded ? 'bg-blue-900 shadow-sm shadow-blue-900/30' : 'bg-slate-300'}`}></span>
+                        {group.category}
+                      </div>
+                      <ChevronDown size={12} className={`text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-blue-900' : ''}`} />
+                    </button>
+                    
+                    <div className={`transition-all duration-300 overflow-hidden ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                      <div className="p-2 space-y-1 bg-slate-50/40">
+                        {visibleItems.map(tab => {
+                          const Icon = tab.icon;
+                          const active = activeTab === tab.id;
+                          return (
+                            <Link
+                              key={tab.id}
+                              to={`/admin?tab=${tab.id}`}
+                              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold transition-all duration-200 group relative ${
+                                getTabStyles(tab.id, active)
+                              }`}
+                            >
+                              {active && (
+                                <span className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-white rounded-r" />
+                              )}
+                              <Icon 
+                                size={15} 
+                                className={`transition-colors flex-shrink-0 ${
+                                  active 
+                                    ? 'text-white' 
+                                    : 'text-slate-400 group-hover:text-blue-900 group-hover:scale-105'
+                                }`} 
+                              />
+                              <span className="text-xs truncate text-left flex-1" title={tab.label}>{tab.label}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
+                );
+              })}
+              {filteredCategorias.length === 0 && (
+                <div className="text-center py-6 text-slate-400 text-xs italic">
+                  No se encontraron módulos
                 </div>
-              );
-            })}
+              )}
+            </div>
           </nav>
         </aside>
 
         {/* Content Panel */}
         <main className="flex-1 min-w-0">
-          {/* Mobile Navigation Dropdown */}
-          <div className="lg:hidden w-full max-w-sm relative z-30 mb-8">
-            <button
-              type="button"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className={`w-full flex items-center justify-between px-6 py-4 font-black rounded-2xl shadow-lg transition-all active:scale-[0.99] text-sm ${
-                getMobileTabStyles(activeTab)
-              }`}
-            >
-              <div className="flex items-center space-x-3">
-                {(() => {
-                  const currentTab = [
-                    { id: 'resumen', label: 'Resumen General', icon: TrendingUp },
-                    { id: 'asignacion_funciones', label: 'Asignación Funciones', icon: Settings },
-                    { id: 'socios', label: 'Gestión de Socios', icon: Users },
-                    { id: 'calendario', label: 'Actividades', icon: Calendar },
-                    { id: 'cuotas', label: 'Control de Cuotas', icon: CreditCard },
-                    { id: 'actas', label: 'Libro de Actas', icon: FileText },
-                    { id: 'donaciones', label: 'Donaciones Recibidas', icon: Gift },
-                    { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
-                    { id: 'parqueo', label: 'Gestión de Parqueo', icon: Car },
-                    { id: 'presupuestos', label: 'Presupuestos', icon: DollarSign },
-                    { id: 'comisiones', label: 'Gestión de Comisiones', icon: Briefcase },
-                    { id: 'minutas', label: 'Minutas de Comisiones', icon: FileText },
-                    { id: 'afiliacion', label: 'Propuestas de Socios', icon: UserCheck },
-                    { id: 'inventario', label: 'Inventario', icon: Archive },
-                    { id: 'galeria_admin', label: 'Gestión de Galería', icon: Camera },
-                    { id: 'linea_tiempo_admin', label: 'Línea de Tiempo', icon: Clock },
-                    { id: 'agenda_contactos', label: 'Agenda de Contactos', icon: BookUser },
-                    { id: 'presidencia', label: 'Gestión de Solicitudes', icon: Layers },
-                    { id: 'agendas_reunion', label: 'Agendas de Reunión', icon: FileText },
-                    { id: 'ranking_lionistico', label: 'Ranking Lionístico', icon: Trophy }
-                  ].find(t => t.id === activeTab);
-                  if (currentTab) {
-                    const Icon = currentTab.icon;
-                    return <Icon size={18} className="text-white" />;
-                  }
-                  return null;
-                })()}
-                <span>
-                  {[
-                    { id: 'resumen', label: 'Resumen General' },
-                    { id: 'asignacion_funciones', label: 'Asignación Funciones' },
-                    { id: 'socios', label: 'Gestión de Socios' },
-                    { id: 'calendario', label: 'Actividades' },
-                    { id: 'cuotas', label: 'Control de Cuotas' },
-                    { id: 'actas', label: 'Libro de Actas' },
-                    { id: 'donaciones', label: 'Donaciones Recibidas' },
-                    { id: 'beneficios', label: 'Beneficios a Socios' },
-                    { id: 'parqueo', label: 'Gestión de Parqueo' },
-                    { id: 'presupuestos', label: 'Presupuestos' },
-                    { id: 'comisiones', label: 'Gestión de Comisiones' },
-                    { id: 'minutas', label: 'Minutas de Comisiones' },
-                    { id: 'afiliacion', label: 'Propuestas de Socios' },
-                    { id: 'inventario', label: 'Inventario' },
-                    { id: 'galeria_admin', label: 'Gestión de Galería' },
-                    { id: 'linea_tiempo_admin', label: 'Línea de Tiempo' },
-                    { id: 'agenda_contactos', label: 'Agenda de Contactos' },
-                    { id: 'presidencia', label: 'Gestión de Solicitudes' },
-                    { id: 'agendas_reunion', label: 'Agendas de Reunión' },
-                    { id: 'ranking_lionistico', label: 'Ranking Lionístico' }
-                  ].find(t => t.id === activeTab)?.label}
-                </span>
-              </div>
-              <ChevronDown size={18} className={`text-white transition-transform duration-300 ${isMobileMenuOpen ? 'rotate-180' : ''}`} />
-            </button>
- 
-            {isMobileMenuOpen && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200/80 py-2.5 z-40 animate-in fade-in slide-in-from-top-2 duration-300 max-h-[60vh] overflow-y-auto">
-                {[
-                  {
-                    category: 'Principal',
-                    items: [
-                      { id: 'resumen', label: 'Resumen General', icon: TrendingUp },
-                      { id: 'asignacion_funciones', label: 'Asignación Funciones', icon: Settings }
-                    ]
-                  },
-                  {
-                    category: 'Presidencia',
-                    items: [
-                      { id: 'presidencia', label: 'Gestión de Solicitudes', icon: Layers },
-                      { id: 'agendas_reunion', label: 'Agendas de Reunión', icon: FileText },
-                      { id: 'ranking_lionistico', label: 'Ranking Lionístico', icon: Trophy }
-                    ]
-                  },
-                  {
-                    category: 'Secretaría',
-                    items: [
-                      { id: 'actas', label: 'Libro de Actas', icon: FileText },
-                      { id: 'comisiones', label: 'Gestión de Comisiones', icon: Briefcase }
-                    ]
-                  },
-                  {
-                    category: 'Comité de Mercadeo',
-                    items: [
-                      { id: 'calendario', label: 'Actividades', icon: Calendar },
-                      { id: 'beneficios', label: 'Beneficios a Socios', icon: Award }
-                    ]
-                  },
-                  {
-                    category: 'Tesorería',
-                    items: [
-                      { id: 'cuotas', label: 'Control de Cuotas', icon: CreditCard },
-                      { id: 'parqueo', label: 'Gestión de Parqueo', icon: Car },
-                      { id: 'donaciones', label: 'Donaciones Recibidas', icon: Gift },
-                      { id: 'presupuestos', label: 'Presupuestos', icon: DollarSign }
-                    ]
-                  },
-                  {
-                    category: 'Propuestas de Socios',
-                    items: [
-                      { id: 'socios', label: 'Gestión de Socios', icon: Users },
-                      { id: 'afiliacion', label: 'Propuestas de Socios', icon: UserCheck }
-                    ]
-                  },
-                  {
-                    category: 'Comité de Servicio',
-                    items: [
-                      { id: 'minutas', label: 'Minutas de Comisiones', icon: FileText }
-                    ]
-                  },
-                  {
-                    category: 'Comité de Patrimonio',
-                    items: [
-                      { id: 'inventario', label: 'Inventario', icon: Archive },
-                      { id: 'galeria_admin', label: 'Gestión de Galería', icon: Camera },
-                      { id: 'linea_tiempo_admin', label: 'Línea de Tiempo', icon: Clock }
-                    ]
-                  },
-                  {
-                    category: 'Comité de Gestión',
-                    items: [
-                      { id: 'agenda_contactos', label: 'Agenda de Contactos', icon: BookUser }
-                    ]
-                  }
-                ].map(group => {
-                  const visibleItems = group.items.filter(tab => allowedTabs.includes(tab.id));
-                  if (visibleItems.length === 0) return null;
-                  
+          {/* Mobile Navigation Drawer & Drawer Trigger */}
+          <div className="lg:hidden flex items-center justify-between bg-white border border-slate-200/80 p-4 rounded-[2rem] mb-6 shadow-sm">
+            <div className="flex items-center space-x-3">
+              {(() => {
+                const currentTab = [
+                  { id: 'resumen', label: 'Resumen General', icon: TrendingUp },
+                  { id: 'asignacion_funciones', label: 'Asignación Funciones', icon: Settings },
+                  { id: 'socios', label: 'Gestión de Socios', icon: Users },
+                  { id: 'calendario', label: 'Actividades', icon: Calendar },
+                  { id: 'cuotas', label: 'Control de Cuotas', icon: CreditCard },
+                  { id: 'actas', label: 'Libro de Actas', icon: FileText },
+                  { id: 'donaciones', label: 'Donaciones Recibidas', icon: Gift },
+                  { id: 'beneficios', label: 'Beneficios a Socios', icon: Award },
+                  { id: 'parqueo', label: 'Gestión de Parqueo', icon: Car },
+                  { id: 'presupuestos', label: 'Presupuestos', icon: DollarSign },
+                  { id: 'comisiones', label: 'Gestión de Comisiones', icon: Briefcase },
+                  { id: 'minutas', label: 'Minutas de Comisiones', icon: FileText },
+                  { id: 'afiliacion', label: 'Propuestas de Socios', icon: UserCheck },
+                  { id: 'inventario', label: 'Inventario', icon: Archive },
+                  { id: 'galeria_admin', label: 'Gestión de Galería', icon: Camera },
+                  { id: 'linea_tiempo_admin', label: 'Línea de Tiempo', icon: Clock },
+                  { id: 'agenda_contactos', label: 'Agenda de Contactos', icon: BookUser },
+                  { id: 'presidencia', label: 'Gestión de Solicitudes', icon: Layers },
+                  { id: 'agendas_reunion', label: 'Agendas de Reunión', icon: FileText },
+                  { id: 'ranking_lionistico', label: 'Ranking Lionístico', icon: Trophy }
+                ].find(t => t.id === activeTab);
+                if (currentTab) {
+                  const Icon = currentTab.icon;
                   return (
-                    <div key={group.category}>
-                      <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-6 py-2 bg-slate-50/50">
-                        {group.category}
-                      </div>
-                      {visibleItems.map(tab => {
-                        const Icon = tab.icon;
-                        const active = activeTab === tab.id;
-                        return (
-                          <button
-                            key={tab.id}
-                            type="button"
-                            onClick={() => {
-                              setActiveTab(tab.id as TabType);
-                              setIsMobileMenuOpen(false);
-                            }}
-                            className={`w-full flex items-center justify-between px-6 py-3.5 text-sm font-extrabold transition-all text-left ${
-                              active 
-                                ? 'bg-slate-50 text-blue-900 font-black' 
-                                : 'text-slate-600 hover:bg-slate-50 hover:text-blue-900'
-                            }`}
-                          >
-                            <div className="flex items-center space-x-3">
-                              <Icon size={18} className={active ? 'text-blue-900' : 'text-slate-400'} />
-                              <span>{tab.label}</span>
-                            </div>
-                            {active && <Check size={16} className="text-blue-900" />}
-                          </button>
-                        );
-                      })}
+                    <div className="bg-blue-50 p-2 rounded-xl text-blue-900 shadow-inner">
+                      <Icon size={18} />
                     </div>
                   );
-                })}
-              </div>
-            )}
+                }
+                return null;
+              })()}
+              <span className="font-extrabold text-slate-800 text-xs">
+                {[
+                  { id: 'resumen', label: 'Resumen General' },
+                  { id: 'asignacion_funciones', label: 'Asignación Funciones' },
+                  { id: 'socios', label: 'Gestión de Socios' },
+                  { id: 'calendario', label: 'Actividades' },
+                  { id: 'cuotas', label: 'Control de Cuotas' },
+                  { id: 'actas', label: 'Libro de Actas' },
+                  { id: 'donaciones', label: 'Donaciones Recibidas' },
+                  { id: 'beneficios', label: 'Beneficios a Socios' },
+                  { id: 'parqueo', label: 'Gestión de Parqueo' },
+                  { id: 'presupuestos', label: 'Presupuestos' },
+                  { id: 'comisiones', label: 'Gestión de Comisiones' },
+                  { id: 'minutas', label: 'Minutas de Comisiones' },
+                  { id: 'afiliacion', label: 'Propuestas de Socios' },
+                  { id: 'inventario', label: 'Inventario' },
+                  { id: 'galeria_admin', label: 'Gestión de Galería' },
+                  { id: 'linea_tiempo_admin', label: 'Línea de Tiempo' },
+                  { id: 'agenda_contactos', label: 'Agenda de Contactos' },
+                  { id: 'presidencia', label: 'Gestión de Solicitudes' },
+                  { id: 'agendas_reunion', label: 'Agendas de Reunión' },
+                  { id: 'ranking_lionistico', label: 'Ranking Lionístico' }
+                ].find(t => t.id === activeTab)?.label}
+              </span>
+            </div>
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="flex items-center space-x-1.5 bg-gradient-to-r from-blue-900 to-indigo-955 text-white px-4 py-2.5 rounded-xl text-xs font-black shadow-md hover:shadow-lg active:scale-95 transition-all"
+            >
+              <Layers size={14} />
+              <span>Ver Módulos</span>
+            </button>
           </div>
+
+          {/* Mobile Drawer Overlay */}
+          {isMobileMenuOpen && (
+            <div className="fixed inset-0 z-50 flex lg:hidden bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+              <div className="w-[18.5rem] max-w-[80vw] bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-left duration-300 relative overflow-hidden">
+                {/* Decorative Top Accent Line */}
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-900 to-indigo-750" />
+                
+                {/* Header */}
+                <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 mt-1">
+                  <span className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                    Módulos
+                  </span>
+                  <button 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="p-2 hover:bg-slate-200/60 rounded-xl text-slate-400 hover:text-slate-700 transition-colors active:scale-90"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                
+                {/* Search Box */}
+                <div className="p-4 border-b border-slate-100 relative">
+                  <Search size={14} className="absolute left-7 top-6.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Buscar módulo..."
+                    value={moduleSearchQuery}
+                    onChange={(e) => setModuleSearchQuery(e.target.value)}
+                    className="w-full pl-8 pr-8 py-2 bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-900 focus:bg-white focus:border-transparent transition-all"
+                  />
+                  {moduleSearchQuery && (
+                    <button 
+                      onClick={() => setModuleSearchQuery('')}
+                      className="absolute right-7 top-5.5 p-1 text-slate-400 hover:bg-slate-100 rounded-md"
+                    >
+                      <X size={10} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Modules List */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+                  {filteredCategorias.map(group => {
+                    const visibleItems = group.items.filter(tab => allowedTabs.includes(tab.id));
+                    if (visibleItems.length === 0) return null;
+                    
+                    return (
+                      <div key={group.category} className="space-y-1">
+                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 py-1 flex items-center">
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-300 mr-2"></span>
+                          {group.category}
+                        </div>
+                        {visibleItems.map(tab => {
+                          const Icon = tab.icon;
+                          const active = activeTab === tab.id;
+                          return (
+                            <Link
+                              key={tab.id}
+                              to={`/admin?tab=${tab.id}`}
+                              onClick={() => setIsMobileMenuOpen(false)}
+                              className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold transition-all text-left ${
+                                active
+                                  ? 'bg-gradient-to-r from-blue-900 to-indigo-900 text-white shadow-md'
+                                  : 'text-slate-600 hover:bg-slate-50'
+                              }`}
+                            >
+                              <Icon size={15} className={active ? 'text-white' : 'text-slate-400'} />
+                              <span className="text-xs truncate flex-1">{tab.label}</span>
+                              {active && <Check size={14} className="text-white" />}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                  {filteredCategorias.length === 0 && (
+                    <div className="text-center py-8 text-slate-400 text-xs italic">
+                      No se encontraron módulos
+                    </div>
+                  )}
+                </div>
+              </div>
+              {/* Click outside to close */}
+              <div className="flex-1" onClick={() => setIsMobileMenuOpen(false)} />
+            </div>
+          )}
           {/* TAB: GESTIÓN DE SOCIOS */}
           {activeTab === 'socios' && (
             <div className="space-y-10 animate-in fade-in duration-500">
@@ -4355,132 +4504,436 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
             </div>
           )}
 
-          {/* TAB: RESUMEN GENERAL */}
           {activeTab === 'resumen' && (
             <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              {/* KPIs */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
+              
+              {/* Welcome Hero Banner */}
+              <div className="bg-gradient-to-br from-blue-900 via-indigo-950 to-slate-900 p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border border-blue-950">
+                {/* Decorative glowing sphere */}
+                <div className="absolute -right-16 -top-16 w-60 h-60 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -left-16 -bottom-16 w-60 h-60 bg-yellow-500/5 rounded-full blur-3xl pointer-events-none" />
                 
-                {/* Socios Activos */}
-                <div className="bg-gradient-to-br from-blue-900 to-indigo-950 p-8 rounded-[2rem] text-white shadow-xl relative overflow-hidden animate-in zoom-in-95 duration-300">
-                  <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
-                    <Award size={120} />
+                <div className="relative z-10 space-y-2">
+                  <div className="flex items-center space-x-2.5">
+                    <span className="bg-yellow-500 text-blue-955 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                      {user.rol === UserRole.SUPER_ADMIN ? 'Super Administrador' :
+                       user.rol === UserRole.TESORERO ? 'Tesorero' :
+                       user.rol === UserRole.SECRETARIO ? 'Secretario' : 
+                       user.rol === UserRole.PRESIDENTE_AFILIACION ? 'Presidente de Afiliación' : 'Asesor de Servicios'}
+                    </span>
+                    <span className="text-xs text-blue-200 font-semibold">• Sesión Activa</span>
                   </div>
-                  <h3 className="text-blue-200 text-sm font-bold uppercase tracking-widest">Total de Socios</h3>
-                  <p className="text-4xl font-black mt-2">{sociosAlDia} / {socios.length}</p>
-                  <p className="text-xs text-yellow-400 mt-3 font-semibold">Socios solventes ("Al día")</p>
+                  <h2 className="text-3xl sm:text-4xl font-serif font-black text-white">¡Hola, {user.nombre}!</h2>
+                  <p className="text-sm text-slate-300 font-medium">
+                    Bienvenido al panel general. Aquí tienes el estado en tiempo real del club para hoy.
+                  </p>
                 </div>
-
-                {/* Actas */}
-                <div className="bg-white p-8 rounded-[2rem] border border-slate-200/80 shadow-sm relative overflow-hidden animate-in zoom-in-95 duration-300">
-                  <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none text-blue-900">
-                    <FileText size={120} />
-                  </div>
-                  <h3 className="text-slate-400 text-sm font-bold uppercase tracking-widest">Biblioteca de Actas</h3>
-                  <p className="text-4xl font-black text-slate-800 mt-2">{actas.length} Actas</p>
-                  <div className="flex items-center text-xs text-green-600 bg-green-50 px-2 py-1 rounded-lg w-fit mt-3 font-semibold">
-                    <CheckCircle size={12} className="mr-1" /> Documentos redactados
-                  </div>
+                
+                <div className="relative z-10 bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-3xl text-right flex flex-col items-start md:items-end gap-1 flex-shrink-0">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Fecha del Sistema</span>
+                  <span className="font-extrabold text-white text-base">
+                    {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  </span>
+                  <span className="text-xs text-blue-200 font-bold">{new Date().getFullYear()} • Quetzaltenango</span>
                 </div>
+              </div>
 
-                {/* Donaciones */}
-                <div className="bg-white p-8 rounded-[2rem] border border-slate-200/80 shadow-sm relative overflow-hidden animate-in zoom-in-95 duration-300">
-                  <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none text-blue-900">
-                    <Gift size={120} />
-                  </div>
-                  <h3 className="text-slate-400 text-sm font-bold uppercase tracking-widest">Total Donaciones</h3>
-                  <p className="text-4xl font-black text-slate-800 mt-2">Q {totalDonaciones.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</p>
-                  <div className="flex items-center text-xs text-green-600 bg-green-50 px-2 py-1 rounded-lg w-fit mt-3 font-semibold">
-                    <CheckCircle size={12} className="mr-1" /> Acumulado anual
-                  </div>
+              {/* Quick Action Hub */}
+              <div className="space-y-4">
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">Accesos Rápidos</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+                  {[
+                    { label: 'Control Cuotas', tab: 'cuotas', icon: CreditCard, color: 'text-emerald-700 bg-emerald-50/60 border-emerald-100/80 hover:bg-emerald-100/60' },
+                    { label: 'Ver Calendario', tab: 'calendario', icon: Calendar, color: 'text-amber-700 bg-amber-50/60 border-amber-100/80 hover:bg-amber-100/60' },
+                    { label: 'Libro de Actas', tab: 'actas', icon: FileText, color: 'text-indigo-700 bg-indigo-50/60 border-indigo-100/80 hover:bg-indigo-100/60' },
+                    { label: 'Ver Solicitudes', tab: 'presidencia', icon: Layers, color: 'text-blue-700 bg-blue-50/60 border-blue-100/80 hover:bg-blue-100/60' },
+                    { label: 'Propuestas Socio', tab: 'afiliacion', icon: UserCheck, color: 'text-purple-700 bg-purple-50/60 border-purple-100/80 hover:bg-purple-100/60' },
+                    { label: 'Ver Contactos', tab: 'agenda_contactos', icon: BookUser, color: 'text-slate-700 bg-slate-50 border-slate-200/80 hover:bg-slate-100/60' }
+                  ].map(act => {
+                    const Icon = act.icon;
+                    const isAllowed = allowedTabs.includes(act.tab);
+                    if (!isAllowed) return null;
+                    
+                    return (
+                      <Link
+                        key={act.label}
+                        to={`/admin?tab=${act.tab}`}
+                        className={`flex flex-col items-center justify-center p-5 rounded-[2rem] border text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-md font-bold text-xs gap-3 ${act.color}`}
+                      >
+                        <div className="p-3 rounded-2xl bg-white shadow-inner flex-shrink-0">
+                          <Icon size={20} />
+                        </div>
+                        <span>{act.label}</span>
+                      </Link>
+                    );
+                  })}
                 </div>
+              </div>
 
-                {/* Actividades */}
-                <div className="bg-gradient-to-br from-amber-500 to-orange-500 p-8 rounded-[2rem] text-white shadow-xl relative overflow-hidden animate-in zoom-in-95 duration-300">
-                  <div className="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">
-                    <Calendar size={120} />
-                  </div>
-                  <h3 className="text-amber-100 text-sm font-bold uppercase tracking-widest">Programas Planificados</h3>
-                  <p className="text-4xl font-black mt-2">{actividades.length} Actividades</p>
-                  <p className="text-xs text-yellow-100 mt-3 font-semibold">En agenda y calendario</p>
-                </div>
-
-                {/* Saldo Cuotas */}
-                <div className="bg-white p-8 rounded-[2rem] border border-slate-200/80 shadow-sm relative overflow-hidden animate-in zoom-in-95 duration-300">
-                  <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none text-blue-900">
-                    <CreditCard size={120} />
-                  </div>
-                  <h3 className="text-slate-400 text-sm font-bold uppercase tracking-widest">Saldo de Cuotas Pendiente</h3>
-                  <p className="text-4xl font-black text-slate-800 mt-2">Q {totalCuotasPendientes.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</p>
-                  <div className="flex items-center text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded-lg w-fit mt-3 font-semibold">
-                    <AlertTriangle size={12} className="mr-1" /> Requiere seguimiento
-                  </div>
-                </div>
-
-                {/* Nuevos Ingresos */}
-                <div className="bg-white p-8 rounded-[2rem] border border-slate-200/80 shadow-sm relative overflow-hidden animate-in zoom-in-95 duration-300">
-                  <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none text-blue-900">
+              {/* KPIs Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                {/* Socios Activos Card */}
+                <div className="bg-gradient-to-br from-blue-900 to-indigo-950 p-6 rounded-[2.5rem] text-white shadow-lg relative overflow-hidden group hover:scale-[1.01] hover:shadow-xl transition-all duration-300">
+                  <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                     <Users size={120} />
                   </div>
-                  <h3 className="text-slate-400 text-sm font-bold uppercase tracking-widest">Nuevos Ingresos</h3>
-                  <p className="text-4xl font-black text-slate-800 mt-2">{socios.filter(s => new Date(s.fechaIngreso).getFullYear() === new Date().getFullYear()).length} Este Año</p>
-                  <div className="flex items-center text-xs text-green-600 bg-green-50 px-2 py-1 rounded-lg w-fit mt-3 font-semibold">
-                    <CheckCircle size={12} className="mr-1" /> Crecimiento del club
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <h3 className="text-blue-200 text-xs font-bold uppercase tracking-widest">Estado de Socios</h3>
+                      <p className="text-3xl font-black">{sociosAlDia} / {socios.length}</p>
+                      <p className="text-[10px] text-yellow-400 font-semibold mt-1">
+                        Solventes ({socios.length > 0 ? Math.round((sociosAlDia / socios.length) * 100) : 0}% del total)
+                      </p>
+                    </div>
+                    {/* SVG Circular Progress Indicator */}
+                    <div className="relative w-16 h-16 flex items-center justify-center bg-white/5 rounded-full p-2 border border-white/10">
+                      <svg className="w-full h-full transform -rotate-90">
+                        <circle
+                          cx="32"
+                          cy="32"
+                          r="25"
+                          className="stroke-white/10 fill-none"
+                          strokeWidth="3.5"
+                        />
+                        <circle
+                          cx="32"
+                          cy="32"
+                          r="25"
+                          className="stroke-yellow-400 fill-none transition-all duration-1000"
+                          strokeWidth="3.5"
+                          strokeDasharray={2 * Math.PI * 25}
+                          strokeDashoffset={2 * Math.PI * 25 * (1 - (socios.length > 0 ? sociosAlDia / socios.length : 0))}
+                        />
+                      </svg>
+                      <span className="absolute text-[10px] font-black">
+                        {socios.length > 0 ? Math.round((sociosAlDia / socios.length) * 100) : 0}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-full bg-white/10 h-1.5 rounded-full mt-5 overflow-hidden">
+                    <div 
+                      className="bg-yellow-450 h-full rounded-full transition-all duration-1000" 
+                      style={{ width: `${socios.length > 0 ? (sociosAlDia / socios.length) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Donaciones Totales Card */}
+                <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200/80 shadow-md relative overflow-hidden group hover:scale-[1.01] hover:shadow-lg transition-all duration-300">
+                  <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none text-emerald-800">
+                    <Gift size={120} />
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="bg-emerald-50 p-4 rounded-3xl text-emerald-700">
+                      <Gift size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest">Total Donaciones</h3>
+                      <p className="text-3xl font-black text-slate-800 mt-1">Q {totalDonaciones.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</p>
+                      <div className="flex items-center text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg w-fit mt-1 font-bold">
+                        <CheckCircle size={10} className="mr-1" /> Acumulado anual
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Saldo Pendiente Card */}
+                <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200/80 shadow-md relative overflow-hidden group hover:scale-[1.01] hover:shadow-lg transition-all duration-300">
+                  <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none text-amber-850">
+                    <CreditCard size={120} />
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="bg-amber-50/70 p-4 rounded-3xl text-amber-600">
+                      <CreditCard size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest">Saldo Pendiente</h3>
+                      <p className="text-3xl font-black text-slate-800 mt-1">Q {totalCuotasPendientes.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</p>
+                      <div className="flex items-center text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-lg w-fit mt-1 font-bold">
+                        <AlertTriangle size={10} className="mr-1 animate-pulse" /> Requiere seguimiento
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actividades Planificadas Card */}
+                <div className="bg-gradient-to-br from-amber-500 to-orange-500 p-6 rounded-[2.5rem] text-white shadow-lg relative overflow-hidden group hover:scale-[1.01] hover:shadow-xl transition-all duration-300">
+                  <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                    <Calendar size={120} />
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="bg-white/10 p-4 rounded-3xl text-white border border-white/10 shadow-inner">
+                      <Calendar size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-amber-100 text-xs font-bold uppercase tracking-widest">Actividades</h3>
+                      <p className="text-3xl font-black mt-1">{actividades.length} Planificadas</p>
+                      <p className="text-[10px] text-yellow-100 font-semibold mt-1">En agenda del club</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Biblioteca de Actas Card */}
+                <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200/80 shadow-md relative overflow-hidden group hover:scale-[1.01] hover:shadow-lg transition-all duration-300">
+                  <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none text-blue-900">
+                    <FileText size={120} />
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="bg-blue-50 p-4 rounded-3xl text-blue-800">
+                      <FileText size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest">Actas Registradas</h3>
+                      <p className="text-3xl font-black text-slate-800 mt-1">{actas.length} redactadas</p>
+                      <div className="flex items-center text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg w-fit mt-1 font-bold">
+                        <CheckCircle size={10} className="mr-1" /> Archivo oficial
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Crecimiento Anual Card */}
+                <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200/80 shadow-md relative overflow-hidden group hover:scale-[1.01] hover:shadow-lg transition-all duration-300">
+                  <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none text-purple-900">
+                    <Users size={120} />
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="bg-purple-50 p-4 rounded-3xl text-purple-800">
+                      <Users size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-slate-400 text-xs font-bold uppercase tracking-widest">Nuevos Socios</h3>
+                      <p className="text-3xl font-black text-slate-800 mt-1">
+                        {socios.filter(s => new Date(s.fechaIngreso).getFullYear() === new Date().getFullYear()).length} Nuevos
+                      </p>
+                      <div className="flex items-center text-[10px] text-purple-600 bg-purple-50 px-2 py-0.5 rounded-lg w-fit mt-1 font-bold">
+                        <TrendingUp size={10} className="mr-1" /> Crecimiento {new Date().getFullYear()}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
               </div>
 
-              {/* Quick Summary Tables */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Cobros Pendientes */}
-                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200/80 shadow-sm space-y-6">
+              {/* Data Visualization Charts */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                
+                {/* Solicitudes por Categoría Chart */}
+                <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] border border-slate-200/80 shadow-sm space-y-4">
+                  <div>
+                    <h3 className="text-xl font-black text-slate-800 tracking-tight">Estadísticas de Solicitudes</h3>
+                    <p className="text-xs text-slate-450 font-bold">Distribución de las solicitudes registradas en Firestore</p>
+                  </div>
+                  <div className="h-64 sm:h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={solicitudesStats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <XAxis 
+                          dataKey="name" 
+                          tick={{ fill: '#64748b', fontSize: 10, fontWeight: 'bold' }} 
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <YAxis tick={{ fill: '#64748b', fontSize: 10, fontWeight: 'bold' }} axisLine={false} tickLine={false} />
+                        <Tooltip 
+                          contentStyle={{ background: '#0f172a', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
+                          cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }}
+                        />
+                        <Bar dataKey="cantidad" radius={[8, 8, 0, 0]}>
+                          {solicitudesStats.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Estatus Financiero Donut Chart */}
+                <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] border border-slate-200/80 shadow-sm space-y-4 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-xl font-black text-slate-800 tracking-tight">Estatus de Solvencia</h3>
+                    <p className="text-xs text-slate-450 font-bold">Estado financiero general de las cuotas de socios</p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row items-center justify-around gap-6 h-full py-4">
+                    <div className="relative w-44 h-44 flex-shrink-0">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={cuotasStats}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={55}
+                            outerRadius={75}
+                            paddingAngle={3}
+                            dataKey="value"
+                          >
+                            {cuotasStats.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip 
+                            contentStyle={{ background: '#0f172a', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '11px', fontWeight: 'bold' }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                        <span className="text-2xl font-black text-slate-800">{socios.length}</span>
+                        <span className="text-[9px] font-black uppercase text-slate-400">Socios</span>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2 w-full max-w-xs">
+                      {cuotasStats.map((entry, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold text-slate-700">
+                          <div className="flex items-center space-x-2">
+                            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }} />
+                            <span>{entry.name}</span>
+                          </div>
+                          <span className="bg-slate-200/70 text-slate-800 px-2.5 py-0.5 rounded-lg text-[10px] font-black">
+                            {entry.value} ({socios.length > 0 ? Math.round((entry.value / socios.length) * 100) : 0}%)
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Connected Real-time Lists */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                
+                {/* Real-time Solicitudes Recientes List */}
+                <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] border border-slate-200/80 shadow-sm space-y-6">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-2xl font-black text-slate-800 tracking-tight">Cobros Pendientes</h3>
-                    <button onClick={() => setActiveTab('cuotas')} className="text-sm text-blue-900 font-bold hover:underline">Gestionar cuotas</button>
+                    <div>
+                      <h3 className="text-xl font-black text-slate-800 tracking-tight">Solicitudes de Ayuda</h3>
+                      <p className="text-xs text-slate-450 font-bold">Últimas solicitudes ingresadas en Firestore</p>
+                    </div>
+                    <Link to="/admin?tab=presidencia" className="text-xs text-blue-900 font-bold hover:underline">Ver todas</Link>
                   </div>
                   <div className="space-y-4">
-                    {socios.filter(s => s.montoPendiente > 0).slice(0, 3).map(s => (
-                      <div key={s.id} className="flex items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-slate-100/50 transition-colors">
-                        <img 
-                          src={s.foto} 
-                          alt={s.nombre} 
-                          className="w-10 h-10 rounded-full border border-slate-100 object-cover mr-4 cursor-zoom-in" 
-                          onClick={() => setSelectedPhoto({ url: s.foto, title: s.nombre })}
-                        />
-                        <div className="flex-grow min-w-0">
-                          <p className="font-extrabold text-slate-800 truncate">{s.nombre}</p>
-                          <p className="text-xs text-slate-400 mt-1 truncate">{s.puesto || 'Socio Regular'}</p>
+                    {solicitudes.slice(0, 4).map(s => {
+                      const theme = TEMA_COLOR_MAP[s.tipo] || 'blue';
+                      const accent = THEME_ACCENTS[theme] || THEME_ACCENTS.blue;
+                      
+                      return (
+                        <div key={s.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-slate-100/50 transition-colors gap-3">
+                          <div className="flex items-center min-w-0">
+                            <div className={`p-3 rounded-xl mr-4 flex-shrink-0 ${accent.bg} ${accent.text}`}>
+                              <Accessibility size={20} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-extrabold text-slate-800 text-sm truncate">
+                                {s.tipo === 'sillas' ? s.nombreBeneficiario : s.nombre || s.salonNombreSolicitante || 'Solicitud'}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 border rounded-md ${accent.badge}`}>
+                                  {s.tipo === 'sillas' ? 'Silla de Ruedas' : 
+                                   s.tipo === 'salon' ? 'Salón/Parqueo' : 
+                                   s.tipo === 'agenda' ? 'Punto de Agenda' : 
+                                   s.tipo === 'internas' ? 'Interna' : 'Abierta'}
+                                </span>
+                                <span className="text-[10px] text-slate-450 font-bold">
+                                  {s.fechaCreacion ? s.fechaCreacion.split('T')[0] : 'Sin fecha'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between sm:justify-end gap-2.5">
+                            {s.faseTracking && (
+                              <span className="text-[9px] font-extrabold bg-blue-50 text-blue-800 border border-blue-100 px-2 py-1 rounded-lg uppercase tracking-wider">
+                                {s.faseTracking === 'recibido' ? 'Recibido' :
+                                 s.faseTracking === 'en_proceso' ? 'En Proceso' :
+                                 s.faseTracking === 'en_analisis' ? 'En Análisis' : 'Resuelta'}
+                              </span>
+                            )}
+                            <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase ${
+                              s.estado === 'Aprobada' ? 'bg-green-50 text-green-700' :
+                              s.estado === 'Rechazada' ? 'bg-red-50 text-red-700' :
+                              'bg-amber-50 text-amber-700 border border-amber-200/50'
+                            }`}>
+                              {s.estado}
+                            </span>
+                          </div>
                         </div>
-                        <span className="text-sm font-black text-red-600 bg-red-50 px-3 py-1 rounded-xl ml-3">
-                          Q {s.montoPendiente.toFixed(2)}
-                        </span>
+                      );
+                    })}
+                    {solicitudes.length === 0 && (
+                      <div className="text-center text-slate-400 text-xs py-8 italic border border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+                        No hay solicitudes registradas en el sistema.
                       </div>
-                    ))}
-                    {socios.filter(s => s.montoPendiente > 0).length === 0 && (
-                      <div className="text-center text-slate-400 text-sm py-4 italic">No hay cobros pendientes. ¡Todo al día!</div>
                     )}
                   </div>
                 </div>
 
-                {/* Próximos Programas */}
-                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200/80 shadow-sm space-y-6">
+                {/* Cobros Pendientes */}
+                <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] border border-slate-200/80 shadow-sm space-y-6">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-2xl font-black text-slate-800 tracking-tight">Próximos Programas</h3>
-                    <button onClick={() => setActiveTab('calendario')} className="text-sm text-blue-900 font-bold hover:underline">Ver todos</button>
+                    <div>
+                      <h3 className="text-xl font-black text-slate-800 tracking-tight">Cobros Pendientes</h3>
+                      <p className="text-xs text-slate-450 font-bold">Socios con saldo pendiente de pago</p>
+                    </div>
+                    <Link to="/admin?tab=cuotas" className="text-xs text-blue-900 font-bold hover:underline">Gestionar cuotas</Link>
                   </div>
                   <div className="space-y-4">
-                    {actividades.slice(0, 3).map(act => (
+                    {socios.filter(s => s.montoPendiente > 0).slice(0, 4).map(s => (
+                      <div key={s.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-slate-100/50 transition-colors">
+                        <div className="flex items-center min-w-0">
+                          <img 
+                            src={s.foto} 
+                            alt={s.nombre} 
+                            className="w-10 h-10 rounded-full border border-slate-100 object-cover mr-4 cursor-zoom-in flex-shrink-0" 
+                            onClick={() => setSelectedPhoto({ url: s.foto, title: s.nombre })}
+                          />
+                          <div className="min-w-0">
+                            <p className="font-extrabold text-slate-800 text-sm truncate">{s.nombre}</p>
+                            <p className="text-xs text-slate-400 mt-0.5 truncate">{s.puesto || 'Socio Regular'}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2 flex-shrink-0">
+                          <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-lg ${
+                            s.estadoCuotas === 'En mora' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                          }`}>
+                            {s.estadoCuotas}
+                          </span>
+                          <span className="text-sm font-black text-red-600 bg-red-50/50 px-3 py-1 rounded-xl">
+                            Q {s.montoPendiente.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    {socios.filter(s => s.montoPendiente > 0).length === 0 && (
+                      <div className="text-center text-slate-400 text-xs py-8 italic border border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+                        ¡Todo al día! No hay cobros pendientes.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Próximas Actividades */}
+                <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] border border-slate-200/80 shadow-sm space-y-6">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="text-xl font-black text-slate-800 tracking-tight">Próximos Programas</h3>
+                      <p className="text-xs text-slate-450 font-bold">Actividades en la agenda del club</p>
+                    </div>
+                    <Link to="/admin?tab=calendario" className="text-xs text-blue-900 font-bold hover:underline">Ver todas</Link>
+                  </div>
+                  <div className="space-y-4">
+                    {actividades.slice(0, 4).map(act => (
                       <div key={act.id} className="flex items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-slate-100/50 transition-colors">
-                        <div className="bg-blue-50 text-blue-900 p-3 rounded-xl mr-4">
+                        <div className="bg-blue-50 text-blue-900 p-3 rounded-xl mr-4 flex-shrink-0">
                           <Calendar size={20} />
                         </div>
                         <div className="flex-grow min-w-0">
-                          <p className="font-extrabold text-slate-800 truncate">{act.titulo}</p>
-                          <p className="text-xs text-slate-400 mt-1 truncate">{act.fecha} • {act.lugar}</p>
+                          <p className="font-extrabold text-slate-800 text-sm truncate">{act.titulo}</p>
+                          <p className="text-xs text-slate-450 font-medium mt-1 truncate">{act.fecha} • {act.lugar}</p>
                         </div>
-                        <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase ml-3 ${
-                          act.publica ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'
+                        <span className={`text-[9px] font-black px-2.5 py-1 rounded-full uppercase ml-3 flex-shrink-0 ${
+                          act.publica ? 'bg-green-50 text-green-700 border border-green-200/50' : 'bg-blue-50 text-blue-700 border border-blue-200/50'
                         }`}>
                           {act.publica ? 'Público' : 'Socio'}
                         </span>
@@ -4489,47 +4942,26 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   </div>
                 </div>
 
-                {/* Donaciones Recientes */}
-                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200/80 shadow-sm space-y-6">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-2xl font-black text-slate-800 tracking-tight">Donaciones Recientes</h3>
-                    <button onClick={() => setActiveTab('donaciones')} className="text-sm text-blue-900 font-bold hover:underline">Ver todas</button>
-                  </div>
-                  <div className="space-y-4">
-                    {donaciones.slice(0, 3).map(don => (
-                      <div key={don.id} className="flex items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-slate-100/50 transition-colors">
-                        <div className="bg-green-50 text-green-600 p-3 rounded-xl mr-4">
-                          <Gift size={20} />
-                        </div>
-                        <div className="flex-grow min-w-0">
-                          <p className="font-extrabold text-slate-800 truncate">{don.donante}</p>
-                          <p className="text-xs text-slate-400 mt-1 truncate">{don.proyecto} • {don.fecha}</p>
-                        </div>
-                        <span className="text-sm font-black text-green-600 bg-green-50 px-3 py-1 rounded-xl ml-3">
-                          + Q {don.monto.toFixed(2)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Actas Recientes */}
-                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200/80 shadow-sm space-y-6">
+                <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] border border-slate-200/80 shadow-sm space-y-6">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-2xl font-black text-slate-800 tracking-tight">Actas Recientes</h3>
-                    <button onClick={() => setActiveTab('actas')} className="text-sm text-blue-900 font-bold hover:underline">Ver biblioteca</button>
+                    <div>
+                      <h3 className="text-xl font-black text-slate-800 tracking-tight">Libro de Actas</h3>
+                      <p className="text-xs text-slate-450 font-bold">Últimas actas redactadas en biblioteca</p>
+                    </div>
+                    <Link to="/admin?tab=actas" className="text-xs text-blue-900 font-bold hover:underline">Ver biblioteca</Link>
                   </div>
                   <div className="space-y-4">
-                    {actas.slice(0, 3).map(acta => (
+                    {actas.slice(0, 4).map(acta => (
                       <div key={acta.id} className="flex items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-slate-100/50 transition-colors">
-                        <div className="bg-yellow-50 text-yellow-600 p-3 rounded-xl mr-4">
+                        <div className="bg-amber-50 text-amber-600 p-3 rounded-xl mr-4 flex-shrink-0">
                           <FileText size={20} />
                         </div>
                         <div className="flex-grow min-w-0">
-                          <p className="font-extrabold text-slate-800 truncate">{acta.titulo}</p>
-                          <p className="text-xs text-slate-400 mt-1">Por {acta.autor} • {acta.fecha}</p>
+                          <p className="font-extrabold text-slate-800 text-sm truncate">{acta.titulo}</p>
+                          <p className="text-xs text-slate-450 font-medium mt-1 truncate">Por {acta.autor} • {acta.fecha}</p>
                         </div>
-                        <span className="text-[10px] font-black bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full uppercase ml-3">
+                        <span className="text-[9px] font-black bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full uppercase ml-3 flex-shrink-0 border border-slate-200">
                           {acta.categoria || 'Reunión'}
                         </span>
                       </div>
@@ -4542,2476 +4974,13 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           )}
 
           {/* TAB: ACTIVIDADES */}
-          {activeTab === 'calendario' && (
-            <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-3xl font-black text-slate-800 tracking-tight">Gestión de Actividades</h3>
-                  <p className="text-xs text-slate-550 font-bold uppercase tracking-wider mt-1">Crea, edita y publica los próximos eventos del club</p>
-                </div>
-                <button 
-                  onClick={() => setShowAddActividad(true)}
-                  className="bg-blue-900 hover:bg-blue-800 text-white font-black px-6 py-3.5 rounded-2xl flex items-center justify-center space-x-2 shadow-lg shadow-blue-900/10 active:scale-95 transition-all text-sm"
-                >
-                  <Plus size={18} />
-                  <span>Programar Actividad</span>
-                </button>
-              </div>
-
-              {/* Add Activity Form Modal */}
-              {showAddActividad && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md overflow-y-auto animate-in fade-in duration-300">
-                  <form onSubmit={handleAddActividad} className="bg-white rounded-[2.5rem] p-6 sm:p-10 max-w-lg w-full space-y-6 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-300 my-8">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h4 className="text-2xl font-black text-blue-900">Nueva Actividad</h4>
-                        <p className="text-[10px] text-slate-450 font-bold uppercase tracking-widest mt-0.5">Programación y Difusión</p>
-                      </div>
-                      <button type="button" onClick={() => setShowAddActividad(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-colors"><X size={20} /></button>
-                    </div>
-
-                    <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Título de la Actividad</label>
-                        <input 
-                          type="text" 
-                          required 
-                          value={newActividad.titulo} 
-                          onChange={e => setNewActividad({...newActividad, titulo: e.target.value})}
-                          placeholder="Ej. Jornada Médica Visual"
-                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Descripción Detallada</label>
-                        <textarea 
-                          rows={4} 
-                          required
-                          value={newActividad.descripcion} 
-                          onChange={e => setNewActividad({...newActividad, descripcion: e.target.value})}
-                          placeholder="Describe el propósito del evento, quiénes pueden asistir y cómo participar..."
-                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all resize-none text-sm leading-relaxed"
-                        />
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Fecha y Hora</label>
-                          <input 
-                            type="datetime-local" 
-                            required 
-                            value={newActividad.fecha} 
-                            onChange={e => setNewActividad({...newActividad, fecha: e.target.value})}
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Ubicación / Lugar</label>
-                          <input 
-                            type="text" 
-                            required 
-                            value={newActividad.lugar} 
-                            onChange={e => setNewActividad({...newActividad, lugar: e.target.value})}
-                            placeholder="Ej. Parque Central Xela"
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Imagen / Afiche de la Actividad</label>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-center w-full">
-                            <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100/50 hover:border-blue-900/30 transition-all overflow-hidden relative group">
-                              {newActividadImagePreview ? (
-                                <>
-                                  <img src={newActividadImagePreview} alt="Preview" className="w-full h-full object-cover" />
-                                  <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold">
-                                    Cambiar Imagen
-                                  </div>
-                                </>
-                              ) : (
-                                <div className="flex flex-col items-center justify-center pt-5 pb-6 px-4 text-center">
-                                  <Upload className="w-8 h-8 text-slate-400 mb-2 group-hover:text-blue-900 transition-colors" />
-                                  <p className="mb-1 text-xs font-bold text-slate-500 uppercase tracking-wider">Subir archivo de imagen</p>
-                                  <p className="text-[10px] text-slate-400">PNG, JPG o WEBP (se comprimirá automáticamente)</p>
-                                </div>
-                              )}
-                              <input 
-                                type="file" 
-                                accept="image/*" 
-                                className="hidden" 
-                                onChange={async (e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    setNewActividadImageFile(file);
-                                    try {
-                                      const compressed = await compressImageFile(file, 800, 800, 0.7);
-                                      setNewActividadImagePreview(compressed);
-                                    } catch (err) {
-                                      console.error("Error compressing preview image:", err);
-                                      const reader = new FileReader();
-                                      reader.onloadend = () => {
-                                        setNewActividadImagePreview(reader.result as string);
-                                      };
-                                      reader.readAsDataURL(file);
-                                    }
-                                  }
-                                }}
-                              />
-                            </label>
-                          </div>
-                          
-                          <div className="relative flex items-center">
-                            <div className="flex-grow border-t border-slate-200"></div>
-                            <span className="flex-shrink mx-4 text-slate-400 text-[10px] font-black uppercase tracking-widest">O ingresar URL</span>
-                            <div className="flex-grow border-t border-slate-200"></div>
-                          </div>
-
-                          <input 
-                            type="text" 
-                            value={newActividad.imagen} 
-                            onChange={e => {
-                              setNewActividad({...newActividad, imagen: e.target.value});
-                              setNewActividadImageFile(null);
-                              setNewActividadImagePreview(null);
-                            }}
-                            placeholder="https://images.unsplash.com/... (Opcional)"
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-mono"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-3 pt-2">
-                        <div className="flex items-center space-x-3">
-                          <input 
-                            type="checkbox" 
-                            id="publica" 
-                            checked={newActividad.publica} 
-                            onChange={e => setNewActividad({...newActividad, publica: e.target.checked})}
-                            className="w-5 h-5 rounded text-blue-900 border-slate-350 focus:ring-blue-900"
-                          />
-                          <label htmlFor="publica" className="text-sm font-bold text-slate-700 select-none cursor-pointer">Hacer actividad pública en el sitio web</label>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <input 
-                            type="checkbox" 
-                            id="conBotonDonacion" 
-                            checked={newActividad.conBotonDonacion} 
-                            onChange={e => setNewActividad({...newActividad, conBotonDonacion: e.target.checked})}
-                            className="w-5 h-5 rounded text-blue-900 border-slate-350 focus:ring-blue-900"
-                          />
-                          <label htmlFor="conBotonDonacion" className="text-sm font-bold text-slate-700 select-none cursor-pointer">Habilitar Botón de Donaciones</label>
-                        </div>
-                      </div>
-
-                      {newActividad.conBotonDonacion && (
-                        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Enlace de Donación Personalizado (Opcional)</label>
-                          <input 
-                            type="text" 
-                            value={newActividad.donacionUrl} 
-                            onChange={e => setNewActividad({...newActividad, donacionUrl: e.target.value})}
-                            placeholder="Ej. #/donar o link de pago externo (dejar vacío para general)"
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-mono"
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex space-x-3 pt-4 border-t border-slate-100">
-                      <button 
-                        type="button" 
-                        onClick={() => setShowAddActividad(false)}
-                        className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl transition-colors text-sm"
-                        disabled={isSavingActividad}
-                      >
-                        Cancelar
-                      </button>
-                      <button 
-                        type="submit" 
-                        disabled={isSavingActividad}
-                        className="w-1/2 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-black py-3.5 rounded-2xl transition-all shadow-md hover:shadow-lg text-sm flex items-center justify-center space-x-2"
-                      >
-                        {isSavingActividad ? (
-                          <>
-                            <Loader2 className="animate-spin" size={16} />
-                            <span>Guardando...</span>
-                          </>
-                        ) : (
-                          <span>Agregar</span>
-                        )}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              )}
-
-              {/* Edit Activity Form Modal */}
-              {showEditActividad && editingActividad && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md overflow-y-auto animate-in fade-in duration-300">
-                  <form onSubmit={handleSaveEditedActividad} className="bg-white rounded-[2.5rem] p-6 sm:p-10 max-w-lg w-full space-y-6 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-300 my-8">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h4 className="text-2xl font-black text-blue-900">Editar Actividad</h4>
-                        <p className="text-[10px] text-slate-450 font-bold uppercase tracking-widest mt-0.5">Modificación de Contenido</p>
-                      </div>
-                      <button 
-                        type="button" 
-                        onClick={() => {
-                          setShowEditActividad(false);
-                          setEditingActividad(null);
-                        }} 
-                        className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-colors"
-                      >
-                        <X size={20} />
-                      </button>
-                    </div>
-
-                    <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Título de la Actividad</label>
-                        <input 
-                          type="text" 
-                          required 
-                          value={editingActividad.titulo} 
-                          onChange={e => setEditingActividad({...editingActividad, titulo: e.target.value})}
-                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Descripción Detallada</label>
-                        <textarea 
-                          rows={4} 
-                          required
-                          value={editingActividad.descripcion} 
-                          onChange={e => setEditingActividad({...editingActividad, descripcion: e.target.value})}
-                          className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all resize-none text-sm leading-relaxed"
-                        />
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Fecha y Hora</label>
-                          <input 
-                            type="datetime-local" 
-                            required 
-                            value={editingActividad.fecha.includes(' ') ? editingActividad.fecha.replace(' ', 'T') : editingActividad.fecha} 
-                            onChange={e => setEditingActividad({...editingActividad, fecha: e.target.value})}
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Ubicación / Lugar</label>
-                          <input 
-                            type="text" 
-                            required 
-                            value={editingActividad.lugar} 
-                            onChange={e => setEditingActividad({...editingActividad, lugar: e.target.value})}
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Imagen / Afiche de la Actividad</label>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-center w-full">
-                            <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100/50 hover:border-blue-900/30 transition-all overflow-hidden relative group">
-                              {(editActividadImagePreview || editingActividad.imagen) ? (
-                                <>
-                                  <img src={editActividadImagePreview || editingActividad.imagen} alt="Preview" className="w-full h-full object-cover" />
-                                  <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold">
-                                    Cambiar Imagen
-                                  </div>
-                                </>
-                              ) : (
-                                <div className="flex flex-col items-center justify-center pt-5 pb-6 px-4 text-center">
-                                  <Upload className="w-8 h-8 text-slate-400 mb-2 group-hover:text-blue-900 transition-colors" />
-                                  <p className="mb-1 text-xs font-bold text-slate-500 uppercase tracking-wider">Subir archivo de imagen</p>
-                                  <p className="text-[10px] text-slate-400">PNG, JPG o WEBP (se comprimirá automáticamente)</p>
-                                </div>
-                              )}
-                              <input 
-                                type="file" 
-                                accept="image/*" 
-                                className="hidden" 
-                                onChange={async (e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    setEditActividadImageFile(file);
-                                    try {
-                                      const compressed = await compressImageFile(file, 800, 800, 0.7);
-                                      setEditActividadImagePreview(compressed);
-                                    } catch (err) {
-                                      console.error("Error compressing preview image:", err);
-                                      const reader = new FileReader();
-                                      reader.onloadend = () => {
-                                        setEditActividadImagePreview(reader.result as string);
-                                      };
-                                      reader.readAsDataURL(file);
-                                    }
-                                  }
-                                }}
-                              />
-                            </label>
-                          </div>
-                          
-                          <div className="relative flex items-center">
-                            <div className="flex-grow border-t border-slate-200"></div>
-                            <span className="flex-shrink mx-4 text-slate-400 text-[10px] font-black uppercase tracking-widest">O ingresar URL</span>
-                            <div className="flex-grow border-t border-slate-200"></div>
-                          </div>
-
-                          <input 
-                            type="text" 
-                            value={editingActividad.imagen} 
-                            onChange={e => {
-                              setEditingActividad({...editingActividad, imagen: e.target.value});
-                              setEditActividadImageFile(null);
-                              setEditActividadImagePreview(null);
-                            }}
-                            placeholder="https://images.unsplash.com/... (Opcional)"
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-mono"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-3 pt-2">
-                        <div className="flex items-center space-x-3">
-                          <input 
-                            type="checkbox" 
-                            id="edit-publica" 
-                            checked={editingActividad.publica} 
-                            onChange={e => setEditingActividad({...editingActividad, publica: e.target.checked})}
-                            className="w-5 h-5 rounded text-blue-900 border-slate-350 focus:ring-blue-900"
-                          />
-                          <label htmlFor="edit-publica" className="text-sm font-bold text-slate-700 select-none cursor-pointer">Hacer actividad pública en el sitio web</label>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <input 
-                            type="checkbox" 
-                            id="edit-conBotonDonacion" 
-                            checked={editingActividad.conBotonDonacion || false} 
-                            onChange={e => setEditingActividad({...editingActividad, conBotonDonacion: e.target.checked})}
-                            className="w-5 h-5 rounded text-blue-900 border-slate-350 focus:ring-blue-900"
-                          />
-                          <label htmlFor="edit-conBotonDonacion" className="text-sm font-bold text-slate-700 select-none cursor-pointer">Habilitar Botón de Donaciones</label>
-                        </div>
-                      </div>
-
-                      {(editingActividad.conBotonDonacion) && (
-                        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Enlace de Donación Personalizado (Opcional)</label>
-                          <input 
-                            type="text" 
-                            value={editingActividad.donacionUrl || ''} 
-                            onChange={e => setEditingActividad({...editingActividad, donacionUrl: e.target.value})}
-                            placeholder="Ej. #/donar o link de pago externo"
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-mono"
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex space-x-3 pt-4 border-t border-slate-100">
-                      <button 
-                        type="button" 
-                        onClick={() => {
-                          setShowEditActividad(false);
-                          setEditingActividad(null);
-                          setEditActividadImageFile(null);
-                          setEditActividadImagePreview(null);
-                        }}
-                        className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl transition-colors text-sm"
-                        disabled={isSavingActividad}
-                      >
-                        Cancelar
-                      </button>
-                      <button 
-                        type="submit" 
-                        disabled={isSavingActividad}
-                        className="w-1/2 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-black py-3.5 rounded-2xl transition-all shadow-md hover:shadow-lg text-sm flex items-center justify-center space-x-2"
-                      >
-                        {isSavingActividad ? (
-                          <>
-                            <Loader2 className="animate-spin" size={16} />
-                            <span>Guardando...</span>
-                          </>
-                        ) : (
-                          <span>Guardar Cambios</span>
-                        )}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              )}
-
-              {/* Sub tabs for Calendario: Actividades vs Voluntarios */}
-              <div className="flex border-b border-slate-200 gap-6 mb-2">
-                <button
-                  onClick={() => setCalendarioSubTab('lista')}
-                  className={`pb-4 text-sm font-extrabold transition-all relative ${
-                    calendarioSubTab === 'lista'
-                      ? 'text-blue-900 border-b-2 border-blue-900'
-                      : 'text-slate-400 hover:text-slate-600'
-                  }`}
-                >
-                  Actividades Programadas ({actividades.length})
-                </button>
-                <button
-                  onClick={() => setCalendarioSubTab('voluntarios')}
-                  className={`pb-4 text-sm font-extrabold transition-all relative ${
-                    calendarioSubTab === 'voluntarios'
-                      ? 'text-blue-900 border-b-2 border-blue-900'
-                      : 'text-slate-400 hover:text-slate-600'
-                  }`}
-                >
-                  Solicitudes de Voluntarios ({voluntarios.length})
-                </button>
-              </div>
-
-              {calendarioSubTab === 'lista' ? (
-                /* Activities Filters & List */
-                <div className="space-y-6">
-                {/* Filters */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-                  <div className="relative w-full md:w-1/3">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input 
-                      type="text" 
-                      placeholder="Buscar actividad..."
-                      value={actividadSearch}
-                      onChange={e => setActividadSearch(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:bg-white transition-all text-sm outline-none"
-                    />
-                  </div>
-                  <div className="flex flex-col sm:flex-row w-full md:w-auto gap-3">
-                    <div className="flex items-center space-x-2 w-full sm:w-auto">
-                      <Filter size={16} className="text-slate-400 hidden sm:block" />
-                      <select 
-                        value={actividadFilter}
-                        onChange={e => setActividadFilter(e.target.value as any)}
-                        className="w-full sm:w-auto bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-900 appearance-none cursor-pointer"
-                      >
-                        <option value="Todas">Todas las Actividades</option>
-                        <option value="Publicas">Solo Públicas</option>
-                        <option value="Privadas">Solo Privadas</option>
-                      </select>
-                    </div>
-                    <select 
-                      value={actividadSort}
-                      onChange={e => setActividadSort(e.target.value as any)}
-                      className="w-full sm:w-auto bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-900 appearance-none cursor-pointer"
-                    >
-                      <option value="recientes">Más recientes</option>
-                      <option value="antiguas">Más antiguas</option>
-                      <option value="az">Alfabético (A-Z)</option>
-                      <option value="za">Alfabético (Z-A)</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Cards Grid */}
-                {filteredAndSortedActividades.length === 0 ? (
-                  <div className="bg-white p-10 rounded-2xl border border-slate-200/80 shadow-sm text-center">
-                    <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                    <p className="text-slate-500 font-medium">No se encontraron actividades que coincidan con la búsqueda.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
-                    {filteredAndSortedActividades.map(act => (
-                      <div key={act.id} className="bg-white rounded-[2rem] overflow-hidden border border-slate-200/80 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col group">
-                        <div className="relative h-48 overflow-hidden bg-slate-100 shrink-0">
-                          <img 
-                            src={act.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800'} 
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                            alt={act.titulo}
-                          />
-                          <div className="absolute top-4 left-4 flex flex-col gap-2">
-                            <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase shadow-sm backdrop-blur-md ${
-                              act.publica ? 'bg-green-500/90 text-white' : 'bg-slate-800/90 text-white'
-                            }`}>
-                              {act.publica ? 'Público' : 'Solo Socios'}
-                            </span>
-                            {act.conBotonDonacion && (
-                              <span className="text-[10px] font-black px-3 py-1 rounded-full uppercase bg-rose-500/90 text-white shadow-sm backdrop-blur-md flex items-center space-x-1">
-                                <Gift size={10} />
-                                <span>Donaciones</span>
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="p-6 flex-1 flex flex-col">
-                          <h4 className="font-extrabold text-slate-800 text-lg leading-tight mb-3 line-clamp-2">{act.titulo}</h4>
-                          
-                          <div className="space-y-2 mb-4">
-                            <div className="flex items-start space-x-2 text-slate-500">
-                              <Calendar size={14} className="mt-0.5 shrink-0 text-blue-900/60" />
-                              <span className="text-xs font-semibold">{act.fecha}</span>
-                            </div>
-                            <div className="flex items-start space-x-2 text-slate-500">
-                              <Building size={14} className="mt-0.5 shrink-0 text-blue-900/60" />
-                              <span className="text-xs font-medium line-clamp-2">{act.lugar}</span>
-                            </div>
-                          </div>
-                          
-                          <p className="text-sm text-slate-600 line-clamp-3 mb-6 flex-1 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                            {act.descripcion || "Sin descripción proporcionada."}
-                          </p>
-
-                          <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-100 mt-auto">
-                            <button 
-                              onClick={() => {
-                                setEditingActividad(act);
-                                setShowEditActividad(true);
-                              }}
-                              className="flex items-center justify-center space-x-2 bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-900 py-2.5 rounded-xl transition-colors text-sm font-bold"
-                            >
-                              <Edit size={16} />
-                              <span>Editar</span>
-                            </button>
-                            <button 
-                              onClick={() => handleDeleteActividad(act.id)}
-                              className="flex items-center justify-center space-x-2 bg-slate-50 hover:bg-red-50 text-slate-600 hover:text-red-600 py-2.5 rounded-xl transition-colors text-sm font-bold"
-                            >
-                              <Trash2 size={16} />
-                              <span>Eliminar</span>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              ) : (
-                /* Volunteer Requests Section */
-                <div className="space-y-6 animate-in fade-in duration-300">
-                  {/* Filters & Search */}
-                  <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-                    <div className="relative w-full md:w-1/3">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                      <input 
-                        type="text" 
-                        placeholder="Buscar por nombre o correo..."
-                        value={voluntarioSearch}
-                        onChange={e => setVoluntarioSearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:bg-white transition-all text-sm outline-none font-semibold text-slate-800"
-                      />
-                    </div>
-                    <div className="flex flex-col sm:flex-row w-full md:w-auto gap-3">
-                      {/* Activity Filter */}
-                      <div className="flex items-center space-x-2 w-full sm:w-auto">
-                        <Filter size={16} className="text-slate-400 hidden sm:block" />
-                        <select 
-                          value={voluntarioFilterActividad}
-                          onChange={e => setVoluntarioFilterActividad(e.target.value)}
-                          className="w-full sm:w-auto bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-900 appearance-none cursor-pointer font-bold"
-                        >
-                          <option value="Todas">Todas las Actividades</option>
-                          {actividades.map(act => (
-                            <option key={act.id} value={act.id}>{act.titulo}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Status Filter */}
-                      <select 
-                        value={voluntarioFilterEstado}
-                        onChange={e => setVoluntarioFilterEstado(e.target.value)}
-                        className="w-full sm:w-auto bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-900 appearance-none cursor-pointer font-bold"
-                      >
-                        <option value="Todos">Todos los Estados</option>
-                        <option value="Pendiente">Pendientes</option>
-                        <option value="Aprobado">Aprobados</option>
-                        <option value="Rechazado">Rechazados</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* List / Table */}
-                  {filteredVoluntarios.length === 0 ? (
-                    <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200/80 shadow-sm text-center">
-                      <Users className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                      <p className="text-slate-500 font-semibold text-base">No se encontraron solicitudes de voluntariado.</p>
-                      <p className="text-slate-400 text-xs mt-1">Las personas que se apunten en la web pública aparecerán aquí.</p>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Desktop Table View */}
-                      <div className="hidden lg:block bg-white rounded-[2.5rem] border border-slate-200/80 shadow-sm overflow-hidden">
-                        <div className="overflow-x-auto">
-                          <table className="w-full border-collapse text-left">
-                            <thead>
-                              <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold text-xs uppercase tracking-wider">
-                                <th className="py-6 px-6">Voluntario</th>
-                                <th className="py-6 px-6">Teléfono</th>
-                                <th className="py-6 px-6">Actividad</th>
-                                <th className="py-6 px-6">Fecha Registro</th>
-                                <th className="py-6 px-6">Mensaje / Motivación</th>
-                                <th className="py-6 px-6">Estado</th>
-                                <th className="py-6 px-6 text-right">Acciones</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                              {filteredVoluntarios.map(v => (
-                                <tr key={v.id} className="hover:bg-slate-50/30 transition-colors">
-                                  <td className="py-5 px-6">
-                                    <p className="font-extrabold text-slate-800 text-sm">{v.nombre}</p>
-                                    <p className="text-xs text-slate-450 mt-0.5">{v.correo}</p>
-                                  </td>
-                                  <td className="py-5 px-6">
-                                    <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg">
-                                      {v.telefono}
-                                    </span>
-                                  </td>
-                                  <td className="py-5 px-6 text-xs font-bold text-slate-700 max-w-[150px] truncate">
-                                    {v.actividadTitulo}
-                                  </td>
-                                  <td className="py-5 px-6 text-xs text-slate-500 font-semibold">
-                                    {new Date(v.fechaRegistro).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                  </td>
-                                  <td className="py-5 px-6 text-xs text-slate-650 max-w-xs truncate" title={v.mensaje}>
-                                    {v.mensaje || <span className="text-slate-350 italic">Sin mensaje</span>}
-                                  </td>
-                                  <td className="py-5 px-6">
-                                    <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider ${
-                                      v.estado === 'Aprobado' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                                      v.estado === 'Rechazado' ? 'bg-red-50 text-red-700 border border-red-200' :
-                                      'bg-amber-50 text-amber-700 border border-amber-200'
-                                    }`}>
-                                      {v.estado}
-                                    </span>
-                                  </td>
-                                  <td className="py-5 px-6 text-right">
-                                    <div className="flex items-center justify-end space-x-2">
-                                      {v.estado === 'Pendiente' && (
-                                        <>
-                                          <button
-                                            onClick={() => handleUpdateVoluntarioEstado(v.id, 'Aprobado')}
-                                            className="w-8 h-8 rounded-xl bg-green-50 hover:bg-green-500 text-green-600 hover:text-white flex items-center justify-center transition-all shadow-sm active:scale-95"
-                                            title="Aprobar Solicitud"
-                                          >
-                                            <Check size={16} />
-                                          </button>
-                                          <button
-                                            onClick={() => handleUpdateVoluntarioEstado(v.id, 'Rechazado')}
-                                            className="w-8 h-8 rounded-xl bg-red-50 hover:bg-red-500 text-red-600 hover:text-white flex items-center justify-center transition-all shadow-sm active:scale-95"
-                                            title="Rechazar Solicitud"
-                                          >
-                                            <X size={16} />
-                                          </button>
-                                        </>
-                                      )}
-                                      <button
-                                        onClick={() => handleDeleteVoluntario(v.id)}
-                                        className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-red-50 text-slate-500 hover:text-red-600 flex items-center justify-center transition-all shadow-sm active:scale-95"
-                                        title="Eliminar Registro"
-                                      >
-                                        <Trash2 size={16} />
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-
-                      {/* Mobile Cards View */}
-                      <div className="lg:hidden space-y-4">
-                        {filteredVoluntarios.map(v => (
-                          <div key={v.id} className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm space-y-4">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="font-extrabold text-slate-800 text-base">{v.nombre}</p>
-                                <p className="text-xs text-slate-450 mt-0.5">{v.correo}</p>
-                              </div>
-                              <span className={`text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                                v.estado === 'Aprobado' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                                v.estado === 'Rechazado' ? 'bg-red-50 text-red-700 border border-red-200' :
-                                'bg-amber-50 text-amber-700 border border-amber-200'
-                              }`}>
-                                {v.estado}
-                              </span>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-3">
-                              <div>
-                                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Actividad:</span>
-                                <p className="text-slate-750 font-extrabold mt-0.5">{v.actividadTitulo}</p>
-                              </div>
-                              <div>
-                                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Teléfono:</span>
-                                <p className="text-slate-750 font-extrabold mt-0.5">{v.telefono}</p>
-                              </div>
-                            </div>
-                            {v.mensaje && (
-                              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
-                                <span className="text-slate-450 font-bold uppercase tracking-wider text-[8px] block mb-1">Mensaje:</span>
-                                <p className="text-slate-650 font-medium italic">{v.mensaje}</p>
-                              </div>
-                            )}
-                            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                              {v.estado === 'Pendiente' && (
-                                <>
-                                  <button
-                                    onClick={() => handleUpdateVoluntarioEstado(v.id, 'Aprobado')}
-                                    className="px-3 py-1.5 rounded-xl bg-green-50 hover:bg-green-500 text-green-700 hover:text-white text-xs font-black transition-all shadow-sm active:scale-95 flex items-center gap-1"
-                                  >
-                                    <Check size={14} />
-                                    <span>Aprobar</span>
-                                  </button>
-                                  <button
-                                    onClick={() => handleUpdateVoluntarioEstado(v.id, 'Rechazado')}
-                                    className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-500 text-red-700 hover:text-white text-xs font-black transition-all shadow-sm active:scale-95 flex items-center gap-1"
-                                  >
-                                    <X size={14} />
-                                    <span>Rechazar</span>
-                                  </button>
-                                </>
-                              )}
-                              <button
-                                onClick={() => handleDeleteVoluntario(v.id)}
-                                className="p-2 rounded-xl bg-slate-50 hover:bg-red-50 text-slate-550 hover:text-red-600 transition-all active:scale-95"
-                                title="Eliminar"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+          {activeTab === 'calendario' && <AdminCalendario />}
 
           {/* TAB: CONTROL DE CUOTAS */}
-          {activeTab === 'cuotas' && (
-            <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              
-              {/* Header */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
-                  <h3 className="text-3xl font-black text-slate-800 tracking-tight">Cobros y Control de Cuotas</h3>
-                  <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Gestión Financiera de Aportaciones de Socios</p>
-                </div>
-                <button 
-                  onClick={() => {
-                    setRegistrarPagoData(prev => ({
-                      ...prev,
-                      socioId: '',
-                      monto: 100
-                    }));
-                    setShowRegistrarPagoModal(true);
-                  }}
-                  className="bg-green-600 hover:bg-green-700 text-white font-black px-6 py-3 rounded-xl flex items-center justify-center space-x-2 shadow-lg shadow-green-600/10 active:scale-95 transition-all w-full md:w-auto"
-                >
-                  <Plus size={18} />
-                  <span>Registrar Pago</span>
-                </button>
-              </div>
-
-              {/* KPI Widgets */}
-              {(() => {
-                const totalRecaudado = socios.reduce((sum, s) => {
-                  const pagosSocio = s.historialPagos?.reduce((pSum, p) => pSum + p.monto, 0) || 0;
-                  return sum + pagosSocio;
-                }, 0);
-                const totalPendiente = socios.reduce((sum, s) => sum + (s.montoPendiente || 0), 0);
-                const sociosAlDia = socios.filter(s => s.rol !== UserRole.DONANTE && s.rol !== UserRole.GUEST && s.estadoCuotas === 'Al día').length;
-                const sociosTotal = socios.filter(s => s.rol !== UserRole.DONANTE && s.rol !== UserRole.GUEST).length;
-                const porcentajeSolvencia = sociosTotal > 0 ? Math.round((sociosAlDia / sociosTotal) * 100) : 100;
-                const sociosEnMora = socios.filter(s => s.rol !== UserRole.DONANTE && s.rol !== UserRole.GUEST && s.estadoCuotas === 'En mora').length;
-
-                return (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
-                      <div className="p-3 bg-green-50 text-green-600 rounded-2xl">
-                        <TrendingUp size={24} />
-                      </div>
-                      <div>
-                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block">Total Recaudado</span>
-                        <span className="text-xl font-black text-slate-800">Q {totalRecaudado.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
-                      <div className="p-3 bg-red-50 text-red-600 rounded-2xl">
-                        <DollarSign size={24} />
-                      </div>
-                      <div>
-                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block">Monto por Cobrar</span>
-                        <span className="text-xl font-black text-slate-800">Q {totalPendiente.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
-                      <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
-                        <CheckCircle size={24} />
-                      </div>
-                      <div>
-                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block">Solvencia General</span>
-                        <span className="text-xl font-black text-slate-800">{porcentajeSolvencia}% ({sociosAlDia}/{sociosTotal})</span>
-                      </div>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
-                      <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl">
-                        <Clock size={24} />
-                      </div>
-                      <div>
-                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block">Socios en Mora</span>
-                        <span className="text-xl font-black text-slate-800">{sociosEnMora} Socios</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Controls: Search & Filter */}
-              <div className="bg-slate-50 p-4 rounded-3xl border border-slate-100 flex flex-col sm:flex-row gap-4 items-center justify-between">
-                <div className="relative w-full sm:flex-grow">
-                  <Search className="absolute left-4 top-3.5 text-slate-400" size={18} />
-                  <input
-                    type="text"
-                    value={socioSearch}
-                    onChange={e => setSocioSearch(e.target.value)}
-                    placeholder="Buscar socio por nombre, correo o código..."
-                    className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm shadow-sm"
-                  />
-                </div>
-                <div className="flex items-center space-x-3 w-full sm:w-auto flex-shrink-0">
-                  <Filter size={18} className="text-slate-400 flex-shrink-0 hidden xs:block" />
-                  <select 
-                    value={cuotasFilterStatus} 
-                    onChange={e => setCuotasFilterStatus(e.target.value as any)}
-                    className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-900 w-full sm:w-56 shadow-sm"
-                  >
-                    <option value="Todos">Todos los Estados</option>
-                    <option value="Al día">Al día</option>
-                    <option value="Pendiente">Pendiente</option>
-                    <option value="En mora">En mora</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Members Cuotas List / Table */}
-              <div className="bg-white rounded-[2.5rem] border border-slate-200/80 shadow-sm overflow-hidden">
-                
-                {/* Desktop View: Table */}
-                <div className="hidden lg:block overflow-x-auto">
-                  <table className="w-full border-collapse text-left">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold text-xs uppercase tracking-wider">
-                        <th className="py-6 px-6">Socio</th>
-                        <th className="py-6 px-6">Estado</th>
-                        <th className="py-6 px-6">Historial Visual (2026)</th>
-                        <th className="py-6 px-6">Monto Pendiente</th>
-                        <th className="py-6 px-6 text-right">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {filteredSociosCuotas.map(s => {
-                        const isExpanded = selectedSocioForCuotas === s.id;
-                        
-                        // Determine payment types for visual rendering
-                        const hasSemestral = s.historialPagos?.some(p => p.tipoPeriodo === 'Semestral');
-                        const hasAnual = s.historialPagos?.some(p => p.tipoPeriodo === 'Anual');
-
-                        return (
-                          <React.Fragment key={s.id}>
-                            <tr className={`hover:bg-slate-50/30 transition-colors cursor-pointer ${isExpanded ? 'bg-blue-50/20' : ''}`} onClick={() => setSelectedSocioForCuotas(isExpanded ? null : s.id)}>
-                              <td className="py-5 px-6 flex items-center space-x-4">
-                                <img 
-                                  src={s.foto} 
-                                  alt={s.nombre} 
-                                  className="w-10 h-10 rounded-full border border-slate-100 object-cover cursor-zoom-in" 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedPhoto({ url: s.foto, title: s.nombre });
-                                  }}
-                                />
-                                <div>
-                                  <p className="font-extrabold text-slate-800">{s.nombre}</p>
-                                  <p className="text-xs text-slate-450 mt-0.5">{s.codigoSocio || 'Sin código'} • {s.correo}</p>
-                                </div>
-                              </td>
-                              <td className="py-5 px-6">
-                                <span className={`text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${
-                                  s.estadoCuotas === 'Al día' 
-                                    ? 'bg-green-50 text-green-700 border border-green-200/50' 
-                                    : s.estadoCuotas === 'Pendiente' 
-                                      ? 'bg-yellow-50 text-yellow-700 border border-yellow-200/50' 
-                                      : 'bg-red-50 text-red-700 border border-red-200/50'
-                                }`}>
-                                  {s.estadoCuotas}
-                                </span>
-                              </td>
-                              <td className="py-5 px-6" onClick={(e) => e.stopPropagation()}>
-                                <div className="flex items-center gap-1">
-                                  {hasAnual ? (
-                                    // Render Annual badge
-                                    (() => {
-                                      const paid = s.historialPagos?.some(p => p.tipoPeriodo === 'Anual' && p.periodo.includes('2026'));
-                                      return (
-                                        <div 
-                                          title={paid ? "Anual 2026 Pagado" : "Anual 2026 Pendiente"} 
-                                          className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider ${
-                                            paid ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-slate-100 text-slate-400 border border-slate-200'
-                                          }`}
-                                        >
-                                          Anual 2026
-                                        </div>
-                                      );
-                                    })()
-                                  ) : hasSemestral ? (
-                                    // Render Semestral badges
-                                    ['1er Semestre', '2do Semestre'].map((sem, idx) => {
-                                      const paid = s.historialPagos?.some(p => p.tipoPeriodo === 'Semestral' && p.periodo.includes(sem));
-                                      return (
-                                        <div 
-                                          key={idx}
-                                          title={`${sem} 2026: ${paid ? 'Pagado' : 'Pendiente'}`}
-                                          className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
-                                            paid ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-slate-100 text-slate-400 border border-slate-200'
-                                          }`}
-                                        >
-                                          {idx === 0 ? 'Semestre 1' : 'Semestre 2'}
-                                        </div>
-                                      );
-                                    })
-                                  ) : (
-                                    // Render Monthly badges (12 months)
-                                    ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'].map((month, idx) => {
-                                      const fullMonthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-                                      const paid = s.historialPagos?.some(p => p.tipoPeriodo === 'Mensual' && p.periodo.includes(fullMonthNames[idx]));
-                                      
-                                      // If month has passed (0-indexed current month is e.g. June=5) and unpaid
-                                      const currentMonthIdx = new Date().getMonth();
-                                      const isPastUnpaid = idx <= currentMonthIdx && !paid;
-                                      
-                                      return (
-                                        <div 
-                                          key={idx}
-                                          title={`${fullMonthNames[idx]} 2026: ${paid ? 'Pagado' : isPastUnpaid ? 'Atrasado' : 'Próximo'}`}
-                                          className={`w-6 h-6 rounded-md flex items-center justify-center text-[9px] font-black uppercase border ${
-                                            paid 
-                                              ? 'bg-green-500 text-white border-green-600' 
-                                              : isPastUnpaid 
-                                                ? 'bg-red-500 text-white border-red-600 animate-pulse'
-                                                : 'bg-slate-100 text-slate-400 border-slate-200'
-                                          }`}
-                                        >
-                                          {month.substring(0, 1)}
-                                        </div>
-                                      );
-                                    })
-                                  )}
-                                </div>
-                              </td>
-                              <td className="py-5 px-6 font-extrabold text-slate-800 text-base">Q {s.montoPendiente.toFixed(2)}</td>
-                              <td className="py-5 px-6 text-right" onClick={(e) => e.stopPropagation()}>
-                                <div className="flex items-center justify-end space-x-2">
-                                  <button
-                                    onClick={() => handleRegistrarPago(s.id)}
-                                    className="bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 px-3.5 py-2 rounded-xl font-bold text-xs transition-colors flex items-center space-x-1 shadow-sm"
-                                    title="Registrar aportación"
-                                  >
-                                    <Check size={14} />
-                                    <span>Cobrar</span>
-                                  </button>
-                                  <button
-                                    onClick={() => handleEnviarRecordatorio(s)}
-                                    className="bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 p-2 rounded-xl font-bold text-xs transition-colors shadow-sm"
-                                    title="Enviar aviso por correo"
-                                  >
-                                    <Send size={14} />
-                                  </button>
-                                  <div className="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition-colors">
-                                    <ChevronDown className={`transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} size={16} onClick={() => setSelectedSocioForCuotas(isExpanded ? null : s.id)} />
-                                  </div>
-                                </div>
-                              </td>
-                            </tr>
-                            
-                            {/* Expanded Detail Panel */}
-                            {isExpanded && (
-                              <tr>
-                                <td colSpan={5} className="bg-slate-50/50 p-6 border-b border-slate-100">
-                                  <div className="space-y-6 max-w-5xl mx-auto">
-                                    
-                                    {/* Warnings Section */}
-                                    {s.estadoCuotas === 'En mora' ? (
-                                      <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-red-800 flex items-start space-x-3 text-sm">
-                                        <AlertTriangle className="text-red-500 mt-0.5 flex-shrink-0" size={18} />
-                                        <div>
-                                          <span className="font-extrabold block">Alerta de Atraso Crítico (En Mora)</span>
-                                          <p className="mt-1 leading-relaxed">
-                                            El socio presenta un atraso mayor a 60 días con un saldo pendiente acumulado de <strong className="font-black">Q {s.montoPendiente.toFixed(2)}</strong>. 
-                                            Su último pago registrado fue el <strong className="font-bold">{s.fechaUltimoPago || 'No registrado'}</strong>. 
-                                            Se recomienda suspender temporalmente sus beneficios corporativos y enviar una notificación formal de cobro.
-                                          </p>
-                                        </div>
-                                      </div>
-                                    ) : s.estadoCuotas === 'Pendiente' ? (
-                                      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-amber-800 flex items-start space-x-3 text-sm">
-                                        <AlertCircle className="text-amber-500 mt-0.5 flex-shrink-0" size={18} />
-                                        <div>
-                                          <span className="font-extrabold block">Aviso de Cuota Pendiente</span>
-                                          <p className="mt-1 leading-relaxed">
-                                            El socio tiene un pago pendiente por valor de <strong className="font-black">Q {s.montoPendiente.toFixed(2)}</strong>. 
-                                            Su cuenta se encuentra activa pero requiere ponerse al día a la brevedad.
-                                          </p>
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-green-800 flex items-start space-x-3 text-sm">
-                                        <CheckCircle className="text-green-500 mt-0.5 flex-shrink-0" size={18} />
-                                        <div>
-                                          <span className="font-extrabold block">Cuenta Solvente</span>
-                                          <p className="mt-1 leading-relaxed">
-                                            El socio se encuentra al día con sus cuotas obligatorias. ¡Gracias por su puntualidad! 
-                                            Último pago registrado el <strong className="font-bold">{s.fechaUltimoPago || 'N/A'}</strong>.
-                                          </p>
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* Payments History Table */}
-                                    <div className="space-y-3">
-                                      <h5 className="font-extrabold text-slate-800 text-sm flex items-center space-x-2">
-                                        <CreditCard size={16} className="text-blue-900" />
-                                        <span>Historial Detallado de Transacciones</span>
-                                      </h5>
-                                      
-                                      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                                        <table className="w-full text-left border-collapse text-xs">
-                                          <thead>
-                                            <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 font-bold uppercase tracking-wider">
-                                              <th className="p-4">Fecha Pago</th>
-                                              <th className="p-4">Período Aportación</th>
-                                              <th className="p-4">Tipo</th>
-                                              <th className="p-4">Monto</th>
-                                              <th className="p-4">Método</th>
-                                              <th className="p-4">Referencia / Banco</th>
-                                              <th className="p-4 text-right">Comprobante</th>
-                                            </tr>
-                                          </thead>
-                                          <tbody className="divide-y divide-slate-100 text-slate-650">
-                                            {s.historialPagos && s.historialPagos.length > 0 ? (
-                                              s.historialPagos.map(pago => (
-                                                <tr key={pago.id} className="hover:bg-slate-50/40">
-                                                  <td className="p-4 font-semibold">{pago.fechaPago}</td>
-                                                  <td className="p-4 font-bold text-slate-800">{pago.periodo}</td>
-                                                  <td className="p-4">{pago.tipoPeriodo}</td>
-                                                  <td className="p-4 font-extrabold text-slate-800">Q {pago.monto.toFixed(2)}</td>
-                                                  <td className="p-4">
-                                                    <span className={`px-2 py-0.5 rounded-md font-bold text-[9px] uppercase ${
-                                                      pago.metodo === 'Transferencia' ? 'bg-blue-50 text-blue-700' : pago.metodo === 'Depósito' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'
-                                                    }`}>
-                                                      {pago.metodo}
-                                                    </span>
-                                                  </td>
-                                                  <td className="p-4">
-                                                    {pago.metodo !== 'Efectivo' ? (
-                                                      <span>{pago.numeroReferencia || 'S/N'} • <span className="font-bold">{pago.bancoReferencia || 'N/A'}</span></span>
-                                                    ) : (
-                                                      <span className="text-slate-400 italic">Efectivo</span>
-                                                    )}
-                                                  </td>
-                                                  <td className="p-4 text-right">
-                                                    <button
-                                                      onClick={() => generateReciboPagoPDF(s, pago)}
-                                                      className="text-blue-900 hover:text-blue-800 font-black flex items-center space-x-1 ml-auto border border-blue-200/50 hover:bg-blue-50/50 px-2.5 py-1.5 rounded-lg shadow-sm transition-all"
-                                                      title="Descargar PDF"
-                                                    >
-                                                      <Download size={12} />
-                                                      <span>Recibo PDF</span>
-                                                    </button>
-                                                  </td>
-                                                </tr>
-                                              ))
-                                            ) : (
-                                              <tr>
-                                                <td colSpan={7} className="p-8 text-center text-slate-400 italic bg-slate-50/20">
-                                                  No se han registrado transacciones de aportaciones para este socio.
-                                                </td>
-                                              </tr>
-                                            )}
-                                          </tbody>
-                                        </table>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </td>
-                              </tr>
-                            )}
-                          </React.Fragment>
-                        );
-                      })}
-                      {filteredSociosCuotas.length === 0 && (
-                        <tr>
-                          <td colSpan={5} className="text-center py-12 text-slate-400 italic">
-                            No se encontraron socios con esos criterios.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Mobile View: Cards */}
-                <div className="block lg:hidden divide-y divide-slate-100">
-                  {filteredSociosCuotas.map(s => {
-                    const isExpanded = selectedSocioForCuotas === s.id;
-                    const hasSemestral = s.historialPagos?.some(p => p.tipoPeriodo === 'Semestral');
-                    const hasAnual = s.historialPagos?.some(p => p.tipoPeriodo === 'Anual');
-
-                    return (
-                      <div key={s.id} className="hover:bg-slate-50/20 transition-colors">
-                        {/* Main row card */}
-                        <div className="p-6 space-y-4 cursor-pointer" onClick={() => setSelectedSocioForCuotas(isExpanded ? null : s.id)}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3 min-w-0">
-                              <img 
-                                src={s.foto} 
-                                alt={s.nombre} 
-                                className="w-11 h-11 rounded-full border border-slate-100 object-cover cursor-zoom-in flex-shrink-0" 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedPhoto({ url: s.foto, title: s.nombre });
-                                }}
-                              />
-                              <div className="min-w-0">
-                                <h4 className="font-extrabold text-slate-800 text-sm leading-tight break-words">{s.nombre}</h4>
-                                <p className="text-[10px] text-slate-450 font-bold uppercase tracking-wider mt-0.5">{s.codigoSocio || 'Sin código'}</p>
-                              </div>
-                            </div>
-                            <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider border flex-shrink-0 ${
-                              s.estadoCuotas === 'Al día' 
-                                ? 'bg-green-50 text-green-700 border-green-200' 
-                                : s.estadoCuotas === 'Pendiente' 
-                                  ? 'bg-yellow-50 text-yellow-700 border-yellow-200' 
-                                  : 'bg-red-50 text-red-700 border-red-200'
-                            }`}>
-                              {s.estadoCuotas}
-                            </span>
-                          </div>
-
-                          {/* Visual mini history */}
-                          <div className="space-y-1.5" onClick={(e) => e.stopPropagation()}>
-                            <span className="text-slate-400 text-[9px] uppercase tracking-wider font-bold block">Historial aportaciones 2026:</span>
-                            <div className="flex items-center gap-1 flex-wrap">
-                              {hasAnual ? (
-                                (() => {
-                                  const paid = s.historialPagos?.some(p => p.tipoPeriodo === 'Anual' && p.periodo.includes('2026'));
-                                  return (
-                                    <div className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
-                                      paid ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-slate-150 text-slate-400 border border-slate-200'
-                                    }`}>
-                                      Anual 2026
-                                    </div>
-                                  );
-                                })()
-                              ) : hasSemestral ? (
-                                ['1er Semestre', '2do Semestre'].map((sem, idx) => {
-                                  const paid = s.historialPagos?.some(p => p.tipoPeriodo === 'Semestral' && p.periodo.includes(sem));
-                                  return (
-                                    <div 
-                                      key={idx}
-                                      className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${
-                                        paid ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-slate-100 text-slate-400 border border-slate-200'
-                                      }`}
-                                    >
-                                      Semestre {idx + 1}
-                                    </div>
-                                  );
-                                })
-                              ) : (
-                                ['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'].map((month, idx) => {
-                                  const fullMonthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-                                  const paid = s.historialPagos?.some(p => p.tipoPeriodo === 'Mensual' && p.periodo.includes(fullMonthNames[idx]));
-                                  const currentMonthIdx = new Date().getMonth();
-                                  const isPastUnpaid = idx <= currentMonthIdx && !paid;
-
-                                  return (
-                                    <div 
-                                      key={idx}
-                                      className={`w-5 h-5 rounded flex items-center justify-center text-[8px] font-black uppercase border ${
-                                        paid 
-                                          ? 'bg-green-500 text-white border-green-600' 
-                                          : isPastUnpaid 
-                                            ? 'bg-red-500 text-white border-red-600'
-                                            : 'bg-slate-100 text-slate-400 border-slate-200'
-                                      }`}
-                                    >
-                                      {month}
-                                    </div>
-                                  );
-                                })
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                            <div>
-                              <span className="text-slate-400 text-[9px] uppercase tracking-wider font-bold block">Pendiente</span>
-                              <span className="font-extrabold text-slate-800 text-sm">Q {s.montoPendiente.toFixed(2)}</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRegistrarPago(s.id);
-                                }}
-                                className="bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 px-3 py-2 rounded-xl font-bold text-xs transition-colors flex items-center space-x-1"
-                              >
-                                <Check size={12} />
-                                <span>Cobrar</span>
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEnviarRecordatorio(s);
-                                }}
-                                className="bg-slate-50 text-slate-600 border border-slate-200 p-2.5 rounded-xl transition-colors"
-                              >
-                                <Send size={12} />
-                              </button>
-                              <div className="p-2 text-slate-400">
-                                <ChevronDown className={`transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} size={16} />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Mobile Expanded detail panel */}
-                        {isExpanded && (
-                          <div className="bg-slate-50 p-4 border-t border-slate-100 space-y-4 text-xs">
-                            
-                            {/* Alert Warnings */}
-                            {s.estadoCuotas === 'En mora' ? (
-                              <div className="bg-red-50 border border-red-200 rounded-xl p-3.5 text-red-800 flex items-start space-x-2">
-                                <AlertTriangle className="text-red-500 mt-0.5 flex-shrink-0" size={16} />
-                                <div>
-                                  <span className="font-bold block text-[11px]">Atraso Crítico (En Mora)</span>
-                                  <p className="mt-1 leading-relaxed text-[10px]">
-                                    Atraso mayor a 60 días. Saldo pendiente acumulado: <strong>Q {s.montoPendiente.toFixed(2)}</strong>.
-                                    Último pago registrado el <strong>{s.fechaUltimoPago || 'No registrado'}</strong>.
-                                  </p>
-                                </div>
-                              </div>
-                            ) : s.estadoCuotas === 'Pendiente' ? (
-                              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-amber-800 flex items-start space-x-2">
-                                <AlertCircle className="text-amber-500 mt-0.5 flex-shrink-0" size={16} />
-                                <div>
-                                  <span className="font-bold block text-[11px]">Cuota Pendiente</span>
-                                  <p className="mt-1 leading-relaxed text-[10px]">
-                                    Saldo pendiente: <strong>Q {s.montoPendiente.toFixed(2)}</strong>.
-                                  </p>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="bg-green-50 border border-green-200 rounded-xl p-3.5 text-green-800 flex items-start space-x-2">
-                                <CheckCircle className="text-green-500 mt-0.5 flex-shrink-0" size={16} />
-                                <div>
-                                  <span className="font-bold block text-[11px]">Cuenta Solvente</span>
-                                  <p className="mt-1 leading-relaxed text-[10px]">
-                                    Al día. Último pago: <strong>{s.fechaUltimoPago || 'N/A'}</strong>.
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Detailed Payment History List */}
-                            <div className="space-y-3">
-                              <h5 className="font-extrabold text-slate-800 text-xs flex items-center space-x-2">
-                                <CreditCard size={14} className="text-blue-900" />
-                                <span>Historial de Pagos</span>
-                              </h5>
-
-                              {s.historialPagos && s.historialPagos.length > 0 ? (
-                                <div className="space-y-2">
-                                  {s.historialPagos.map(pago => (
-                                    <div key={pago.id} className="bg-white p-3 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between gap-2">
-                                      <div className="space-y-0.5">
-                                        <p className="font-bold text-slate-800 text-[11px]">{pago.periodo} ({pago.tipoPeriodo})</p>
-                                        <p className="text-[10px] text-slate-450">Fecha: {pago.fechaPago} • {pago.metodo}</p>
-                                        {pago.metodo !== 'Efectivo' && (
-                                          <p className="text-[9px] text-slate-500 font-medium">Ref: {pago.numeroReferencia} ({pago.bancoReferencia})</p>
-                                        )}
-                                      </div>
-                                      <div className="text-right flex flex-col items-end gap-1.5">
-                                        <span className="font-extrabold text-slate-800 text-xs">Q {pago.monto.toFixed(2)}</span>
-                                        <button
-                                          onClick={() => generateReciboPagoPDF(s, pago)}
-                                          className="text-blue-900 font-bold border border-blue-100 hover:bg-blue-50 px-2 py-1 rounded-md text-[9px] flex items-center space-x-1"
-                                        >
-                                          <Download size={10} />
-                                          <span>Recibo</span>
-                                        </button>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="text-center text-slate-400 italic py-4 bg-white rounded-xl border border-slate-200">
-                                  No hay transacciones registradas.
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {filteredSociosCuotas.length === 0 && (
-                    <div className="text-center py-12 text-slate-450 italic">
-                      No se encontraron socios con esos criterios.
-                    </div>
-                  )}
-                </div>
-
-              </div>
-            </div>
-          )}
+          {activeTab === 'cuotas' && <AdminCuotas />}
 
           {/* TAB: LIBRO DE ACTAS */}
-          {activeTab === 'actas' && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              {showAddActa ? (
-                <div className="bg-white rounded-3xl sm:rounded-[2.5rem] p-4 sm:p-10 md:p-14 border border-slate-200/80 shadow-sm space-y-6 sm:space-y-10 animate-in fade-in duration-300">
-                  
-                  {/* Header */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-slate-100 gap-4">
-                    <div>
-                      <h4 className="text-2xl sm:text-3xl font-black text-blue-900 tracking-tight">Redactar Acta de Sesión</h4>
-                      <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Estandarización y Gestión Digital</p>
-                    </div>
-                    <button 
-                      type="button" 
-                      onClick={() => setShowAddActa(false)} 
-                      className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold px-5 py-2.5 rounded-xl transition-all text-sm flex items-center space-x-1.5 self-start sm:self-auto shadow-sm"
-                    >
-                      <X size={16} />
-                      <span>Volver al Listado</span>
-                    </button>
-                  </div>
-
-                  {/* Step Indicator */}
-                  {/* Mobile Compact Progress */}
-                  <div className="block md:hidden text-center space-y-2 mb-6">
-                    <div className="flex justify-between items-center text-xs font-black text-slate-400 uppercase tracking-wider px-1">
-                      <span>Redacción de Acta</span>
-                      <span className="text-amber-600 font-extrabold">
-                        Paso {['datos', 'asistencia', 'protocolo', 'solicitudes', 'libre', 'vista_previa'].indexOf(actaWizardStep) + 1} de 6
-                      </span>
-                    </div>
-                    <div className="text-base font-extrabold text-blue-900">
-                      {actaWizardStep === 'datos' && 'Datos Generales de la Sesión'}
-                      {actaWizardStep === 'asistencia' && 'Control de Asistencia y Quórum'}
-                      {actaWizardStep === 'protocolo' && 'Puntos de Protocolo'}
-                      {actaWizardStep === 'solicitudes' && 'Resolución de Solicitudes'}
-                      {actaWizardStep === 'libre' && 'Redacción de Agenda Libre'}
-                      {actaWizardStep === 'vista_previa' && 'Previsualización y Publicación'}
-                    </div>
-                    <div className="h-2 bg-slate-100 rounded-full w-full overflow-hidden mt-1 shadow-inner">
-                      <div 
-                        className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
-                        style={{ width: `${((['datos', 'asistencia', 'protocolo', 'solicitudes', 'libre', 'vista_previa'].indexOf(actaWizardStep) + 1) / 6) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  {/* Desktop Full Stepper */}
-                  <div className="hidden md:flex justify-between items-center relative my-8 px-8">
-                    <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 h-1 bg-slate-100 rounded-full z-0"></div>
-                    <div 
-                      className="absolute left-8 top-1/2 -translate-y-1/2 h-1 bg-amber-500 rounded-full z-0 transition-all duration-500"
-                      style={{ width: `${(['datos', 'asistencia', 'protocolo', 'solicitudes', 'libre', 'vista_previa'].indexOf(actaWizardStep)) * 20}%` }}
-                    ></div>
-                    
-                    {[
-                      { id: 'datos', label: 'Datos', icon: FileText },
-                      { id: 'asistencia', label: 'Asistencia', icon: Users },
-                      { id: 'protocolo', label: 'Protocolo', icon: Building },
-                      { id: 'solicitudes', label: 'Solicitudes', icon: Mail },
-                      { id: 'libre', label: 'Agenda', icon: Briefcase },
-                      { id: 'vista_previa', label: 'Previa', icon: CheckCircle }
-                    ].map((s, idx) => {
-                      const active = actaWizardStep === s.id;
-                      const past = idx <= ['datos', 'asistencia', 'protocolo', 'solicitudes', 'libre', 'vista_previa'].indexOf(actaWizardStep);
-                      const Icon = s.icon;
-                      return (
-                        <button 
-                          key={s.id}
-                          type="button"
-                          onClick={() => setActaWizardStep(s.id as any)}
-                          className={`relative z-10 flex flex-col items-center gap-2 focus:outline-none group`}
-                        >
-                          <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm ${
-                            active 
-                              ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-orange-500/30 scale-110 ring-4 ring-orange-50' 
-                              : past
-                                ? 'bg-amber-100 text-amber-600'
-                                : 'bg-white text-slate-300 border-2 border-slate-100 group-hover:border-amber-200 group-hover:text-amber-400'
-                          }`}>
-                            <Icon size={active ? 20 : 18} />
-                          </div>
-                          <span className={`text-xs font-bold transition-colors ${
-                            active ? 'text-orange-600' : past ? 'text-amber-600' : 'text-slate-400'
-                          }`}>
-                            <span className="hidden md:inline">{idx + 1}. </span>{s.label}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Form Step Contents */}
-                  <div className="py-2">
-                    {actaWizardStep === 'datos' && (
-                      <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 max-w-3xl mx-auto">
-                        <div className="bg-slate-50/50 rounded-3xl p-4 sm:p-8 space-y-6 border border-slate-100/60 shadow-sm text-left">
-                          
-                          {/* Importar Agenda de Reunión */}
-                          <div className="bg-amber-50/60 border border-amber-200/80 p-5 rounded-2xl space-y-3">
-                            <label className="block text-xs font-black text-amber-900 uppercase tracking-widest">
-                              ¿Deseas pre-cargar una Agenda de Reunión?
-                            </label>
-                            <p className="text-[11px] text-slate-550 leading-relaxed">
-                              Si el presidente finalizó la agenda de esta reunión, puedes seleccionarla a continuación para auto-completar el título, lugar de sesión y cargar todos sus puntos de debate.
-                            </p>
-                            <select
-                              onChange={(e) => {
-                                if (e.target.value) {
-                                  handleImportAgendaToActa(e.target.value);
-                                  e.target.value = ""; // reset
-                                }
-                              }}
-                              className="w-full px-4 py-2.5 bg-white border border-amber-250/65 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none text-xs font-semibold text-slate-700 cursor-pointer"
-                            >
-                              <option value="">-- Seleccionar Agenda para Importar --</option>
-                              {(agendas || [])
-                                .filter(a => a.estado === 'Finalizada')
-                                .filter(a => {
-                                  const cat = a.categoria || 'ordinaria';
-                                  if (actaWizardData.categoria === 'Ordinaria') {
-                                    return cat === 'ordinaria';
-                                  }
-                                  if (actaWizardData.categoria === 'Extraordinaria') {
-                                    return cat === 'extraordinaria';
-                                  }
-                                  if (actaWizardData.categoria === 'Reunión de Comisión') {
-                                    return cat === 'comisiones';
-                                  }
-                                  return false;
-                                })
-                                .map(a => (
-                                  <option key={a.id} value={a.id}>{a.fecha} - {a.titulo}</option>
-                                ))}
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2">Título de la Sesión</label>
-                            <input 
-                              type="text"
-                              value={actaWizardData.titulo}
-                              onChange={e => setActaWizardData(prev => ({ ...prev, titulo: e.target.value }))}
-                              placeholder="Ej. Sesión Ordinaria de Junta Directiva No. 05-2026"
-                              className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold text-slate-800"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2">Categoría de Sesión</label>
-                            <select
-                              value={actaWizardData.categoria}
-                              onChange={e => setActaWizardData(prev => ({ ...prev, categoria: e.target.value as any }))}
-                              className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-bold text-slate-700"
-                            >
-                              <option value="Ordinaria">Ordinaria</option>
-                              <option value="Extraordinaria">Extraordinaria</option>
-                              <option value="Reunión de Comisión">Reunión de Comisión</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2">Número de Acta</label>
-                            <input 
-                              type="text"
-                              value={actaWizardData.numeroActa}
-                              onChange={e => setActaWizardData(prev => ({ ...prev, numeroActa: e.target.value }))}
-                              placeholder="Ej. 5"
-                              className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold text-slate-800"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2">Lugar Preestablecido (con Ciudad al inicio)</label>
-                            <input 
-                              type="text"
-                              value={actaWizardData.lugar}
-                              onChange={e => setActaWizardData(prev => ({ ...prev, lugar: e.target.value }))}
-                              placeholder="Ej. Quetzaltenango..."
-                              className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold text-slate-800"
-                            />
-                          </div>
-                          <div>
-                            <div className="flex justify-between items-center mb-2">
-                              <label className="block text-sm font-bold text-slate-700">Fecha y Hora Automática (Numérica y Escrita)</label>
-                              <button 
-                                type="button"
-                                onClick={() => setActaWizardData(prev => ({ ...prev, fechaHoraText: getWrittenDateTimeSpanish(new Date()) }))}
-                                className="text-[10px] font-black text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg uppercase tracking-wider hover:bg-amber-100 flex items-center space-x-1 transition-colors"
-                              >
-                                <Clock size={12} />
-                                <span>Refrescar hora</span>
-                              </button>
-                            </div>
-                            <input 
-                              type="text"
-                              disabled
-                              value={actaWizardData.fechaHoraText}
-                              className="w-full px-5 py-3.5 bg-slate-100/50 border border-slate-200 rounded-2xl text-slate-500 font-semibold text-sm outline-none cursor-not-allowed"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {actaWizardStep === 'asistencia' && (
-                      <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 max-w-5xl mx-auto text-left">
-                        <div className="bg-slate-50/50 rounded-3xl p-4 sm:p-8 border border-slate-100/60 shadow-sm space-y-6">
-                          
-                          {/* Attendance stats */}
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/60 shadow-sm">
-                            <div className="text-center sm:border-r border-slate-100 py-2">
-                              <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Total de Miembros</span>
-                              <span className="text-2xl font-black text-slate-800">{socios.length}</span>
-                            </div>
-                            <div className="text-center sm:border-r border-slate-100 py-2">
-                              <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Presentes (Quórum)</span>
-                              <span className="text-2xl font-black text-amber-500">{(actaWizardData.asistencia || []).length}</span>
-                            </div>
-                            <div className="text-center py-2">
-                              <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider">Ausentes</span>
-                              <span className="text-2xl font-black text-slate-400">{socios.length - (actaWizardData.asistencia || []).length}</span>
-                            </div>
-                          </div>
-
-                          {/* Search and Columns */}
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            
-                            {/* Absent Column (Search & Add) */}
-                            <div className="space-y-4">
-                              <h5 className="font-extrabold text-slate-700 text-sm flex items-center justify-between">
-                                <span>Buscar y Marcar Asistencia</span>
-                                <span className="bg-slate-200 text-slate-700 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">
-                                  {filteredAbsentSocios.length} Disponibles
-                                </span>
-                              </h5>
-                              
-                              <div className="relative">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                                <input
-                                  type="text"
-                                  value={asistenciaSearch}
-                                  onChange={e => setAsistenciaSearch(e.target.value)}
-                                  onKeyDown={handleAsistenciaSearchKeyDown}
-                                  placeholder="Buscar por nombre o puesto... (Enter para marcar el 1ro)"
-                                  className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold text-slate-800 shadow-sm"
-                                />
-                              </div>
-
-                              <div className="bg-white border border-slate-200/80 rounded-2xl max-h-[400px] overflow-y-auto divide-y divide-slate-100 shadow-sm">
-                                {filteredAbsentSocios.length === 0 ? (
-                                  <div className="p-8 text-center text-slate-400 text-xs italic font-medium">
-                                    {asistenciaSearch ? 'No se encontraron miembros coincidentes.' : 'Todos los miembros han sido marcados como presentes.'}
-                                  </div>
-                                ) : (
-                                  filteredAbsentSocios.map(member => (
-                                    <div 
-                                      key={member.id} 
-                                      onClick={() => handleMarkPresent(member.id)}
-                                      className="p-3.5 flex items-center justify-between hover:bg-slate-50 cursor-pointer transition-colors group"
-                                    >
-                                      <div className="flex items-center space-x-3">
-                                        <img 
-                                          src={member.foto || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=60'} 
-                                          alt={member.nombre} 
-                                          className="w-9 h-9 rounded-full object-cover border border-slate-100 shadow-sm"
-                                          onError={(e) => {
-                                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=60';
-                                          }}
-                                        />
-                                        <div>
-                                          <p className="text-sm font-extrabold text-slate-700 group-hover:text-amber-600 transition-colors leading-tight">{member.nombre}</p>
-                                          {member.puesto && <p className="text-[10px] font-black text-slate-400 uppercase tracking-wide mt-0.5">{member.puesto}</p>}
-                                        </div>
-                                      </div>
-                                      <button
-                                        type="button"
-                                        className="bg-slate-100 hover:bg-amber-100 text-slate-500 hover:text-amber-600 p-2 rounded-xl transition-all active:scale-90"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleMarkPresent(member.id);
-                                        }}
-                                      >
-                                        <Plus size={16} />
-                                      </button>
-                                    </div>
-                                  ))
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Present Column (Quorum / Remove) */}
-                            <div className="space-y-4">
-                              <h5 className="font-extrabold text-slate-700 text-sm flex items-center justify-between">
-                                <span>Miembros Presentes en Reunión</span>
-                                <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase">
-                                  {presentSocios.length} Marcados
-                                </span>
-                              </h5>
-
-                              <div className="bg-white border border-slate-200/80 rounded-2xl max-h-[460px] overflow-y-auto divide-y divide-slate-100 shadow-sm">
-                                {presentSocios.length === 0 ? (
-                                  <div className="p-12 text-center text-slate-400 text-sm italic font-medium">
-                                    No se ha marcado asistencia aún. Utiliza la lista de la izquierda para agregar miembros.
-                                  </div>
-                                ) : (
-                                  presentSocios.map((member, index) => (
-                                    <div 
-                                      key={member.id} 
-                                      className="p-3.5 flex items-center justify-between hover:bg-slate-50/50 transition-colors"
-                                    >
-                                      <div className="flex items-center space-x-3">
-                                        <span className="text-[10px] font-black text-slate-400 w-5 text-right">{index + 1}.</span>
-                                        <img 
-                                          src={member.foto || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=60'} 
-                                          alt={member.nombre} 
-                                          className="w-9 h-9 rounded-full object-cover border border-slate-100 shadow-sm"
-                                          onError={(e) => {
-                                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=60';
-                                          }}
-                                        />
-                                        <div>
-                                          <p className="text-sm font-extrabold text-slate-805 leading-tight">{member.nombre}</p>
-                                          {member.puesto && <p className="text-[10px] font-black text-amber-600 uppercase tracking-wide mt-0.5">{member.puesto}</p>}
-                                        </div>
-                                      </div>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleMarkAbsent(member.id)}
-                                        className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all active:scale-90"
-                                        title="Remover de asistencia"
-                                      >
-                                        <X size={16} />
-                                      </button>
-                                    </div>
-                                  ))
-                                )}
-                              </div>
-                            </div>
-
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {actaWizardStep === 'protocolo' && (
-                      <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 max-w-3xl mx-auto">
-                        {/* Invocación */}
-                        <div className="bg-slate-50/50 p-4 sm:p-8 rounded-3xl border border-slate-100/60 shadow-sm space-y-6">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <h5 className="text-lg font-extrabold text-blue-900 flex items-center">
-                              <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xs mr-3">1</span>
-                              Invocación Leonística
-                            </h5>
-                            
-                            <div className="flex bg-white p-1.5 rounded-2xl border border-slate-200/60 w-fit shadow-sm">
-                              <button
-                                type="button"
-                                onClick={() => setActaWizardData(prev => ({ ...prev, invocacionResponsableType: 'socio' }))}
-                                className={`px-4 py-1.5 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all ${
-                                  actaWizardData.invocacionResponsableType === 'socio' 
-                                    ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' 
-                                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
-                                }`}
-                              >
-                                Socio Activo
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setActaWizardData(prev => ({ ...prev, invocacionResponsableType: 'invitado' }))}
-                                className={`px-4 py-1.5 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all ${
-                                  actaWizardData.invocacionResponsableType === 'invitado' 
-                                    ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' 
-                                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
-                                }`}
-                              >
-                                Invitado
-                              </button>
-                            </div>
-                          </div>
-
-                          {actaWizardData.invocacionResponsableType === 'socio' ? (
-                            <div className="animate-in fade-in duration-300">
-                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Seleccionar Socio Responsable</label>
-                              <select 
-                                value={actaWizardData.invocacionSocioId}
-                                onChange={e => setActaWizardData(prev => ({ ...prev, invocacionSocioId: e.target.value }))}
-                                className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none text-sm font-bold text-slate-700 bg-white shadow-sm"
-                              >
-                                {selectableSocios.map(s => (
-                                  <option key={s.id} value={s.id}>{s.nombre} ({s.puesto || 'Socio Regular'})</option>
-                                ))}
-                              </select>
-                            </div>
-                          ) : (
-                            <div className="animate-in fade-in duration-300">
-                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Nombre Completo del Invitado</label>
-                              <input 
-                                type="text"
-                                value={actaWizardData.invocacionInvitadoName}
-                                onChange={e => setActaWizardData(prev => ({ ...prev, invocacionInvitadoName: e.target.value }))}
-                                placeholder="Ej. Ing. Juan Gómez (Gobernador de Distrito)"
-                                className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none text-sm font-semibold text-slate-800 shadow-sm"
-                              />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Saludo a la Bandera */}
-                        <div className="bg-slate-50/50 p-4 sm:p-8 rounded-3xl border border-slate-100/60 shadow-sm space-y-6">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <h5 className="text-lg font-extrabold text-blue-900 flex items-center">
-                              <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xs mr-3">2</span>
-                              Saludo a la Bandera
-                            </h5>
-                            
-                            <div className="flex bg-white p-1.5 rounded-2xl border border-slate-200/60 w-fit shadow-sm">
-                              <button
-                                type="button"
-                                onClick={() => setActaWizardData(prev => ({ ...prev, saludoResponsableType: 'socio' }))}
-                                className={`px-4 py-1.5 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all ${
-                                  actaWizardData.saludoResponsableType === 'socio' 
-                                    ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' 
-                                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
-                                }`}
-                              >
-                                Socio Activo
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setActaWizardData(prev => ({ ...prev, saludoResponsableType: 'invitado' }))}
-                                className={`px-4 py-1.5 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all ${
-                                  actaWizardData.saludoResponsableType === 'invitado' 
-                                    ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' 
-                                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
-                                }`}
-                              >
-                                Invitado
-                              </button>
-                            </div>
-                          </div>
-
-                          {actaWizardData.saludoResponsableType === 'socio' ? (
-                            <div className="animate-in fade-in duration-300">
-                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Seleccionar Socio Responsable</label>
-                              <select 
-                                value={actaWizardData.saludoSocioId}
-                                onChange={e => setActaWizardData(prev => ({ ...prev, saludoSocioId: e.target.value }))}
-                                className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none text-sm font-bold text-slate-700 bg-white shadow-sm"
-                              >
-                                {selectableSocios.map(s => (
-                                  <option key={s.id} value={s.id}>{s.nombre} ({s.puesto || 'Socio Regular'})</option>
-                                ))}
-                              </select>
-                            </div>
-                          ) : (
-                            <div className="animate-in fade-in duration-300">
-                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Nombre Completo del Invitado</label>
-                              <input 
-                                type="text"
-                                value={actaWizardData.saludoInvitadoName}
-                                onChange={e => setActaWizardData(prev => ({ ...prev, saludoInvitadoName: e.target.value }))}
-                                placeholder="Ej. Sra. Ana Martínez"
-                                className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none text-sm font-semibold text-slate-800 shadow-sm"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {actaWizardStep === 'solicitudes' && (
-                      <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 max-w-3xl mx-auto">
-                        <div className="text-sm font-black text-slate-800 uppercase tracking-widest mb-2 flex items-center bg-amber-50 w-fit px-4 py-2 rounded-xl">
-                          <FileText size={18} className="mr-2 text-amber-500" />
-                          Lectura y Resolución de Solicitudes Pendientes
-                        </div>
-
-                        <div className="space-y-5 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-                          {solicitudes.filter(s => s.estado === 'Pendiente').length === 0 ? (
-                            <div className="text-center py-16 bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-200 text-slate-400 italic text-sm font-medium">
-                              No hay solicitudes con estado "Pendiente" registradas en el sistema para evaluar en esta sesión.
-                            </div>
-                          ) : (
-                            solicitudes.filter(s => s.estado === 'Pendiente').map(sol => {
-                              const res = actaWizardData.solicitudesResoluciones[sol.id] || { decision: 'Pendiente', razon: '' };
-                              return (
-                                <div key={sol.id} className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 space-y-4">
-                                  <div className="flex flex-col md:flex-row md:justify-between items-start gap-5">
-                                    <div className="flex-1 w-full">
-                                      <h6 className="font-extrabold text-slate-800 text-base">{sol.nombre}</h6>
-                                      <div className="flex items-center space-x-2 mt-2">
-                                        <span className="text-[10px] font-black bg-blue-50 text-blue-900 px-2.5 py-1 rounded-full uppercase tracking-wider">{sol.tipo}</span>
-                                        <span className="text-[10px] font-semibold text-slate-400">Creado: {sol.fechaCreacion ? new Date(sol.fechaCreacion).toLocaleDateString() : 'N/A'}</span>
-                                      </div>
-                                      {sol.descripcion && (
-                                        <p className="text-sm text-slate-600 mt-4 font-medium bg-slate-50 p-4 rounded-2xl border border-slate-100 leading-relaxed text-justify">{sol.descripcion}</p>
-                                      )}
-                                    </div>
-
-                                    {/* Buttons group for decision */}
-                                    <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-200/60 w-full sm:w-auto justify-between sm:justify-start flex-shrink-0">
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setActaWizardData(prev => ({
-                                            ...prev,
-                                            solicitudesResoluciones: {
-                                              ...prev.solicitudesResoluciones,
-                                              [sol.id]: { ...res, decision: 'Aprobada' }
-                                            }
-                                          }));
-                                        }}
-                                        className={`flex-1 sm:flex-initial text-center px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all ${
-                                          res.decision === 'Aprobada' 
-                                            ? 'bg-green-500 text-white shadow-md shadow-green-500/20' 
-                                            : 'text-slate-500 hover:text-green-600 hover:bg-white'
-                                        }`}
-                                      >
-                                        Aprobar
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setActaWizardData(prev => ({
-                                            ...prev,
-                                            solicitudesResoluciones: {
-                                              ...prev.solicitudesResoluciones,
-                                              [sol.id]: { ...res, decision: 'Rechazada' }
-                                            }
-                                          }));
-                                        }}
-                                        className={`flex-1 sm:flex-initial text-center px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all ${
-                                          res.decision === 'Rechazada' 
-                                            ? 'bg-red-500 text-white shadow-md shadow-red-500/20' 
-                                            : 'text-slate-500 hover:text-red-600 hover:bg-white'
-                                        }`}
-                                      >
-                                        Rechazar
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setActaWizardData(prev => ({
-                                            ...prev,
-                                            solicitudesResoluciones: {
-                                              ...prev.solicitudesResoluciones,
-                                              [sol.id]: { ...res, decision: 'Pendiente' }
-                                            }
-                                          }));
-                                        }}
-                                        className={`flex-1 sm:flex-initial text-center px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all ${
-                                          res.decision === 'Pendiente' 
-                                            ? 'bg-slate-200 text-slate-700 shadow-md' 
-                                            : 'text-slate-500 hover:bg-white'
-                                        }`}
-                                      >
-                                        Pendiente
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  {/* Resolution reason */}
-                                  {res.decision !== 'Pendiente' && (
-                                    <div className="animate-in slide-in-from-top-2 duration-300 pt-2 border-t border-slate-100 mt-2">
-                                      <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Justificación de la resolución (Opcional)</label>
-                                      <textarea
-                                        rows={3}
-                                        value={res.razon}
-                                        onChange={e => {
-                                          setActaWizardData(prev => ({
-                                            ...prev,
-                                            solicitudesResoluciones: {
-                                              ...prev.solicitudesResoluciones,
-                                              [sol.id]: { ...res, razon: e.target.value }
-                                            }
-                                          }));
-                                        }}
-                                        placeholder="Escriba aquí los motivos técnicos o sociales..."
-                                        className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold resize-none shadow-sm"
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {actaWizardStep === 'libre' && (
-                      <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300 max-w-3xl mx-auto">
-                        <div className="bg-slate-50/50 p-4 sm:p-8 rounded-3xl border border-slate-100/60 space-y-6 shadow-sm">
-                          
-                          {/* Premium Header */}
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200/60 gap-4">
-                            <h3 className="text-xl font-extrabold text-blue-900 tracking-tight flex items-center">
-                              <span className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mr-3">
-                                <Briefcase size={16}/>
-                              </span>
-                              Gestión de Puntos de Agenda
-                            </h3>
-                            <span className="bg-slate-200 text-slate-700 text-[10px] font-black px-2.5 py-1 rounded-full uppercase self-start sm:self-auto shadow-sm">
-                              {(actaWizardData.puntosAgenda || []).length} Puntos Guardados
-                            </span>
-                          </div>
-
-                          {/* Tabs Navigation */}
-                          <div className="flex flex-nowrap overflow-x-auto pb-4 -mx-4 px-4 sm:-mx-8 sm:px-8 border-b border-slate-100 scrollbar-none w-[calc(100%+2rem)] sm:w-auto gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setSelectedAgendaPointTab('new')}
-                              className={`flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-95 border whitespace-nowrap shrink-0 ${
-                                selectedAgendaPointTab === 'new'
-                                  ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/20'
-                                  : 'bg-white border-dashed border-amber-300 text-amber-600 hover:bg-amber-50/50'
-                              }`}
-                            >
-                              <Plus size={14} />
-                              <span>+ Nuevo Punto</span>
-                            </button>
-
-                            {(actaWizardData.puntosAgenda || []).map((point, idx) => (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={() => setSelectedAgendaPointTab(idx)}
-                                className={`flex items-center space-x-2 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-200 active:scale-95 border whitespace-nowrap shrink-0 ${
-                                  selectedAgendaPointTab === idx
-                                    ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/20'
-                                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                                }`}
-                              >
-                                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black transition-colors ${
-                                  selectedAgendaPointTab === idx ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-655'
-                                }`}>
-                                  {idx + 1}
-                                </span>
-                                <div className="flex flex-col items-start text-left">
-                                  <span className="max-w-[120px] truncate">
-                                    {point.tema || `Punto ${idx + 1}`}
-                                  </span>
-                                  {point.socioSolicitante && (
-                                    <span className={`text-[9px] font-bold ${
-                                      selectedAgendaPointTab === idx ? 'text-amber-100' : 'text-slate-400'
-                                    }`}>
-                                      Socio: {point.socioSolicitante}
-                                    </span>
-                                  )}
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-
-                          {/* Tab Contents */}
-                          {selectedAgendaPointTab === 'new' ? (
-                            /* Create Point Tab */
-                            <div className="space-y-6 animate-in fade-in duration-300 text-left">
-                              {/* Import from Agenda Proposal Dropdown */}
-                              {agendaProposals.length > 0 && (
-                                <div className="bg-amber-50/30 p-5 rounded-2xl border border-amber-100/50 space-y-3">
-                                  <label className="block text-xs font-bold text-amber-900/80 uppercase tracking-wider">
-                                    💡 ¿Desea discutir una propuesta de punto de agenda?
-                                  </label>
-                                  <select
-                                    onChange={(e) => {
-                                      const selectedId = e.target.value;
-                                      if (!selectedId) return;
-                                      const prop = agendaProposals.find(p => p.id === selectedId);
-                                      if (prop) {
-                                        setNewAgendaPoint({
-                                          tema: prop.agendaNombrePunto || '',
-                                          debate: '',
-                                          acuerdo: '',
-                                          socioSolicitante: prop.agendaSocioNombre || '',
-                                          agendaContenido: prop.agendaContenido || ''
-                                        });
-                                      }
-                                      // Reset value
-                                      e.target.value = '';
-                                    }}
-                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none font-semibold text-slate-800 text-xs shadow-sm"
-                                  >
-                                    <option value="">Seleccione una propuesta registrada para debatirla...</option>
-                                    {agendaProposals.map((prop) => (
-                                      <option key={prop.id} value={prop.id}>
-                                        {prop.agendaNombrePunto} (Solicitado por: {prop.agendaSocioNombre})
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                              )}
-
-                              {newAgendaPoint.agendaContenido && (
-                                <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100/60 space-y-2 animate-in fade-in duration-300">
-                                  <div className="flex justify-between items-center text-[10px] font-black text-blue-900/60 uppercase tracking-widest">
-                                    <span>Contenido de la Propuesta (Discusión)</span>
-                                    {newAgendaPoint.socioSolicitante && (
-                                      <span>Solicitado por: <span className="font-extrabold text-blue-955">{newAgendaPoint.socioSolicitante}</span></span>
-                                    )}
-                                  </div>
-                                  <p className="text-slate-700 text-xs font-semibold leading-relaxed">
-                                    {newAgendaPoint.agendaContenido}
-                                  </p>
-                                  <div className="flex justify-end pt-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => setNewAgendaPoint(prev => ({ ...prev, socioSolicitante: '', agendaContenido: '' }))}
-                                      className="text-xs font-bold text-red-500 hover:text-red-700 underline"
-                                    >
-                                      Remover propuesta importada
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-
-                              <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tema del Punto</label>
-                                <input 
-                                  type="text"
-                                  value={newAgendaPoint.tema}
-                                  onChange={e => setNewAgendaPoint(prev => ({ ...prev, tema: e.target.value }))}
-                                  placeholder="Ej. Aprobación del presupuesto para la jornada oftalmológica"
-                                  className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold shadow-sm"
-                                />
-                              </div>
-                              
-                              <div className="space-y-6">
-                                <div>
-                                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Debate / Discusión (Opcional)</label>
-                                  <textarea 
-                                    ref={debateRef}
-                                    rows={4}
-                                    value={newAgendaPoint.debate}
-                                    onChange={e => setNewAgendaPoint(prev => ({ ...prev, debate: e.target.value }))}
-                                    placeholder="Describa los puntos clave discutidos..."
-                                    className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold resize-none text-justify shadow-sm"
-                                  />
-                                  
-                                  {/* Mention present quorum members */}
-                                  <div className="mt-3 text-left">
-                                    <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Etiquetar participantes presentes (insertar al cursor):</span>
-                                    {presentSocios.length === 0 ? (
-                                      <div className="text-[10px] font-bold text-slate-400 bg-slate-100/50 p-3 rounded-xl border border-dashed border-slate-200 italic">
-                                        No hay socios marcados en el quórum aún. Registra asistencia en el paso anterior para poder etiquetar.
-                                      </div>
-                                    ) : (
-                                      <div className="flex flex-wrap gap-2 max-h-[96px] overflow-y-auto p-1.5 bg-slate-50 rounded-2xl border border-slate-200/50 shadow-inner">
-                                        {presentSocios.map(member => (
-                                          <button
-                                            key={member.id}
-                                            type="button"
-                                            onClick={() => handleInsertMemberMention(member.nombre)}
-                                            className="flex items-center space-x-1.5 px-3 py-1.5 bg-white hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded-xl text-xs font-bold text-slate-650 hover:text-amber-800 transition-all select-none cursor-pointer active:scale-95 shadow-sm"
-                                          >
-                                            <img 
-                                              src={member.foto || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=60'} 
-                                              alt={member.nombre} 
-                                              className="w-5 h-5 rounded-full object-cover border border-slate-100 shadow-sm"
-                                              onError={(e) => {
-                                                (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=60';
-                                              }}
-                                            />
-                                            <span>
-                                              {member.nombre.split(' ')[0]} {member.nombre.split(' ')[1] ? member.nombre.split(' ')[1][0] + '.' : ''}
-                                            </span>
-                                          </button>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                                <div>
-                                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Acuerdo / Resolución (Opcional)</label>
-                                  <textarea 
-                                    rows={4}
-                                    value={newAgendaPoint.acuerdo}
-                                    onChange={e => setNewAgendaPoint(prev => ({ ...prev, acuerdo: e.target.value }))}
-                                    placeholder="Describa el acuerdo final tomado..."
-                                    className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold resize-none text-justify shadow-sm"
-                                  />
-                                </div>
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={handleAddAgendaPoint}
-                                className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-white font-black px-8 py-3.5 rounded-2xl text-sm transition-all shadow-md shadow-amber-500/20 flex items-center justify-center space-x-2 active:scale-95"
-                              >
-                                <Plus size={18} />
-                                <span>Agregar a la Agenda</span>
-                              </button>
-                            </div>
-                          ) : (
-                            /* Edit Existing Point Tab */
-                            <div className="space-y-6 animate-in fade-in duration-300 text-left">
-                              <div className="flex flex-col sm:flex-row justify-between sm:items-center bg-amber-50/50 p-4 rounded-2xl border border-amber-100/50 gap-4">
-                                <div>
-                                  <h4 className="text-sm font-black text-amber-800 uppercase tracking-wider">
-                                    Editando Punto {selectedAgendaPointTab as number + 1}
-                                  </h4>
-                                  <p className="text-[11px] text-slate-500 font-semibold mt-0.5">
-                                    Los cambios realizados aquí se guardan de forma instantánea.
-                                  </p>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveAgendaPoint(selectedAgendaPointTab as number)}
-                                  className="w-full sm:w-auto text-red-500 hover:bg-red-50 hover:text-red-650 px-4 py-2.5 rounded-xl transition-all text-xs font-black flex items-center justify-center space-x-1.5 active:scale-95 shadow-sm border border-red-200 bg-white"
-                                  title="Eliminar este punto"
-                                >
-                                  <Trash2 size={14} />
-                                  <span>Eliminar Punto</span>
-                                </button>
-                              </div>
-
-                              <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tema del Punto</label>
-                                <input 
-                                  type="text"
-                                  value={(actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.tema || ''}
-                                  onChange={e => handleUpdateAgendaPoint(selectedAgendaPointTab as number, 'tema', e.target.value)}
-                                  placeholder="Ej. Tema del punto..."
-                                  className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold shadow-sm"
-                                />
-                              </div>
-
-                              {((actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.agendaContenido || (actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.socioSolicitante) && (
-                                <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100/60 space-y-2 animate-in fade-in duration-300">
-                                  <div className="flex justify-between items-center text-[10px] font-black text-blue-900/60 uppercase tracking-widest">
-                                    <span>Contenido de la Propuesta (Discusión)</span>
-                                    {(actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.socioSolicitante && (
-                                      <span>Solicitado por: <span className="font-extrabold text-blue-955">{(actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.socioSolicitante}</span></span>
-                                    )}
-                                  </div>
-                                  {(actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.agendaContenido && (
-                                    <p className="text-slate-700 text-xs font-semibold leading-relaxed">
-                                      {(actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.agendaContenido}
-                                    </p>
-                                  )}
-                                  <div className="flex justify-end pt-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        handleUpdateAgendaPoint(selectedAgendaPointTab as number, 'agendaContenido', '');
-                                        handleUpdateAgendaPoint(selectedAgendaPointTab as number, 'socioSolicitante', '');
-                                      }}
-                                      className="text-xs font-bold text-red-500 hover:text-red-700 underline"
-                                    >
-                                      Remover propuesta importada
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-
-                              <div className="space-y-6">
-                                <div>
-                                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Debate / Discusión</label>
-                                  <textarea 
-                                    ref={debateRef}
-                                    rows={4}
-                                    value={(actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.debate || ''}
-                                    onChange={e => handleUpdateAgendaPoint(selectedAgendaPointTab as number, 'debate', e.target.value)}
-                                    placeholder="Describa los puntos clave discutidos..."
-                                    className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold resize-none text-justify shadow-sm"
-                                  />
-                                  
-                                  {/* Mention present quorum members */}
-                                  <div className="mt-3 text-left">
-                                    <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Etiquetar participantes presentes (insertar al cursor):</span>
-                                    {presentSocios.length === 0 ? (
-                                      <div className="text-[10px] font-bold text-slate-400 bg-slate-100/50 p-3 rounded-xl border border-dashed border-slate-200 italic">
-                                        No hay socios marcados en el quórum aún. Registra asistencia en el paso anterior para poder etiquetar.
-                                      </div>
-                                    ) : (
-                                      <div className="flex flex-wrap gap-2 max-h-[96px] overflow-y-auto p-1.5 bg-slate-50 rounded-2xl border border-slate-200/50 shadow-inner">
-                                        {presentSocios.map(member => (
-                                          <button
-                                            key={member.id}
-                                            type="button"
-                                            onClick={() => handleInsertMemberMention(member.nombre)}
-                                            className="flex items-center space-x-1.5 px-3 py-1.5 bg-white hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded-xl text-xs font-bold text-slate-650 hover:text-amber-800 transition-all select-none cursor-pointer active:scale-95 shadow-sm"
-                                          >
-                                            <img 
-                                              src={member.foto || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=60'} 
-                                              alt={member.nombre} 
-                                              className="w-5 h-5 rounded-full object-cover border border-slate-100 shadow-sm"
-                                              onError={(e) => {
-                                                (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&auto=format&fit=crop&q=60';
-                                              }}
-                                            />
-                                            <span>
-                                              {member.nombre.split(' ')[0]} {member.nombre.split(' ')[1] ? member.nombre.split(' ')[1][0] + '.' : ''}
-                                            </span>
-                                          </button>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                                <div>
-                                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Acuerdo / Resolución</label>
-                                  <textarea 
-                                    rows={4}
-                                    value={(actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.acuerdo || ''}
-                                    onChange={e => handleUpdateAgendaPoint(selectedAgendaPointTab as number, 'acuerdo', e.target.value)}
-                                    placeholder="Describa el acuerdo final tomado..."
-                                    className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold resize-none text-justify shadow-sm"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {actaWizardStep === 'vista_previa' && (
-                      <div className="space-y-6 animate-in fade-in duration-350">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200/50">
-                          <div className="text-left">
-                            <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider">Modo de Previsualización</h4>
-                            <p className="text-xs text-slate-500 font-medium">Visualice el acta en formato oficial impreso o en texto limpio.</p>
-                          </div>
-                          <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto space-x-2">
-                            <div className="bg-slate-200/60 p-1 rounded-xl flex space-x-1">
-                              <button
-                                type="button"
-                                onClick={() => setActaPreviewMode('documento')}
-                                className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${
-                                  actaPreviewMode === 'documento'
-                                    ? 'bg-blue-900 text-white shadow-sm'
-                                    : 'text-slate-600 hover:bg-slate-350/50'
-                                }`}
-                              >
-                                Vista Oficial
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setActaPreviewMode('texto')}
-                                className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${
-                                  actaPreviewMode === 'texto'
-                                    ? 'bg-blue-900 text-white shadow-sm'
-                                    : 'text-slate-600 hover:bg-slate-350/50'
-                                }`}
-                              >
-                                Texto Plano
-                              </button>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const rawText = compileActaText(actaWizardData);
-                                navigator.clipboard.writeText(rawText);
-                                alert('¡Texto del acta copiado al portapapeles!');
-                              }}
-                              className="p-2.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-blue-900 rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer"
-                              title="Copiar texto plano"
-                            >
-                              <FileText size={18} />
-                            </button>
-                          </div>
-                        </div>
-
-                        {actaPreviewMode === 'documento' ? (
-                          <div className="max-h-[50vh] sm:max-h-[60vh] overflow-y-auto bg-slate-100/60 p-2 sm:p-4 md:p-6 rounded-[2rem] border border-slate-200/50 shadow-inner">
-                            <FormattedActa
-                              titulo={actaWizardData.titulo.trim() || `Acta de Sesión - ${new Date().toLocaleDateString('es-GT')}`}
-                              fecha={actaWizardData.fechaHoraText.split(',')[0] || new Date().toLocaleDateString('es-GT')}
-                              categoria={actaWizardData.categoria}
-                              autor={user.nombre}
-                              contenido={compileActaText(actaWizardData)}
-                              presidentName={presidentName}
-                              secretaryName={secretaryName}
-                              numeroActa={actaWizardData.numeroActa || '1'}
-                              codigoRegistro={actaWizardData.codigoRegistro}
-                            />
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            <div className="flex justify-between items-center px-1">
-                              <span className="text-[10px] font-black bg-yellow-50 text-yellow-750 px-2.5 py-1 rounded-lg uppercase tracking-wider border border-yellow-100 shadow-sm">Generado automáticamente</span>
-                            </div>
-                            <textarea 
-                              readOnly
-                              rows={15}
-                              value={compileActaText(actaWizardData)}
-                              className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-700 font-semibold text-xs font-serif outline-none resize-none text-justify select-all shadow-inner leading-relaxed"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Footer / Navigation */}
-                  <div className="pt-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:justify-between gap-3 sm:gap-4 flex-shrink-0 w-full">
-                    <div className="flex flex-row w-full sm:w-auto gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setShowAddActa(false)}
-                        className="flex-1 sm:flex-initial text-center bg-white hover:bg-slate-50 border border-slate-200 text-slate-500 font-extrabold px-4 sm:px-6 py-2.5 rounded-xl transition-all text-xs sm:text-sm"
-                      >
-                        Cancelar
-                      </button>
-                      {actaWizardStep !== 'datos' && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const steps: typeof actaWizardStep[] = ['datos', 'asistencia', 'protocolo', 'solicitudes', 'libre', 'vista_previa'];
-                            const idx = steps.indexOf(actaWizardStep);
-                            if (idx > 0) setActaWizardStep(steps[idx - 1]);
-                          }}
-                          className="flex-1 sm:flex-initial text-center bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold px-4 sm:px-6 py-2.5 rounded-xl transition-all text-xs sm:text-sm"
-                        >
-                          Atrás
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="w-full sm:w-auto">
-                      {actaWizardStep !== 'vista_previa' ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const steps: typeof actaWizardStep[] = ['datos', 'asistencia', 'protocolo', 'solicitudes', 'libre', 'vista_previa'];
-                            const idx = steps.indexOf(actaWizardStep);
-                            if (idx < steps.length - 1) setActaWizardStep(steps[idx + 1]);
-                          }}
-                          className="w-full sm:w-auto text-center bg-blue-900 hover:bg-blue-800 text-white font-black px-4 sm:px-6 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg text-xs sm:text-sm"
-                        >
-                          Siguiente
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={handleSaveStructuredActa}
-                          className="w-full sm:w-auto text-center bg-emerald-500 hover:bg-emerald-600 text-white font-black px-4 sm:px-6 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg text-xs sm:text-sm"
-                        >
-                          Publicar Acta
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                </div>
-              ) : (
-                <>
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <h3 className="text-3xl font-black text-slate-800 tracking-tight">Biblioteca y Redacción de Actas</h3>
-                    <button 
-                      onClick={handleOpenRedactarActa}
-                      className="w-full md:w-auto justify-center bg-blue-900 hover:bg-blue-800 text-white font-black px-6 py-3 rounded-xl flex items-center space-x-2 shadow-lg shadow-blue-900/10 active:scale-95 transition-all"
-                    >
-                      <Plus size={18} />
-                      <span>Redactar Acta</span>
-                    </button>
-                  </div>
-
-                  {/* Filters */}
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="relative flex-grow w-full">
-                      <Search className="absolute left-4 top-3 text-slate-400" size={18} />
-                      <input
-                        type="text"
-                        value={actaSearch}
-                        onChange={e => setActaSearch(e.target.value)}
-                        placeholder="Buscar por palabra clave..."
-                        className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm"
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2 w-full sm:w-auto">
-                      <Filter size={18} className="text-slate-400 flex-shrink-0" />
-                      <select 
-                        value={actaFilterCategory} 
-                        onChange={e => setActaFilterCategory(e.target.value)}
-                        className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-900 w-full sm:w-auto"
-                      >
-                        <option value="Todas">Todas las categorías</option>
-                        <option value="Ordinaria">Ordinaria</option>
-                        <option value="Extraordinaria">Extraordinaria</option>
-                        <option value="Reunión de Comisión">Reunión de Comisión</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* List of Actas */}
-                  <div className="grid gap-4">
-                    {filteredActas.map(acta => (
-                      <div key={acta.id} className="bg-white p-4 sm:p-6 md:p-9 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 hover:shadow-md transition-shadow w-full">
-                        <div className="flex items-center space-x-4 min-w-0 w-full md:w-auto">
-                          <div className="bg-yellow-50 text-yellow-605 p-3.5 rounded-2xl flex-shrink-0">
-                            <FileText size={24} />
-                          </div>
-                          <div className="min-w-0 flex-grow w-full">
-                            <h4 className="font-extrabold text-slate-800 text-base md:text-lg break-words leading-tight">{acta.titulo}</h4>
-                            <p className="text-xs text-slate-450 mt-1.5">
-                              Redactada por <span className="font-bold text-blue-900/60 uppercase">{acta.autor}</span> • {acta.fecha}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex flex-row items-center justify-between md:justify-end gap-3 w-full md:w-auto pt-4 md:pt-0 border-t border-slate-100 md:border-t-0 flex-wrap">
-                          <span className="text-[10px] font-black bg-slate-100 text-slate-650 px-3 py-1 rounded-full uppercase">
-                            {acta.categoria || 'Ordinaria'}
-                          </span>
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => handleEditActaClick(acta)}
-                              className="p-2.5 text-slate-500 hover:text-blue-900 hover:bg-blue-50 rounded-xl transition-all border border-slate-150 bg-slate-50/50 active:scale-95"
-                              title="Editar acta"
-                            >
-                              <Edit size={16} />
-                            </button>
-                            <button
-                              onClick={() => generateActaPDF(acta)}
-                              className="p-2.5 text-slate-500 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all border border-slate-150 bg-slate-50/50 active:scale-95"
-                              title="Descargar PDF"
-                            >
-                              <Download size={16} />
-                            </button>
-                            <button 
-                              onClick={() => setDeleteActaConfirmId(acta.id)}
-                              className="p-2.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all border border-slate-150 bg-slate-50/50 active:scale-95"
-                              title="Eliminar acta"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {filteredActas.length === 0 && (
-                      <div className="text-center py-12 text-slate-400 italic">No se encontraron actas con esos criterios de búsqueda.</div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+          {activeTab === 'actas' && <AdminActas user={user} />}
 
           {/* TAB: DONACIONES RECIBIDAS */}
           {activeTab === 'donaciones' && (

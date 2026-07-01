@@ -43,12 +43,37 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     const fetchPuestos = async () => {
       try {
         const list = await firebaseService.getSocios();
-        const unique = Array.from(new Set(
-          list.map(s => s.puesto).filter((p): p is string => !!p)
-        ));
-        if (unique.length > 0) {
-          unique.sort();
-          setAvailablePuestos(unique);
+        
+        let rolesOrderMap: Record<string, number> = {};
+        try {
+          const storedConfig = localStorage.getItem('club_leones_roles_config');
+          if (storedConfig) {
+            const parsed = JSON.parse(storedConfig);
+            parsed.forEach((r: any, idx: number) => {
+              rolesOrderMap[r.id] = r.orden !== undefined ? r.orden : idx;
+            });
+          }
+        } catch (e) {
+          console.error("Error parsing roles config in Login.tsx:", e);
+        }
+
+        const uniquePuestosWithRole = list.reduce((acc: { puesto: string, rol: string }[], socio) => {
+          if (socio.puesto && !acc.some(item => item.puesto === socio.puesto)) {
+            acc.push({ puesto: socio.puesto, rol: socio.rol || 'SOCIO' });
+          }
+          return acc;
+        }, []);
+
+        if (uniquePuestosWithRole.length > 0) {
+          uniquePuestosWithRole.sort((a, b) => {
+            const orderA = rolesOrderMap[a.rol] ?? 999;
+            const orderB = rolesOrderMap[b.rol] ?? 999;
+            if (orderA !== orderB) {
+              return orderA - orderB;
+            }
+            return a.puesto.localeCompare(b.puesto);
+          });
+          setAvailablePuestos(uniquePuestosWithRole.map(item => item.puesto));
         }
       } catch (err) {
         console.error("Error loading dynamic login positions:", err);

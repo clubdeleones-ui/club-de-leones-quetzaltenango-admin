@@ -8,7 +8,7 @@ export const MOCK_SOCIOS: Socio[] = [
     rol: UserRole.SUPER_ADMIN,
     puesto: 'Presidente del Club',
     codigoSocio: 'CLQ-2026-001',
-    estadoCuotas: 'Al día',
+    estadoCuotas: 'Pendiente',
     montoPendiente: 0,
     foto: 'https://picsum.photos/seed/edwin/200/200',
     fechaIngreso: '2026-07-01',
@@ -16,11 +16,8 @@ export const MOCK_SOCIOS: Socio[] = [
     estatus: 'Pending',
     fechaFin: '2027-06-30',
     club: 'QUETZALTENANGO',
-    fechaUltimoPago: '2026-02-05',
-    historialPagos: [
-      { id: 'p1-1', fechaPago: '2026-01-05', monto: 100, periodo: 'Enero 2026', tipoPeriodo: 'Mensual', metodo: 'Transferencia', bancoReferencia: 'Banco Industrial', numeroReferencia: 'BI-778901' },
-      { id: 'p1-2', fechaPago: '2026-02-05', monto: 100, periodo: 'Febrero 2026', tipoPeriodo: 'Mensual', metodo: 'Transferencia', bancoReferencia: 'Banco Industrial', numeroReferencia: 'BI-889012' }
-    ]
+    fechaUltimoPago: '',
+    historialPagos: []
   },
   {
     id: '2',
@@ -30,17 +27,15 @@ export const MOCK_SOCIOS: Socio[] = [
     puesto: 'Secretario del Club',
     codigoSocio: 'CLQ-2026-002',
     estadoCuotas: 'Pendiente',
-    montoPendiente: 100,
+    montoPendiente: 0,
     foto: 'https://picsum.photos/seed/flor/200/200',
     fechaIngreso: '2026-07-01',
     telefono: '',
     estatus: 'Pending',
     fechaFin: '2027-06-30',
     club: 'QUETZALTENANGO',
-    fechaUltimoPago: '2026-01-08',
-    historialPagos: [
-      { id: 'p2-1', fechaPago: '2026-01-08', monto: 100, periodo: 'Enero 2026', tipoPeriodo: 'Mensual', metodo: 'Depósito', bancoReferencia: 'Banrural', numeroReferencia: 'BR-112233' }
-    ]
+    fechaUltimoPago: '',
+    historialPagos: []
   },
   {
     id: '3',
@@ -50,18 +45,16 @@ export const MOCK_SOCIOS: Socio[] = [
     puesto: 'Tesorero del Club',
     puestosAdicionales: ['Segundo Vicepresidente del Club'],
     codigoSocio: 'CLQ-2026-003',
-    estadoCuotas: 'En mora',
-    montoPendiente: 300,
+    estadoCuotas: 'Pendiente',
+    montoPendiente: 0,
     foto: 'https://picsum.photos/seed/oscar/200/200',
     fechaIngreso: '2026-07-01',
     telefono: '',
     estatus: 'Pending',
     fechaFin: '2027-06-30',
     club: 'QUETZALTENANGO',
-    fechaUltimoPago: '2025-12-10',
-    historialPagos: [
-      { id: 'p3-1', fechaPago: '2025-12-10', monto: 100, periodo: 'Diciembre 2025', tipoPeriodo: 'Mensual', metodo: 'Efectivo' }
-    ]
+    fechaUltimoPago: '',
+    historialPagos: []
   },
   {
     id: '4',
@@ -70,7 +63,7 @@ export const MOCK_SOCIOS: Socio[] = [
     rol: UserRole.ASESOR_SERVICIOS,
     puesto: 'Asesor de Mercadotecnia',
     codigoSocio: 'CLQ-2026-004',
-    estadoCuotas: 'Al día',
+    estadoCuotas: 'Pendiente',
     montoPendiente: 0,
     foto: 'https://picsum.photos/seed/mariantonia/200/200',
     fechaIngreso: '2026-07-01',
@@ -78,10 +71,8 @@ export const MOCK_SOCIOS: Socio[] = [
     estatus: 'Pending',
     fechaFin: '2027-06-30',
     club: 'QUETZALTENANGO',
-    fechaUltimoPago: '2026-01-12',
-    historialPagos: [
-      { id: 'p4-1', fechaPago: '2026-01-12', monto: 600, periodo: '1er Semestre 2026', tipoPeriodo: 'Semestral', metodo: 'Transferencia', bancoReferencia: 'G&T Continental', numeroReferencia: 'GT-445566' }
-    ]
+    fechaUltimoPago: '',
+    historialPagos: []
   },
   {
     id: '5',
@@ -90,7 +81,7 @@ export const MOCK_SOCIOS: Socio[] = [
     rol: UserRole.PRESIDENTE_AFILIACION,
     puesto: 'Presidente del Comité de Aumento de Socios del Club',
     codigoSocio: 'CLQ-2026-005',
-    estadoCuotas: 'Al día',
+    estadoCuotas: 'Pendiente',
     montoPendiente: 0,
     foto: 'https://picsum.photos/seed/rolando/200/200',
     fechaIngreso: '2026-07-01',
@@ -98,10 +89,8 @@ export const MOCK_SOCIOS: Socio[] = [
     estatus: 'Pending',
     fechaFin: '2027-06-30',
     club: 'QUETZALTENANGO',
-    fechaUltimoPago: '2026-01-02',
-    historialPagos: [
-      { id: 'p5-1', fechaPago: '2026-01-02', monto: 1200, periodo: 'Año 2026', tipoPeriodo: 'Anual', metodo: 'Transferencia', bancoReferencia: 'Banco Industrial', numeroReferencia: 'BI-999000' }
-    ]
+    fechaUltimoPago: '',
+    historialPagos: []
   },
   {
     id: '6',
@@ -111,17 +100,15 @@ export const MOCK_SOCIOS: Socio[] = [
     puesto: 'Asesor de Servicios del club',
     codigoSocio: 'CLQ-2026-006',
     estadoCuotas: 'Pendiente',
-    montoPendiente: 200,
+    montoPendiente: 0,
     foto: 'https://picsum.photos/seed/jonathan/200/200',
     fechaIngreso: '2026-07-01',
     telefono: '',
     estatus: 'Pending',
     fechaFin: '2027-06-30',
     club: 'QUETZALTENANGO',
-    fechaUltimoPago: '2025-12-28',
-    historialPagos: [
-      { id: 'p6-1', fechaPago: '2025-12-28', monto: 100, periodo: 'Diciembre 2025', tipoPeriodo: 'Mensual', metodo: 'Depósito', bancoReferencia: 'Banrural', numeroReferencia: 'BR-789012' }
-    ]
+    fechaUltimoPago: '',
+    historialPagos: []
   },
   {
     id: '7',
@@ -130,7 +117,7 @@ export const MOCK_SOCIOS: Socio[] = [
     rol: UserRole.SOCIO,
     puesto: 'Vicepresidente de club',
     codigoSocio: 'CLQ-2026-007',
-    estadoCuotas: 'Al día',
+    estadoCuotas: 'Pendiente',
     montoPendiente: 0,
     foto: 'https://picsum.photos/seed/ricardo/200/200',
     fechaIngreso: '2026-07-01',
@@ -138,11 +125,8 @@ export const MOCK_SOCIOS: Socio[] = [
     estatus: 'Pending',
     fechaFin: '2027-06-30',
     club: 'QUETZALTENANGO',
-    fechaUltimoPago: '2026-02-15',
-    historialPagos: [
-      { id: 'p7-1', fechaPago: '2026-01-15', monto: 100, periodo: 'Enero 2026', tipoPeriodo: 'Mensual', metodo: 'Efectivo' },
-      { id: 'p7-2', fechaPago: '2026-02-15', monto: 100, periodo: 'Febrero 2026', tipoPeriodo: 'Mensual', metodo: 'Transferencia', bancoReferencia: 'Banco Industrial', numeroReferencia: 'BI-113355' }
-    ]
+    fechaUltimoPago: '',
+    historialPagos: []
   },
   {
     id: '8',
@@ -151,14 +135,16 @@ export const MOCK_SOCIOS: Socio[] = [
     rol: UserRole.SUPER_ADMIN,
     puesto: 'Administrador Principal',
     codigoSocio: 'CLQ-ADMIN-000',
-    estadoCuotas: 'Al día',
+    estadoCuotas: 'Pendiente',
     montoPendiente: 0,
     foto: 'https://picsum.photos/seed/adminmain/200/200',
     fechaIngreso: '2026-01-01',
     telefono: '502-7761-0000',
     estatus: 'Active',
     fechaFin: 'Sin fecha fin',
-    club: 'QUETZALTENANGO'
+    club: 'QUETZALTENANGO',
+    fechaUltimoPago: '',
+    historialPagos: []
   },
   {
     id: '9',
@@ -174,7 +160,9 @@ export const MOCK_SOCIOS: Socio[] = [
     telefono: '502-5555-5555',
     estatus: 'Active',
     fechaFin: 'Sin fecha fin',
-    club: 'QUETZALTENANGO'
+    club: 'QUETZALTENANGO',
+    fechaUltimoPago: '',
+    historialPagos: []
   }
 ];
 
