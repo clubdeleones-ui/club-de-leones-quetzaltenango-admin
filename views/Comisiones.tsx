@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { firebaseService } from '../services/firebaseService';
 import { useClubData } from '../context/ClubDataContext';
 import { Comision, Socio, AsignacionComision, Acta } from '../types';
-import { Briefcase, Plus, Search, Trash2, Users, CheckCircle, Save, DollarSign, FileText, X, Pencil, Calendar, Award } from 'lucide-react';
+import { Briefcase, Plus, Search, Trash2, Users, CheckCircle, Save, DollarSign, FileText, X as XIcon, Pencil, Calendar, Award } from 'lucide-react';
 import { MOCK_ACTAS } from '../constants';
 import { FormattedActa } from '../components/FormattedActa';
 import { generateActaPDF } from '../utils/pdfGenerator';
@@ -344,7 +344,7 @@ export const Comisiones: React.FC = () => {
                                 className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all cursor-pointer"
                                 title="Remover miembro"
                               >
-                                <X size={16} />
+                                <XIcon size={16} />
                               </button>
                             </div>
                           </div>
@@ -421,7 +421,7 @@ export const Comisiones: React.FC = () => {
                               onClick={() => handleToggleActa(acta.id)}
                               className="text-slate-400 hover:text-red-500 p-1 ml-2 transition-colors shrink-0"
                             >
-                              <X size={14} />
+                              <XIcon size={14} />
                             </button>
                           </div>
                         ))
@@ -703,7 +703,7 @@ export const Comisiones: React.FC = () => {
                 className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors cursor-pointer flex items-center justify-center"
                 title="Cerrar"
               >
-                <X size={16} />
+                <XIcon size={16} />
               </button>
               {/* Avatar floating inside header decoration (not overflow hidden) */}
               <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 z-10">
@@ -835,7 +835,7 @@ export const Comisiones: React.FC = () => {
                 className="absolute top-3.5 right-4 sm:top-4.5 sm:right-6 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors cursor-pointer flex items-center justify-center"
                 title="Cerrar"
               >
-                <X size={18} />
+                <XIcon size={18} />
               </button>
             </div>
             

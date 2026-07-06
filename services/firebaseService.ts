@@ -13,7 +13,7 @@ import {
   writeBatch
 } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda, Acta, HitoHistorico, SolicitudVoluntario, ReunionAgenda, TareaComision, Asistencia, BienInventario, CategoriaInventario, ConvencionConfig, ConvencionRegistro } from "../types";
+import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda, Acta, HitoHistorico, SolicitudVoluntario, ReunionAgenda, TareaComision, Asistencia, BienInventario, CategoriaInventario, ConvencionConfig, ConvencionRegistro, RegistroParticipacion } from "../types";
 
 export const firebaseService = {
   // Upload candidate photo to Firebase Storage (Supports Base64 data_url format)
@@ -278,6 +278,28 @@ export const firebaseService = {
     } catch (error) {
       console.error("Error deleting actividad from Firestore:", error);
       throw error;
+    }
+  },
+
+  // Check if system has been initialized (mock data sync completed)
+  isSystemInitialized: async (): Promise<boolean> => {
+    try {
+      const docRef = doc(db, "config", "system_state");
+      const snap = await getDoc(docRef);
+      return snap.exists() && snap.data()?.initialized === true;
+    } catch (err) {
+      console.error("Error checking system initialization state:", err);
+      return false;
+    }
+  },
+
+  // Set system as initialized
+  setSystemInitialized: async (): Promise<void> => {
+    try {
+      const docRef = doc(db, "config", "system_state");
+      await setDoc(docRef, { initialized: true });
+    } catch (err) {
+      console.error("Error setting system initialized state:", err);
     }
   },
 
@@ -756,6 +778,43 @@ export const firebaseService = {
     }
   },
 
+  // ================= CONFIRMACIÓN DE PARTICIPACIÓN (RSVP) =================
+  saveRegistroParticipacion: async (registro: RegistroParticipacion): Promise<void> => {
+    try {
+      const docRef = doc(db, "registro_participaciones", registro.id);
+      const cleanData = JSON.parse(JSON.stringify(registro));
+      await setDoc(docRef, cleanData);
+    } catch (error) {
+      console.error("Error saving RSVP request in Firestore:", error);
+      throw error;
+    }
+  },
+
+  getRegistroParticipaciones: async (): Promise<RegistroParticipacion[]> => {
+    try {
+      const colRef = collection(db, "registro_participaciones");
+      const snapshot = await getDocs(colRef);
+      const list: RegistroParticipacion[] = [];
+      snapshot.forEach(doc => {
+        list.push(doc.data() as RegistroParticipacion);
+      });
+      return list.sort((a, b) => new Date(b.fechaRegistro).getTime() - new Date(a.fechaRegistro).getTime());
+    } catch (error) {
+      console.error("Error fetching RSVP requests from Firestore:", error);
+      throw error;
+    }
+  },
+
+  deleteRegistroParticipacion: async (id: string): Promise<void> => {
+    try {
+      const docRef = doc(db, "registro_participaciones", id);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting RSVP request from Firestore:", error);
+      throw error;
+    }
+  },
+
   // AGENDAS
   getAgendas: async (): Promise<ReunionAgenda[]> => {
     try {
@@ -1100,6 +1159,21 @@ export const firebaseService = {
     } catch (error: any) {
       console.error("Error al subir foto de convención a Firebase Storage:", error);
       throw new Error(`Error de subida de imagen: ${error.message || error}`);
+    }
+  },
+
+  uploadReceiptImage: async (base64Data: string, socioId: string): Promise<string> => {
+    try {
+      if (!base64Data.startsWith('data:image')) {
+        return base64Data;
+      }
+      const uniqueName = `recibo_${socioId}_${Date.now()}`;
+      const storageRef = ref(storage, `recibos_pagos/${uniqueName}`);
+      await uploadString(storageRef, base64Data, 'data_url');
+      return await getDownloadURL(storageRef);
+    } catch (error: any) {
+      console.error("Error al subir comprobante a Firebase Storage:", error);
+      throw new Error(`Error al subir la imagen a Storage: ${error.message || error}`);
     }
   },
 };

@@ -73,6 +73,13 @@ service cloud.firestore {
                    && (request.resource.data.estado in ['Pendiente', 'Aprobado', 'Rechado', 'Rechazado']);
     }
 
+    match /registro_participaciones/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'nombre', false)
+                   && isValidString(request.resource.data, 'telefono', false)
+                   && isValidString(request.resource.data, 'actividadId', false);
+    }
+
     match /galeria/{document} {
       allow read: if true;
       allow write: if isValidString(request.resource.data, 'titulo', false)
@@ -176,7 +183,7 @@ service cloud.firestore {
           'solicitudes_voluntarios', 'galeria', 'linea_tiempo', 'comisiones', 
           'minutas', 'agenda', 'agendas', 'tareas_comisiones', 'asistencias', 
           'presupuestos_rubros', 'presupuestos_fondos', 'presupuestos_asignaciones', 
-          'config_roles', 'config_puestos', 'parqueo', 'convencion_config', 'convencion_registros'
+          'config_roles', 'config_puestos', 'parqueo', 'convencion_config', 'convencion_registros', 'registro_participaciones'
         ]);
     }
   }

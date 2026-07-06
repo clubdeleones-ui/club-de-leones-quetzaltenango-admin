@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, X, UploadCloud, Save, Clock, MapPin, Search } from 'lucide-react';
+import { Plus, Edit2, Trash2, X as XIcon, UploadCloud, Save, Clock, MapPin, Search } from 'lucide-react';
 import { HitoHistorico } from '../types';
 import { firebaseService } from '../services/firebaseService';
 import { compressImageFile, validateImageFile } from '../utils/imageCompressor';
@@ -269,7 +269,7 @@ export const LineaTiempoAdmin: React.FC = () => {
             <div className="p-6 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur z-10">
               <h2 className="text-2xl font-bold text-blue-900">{editingItem ? 'Editar Hito Histórico' : 'Nuevo Hito Histórico'}</h2>
               <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                <X size={24} className="text-slate-500" />
+                <XIcon size={24} className="text-slate-500" />
               </button>
             </div>
             

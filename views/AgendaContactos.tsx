@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BookUser, Plus, Phone, MessageCircle, Edit2, Trash2, Search, Building2, Briefcase, X, ChevronDown, CheckCircle, Smartphone } from 'lucide-react';
+import { BookUser, Plus, Phone, MessageCircle, Edit2, Trash2, Search, Building2, Briefcase, X as XIcon, ChevronDown, CheckCircle, Smartphone } from 'lucide-react';
 import { ContactoAgenda } from '../types';
 import { firebaseService } from '../services/firebaseService';
 import { useModal } from '../context/ModalContext';
@@ -310,7 +310,7 @@ export const AgendaContactos: React.FC = () => {
                 {editingItem ? 'Editar Contacto' : 'Nuevo Contacto'}
               </h2>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 bg-white p-2 rounded-full shadow-sm">
-                <X size={20} />
+                <XIcon size={20} />
               </button>
             </header>
 

@@ -29,7 +29,8 @@ import {
   Building,
   Plus,
   Trash2,
-  QrCode
+  QrCode,
+  MapPin
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { MOCK_DONACIONES, MOCK_SOCIOS } from '../constants';
@@ -37,6 +38,7 @@ import { generateDiplomaDonacionPDF } from '../utils/pdfGenerator';
 import { compressImageFile, validateImageFile } from '../utils/imageCompressor';
 import { firebaseService } from '../services/firebaseService';
 import { useModal } from '../context/ModalContext';
+import { useToast } from '../context/ToastContext';
 
 const PUESTOS_PREDEFINIDOS = [
   'Presidente',
@@ -69,6 +71,7 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
   const { showAlert } = useModal();
+  const { showToast } = useToast();
   const alert = (msg: string) => {
     showAlert("Notificación", msg);
   };
@@ -153,6 +156,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editTelefono, setEditTelefono] = useState(user.telefono || '');
   const [editFoto, setEditFoto] = useState(user.foto || '');
+  const [editDpi, setEditDpi] = useState(user.dpi || '');
+  const [editFechaNacimiento, setEditFechaNacimiento] = useState(user.fechaNacimiento || '');
+  const [editProfesion, setEditProfesion] = useState(user.profesion || '');
+  const [editDireccion, setEditDireccion] = useState(user.direccion || '');
   const [isSavingSocio, setIsSavingSocio] = useState(false);
   const [socioSaveError, setSocioSaveError] = useState<string | null>(null);
   const [socioSaveSuccess, setSocioSaveSuccess] = useState(false);
@@ -161,6 +168,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
   useEffect(() => {
     setEditTelefono(user.telefono || '');
     setEditFoto(user.foto || '');
+    setEditDpi(user.dpi || '');
+    setEditFechaNacimiento(user.fechaNacimiento || '');
+    setEditProfesion(user.profesion || '');
+    setEditDireccion(user.direccion || '');
   }, [user]);
 
   const handleEditSocioClick = () => {
@@ -197,12 +208,19 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
         ...user,
         telefono: editTelefono,
         foto: editFoto,
+        dpi: editDpi,
+        fechaNacimiento: editFechaNacimiento,
+        profesion: editProfesion,
+        direccion: editDireccion,
+        fechaEdicion: new Date().toISOString(),
+        editadoPor: 'Socio (Mi Perfil)'
       };
 
       await firebaseService.saveSocio(updated);
 
       onUpdateUser(updated);
       setSocioSaveSuccess(true);
+      showToast('¡Perfil actualizado con éxito!', 'success');
       setTimeout(() => {
         setSocioSaveSuccess(false);
         setIsEditing(false);
@@ -210,6 +228,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
     } catch (err: any) {
       console.error("Error updating profile in Firebase:", err);
       setSocioSaveError(err?.message || "No se pudo actualizar el perfil.");
+      showToast('Error al actualizar el perfil.', 'error');
     } finally {
       setIsSavingSocio(false);
     }
@@ -684,6 +703,42 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                     <span className="font-bold text-slate-800 text-left sm:text-right break-words w-full sm:w-auto">{user.telefono || 'Sin teléfono'}</span>
                   </div>
 
+                  {/* DPI */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100/60 gap-1">
+                    <span className="text-slate-450 flex items-center space-x-1.5 flex-shrink-0">
+                      <FileText size={16} className="text-slate-400 flex-shrink-0" />
+                      <span>DPI / Identificación</span>
+                    </span>
+                    <span className="font-bold text-slate-800 text-left sm:text-right break-words w-full sm:w-auto">{user.dpi || 'No indicado'}</span>
+                  </div>
+
+                  {/* Fecha Nacimiento */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100/60 gap-1">
+                    <span className="text-slate-450 flex items-center space-x-1.5 flex-shrink-0">
+                      <Calendar size={16} className="text-slate-400 flex-shrink-0" />
+                      <span>Fecha Nacimiento</span>
+                    </span>
+                    <span className="font-bold text-slate-800 text-left sm:text-right break-words w-full sm:w-auto">{user.fechaNacimiento || 'No indicado'}</span>
+                  </div>
+
+                  {/* Profesión */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100/60 gap-1">
+                    <span className="text-slate-450 flex items-center space-x-1.5 flex-shrink-0">
+                      <Briefcase size={16} className="text-slate-400 flex-shrink-0" />
+                      <span>Profesión</span>
+                    </span>
+                    <span className="font-bold text-slate-800 text-left sm:text-right break-words w-full sm:w-auto">{user.profesion || 'No indicada'}</span>
+                  </div>
+
+                  {/* Dirección */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100/60 gap-1">
+                    <span className="text-slate-450 flex items-center space-x-1.5 flex-shrink-0">
+                      <MapPin size={16} className="text-slate-400 flex-shrink-0" />
+                      <span>Dirección</span>
+                    </span>
+                    <span className="font-bold text-slate-800 text-left sm:text-right break-words w-full sm:w-auto text-xs">{user.direccion || 'No indicada'}</span>
+                  </div>
+
                   {/* Gestión / Período */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                     <span className="text-slate-450 flex items-center space-x-1.5 flex-shrink-0">
@@ -694,17 +749,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                       Miembro desde: {user.fechaIngreso}
                     </span>
                   </div>
-                </div>
-
-                {/* Membresía / Solvencia */}
-                <div className="flex items-center justify-between px-2 pt-2 text-xs text-slate-400 font-bold uppercase tracking-wider">
-                  <span>Membresía Financiera</span>
-                  <span className={`flex items-center space-x-1 ${
-                    user.estadoCuotas === 'Al día' ? 'text-emerald-600' : 'text-yellow-600'
-                  }`}>
-                    <span>●</span>
-                    <span>{user.estadoCuotas}</span>
-                  </span>
                 </div>
 
                 {/* Botón Editar Ficha de Perfil */}
@@ -736,7 +780,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
       {/* Modal para Editar Perfil */}
       {isEditing && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2rem] border border-slate-200/80 shadow-2xl w-full max-w-md p-6 sm:p-10 space-y-6 relative animate-in zoom-in-95 duration-300 text-left">
+          <div className="bg-white rounded-[2rem] border border-slate-200/80 shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto p-6 sm:p-10 space-y-6 relative animate-in zoom-in-95 duration-300 text-left">
             <button
               type="button"
               onClick={() => setIsEditing(false)}
@@ -831,6 +875,53 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                       className="w-full pl-16 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-sm text-slate-800"
                     />
                   </div>
+                </div>
+
+                {/* Editable DPI */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-450 uppercase tracking-wide mb-1.5">DPI / Identificación</label>
+                  <input
+                    type="text"
+                    placeholder="2352 12345 0101"
+                    value={editDpi}
+                    onChange={e => setEditDpi(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-sm text-slate-800"
+                  />
+                </div>
+
+                {/* Editable Fecha Nacimiento */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-450 uppercase tracking-wide mb-1.5">Fecha Nacimiento</label>
+                  <input
+                    type="date"
+                    value={editFechaNacimiento}
+                    onChange={e => setEditFechaNacimiento(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-sm text-slate-800"
+                  />
+                </div>
+
+                {/* Editable Profesión */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-450 uppercase tracking-wide mb-1.5">Profesión / Ocupación</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Ingeniero Civil"
+                    value={editProfesion}
+                    onChange={e => setEditProfesion(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-sm text-slate-800"
+                  />
+                </div>
+
+                {/* Editable Dirección */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-450 uppercase tracking-wide mb-1.5">Dirección de Residencia</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. 12 Av. 10-55, Zona 1, Quetzaltenango"
+                    value={editDireccion}
+                    onChange={e => setEditDireccion(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-sm text-slate-800"
+                  />
                 </div>
               </div>
 

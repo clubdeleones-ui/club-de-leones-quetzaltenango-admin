@@ -155,6 +155,19 @@ export const AsignacionFunciones: React.FC = () => {
     }
   };
 
+  const handleSocioClubChange = (socioId: string, clubName: string) => {
+    const socio = socios.find(s => s.id === socioId);
+    if (socio) {
+      const updated = {
+        ...socio,
+        club: clubName
+      };
+      firebaseService.saveSocio(updated).catch(err => {
+        console.error("Error updating member club in real-time:", err);
+      });
+    }
+  };
+
   // Filtered members list
   const filteredSocios = useMemo(() => {
     const rolesOrderMap: Record<string, number> = {};
@@ -432,16 +445,16 @@ export const AsignacionFunciones: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Fila 2: Selectores de Puesto y Rol */}
-                  <div className="grid grid-cols-2 gap-3 text-xs">
+                  {/* Fila 2: Selectores de Puesto, Rol y Club */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                     <div>
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
-                        Puesto del Club
+                      <label className="block text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">
+                        Puesto
                       </label>
                       <select
                         value={socio.puesto || ''}
                         onChange={(e) => handleSocioPuestoChange(socio.id, e.target.value)}
-                        className="w-full py-2 px-2.5 border border-slate-200 rounded-xl text-xs font-bold bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full py-2 px-1.5 border border-slate-200 rounded-xl text-[11px] font-bold bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500"
                       >
                         <option value="">Sin puesto</option>
                         {puestosList.map(p => (
@@ -450,18 +463,30 @@ export const AsignacionFunciones: React.FC = () => {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">
+                      <label className="block text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">
                         Rol de Sistema
                       </label>
                       <select
                         value={socio.rol || 'SOCIO'}
                         onChange={(e) => handleSocioRoleChange(socio.id, e.target.value)}
-                        className="w-full py-2 px-2.5 border border-slate-200 rounded-xl text-xs font-bold bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-full py-2 px-1.5 border border-slate-200 rounded-xl text-[11px] font-bold bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500"
                       >
                         {rolesConfig.map(r => (
                           <option key={r.id} value={r.id}>{r.label}</option>
                         ))}
                       </select>
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">
+                        Club
+                      </label>
+                      <input
+                        type="text"
+                        value={socio.club || ''}
+                        placeholder="QUETZALTENANGO"
+                        onChange={(e) => handleSocioClubChange(socio.id, e.target.value)}
+                        className="w-full py-2 px-2 border border-slate-200 rounded-xl text-[11px] font-bold bg-white text-slate-700 outline-none focus:ring-1 focus:ring-blue-500"
+                      />
                     </div>
                   </div>
 

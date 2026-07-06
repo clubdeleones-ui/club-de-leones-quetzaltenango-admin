@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { CheckCircle, XOctagon } from 'lucide-react';
+import { CheckCircle, XOctagon, X as XIcon } from 'lucide-react';
 
 type ToastType = 'success' | 'error' | 'info';
 
@@ -26,7 +26,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     <ToastContext.Provider value={{ showToast }}>
       {children}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-[70] animate-in slide-in-from-bottom-5 fade-in duration-300">
+        <div className="fixed bottom-6 right-6 z-[9999] animate-in slide-in-from-bottom-5 fade-in duration-300">
           <div className={`flex items-center space-x-3 px-5 py-3.5 rounded-2xl shadow-xl border ${
             toast.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 
             toast.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
@@ -36,7 +36,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             {toast.type === 'error' && <XOctagon size={20} className="text-red-500" />}
             <span className="font-bold text-sm">{toast.message}</span>
             <button onClick={() => setToast(null)} className="ml-2 text-current opacity-50 hover:opacity-100 transition-opacity">
-              <XOctagon size={16} />
+              <XIcon size={16} />
             </button>
           </div>
         </div>

@@ -28,6 +28,7 @@ import {
 import { firebaseService } from '../services/firebaseService';
 import { useClubData } from '../context/ClubDataContext';
 import { useModal } from '../context/ModalContext';
+import { useToast } from '../context/ToastContext';
 import { getWrittenDateTimeSpanish } from '../utils/dateSpanishFormatter';
 import { 
   TrendingUp, 
@@ -41,13 +42,14 @@ import {
   DollarSign, 
   CheckCircle, 
   AlertTriangle, 
+  User,
   UserPlus,
   UserCheck,
   Trash2,
   Filter,
   Check,
   Send,
-  X,
+  X as XIcon,
   Download,
   Edit,
   Clock,
@@ -73,6 +75,7 @@ import {
   XOctagon,
   Lock,
   Star,
+  Share2,
   ArrowUp,
   ArrowDown,
   Printer,
@@ -370,6 +373,8 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     loading: dbLoading
   } = useClubData();
 
+  const { showToast } = useToast();
+
   const [socios, setSocios] = useState<Socio[]>(dbSocios);
   const [propuestas, setPropuestas] = useState<PropuestaSocio[]>(dbPropuestas);
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>(dbSolicitudes);
@@ -545,8 +550,6 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     return result;
   }, [voluntarios, voluntarioFilterActividad, voluntarioFilterEstado, voluntarioSearch]);
   const [roleFilter, setRoleFilter] = useState('Todos');
-  const [statusFilter, setStatusFilter] = useState('Todos');
-  const [financialFilter, setFinancialFilter] = useState('Todos');
   const [isLoadingSocios, setIsLoadingSocios] = useState(false);
 
   // Cuotas Redesign States
@@ -568,6 +571,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
 
   // Socio Form / QR states
   const [editingSocio, setEditingSocio] = useState<Socio | null>(null);
+  const [clubSectionOpen, setClubSectionOpen] = useState(false);
   const [editSocioForm, setEditSocioForm] = useState<Partial<Socio>>({});
   const [isSavingSocio, setIsSavingSocio] = useState(false);
   const [socioSaveSuccess, setSocioSaveSuccess] = useState(false);
@@ -586,6 +590,19 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     if (!editingSocio) return false;
     return editingSocio.id === user.id;
   }, [editingSocio, user.id]);
+
+  const isClubSectionAllowed = useMemo(() => {
+    if (!user) return false;
+    return (
+      user.rol === UserRole.SUPER_ADMIN ||
+      user.rol === UserRole.PRESIDENTE_AFILIACION ||
+      !!(user.puesto && user.puesto.toLowerCase().includes('presidente'))
+    );
+  }, [user]);
+
+  const showClubRightColumn = isClubSectionAllowed && clubSectionOpen;
+  const modalMaxWidth = showClubRightColumn ? 'max-w-4xl' : 'max-w-xl';
+  const formColumnsClass = showClubRightColumn ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1';
 
   const [actaSearch, setActaSearch] = useState('');
   const [deleteActaConfirmId, setDeleteActaConfirmId] = useState<string | null>(null);
@@ -1466,7 +1483,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
     const newSocios = socios.map(s => s.id === socioId ? updatedSocio : s);
     setSocios(newSocios);
-    localStorage.setItem('club_leones_socios_v4', JSON.stringify(newSocios));
+    localStorage.setItem('club_leones_socios', JSON.stringify(newSocios));
 
     try {
       await firebaseService.saveSocio(updatedSocio);
@@ -1507,7 +1524,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       
       const newList = socios.map(s => s.id === socio.id ? updatedSocio : s);
       setSocios(newList);
-      localStorage.setItem('club_leones_socios_v4', JSON.stringify(newList));
+      localStorage.setItem('club_leones_socios', JSON.stringify(newList));
       
       setQrSocio(updatedSocio);
     } catch (err) {
@@ -1533,7 +1550,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       
       const newList = socios.map(s => s.id === socioId ? updatedSocio : s);
       setSocios(newList);
-      localStorage.setItem('club_leones_socios_v4', JSON.stringify(newList));
+      localStorage.setItem('club_leones_socios', JSON.stringify(newList));
       
       setQrSocio(updatedSocio);
       alert("Código QR regenerado con éxito. El anterior ha sido invalidado.");
@@ -2006,7 +2023,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               onClick={() => setShowAgendaForm(false)}
               className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-black text-slate-550 hover:bg-slate-50 transition-all cursor-pointer flex items-center space-x-1.5 self-start"
             >
-              <X size={14} />
+              <XIcon size={14} />
               <span>Cancelar</span>
             </button>
           </div>
@@ -3695,7 +3712,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                             className="bg-rose-500 hover:bg-rose-600 text-white p-1.5 rounded-lg shadow-sm transition-all active:scale-95"
                             title="Rechazar Solicitud"
                           >
-                            <X size={12} />
+                            <XIcon size={12} />
                           </button>
                         </>
                       )}
@@ -3767,12 +3784,25 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       
       const newSociosList = socios.filter(s => s.id !== socio.id);
       setSocios(newSociosList);
-      localStorage.setItem('club_leones_socios_v4', JSON.stringify(newSociosList));
+      localStorage.setItem('club_leones_socios', JSON.stringify(newSociosList));
       alert("Socio eliminado con éxito.");
     } catch (err: any) {
       console.error("Error deleting socio:", err);
       alert(`Ocurrió un error al eliminar el socio: ${err?.message || err}`);
     }
+  };
+
+  const handleShareSocioLink = (socioId: string) => {
+    const shareUrl = `${window.location.origin}${window.location.pathname}#/completar-ficha-socio/${socioId}`;
+    navigator.clipboard.writeText(shareUrl)
+      .then(() => {
+        alert("¡Enlace de autogestión copiado con éxito! Puedes enviárselo al socio para que actualice sus datos.");
+      })
+      .catch(err => {
+        console.error("Error copying link: ", err);
+        // Fallback prompt
+        window.prompt("Copia este enlace de autogestión para el socio:", shareUrl);
+      });
   };
 
   const handleEditSocioPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -3823,7 +3853,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
         newSociosList = socios.map(s => s.id === updated.id ? updated : s);
       }
       setSocios(newSociosList);
-      localStorage.setItem('club_leones_socios_v4', JSON.stringify(newSociosList));
+      localStorage.setItem('club_leones_socios', JSON.stringify(newSociosList));
 
       // If editing self, notify parent to refresh auth state
       if (updated.id === user.id && onUpdateUser) {
@@ -3831,6 +3861,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       }
 
       setSocioSaveSuccess(true);
+      showToast(isNewSocio ? '¡Socio registrado con éxito!' : '¡Ficha de socio guardada exitosamente!', 'success');
       setTimeout(() => {
         setSocioSaveSuccess(false);
         setEditingSocio(null);
@@ -3838,6 +3869,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     } catch (err: any) {
       console.error("Error updating socio:", err);
       setSocioSaveError(err?.message || "No se pudo actualizar la ficha.");
+      showToast('Error al guardar la información del socio.', 'error');
     } finally {
       setIsSavingSocio(false);
     }
@@ -3924,46 +3956,30 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       
       const matchesRole = roleFilter === 'Todos' || s.rol === roleFilter;
       
-      const matchesStatus = 
-        statusFilter === 'Todos' ||
-        (statusFilter === 'Activos' && s.estatus !== 'Inactive') ||
-        (statusFilter === 'Inactivos' && s.estatus === 'Inactive');
-      
-      const matchesFinancial = 
-        financialFilter === 'Todos' ||
-        (financialFilter === 'al_dia' && s.estadoCuotas === 'Al día') ||
-        (financialFilter === 'pendiente' && s.estadoCuotas === 'Pendiente') ||
-        (financialFilter === 'en_mora' && s.estadoCuotas === 'En mora');
-
-      return matchesSearch && matchesRole && matchesStatus && matchesFinancial;
+      return matchesSearch && matchesRole;
     });
 
-    // Sort: Directiva first, then Active, then Inactive
+    // Sort: Directiva first, then standard socios, alphabetically
     return list.sort((a, b) => {
-      const aInactive = a.estatus === 'Inactive';
-      const bInactive = b.estatus === 'Inactive';
-      
-      const aDirectiva = !aInactive && (
+      const aDirectiva = 
         a.rol === UserRole.SUPER_ADMIN ||
         a.rol === UserRole.SECRETARIO ||
         a.rol === UserRole.TESORERO ||
         a.rol === UserRole.ASESOR_SERVICIOS ||
         a.rol === UserRole.PRESIDENTE_AFILIACION ||
-        (a.puesto && a.puesto.trim() !== '' && a.puesto.toLowerCase() !== 'socio' && a.puesto.toLowerCase() !== 'socio regular')
-      );
+        (a.puesto && a.puesto.trim() !== '' && a.puesto.toLowerCase() !== 'socio' && a.puesto.toLowerCase() !== 'socio regular');
       
-      const bDirectiva = !bInactive && (
+      const bDirectiva = 
         b.rol === UserRole.SUPER_ADMIN ||
         b.rol === UserRole.SECRETARIO ||
         b.rol === UserRole.TESORERO ||
         b.rol === UserRole.ASESOR_SERVICIOS ||
         b.rol === UserRole.PRESIDENTE_AFILIACION ||
-        (b.puesto && b.puesto.trim() !== '' && b.puesto.toLowerCase() !== 'socio' && b.puesto.toLowerCase() !== 'socio regular')
-      );
+        (b.puesto && b.puesto.trim() !== '' && b.puesto.toLowerCase() !== 'socio' && b.puesto.toLowerCase() !== 'socio regular');
 
-      // Directiva = 1, Active = 2, Inactive = 3
-      const aRank = aInactive ? 3 : (aDirectiva ? 1 : 2);
-      const bRank = bInactive ? 3 : (bDirectiva ? 1 : 2);
+      // Directiva = 1, regular = 2
+      const aRank = aDirectiva ? 1 : 2;
+      const bRank = bDirectiva ? 1 : 2;
       
       if (aRank !== bRank) {
         return aRank - bRank;
@@ -3972,7 +3988,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       // Fallback alphabetical by name
       return a.nombre.localeCompare(b.nombre);
     });
-  }, [socios, socioSearch, roleFilter, statusFilter, financialFilter]);
+  }, [socios, socioSearch, roleFilter]);
 
   const filteredActas = actas.filter(a => {
     const matchesSearch = a.titulo.toLowerCase().includes(actaSearch.toLowerCase()) || 
@@ -4034,7 +4050,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   onClick={() => setModuleSearchQuery('')}
                   className="absolute right-3.5 top-2.5 p-1 text-slate-400 hover:text-slate-650 hover:bg-slate-100 rounded-md transition-all"
                 >
-                  <X size={10} />
+                  <XIcon size={10} />
                 </button>
               )}
             </div>
@@ -4194,7 +4210,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="p-2 hover:bg-slate-200/60 rounded-xl text-slate-400 hover:text-slate-700 transition-colors active:scale-90"
                   >
-                    <X size={16} />
+                    <XIcon size={16} />
                   </button>
                 </div>
                 
@@ -4213,7 +4229,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                       onClick={() => setModuleSearchQuery('')}
                       className="absolute right-7 top-5.5 p-1 text-slate-400 hover:bg-slate-100 rounded-md"
                     >
-                      <X size={10} />
+                      <XIcon size={10} />
                     </button>
                   )}
                 </div>
@@ -4310,7 +4326,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Text Search */}
                   <div className="relative">
                     <Search size={18} className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-slate-400" />
@@ -4336,33 +4352,6 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                       ))}
                     </select>
                   </div>
-
-                  {/* Status filter */}
-                  <div>
-                    <select
-                      value={statusFilter}
-                      onChange={e => setStatusFilter(e.target.value)}
-                      className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold bg-white"
-                    >
-                      <option value="Todos">Estatus: Todos</option>
-                      <option value="Activos">Estatus: Activos</option>
-                      <option value="Inactivos">Estatus: Inactivos</option>
-                    </select>
-                  </div>
-
-                  {/* Financial filter */}
-                  <div>
-                    <select
-                      value={financialFilter}
-                      onChange={e => setFinancialFilter(e.target.value)}
-                      className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold bg-white"
-                    >
-                      <option value="Todos">Cuotas: Todos</option>
-                      <option value="al_dia">Cuotas: Al día</option>
-                      <option value="pendiente">Cuotas: Pendiente</option>
-                      <option value="en_mora">Cuotas: En mora</option>
-                    </select>
-                  </div>
                 </div>
               </div>
 
@@ -4382,28 +4371,24 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
                     {filteredSociosAdmin.map(socio => {
-                      const isInactive = socio.estatus === 'Inactive';
-                      const isDirectiva = !isInactive && (
+                      const isDirectiva = 
                         socio.rol === UserRole.SUPER_ADMIN ||
                         socio.rol === UserRole.SECRETARIO ||
                         socio.rol === UserRole.TESORERO ||
                         socio.rol === UserRole.ASESOR_SERVICIOS ||
                         socio.rol === UserRole.PRESIDENTE_AFILIACION ||
-                        (socio.puesto && socio.puesto.trim() !== '' && socio.puesto.toLowerCase() !== 'socio' && socio.puesto.toLowerCase() !== 'socio regular')
-                      );
+                        (socio.puesto && socio.puesto.trim() !== '' && socio.puesto.toLowerCase() !== 'socio' && socio.puesto.toLowerCase() !== 'socio regular');
 
                       // Layout color definitions
-                      const cardBgColor = isInactive ? 'bg-slate-50/50' : isDirectiva ? 'bg-amber-50/10' : 'bg-white';
-                      const cardBorderColor = isInactive ? 'border-slate-200' : isDirectiva ? 'border-amber-200' : 'border-blue-100';
-                      const leftBorderAccent = isInactive ? 'border-l-8 border-l-slate-400' : isDirectiva ? 'border-l-8 border-l-amber-500' : 'border-l-8 border-l-blue-900';
-                      const avatarBorder = isInactive ? 'border-slate-300' : isDirectiva ? 'border-amber-400' : 'border-blue-900';
+                      const cardBgColor = isDirectiva ? 'bg-amber-50/10' : 'bg-white';
+                      const cardBorderColor = isDirectiva ? 'border-amber-200' : 'border-blue-100';
+                      const leftBorderAccent = isDirectiva ? 'border-l-8 border-l-amber-500' : 'border-l-8 border-l-blue-900';
+                      const avatarBorder = isDirectiva ? 'border-amber-400' : 'border-blue-900';
 
                       return (
                         <div 
                           key={socio.id}
-                          className={`bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-xl border ${cardBorderColor} ${leftBorderAccent} ${cardBgColor} transition-all duration-300 flex flex-col justify-between p-6 space-y-4 ${
-                            isInactive ? 'opacity-75' : ''
-                          }`}
+                          className={`bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-xl border ${cardBorderColor} ${leftBorderAccent} ${cardBgColor} transition-all duration-300 flex flex-col justify-between p-6 space-y-4`}
                         >
                           {/* Top Info Header */}
                           <div className="flex items-start space-x-4">
@@ -4437,25 +4422,14 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                               </span>
                             ))}
                             
-                            <div className="w-full flex items-center space-x-1.5 mt-1">
-                              {isInactive ? (
-                                <span className="bg-slate-150 text-slate-655 border border-slate-250 text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">
-                                  Inactivo
-                                </span>
-                              ) : isDirectiva ? (
+                            {isDirectiva && (
+                              <div className="w-full flex items-center space-x-1.5 mt-1">
                                 <span className="bg-amber-100 text-amber-800 border border-amber-250 text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center">
                                   <Star size={8} className="mr-1 text-amber-600 fill-amber-600 animate-pulse" />
                                   Junta Directiva
                                 </span>
-                              ) : (
-                                <span className="bg-blue-50 text-blue-900 border border-blue-200 text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">
-                                  Socio Activo
-                                </span>
-                              )}
-                              <span className="text-[9px] text-slate-405 font-bold uppercase tracking-wider">
-                                ({socio.rol})
-                              </span>
-                            </div>
+                              </div>
+                            )}
                           </div>
 
                           {/* Contact Info Section */}
@@ -4477,7 +4451,15 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                           </div>
 
                           {/* Card Footer Actions */}
-                          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                          <div className="flex flex-wrap items-center justify-end gap-1.5 pt-3 border-t border-slate-100">
+                            <button
+                              onClick={() => handleShareSocioLink(socio.id)}
+                              className="bg-white hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700 border border-slate-200/60 px-3 py-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm"
+                              title="Copiar enlace de autogestión para el socio"
+                            >
+                              <Share2 size={13} className="mr-1.5" />
+                              <span>Enlace</span>
+                            </button>
                             <button
                               onClick={() => handleQrClick(socio)}
                               className="bg-white hover:bg-yellow-50 text-amber-600 hover:text-amber-700 border border-slate-200/60 px-3 py-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm disabled:opacity-50"
@@ -5011,7 +4993,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   <form onSubmit={handleAddDonacion} className="bg-white rounded-[2.5rem] p-10 md:p-12 max-w-lg w-full space-y-8 shadow-2xl border border-slate-100">
                     <div className="flex justify-between items-center">
                       <h4 className="text-2xl font-black text-slate-800">Registrar Donación Entrante</h4>
-                      <button type="button" onClick={() => setShowAddDonacion(false)} className="p-2 hover:bg-slate-50 rounded-xl transition-colors"><X size={20} /></button>
+                      <button type="button" onClick={() => setShowAddDonacion(false)} className="p-2 hover:bg-slate-50 rounded-xl transition-colors"><XIcon size={20} /></button>
                     </div>
 
                     <div className="space-y-4">
@@ -5182,7 +5164,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                       onClick={() => setShowAddBeneficio(false)} 
                       className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors"
                     >
-                      <X size={20} />
+                      <XIcon size={20} />
                     </button>
 
                     <div className="pb-2">
@@ -5375,22 +5357,38 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       {/* --- UNIFIED MODAL FOR EDITING / REGISTERING SOCIO --- */}
       {editingSocio && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300">
-          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-6 sm:p-10 space-y-6 relative animate-in zoom-in-95 duration-300">
+          <div className={`bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full ${modalMaxWidth} max-h-[95vh] overflow-y-auto overflow-x-hidden p-6 sm:p-8 space-y-4 relative transition-all duration-300 animate-in zoom-in-95`}>
             <button 
               type="button"
               onClick={() => setEditingSocio(null)}
               className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors"
             >
-              <X size={20} />
+              <XIcon size={20} />
             </button>
 
-            <div className="space-y-1">
-              <h2 className="text-2xl font-black text-blue-900">
-                {isNewSocio ? 'Registrar Nuevo Socio' : isSelfEdit ? 'Editar Mi Perfil' : 'Editar Ficha de Socio'}
-              </h2>
-              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
-                {isSelfEdit ? 'Actualizar mis datos personales de contacto' : 'Panel Administrativo de Control'}
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+              <div className="space-y-1">
+                <h2 className="text-xl font-black text-blue-900">
+                  {isNewSocio ? 'Registrar Nuevo Socio' : isSelfEdit ? 'Editar Mi Perfil' : 'Editar Ficha de Socio'}
+                </h2>
+                <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
+                  {isSelfEdit ? 'Actualizar mis datos personales de contacto' : 'Panel Administrativo de Control'}
+                </p>
+              </div>
+              {isClubSectionAllowed && (
+                <button
+                  type="button"
+                  onClick={() => setClubSectionOpen(!clubSectionOpen)}
+                  className={`text-xs font-bold px-3.5 py-1.5 rounded-xl border transition-all flex items-center gap-1.5 shadow-sm hover:shadow active:scale-95 ${
+                    clubSectionOpen 
+                      ? 'bg-amber-50 text-amber-700 border-amber-250 hover:bg-amber-100' 
+                      : 'bg-blue-50 text-blue-900 border-blue-200 hover:bg-blue-100'
+                  }`}
+                >
+                  <span>{clubSectionOpen ? 'Ocultar Datos del Club' : 'Mostrar Datos del Club'}</span>
+                  <Briefcase size={12} />
+                </button>
+              )}
             </div>
 
             {socioSaveError && (
@@ -5408,169 +5406,158 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
             )}
 
             <form onSubmit={handleSaveSocioSubmit} className="space-y-6">
-              {/* ── Photo, Código & Estatus ── */}
-              <div className="flex flex-col sm:flex-row items-start gap-5 pb-6 border-b border-slate-100">
-                {/* Photo */}
-                <div className="relative group flex-shrink-0 mx-auto sm:mx-0">
-                  <img 
-                    src={editSocioForm.foto || `https://picsum.photos/seed/${editingSocio.id}/150/150`} 
-                    alt="Avatar de socio" 
-                    className="w-24 h-24 rounded-full object-cover border-4 border-slate-100 shadow-md"
-                  />
-                  <label 
-                    htmlFor="socio-photo-upload"
-                    className="absolute bottom-0 right-0 bg-yellow-500 text-blue-900 p-2 rounded-full border-2 border-white shadow-sm hover:bg-yellow-600 cursor-pointer flex items-center justify-center"
-                    title="Cambiar foto de socio"
-                  >
-                    <Plus size={14} />
-                    <input 
-                      type="file" 
-                      id="socio-photo-upload" 
-                      accept="image/*" 
-                      className="hidden" 
-                      onChange={handleEditSocioPhotoChange} 
-                    />
-                  </label>
-                </div>
-
-                <div className="flex-grow space-y-3 w-full">
-                  {/* Código de Socio */}
-                  <div>
-                    <label className="flex items-center gap-1.5 text-xs font-bold text-blue-800 uppercase tracking-wider mb-2">
-                      <Hash size={12} />
-                      <span>Código de Socio</span>
-                    </label>
-                    <div className="flex gap-2">
-                      <input 
-                        type="text"
-                        placeholder="CLQ-2026-001"
-                        value={editSocioForm.codigoSocio || ''}
-                        onChange={e => setEditSocioForm(prev => ({ ...prev, codigoSocio: e.target.value }))}
-                        className="flex-1 px-4 py-2.5 border-2 border-blue-200 bg-blue-50 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-mono font-bold text-blue-900 text-sm tracking-widest"
+              <div className={`grid ${formColumnsClass} gap-8 items-start`}>
+                
+                {/* COLUMNA IZQUIERDA: DATOS PERSONALES */}
+                <div className="space-y-4">
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest pb-2 border-b border-slate-100 flex items-center gap-2">
+                    <User size={12} className="text-blue-900" />
+                    <span>Datos Personales</span>
+                  </h3>
+                  
+                  {/* Photo row */}
+                  <div className="flex items-center gap-4 bg-slate-50/50 p-3 rounded-2xl border border-slate-100/50">
+                    <div className="relative group flex-shrink-0">
+                      <img 
+                        src={editSocioForm.foto || `https://picsum.photos/seed/${editingSocio.id}/150/150`} 
+                        alt="Avatar de socio" 
+                        className="w-16 h-16 rounded-full object-cover border-2 border-slate-200 shadow-sm"
                       />
+                      <label 
+                        htmlFor="socio-photo-upload"
+                        className="absolute bottom-0 right-0 bg-yellow-500 text-blue-900 p-1.5 rounded-full border border-white shadow-sm hover:bg-yellow-600 cursor-pointer flex items-center justify-center"
+                        title="Cambiar foto de socio"
+                      >
+                        <Plus size={10} />
+                        <input 
+                          type="file" 
+                          id="socio-photo-upload" 
+                          accept="image/*" 
+                          className="hidden" 
+                          onChange={handleEditSocioPhotoChange} 
+                        />
+                      </label>
                     </div>
-                    <p className="text-[10px] text-slate-400 mt-1">Identificador único. Se muestra en la ficha del socio.</p>
+                    <div>
+                      <span className="block text-[11px] font-extrabold text-slate-800">Fotografía de Ficha</span>
+                      <span className="block text-[9px] text-slate-400 font-semibold">Formatos recomendados: JPG o PNG</span>
+                    </div>
                   </div>
-                  {/* Estatus */}
-                  <div>
-                    <label className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      <span>Estatus Institucional *</span>
-                    </label>
-                    <select 
-                      value={editSocioForm.estatus === 'Inactive' ? 'Inactive' : 'Active'}
-                      onChange={e => setEditSocioForm(prev => ({ ...prev, estatus: e.target.value }))}
-                      className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold bg-white"
-                    >
-                      <option value="Active">Activo (Visible en Directorio)</option>
-                      <option value="Inactive">Inactivo (Oculto en Directorio)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
 
-              {/* ── Sección: Datos Personales ── */}
-              <div>
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                  <span className="h-px flex-1 bg-slate-100"></span>
-                  <span>Datos Personales</span>
-                  <span className="h-px flex-1 bg-slate-100"></span>
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nombre Completo *</label>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5">Nombre Completo *</label>
                     <input 
                       type="text"
                       required
                       placeholder="Ej. Carlos Roberto Méndez"
                       value={editSocioForm.nombre || ''}
                       onChange={e => setEditSocioForm(prev => ({ ...prev, nombre: e.target.value }))}
-                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 text-xs"
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Correo Electrónico</label>
-                    <input 
-                      type="email"
-                      placeholder="Ej. carlosmendez@gmail.com"
-                      value={editSocioForm.correo || ''}
-                      onChange={e => setEditSocioForm(prev => ({ ...prev, correo: e.target.value }))}
-                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
-                    />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5">Correo Electrónico</label>
+                      <input 
+                        type="email"
+                        placeholder="carlos@gmail.com"
+                        value={editSocioForm.correo || ''}
+                        onChange={e => setEditSocioForm(prev => ({ ...prev, correo: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5">Teléfono</label>
+                      <div className="relative flex items-center">
+                        <span className="absolute left-3 text-[11px] font-semibold text-slate-400 select-none">
+                          +502
+                        </span>
+                        <input 
+                          type="text"
+                          maxLength={8}
+                          placeholder="55555555"
+                          value={(editSocioForm.telefono || '').replace(/^\+502\s?/, '')}
+                          onChange={e => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            setEditSocioForm(prev => ({ ...prev, telefono: val ? `+502 ${val}` : '' }));
+                          }}
+                          className="w-full pl-11 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 text-xs"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Teléfono</label>
-                    <div className="relative flex items-center">
-                      <span className="absolute left-4 text-sm font-semibold text-slate-400 select-none">
-                        +502
-                      </span>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5">DPI / Identificación</label>
                       <input 
                         type="text"
-                        maxLength={8}
-                        placeholder="55555555"
-                        value={(editSocioForm.telefono || '').replace(/^\+502\s?/, '')}
-                        onChange={e => {
-                          const val = e.target.value.replace(/\D/g, '');
-                          setEditSocioForm(prev => ({ ...prev, telefono: val ? `+502 ${val}` : '' }));
-                        }}
-                        className="w-full pl-16 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
+                        placeholder="2352 12345 0101"
+                        value={editSocioForm.dpi || ''}
+                        onChange={e => setEditSocioForm(prev => ({ ...prev, dpi: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5">Fecha Nacimiento</label>
+                      <input 
+                        type="date"
+                        value={editSocioForm.fechaNacimiento || ''}
+                        onChange={e => setEditSocioForm(prev => ({ ...prev, fechaNacimiento: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 text-xs"
                       />
                     </div>
                   </div>
+
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">DPI / Identificación</label>
-                    <input 
-                      type="text"
-                      placeholder="Ej. 2352 12345 0101"
-                      value={editSocioForm.dpi || ''}
-                      onChange={e => setEditSocioForm(prev => ({ ...prev, dpi: e.target.value }))}
-                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Fecha de Nacimiento</label>
-                    <input 
-                      type="date"
-                      value={editSocioForm.fechaNacimiento || ''}
-                      onChange={e => setEditSocioForm(prev => ({ ...prev, fechaNacimiento: e.target.value }))}
-                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Profesión / Ocupación</label>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5">Profesión / Ocupación</label>
                     <input 
                       type="text"
                       placeholder="Ej. Ingeniero Civil"
                       value={editSocioForm.profesion || ''}
                       onChange={e => setEditSocioForm(prev => ({ ...prev, profesion: e.target.value }))}
-                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 text-xs"
                     />
                   </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Dirección de Residencia</label>
+
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5">Dirección de Residencia</label>
                     <input 
                       type="text"
                       placeholder="Ej. 12 Av. 10-55, Zona 1, Quetzaltenango"
                       value={editSocioForm.direccion || ''}
                       onChange={e => setEditSocioForm(prev => ({ ...prev, direccion: e.target.value }))}
-                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 text-xs"
                     />
                   </div>
                 </div>
-              </div>
 
-              {/* ── Sección: Cargo Institucional ── */}
-              <div>
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                  <span className="h-px flex-1 bg-slate-100"></span>
-                  <span>Cargo Institucional</span>
-                  <span className="h-px flex-1 bg-slate-100"></span>
-                </h3>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* COLUMNA DERECHA: DATOS INSTITUCIONALES */}
+                {showClubRightColumn && (
+                  <div className="space-y-4">
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest pb-2 border-b border-slate-100 flex items-center gap-2">
+                    <Briefcase size={12} className="text-blue-900" />
+                    <span>Datos del Club</span>
+                  </h3>
+
+                  <div>
+                    <label className="flex items-center gap-1 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5">
+                      <Hash size={10} />
+                      <span>Código de Socio</span>
+                    </label>
+                    <input 
+                      type="text"
+                      placeholder="CLQ-2026-001"
+                      value={editSocioForm.codigoSocio || ''}
+                      onChange={e => setEditSocioForm(prev => ({ ...prev, codigoSocio: e.target.value }))}
+                      className="w-full px-3 py-2 border-2 border-blue-200 bg-blue-50/50 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-mono font-bold text-blue-900 text-xs tracking-wider"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                        <span>Puesto Principal *</span>
-                      </label>
+                      <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5">Puesto Principal *</label>
                       <select 
                         value={editSocioForm.puesto || ''}
                         onChange={e => {
@@ -5582,7 +5569,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                             rol: matchedP ? matchedP.rolAsociado : prev.rol
                           }));
                         }}
-                        className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold bg-white"
+                        className="w-full px-2 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-xs font-semibold bg-white"
                       >
                         <option value="">Seleccione puesto...</option>
                         {puestosList.map(p => (
@@ -5591,75 +5578,51 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                       </select>
                     </div>
                     <div>
-                      <label className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                        <span>Rol del Sistema (Permisos) *</span>
-                      </label>
-                      <select 
-                        value={editSocioForm.rol || 'SOCIO'}
-                        onChange={e => setEditSocioForm(prev => ({ ...prev, rol: e.target.value }))}
-                        className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold bg-white"
-                      >
-                        {rolesConfig.map(r => (
-                          <option key={r.id} value={r.id}>{r.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Club de Leones</label>
-                      <input 
-                        type="text"
-                        value={editSocioForm.club || 'QUETZALTENANGO'}
-                        onChange={e => setEditSocioForm(prev => ({ ...prev, club: e.target.value }))}
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Fecha de Ingreso</label>
+                      <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1.5">Fecha de Ingreso</label>
                       <input 
                         type="date"
                         value={editSocioForm.fechaIngreso || ''}
                         onChange={e => setEditSocioForm(prev => ({ ...prev, fechaIngreso: e.target.value }))}
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 text-xs"
                       />
                     </div>
                   </div>
 
                   {/* Puestos Adicionales */}
-                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-                    <label className="flex items-center gap-2 text-xs font-bold text-amber-800 uppercase tracking-wider mb-3">
-                      <Briefcase size={12} />
-                      <span>Funciones / Cargos Adicionales</span>
-                      <span className="ml-auto text-[10px] font-normal text-amber-600">Ejemplo: doble función</span>
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3">
+                    <label className="flex items-center gap-1.5 text-[10px] font-extrabold text-amber-800 uppercase tracking-wider">
+                      <Briefcase size={10} />
+                      <span>Cargos Adicionales</span>
                     </label>
-                    <div className="space-y-2 mb-3">
+                    <div className="space-y-1.5 max-h-[80px] overflow-y-auto pr-1">
                       {(editSocioForm.puestosAdicionales || []).map((pa, i) => (
-                        <div key={i} className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 border border-amber-200">
-                          <span className="flex-1 text-sm font-semibold text-slate-700">{pa}</span>
+                        <div key={i} className="flex items-center gap-2 bg-white rounded-xl px-2.5 py-1.5 border border-amber-200">
+                          <span className="flex-1 text-[11px] font-semibold text-slate-700">{pa}</span>
                           <button
                             type="button"
                             onClick={() => {
                               const updated = (editSocioForm.puestosAdicionales || []).filter((_, idx) => idx !== i);
                               setEditSocioForm(prev => ({ ...prev, puestosAdicionales: updated }));
                             }}
-                            className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            className="p-0.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
                             title="Eliminar cargo"
                           >
-                            <X size={14} />
+                            <XIcon size={12} />
                           </button>
                         </div>
                       ))}
                       {(editSocioForm.puestosAdicionales || []).length === 0 && (
-                        <p className="text-xs text-amber-600 italic">Sin cargos adicionales asignados.</p>
+                        <p className="text-[11px] text-amber-600 italic">Sin cargos adicionales asignados.</p>
                       )}
                     </div>
                     {/* Agregar nuevo puesto adicional */}
-                    <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="flex gap-2">
                       <select
                         id="nuevo-puesto-adicional"
-                        className="w-full sm:flex-1 min-w-0 px-3 py-2.5 border border-amber-300 rounded-xl text-sm font-semibold bg-white focus:ring-2 focus:ring-amber-500 outline-none"
+                        className="flex-1 min-w-0 px-2 py-2 border border-amber-300 rounded-xl text-xs font-semibold bg-white focus:ring-2 focus:ring-amber-500 outline-none"
                         defaultValue=""
                       >
-                        <option value="" disabled>Seleccionar cargo adicional...</option>
+                        <option value="" disabled>Seleccionar cargo...</option>
                         {puestosList.map(p => (
                           <option key={p.id} value={p.nombre}>{p.nombre}</option>
                         ))}
@@ -5676,14 +5639,16 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                           }
                           sel.value = '';
                         }}
-                        className="w-full sm:w-auto px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-sm transition-colors flex items-center justify-center gap-1.5 flex-shrink-0"
+                        className="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs transition-colors flex items-center justify-center gap-1 flex-shrink-0"
                       >
-                        <Plus size={14} />
+                        <Plus size={12} />
                         Agregar
                       </button>
                     </div>
                   </div>
                 </div>
+              )}
+
               </div>
 
 
@@ -5734,7 +5699,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               onClick={() => setQrSocio(null)}
               className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors"
             >
-              <X size={20} />
+              <XIcon size={20} />
             </button>
 
             <div className="space-y-1">
@@ -5805,7 +5770,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               onClick={() => setShowRegistrarPagoModal(false)}
               className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors"
             >
-              <X size={20} />
+              <XIcon size={20} />
             </button>
 
             <div className="space-y-1">
@@ -6004,7 +5969,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               className="absolute -top-12 right-0 p-2 text-white/80 hover:text-white bg-slate-900/60 hover:bg-slate-900/90 rounded-full transition-colors"
               onClick={() => setSelectedPhoto(null)}
             >
-              <X size={24} />
+              <XIcon size={24} />
             </button>
             <img 
               src={selectedPhoto.url} 

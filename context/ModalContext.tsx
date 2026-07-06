@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { AlertTriangle, Info, HelpCircle, X } from 'lucide-react';
+import { AlertTriangle, Info, HelpCircle, X as XIcon } from 'lucide-react';
 
 interface AlertConfig {
   title: string;
@@ -80,7 +80,7 @@ export const ModalProvider: React.FC<{ children: ReactNode }> = ({ children }) =
               onClick={handleAlertClose}
               className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors p-1"
             >
-              <X size={20} />
+              <XIcon size={20} />
             </button>
             <div className="flex items-center space-x-4 mb-5 text-blue-900">
               <div className="bg-blue-50 p-3 rounded-full border border-blue-100">
@@ -112,7 +112,7 @@ export const ModalProvider: React.FC<{ children: ReactNode }> = ({ children }) =
               onClick={() => handleConfirmAction(false)}
               className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors p-1"
             >
-              <X size={20} />
+              <XIcon size={20} />
             </button>
             <div className={`flex items-center space-x-4 mb-5 ${
               confirmConfig.type === 'danger' ? 'text-red-600' :

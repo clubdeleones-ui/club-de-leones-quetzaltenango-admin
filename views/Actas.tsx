@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { MOCK_ACTAS } from '../constants';
-import { Search, FileText, Download, Eye, Sparkles, MessageCircle, X, Loader2, Calendar, User, HelpCircle } from 'lucide-react';
+import { Search, FileText, Download, Eye, Sparkles, MessageCircle, X as XIcon, Loader2, Calendar, User, HelpCircle } from 'lucide-react';
 import { googleService } from '../services/googleService';
 import { geminiService } from '../services/geminiService';
 import { firebaseService } from '../services/firebaseService';
@@ -248,7 +248,7 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
                 <span className="text-xs font-bold uppercase tracking-widest text-yellow-400 flex items-center">
                   <MessageCircle size={16} className="mr-2" /> Respuesta de IA
                 </span>
-                <button onClick={() => setAiResult(null)} className="text-white/50 hover:text-white transition-colors p-1"><X size={18} /></button>
+                <button onClick={() => setAiResult(null)} className="text-white/50 hover:text-white transition-colors p-1"><XIcon size={18} /></button>
               </div>
               <p className="text-sm md:text-base leading-relaxed font-normal whitespace-pre-wrap">{aiResult}</p>
             </div>
@@ -454,7 +454,7 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
                 className="absolute top-3.5 right-4 sm:top-4.5 sm:right-6 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors cursor-pointer flex items-center justify-center"
                 title="Cerrar"
               >
-                <X size={18} />
+                <XIcon size={18} />
               </button>
             </div>
             

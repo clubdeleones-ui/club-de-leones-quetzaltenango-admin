@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  Plus, Calendar, Search, Filter, Edit, Trash2, Gift, Building, X, Loader2, Users, Check, Upload
+  Plus, Calendar, Search, Filter, Edit, Trash2, Gift, Building, X, Loader2, Users, Check, Upload, ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { Actividad, SolicitudVoluntario } from '../../types';
+import { Actividad, SolicitudVoluntario, RegistroParticipacion } from '../../types';
 import { firebaseService } from '../../services/firebaseService';
 import { useClubData } from '../../context/ClubDataContext';
 import { useModal } from '../../context/ModalContext';
@@ -18,6 +18,8 @@ export const AdminCalendario: React.FC = () => {
 
   const [actividades, setActividades] = useState<Actividad[]>(dbActividades);
   const [voluntarios, setVoluntarios] = useState<SolicitudVoluntario[]>(dbVoluntarios);
+  const [participaciones, setParticipaciones] = useState<RegistroParticipacion[]>([]);
+  const [loadingParticipaciones, setLoadingParticipaciones] = useState(false);
 
   React.useEffect(() => {
     setActividades(dbActividades);
@@ -27,7 +29,23 @@ export const AdminCalendario: React.FC = () => {
     setVoluntarios(dbVoluntarios);
   }, [dbVoluntarios]);
 
-  const [calendarioSubTab, setCalendarioSubTab] = useState<'lista' | 'voluntarios'>('lista');
+  const fetchParticipaciones = async () => {
+    setLoadingParticipaciones(true);
+    try {
+      const list = await firebaseService.getRegistroParticipaciones();
+      setParticipaciones(list);
+    } catch (error) {
+      console.error("Error loading participations:", error);
+    } finally {
+      setLoadingParticipaciones(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchParticipaciones();
+  }, []);
+
+  const [calendarioSubTab, setCalendarioSubTab] = useState<'lista' | 'voluntarios' | 'asistentes'>('lista');
 
   const [showAddActividad, setShowAddActividad] = useState(false);
   const [showEditActividad, setShowEditActividad] = useState(false);
@@ -40,6 +58,11 @@ export const AdminCalendario: React.FC = () => {
     publica: true,
     conBotonDonacion: false,
     donacionUrl: '',
+    conBotonVoluntariado: true,
+    conBotonAsistencia: false,
+    costoSocio: '',
+    costoInvitado: '',
+    vestimenta: 'libre',
     imagen: ''
   });
 
@@ -57,6 +80,9 @@ export const AdminCalendario: React.FC = () => {
   const [voluntarioSearch, setVoluntarioSearch] = useState('');
   const [voluntarioFilterActividad, setVoluntarioFilterActividad] = useState('Todas');
   const [voluntarioFilterEstado, setVoluntarioFilterEstado] = useState('Todos');
+
+  const [participacionSearch, setParticipacionSearch] = useState('');
+  const [participacionFilterActividad, setParticipacionFilterActividad] = useState('Todas');
 
   // Pagination
   const [actividadesPage, setActividadesPage] = useState(1);
@@ -137,6 +163,34 @@ export const AdminCalendario: React.FC = () => {
     return result;
   }, [voluntarios, voluntarioSearch, voluntarioFilterActividad, voluntarioFilterEstado]);
 
+  const filteredParticipaciones = useMemo(() => {
+    let result = [...participaciones];
+    if (participacionSearch.trim()) {
+      const q = participacionSearch.toLowerCase();
+      result = result.filter(p => 
+        p.nombre.toLowerCase().includes(q) || 
+        p.telefono.includes(q) ||
+        p.actividadTitulo.toLowerCase().includes(q)
+      );
+    }
+    if (participacionFilterActividad !== 'Todas') {
+      result = result.filter(p => p.actividadId === participacionFilterActividad);
+    }
+    return result;
+  }, [participaciones, participacionSearch, participacionFilterActividad]);
+
+  const handleDeleteParticipacion = async (id: string) => {
+    if (!(await showConfirm("Eliminar Confirmación", "¿Está seguro de eliminar esta confirmación de participación?", { type: 'danger', confirmText: 'Eliminar', cancelText: 'Cancelar' }))) return;
+    try {
+      await firebaseService.deleteRegistroParticipacion(id);
+      setParticipaciones(participaciones.filter(p => p.id !== id));
+      showAlert("Confirmación eliminada exitosamente", "success");
+    } catch (error) {
+      console.error("Error deleting RSVP:", error);
+      showAlert("No se pudo eliminar la confirmación", "error");
+    }
+  };
+
   const handleAddActividad = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newActividad.titulo || !newActividad.fecha || !newActividad.lugar) return;
@@ -157,12 +211,17 @@ export const AdminCalendario: React.FC = () => {
         imagen: finalImageUrl || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800',
         publica: newActividad.publica,
         conBotonDonacion: newActividad.conBotonDonacion,
-        donacionUrl: newActividad.conBotonDonacion ? (newActividad.donacionUrl || '#/donar') : ''
+        donacionUrl: newActividad.conBotonDonacion ? (newActividad.donacionUrl || '#/donar') : '',
+        conBotonVoluntariado: newActividad.conBotonVoluntariado,
+        conBotonAsistencia: newActividad.conBotonAsistencia,
+        costoSocio: newActividad.costoSocio ? parseFloat(newActividad.costoSocio) : 0,
+        costoInvitado: newActividad.costoInvitado ? parseFloat(newActividad.costoInvitado) : 0,
+        vestimenta: newActividad.vestimenta || 'libre'
       };
 
       await firebaseService.saveActividad(created);
       setActividades([created, ...actividades]);
-      setNewActividad({ titulo: '', descripcion: '', fecha: '', lugar: '', publica: true, conBotonDonacion: false, donacionUrl: '', imagen: '' });
+      setNewActividad({ titulo: '', descripcion: '', fecha: '', lugar: '', publica: true, conBotonDonacion: false, donacionUrl: '', conBotonVoluntariado: true, conBotonAsistencia: false, costoSocio: '', costoInvitado: '', vestimenta: 'libre', imagen: '' });
       setNewActividadImageFile(null);
       setNewActividadImagePreview(null);
       setShowAddActividad(false);
@@ -412,20 +471,71 @@ export const AdminCalendario: React.FC = () => {
                   />
                   <label htmlFor="conBotonDonacion" className="text-sm font-bold text-slate-700 select-none cursor-pointer">Habilitar Botón de Donaciones</label>
                 </div>
+                <div className="flex items-center space-x-3">
+                  <input 
+                    type="checkbox" 
+                    id="conBotonVoluntariado" 
+                    checked={newActividad.conBotonVoluntariado} 
+                    onChange={e => setNewActividad({...newActividad, conBotonVoluntariado: e.target.checked})}
+                    className="w-5 h-5 rounded text-blue-900 border-slate-300 focus:ring-blue-900"
+                  />
+                  <label htmlFor="conBotonVoluntariado" className="text-sm font-bold text-slate-700 select-none cursor-pointer">Habilitar Botón de Voluntariado</label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <input 
+                    type="checkbox" 
+                    id="conBotonAsistencia" 
+                    checked={newActividad.conBotonAsistencia} 
+                    onChange={e => setNewActividad({...newActividad, conBotonAsistencia: e.target.checked})}
+                    className="w-5 h-5 rounded text-blue-900 border-slate-300 focus:ring-blue-900"
+                  />
+                  <label htmlFor="conBotonAsistencia" className="text-sm font-bold text-slate-700 select-none cursor-pointer">Habilitar Botón de Confirmar Asistencia</label>
+                </div>
               </div>
 
-              {newActividad.conBotonDonacion && (
-                <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Enlace de Donación Personalizado (Opcional)</label>
+              {/* Costo Socios e Invitados */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Costo para Socios (Q)</label>
                   <input 
-                    type="text" 
-                    value={newActividad.donacionUrl} 
-                    onChange={e => setNewActividad({...newActividad, donacionUrl: e.target.value})}
-                    placeholder="Ej. #/donar o link de pago externo (dejar vacío para general)"
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-mono"
+                    type="number" 
+                    min="0"
+                    step="0.01"
+                    value={newActividad.costoSocio} 
+                    onChange={e => setNewActividad({...newActividad, costoSocio: e.target.value})}
+                    placeholder="Ej. 50 (0 para gratis)"
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-800"
                   />
                 </div>
-              )}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Costo para Invitados (Q)</label>
+                  <input 
+                    type="number" 
+                    min="0"
+                    step="0.01"
+                    value={newActividad.costoInvitado} 
+                    onChange={e => setNewActividad({...newActividad, costoInvitado: e.target.value})}
+                    placeholder="Ej. 100 (0 para gratis)"
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-800"
+                  />
+                </div>
+              </div>
+
+              {/* Vestimenta select */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Vestimenta Requerida</label>
+                <select
+                  value={newActividad.vestimenta}
+                  onChange={e => setNewActividad({...newActividad, vestimenta: e.target.value})}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-800 bg-white"
+                >
+                  <option value="formal">Formal</option>
+                  <option value="casual">Casual</option>
+                  <option value="ropa de trabajo">Ropa de trabajo</option>
+                  <option value="chaleco leonistico">Chaleco leonístico</option>
+                  <option value="libre">Libre</option>
+                </select>
+              </div>
             </div>
 
             <div className="flex space-x-3 pt-4 border-t border-slate-100">
@@ -609,6 +719,26 @@ export const AdminCalendario: React.FC = () => {
                   />
                   <label htmlFor="edit-conBotonDonacion" className="text-sm font-bold text-slate-700 select-none cursor-pointer">Habilitar Botón de Donaciones</label>
                 </div>
+                <div className="flex items-center space-x-3">
+                  <input 
+                    type="checkbox" 
+                    id="edit-conBotonVoluntariado" 
+                    checked={editingActividad.conBotonVoluntariado !== false} 
+                    onChange={e => setEditingActividad({...editingActividad, conBotonVoluntariado: e.target.checked})}
+                    className="w-5 h-5 rounded text-blue-900 border-slate-300 focus:ring-blue-900"
+                  />
+                  <label htmlFor="edit-conBotonVoluntariado" className="text-sm font-bold text-slate-700 select-none cursor-pointer">Habilitar Botón de Voluntariado</label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <input 
+                    type="checkbox" 
+                    id="edit-conBotonAsistencia" 
+                    checked={editingActividad.conBotonAsistencia || false} 
+                    onChange={e => setEditingActividad({...editingActividad, conBotonAsistencia: e.target.checked})}
+                    className="w-5 h-5 rounded text-blue-900 border-slate-300 focus:ring-blue-900"
+                  />
+                  <label htmlFor="edit-conBotonAsistencia" className="text-sm font-bold text-slate-700 select-none cursor-pointer">Habilitar Botón de Confirmar Asistencia</label>
+                </div>
               </div>
 
               {(editingActividad.conBotonDonacion) && (
@@ -623,6 +753,50 @@ export const AdminCalendario: React.FC = () => {
                   />
                 </div>
               )}
+
+              {/* Costo Socios e Invitados */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Costo para Socios (Q)</label>
+                  <input 
+                    type="number" 
+                    min="0"
+                    step="0.01"
+                    value={editingActividad.costoSocio !== undefined ? editingActividad.costoSocio : ''} 
+                    onChange={e => setEditingActividad({...editingActividad, costoSocio: e.target.value ? parseFloat(e.target.value) : 0})}
+                    placeholder="Ej. 50 (0 para gratis)"
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-800"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Costo para Invitados (Q)</label>
+                  <input 
+                    type="number" 
+                    min="0"
+                    step="0.01"
+                    value={editingActividad.costoInvitado !== undefined ? editingActividad.costoInvitado : ''} 
+                    onChange={e => setEditingActividad({...editingActividad, costoInvitado: e.target.value ? parseFloat(e.target.value) : 0})}
+                    placeholder="Ej. 100 (0 para gratis)"
+                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-800"
+                  />
+                </div>
+              </div>
+
+              {/* Vestimenta select */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Vestimenta Requerida</label>
+                <select
+                  value={editingActividad.vestimenta || 'libre'}
+                  onChange={e => setEditingActividad({...editingActividad, vestimenta: e.target.value})}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-800 bg-white"
+                >
+                  <option value="formal">Formal</option>
+                  <option value="casual">Casual</option>
+                  <option value="ropa de trabajo">Ropa de trabajo</option>
+                  <option value="chaleco leonistico">Chaleco leonístico</option>
+                  <option value="libre">Libre</option>
+                </select>
+              </div>
             </div>
 
             <div className="flex space-x-3 pt-4 border-t border-slate-100">
@@ -658,7 +832,7 @@ export const AdminCalendario: React.FC = () => {
         </div>
       )}
 
-      {/* Sub tabs for Calendario: Actividades vs Voluntarios */}
+      {/* Sub tabs for Calendario: Actividades vs Voluntarios vs Asistentes */}
       <div className="flex border-b border-slate-200 gap-6 mb-2">
         <button
           onClick={() => setCalendarioSubTab('lista')}
@@ -679,6 +853,16 @@ export const AdminCalendario: React.FC = () => {
           }`}
         >
           Solicitudes de Voluntarios ({voluntarios.length})
+        </button>
+        <button
+          onClick={() => setCalendarioSubTab('asistentes')}
+          className={`pb-4 text-sm font-extrabold transition-all relative ${
+            calendarioSubTab === 'asistentes'
+              ? 'text-blue-900 border-b-2 border-blue-900'
+              : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          Asistentes Confirmados ({participaciones.length})
         </button>
       </div>
 
@@ -868,7 +1052,7 @@ export const AdminCalendario: React.FC = () => {
             </div>
           )}
         </div>
-      ) : (
+      ) : calendarioSubTab === 'voluntarios' ? (
         /* Volunteer Requests Section */
         <div className="space-y-6 animate-in fade-in duration-300">
           {/* Filters & Search */}
@@ -1062,6 +1246,149 @@ export const AdminCalendario: React.FC = () => {
                       >
                         <Trash2 size={14} />
                       </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
+        /* Asistentes / RSVP Section */
+        <div className="space-y-6 animate-in fade-in duration-300">
+          {/* Filters & Search */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="relative w-full md:w-1/3 text-left">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="Buscar por nombre, teléfono o actividad..."
+                value={participacionSearch}
+                onChange={e => setParticipacionSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:bg-white transition-all text-sm outline-none font-semibold text-slate-800"
+              />
+            </div>
+            
+            <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto items-center">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Actividad:</span>
+              <select
+                value={participacionFilterActividad}
+                onChange={e => setParticipacionFilterActividad(e.target.value)}
+                className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:bg-white text-xs font-bold text-slate-700 outline-none w-full md:w-auto"
+              >
+                <option value="Todas">Todas las actividades</option>
+                {actividades.filter(a => a.conBotonAsistencia).map(act => (
+                  <option key={act.id} value={act.id}>{act.titulo}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {loadingParticipaciones ? (
+            <div className="flex justify-center items-center py-12">
+              <Loader2 className="animate-spin text-blue-900" size={32} />
+            </div>
+          ) : filteredParticipaciones.length === 0 ? (
+            <div className="bg-white border rounded-3xl p-12 text-center text-slate-450 font-bold italic shadow-sm">
+              No se encontraron registros de asistencia confirmada.
+            </div>
+          ) : (
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden lg:block bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50/75 border-b border-slate-200 text-slate-405 text-[10px] font-black uppercase tracking-wider">
+                        <th className="px-6 py-4">Nombre del Asistente</th>
+                        <th className="px-6 py-4">¿Es Socio?</th>
+                        <th className="px-6 py-4">Teléfono</th>
+                        <th className="px-6 py-4">Actividad</th>
+                        <th className="px-6 py-4">Invitados</th>
+                        <th className="px-6 py-4">Fecha de Registro</th>
+                        <th className="px-6 py-4 text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs font-bold text-slate-700">
+                      {filteredParticipaciones.map(p => (
+                        <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-6 py-4 font-extrabold text-slate-900">{p.nombre}</td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase border ${
+                              p.esSocio 
+                                ? 'bg-blue-50 text-blue-800 border-blue-150' 
+                                : 'bg-slate-50 text-slate-500 border-slate-200'
+                            }`}>
+                              {p.esSocio ? 'Sí' : 'No'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 font-mono text-slate-600">{p.telefono}</td>
+                          <td className="px-6 py-4 text-blue-900">{p.actividadTitulo}</td>
+                          <td className="px-6 py-4">
+                            {p.llevaInvitados ? (
+                              <span className="text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-100">
+                                {p.cantidadInvitados} acompañantes
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 font-medium">Ninguno</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-slate-400">{new Date(p.fechaRegistro).toLocaleDateString()}</td>
+                          <td className="px-6 py-4 text-right">
+                            <button
+                              onClick={() => handleDeleteParticipacion(p.id)}
+                              className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-red-50 text-slate-500 hover:text-red-650 inline-flex items-center justify-center transition-all shadow-sm active:scale-95 cursor-pointer"
+                              title="Eliminar Registro"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Mobile Cards View */}
+              <div className="lg:hidden space-y-4 text-left">
+                {filteredParticipaciones.map(p => (
+                  <div key={p.id} className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm space-y-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-extrabold text-slate-800 text-base">{p.nombre}</p>
+                        <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase border ${
+                          p.esSocio 
+                            ? 'bg-blue-50 text-blue-800 border-blue-150' 
+                            : 'bg-slate-50 text-slate-500 border-slate-200'
+                        }`}>
+                          {p.esSocio ? 'Socio' : 'Externo'}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteParticipacion(p.id)}
+                        className="p-2 rounded-xl bg-slate-50 hover:bg-red-50 text-slate-550 hover:text-red-600 transition-all active:scale-95 cursor-pointer"
+                        title="Eliminar"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-3">
+                      <div>
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Actividad:</span>
+                        <p className="text-slate-750 font-extrabold mt-0.5">{p.actividadTitulo}</p>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Teléfono:</span>
+                        <p className="text-slate-750 font-extrabold mt-0.5">{p.telefono}</p>
+                      </div>
+                      <div className="col-span-2 mt-2">
+                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Invitados:</span>
+                        <p className="text-slate-750 font-extrabold mt-0.5">
+                          {p.llevaInvitados ? `${p.cantidadInvitados} acompañantes` : 'Ninguno'}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ))}

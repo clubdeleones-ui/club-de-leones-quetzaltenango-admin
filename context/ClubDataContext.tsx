@@ -197,10 +197,19 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     const performInitialSync = async () => {
       try {
+        const isInit = await firebaseService.isSystemInitialized();
+        if (isInit) {
+          console.log("El sistema ya está inicializado. Omitiendo sincronización de datos de prueba.");
+          return;
+        }
+
         await firebaseService.syncInitialSocios(MOCK_SOCIOS);
         await firebaseService.syncInitialActividades(MOCK_ACTIVIDADES);
         await firebaseService.syncInitialGaleria(MOCK_GALERIA);
         await firebaseService.syncInitialActas(MOCK_ACTAS);
+        
+        await firebaseService.setSystemInitialized();
+        console.log("Datos de prueba sincronizados e inicialización guardada en Firestore.");
       } catch (err) {
         console.error("Error performing initial mock data sync:", err);
       }

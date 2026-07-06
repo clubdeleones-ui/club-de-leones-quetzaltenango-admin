@@ -29,6 +29,8 @@ const EvaluacionCompartida = lazy(() => import('./views/EvaluacionCompartida').t
 const ConfirmarInvitacion = lazy(() => import('./views/ConfirmarInvitacion'));
 const RetencionSocios = lazy(() => import('./views/RetencionSocios'));
 const Convencion = lazy(() => import('./views/Convencion'));
+const CompletarFichaSocio = lazy(() => import('./views/CompletarFichaSocio'));
+const PublicPagoCuota = lazy(() => import('./views/PublicPagoCuota').then(m => ({ default: m.PublicPagoCuota })));
 
 // ProtectedRoute moved outside of App to resolve typing errors and improve performance
 interface ProtectedRouteProps {
@@ -132,6 +134,8 @@ const App: React.FC = () => {
               <Route path="/ficha-evaluacion/:id" element={<FichaEvaluacion />} />
               <Route path="/evaluacion-compartida" element={<EvaluacionCompartida />} />
               <Route path="/confirmar-invitacion/:id" element={<ConfirmarInvitacion />} />
+              <Route path="/completar-ficha-socio/:id" element={<CompletarFichaSocio />} />
+              <Route path="/pago-cuota" element={<PublicPagoCuota />} />
 
               <Route path="/login" element={auth.isAuthenticated ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />} />
 

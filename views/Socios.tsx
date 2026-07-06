@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useClubData } from '../context/ClubDataContext';
 import { Socio, UserRole } from '../types';
@@ -10,7 +10,10 @@ import {
   Phone,
   Building,
   X,
-  UserCheck
+  UserCheck,
+  FileText,
+  MapPin,
+  Briefcase
 } from 'lucide-react';
 
 interface SociosProps {
@@ -21,15 +24,15 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
   const { socios, rolesConfig } = useClubData();
 
   const [selectedPhoto, setSelectedPhoto] = useState<{ url: string; title: string } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const sociosActivos = React.useMemo(() => {
+  const sortedSocios = React.useMemo(() => {
     const rolesOrderMap: Record<string, number> = {};
     rolesConfig.forEach((r, idx) => {
       rolesOrderMap[r.id] = r.orden !== undefined ? r.orden : idx;
     });
 
     return [...socios]
-      .filter(s => s.estatus !== 'Inactive')
       .sort((a, b) => {
         const orderA = rolesOrderMap[a.rol || ''] ?? 999;
         const orderB = rolesOrderMap[b.rol || ''] ?? 999;
@@ -39,6 +42,15 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
         return a.nombre.localeCompare(b.nombre);
       });
   }, [socios, rolesConfig]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [socios.length]);
+
+  const totalPages = Math.ceil(sortedSocios.length / 9);
+  const displayedSocios = React.useMemo(() => {
+    return sortedSocios.slice((currentPage - 1) * 9, currentPage * 9);
+  }, [sortedSocios, currentPage]);
 
   return (
     <div className="space-y-10 max-w-7xl mx-auto px-4 md:px-8 py-8 animate-in fade-in duration-700">
@@ -64,7 +76,7 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
 
       {/* ACTIVE MEMBERS LIST */}
       <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-10 pt-4">
-        {sociosActivos.map((socio) => (
+        {displayedSocios.map((socio) => (
           <div 
             key={socio.id} 
             className="bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-2xl border border-slate-100 hover:border-blue-900/10 transition-all duration-500 flex flex-col relative group hover:-translate-y-2"
@@ -77,14 +89,14 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
               {/* Badge de Estatus flotante premium */}
               <div className="absolute top-4 right-4">
                 <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center space-x-1.5 border backdrop-blur-md ${
-                  socio.estatus === 'Pending' 
+                  socio.estatus === 'Inactive' 
                     ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' 
                     : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                 }`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${
-                    socio.estatus === 'Pending' ? 'bg-yellow-500 animate-pulse' : 'bg-emerald-400 animate-pulse'
+                    socio.estatus === 'Inactive' ? 'bg-yellow-500 animate-pulse' : 'bg-emerald-400 animate-pulse'
                   }`} />
-                  <span>{socio.estatus === 'Pending' ? 'Pendiente' : 'Activo'}</span>
+                  <span>{socio.estatus === 'Inactive' ? 'Inactivo' : 'Activo'}</span>
                 </span>
               </div>
             </div>
@@ -191,31 +203,23 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                     )}
                   </div>
 
-                  {/* Gestión / Período */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                  {/* Fecha Nacimiento */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100/60 gap-1">
                     <span className="text-slate-450 flex items-center space-x-1.5 flex-shrink-0">
                       <Calendar size={16} className="text-slate-400 flex-shrink-0" />
-                      <span>Gestión</span>
+                      <span>Fecha Nacimiento</span>
                     </span>
-                    <span className="font-bold text-slate-800 text-left sm:text-right break-words w-full sm:w-auto">
-                      {socio.fechaIngreso} al {socio.fechaFin && socio.fechaFin !== 'Sin fecha fin' ? socio.fechaFin : 'Indefinido'}
-                    </span>
+                    <span className="font-bold text-slate-800 text-left sm:text-right break-words w-full sm:w-auto">{socio.fechaNacimiento || 'No indicado'}</span>
                   </div>
-                </div>
 
-                {/* Membresía / Solvencia */}
-                <div className="flex items-center justify-between px-2 pt-2 text-xs text-slate-400 font-bold uppercase tracking-wider">
-                  <span>Membresía Financiera</span>
-                  <span className={`flex items-center space-x-1 ${
-                    socio.estadoCuotas === 'Al día' 
-                      ? 'text-emerald-600' 
-                      : socio.estadoCuotas === 'Pendiente'
-                      ? 'text-yellow-600'
-                      : 'text-rose-600'
-                  }`}>
-                    <span>●</span>
-                    <span>{socio.estadoCuotas}</span>
-                  </span>
+                  {/* Profesión */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <span className="text-slate-450 flex items-center space-x-1.5 flex-shrink-0">
+                      <Briefcase size={16} className="text-slate-400 flex-shrink-0" />
+                      <span>Profesión</span>
+                    </span>
+                    <span className="font-bold text-slate-800 text-left sm:text-right break-words w-full sm:w-auto">{socio.profesion || 'No indicada'}</span>
+                  </div>
                 </div>
 
               </div>
@@ -223,6 +227,55 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
           </div>
         ))}
       </div>
+
+      {/* PAGINACIÓN */}
+      {totalPages > 1 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 border-t border-slate-100/85">
+          <p className="text-sm font-medium text-slate-500">
+            Mostrando <span className="font-bold text-slate-800">{(currentPage - 1) * 9 + 1}</span> a <span className="font-bold text-slate-800">{Math.min(currentPage * 9, sortedSocios.length)}</span> de <span className="font-bold text-slate-800">{sortedSocios.length}</span> socios
+          </p>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => {
+                setCurrentPage(prev => Math.max(prev - 1, 1));
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              disabled={currentPage === 1}
+              className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-55 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Anterior
+            </button>
+            
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                onClick={() => {
+                  setCurrentPage(page);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className={`w-10 h-10 rounded-xl text-sm font-bold transition-all ${
+                  currentPage === page
+                    ? 'bg-blue-900 text-white shadow-md'
+                    : 'text-slate-655 hover:bg-slate-55 border border-slate-100'
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+
+            <button
+              onClick={() => {
+                setCurrentPage(prev => Math.min(prev + 1, totalPages));
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              disabled={currentPage === totalPages}
+              className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-55 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Siguiente
+            </button>
+          </div>
+        </div>
+      )}
 
       {selectedPhoto && (
         <div 

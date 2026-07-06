@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, Plus, Edit2, Trash2, X, UploadCloud, Save, ImageIcon, Calendar, Tag } from 'lucide-react';
+import { Camera, Plus, Edit2, Trash2, X as XIcon, UploadCloud, Save, ImageIcon, Calendar, Tag } from 'lucide-react';
 import { GaleriaItem } from '../types';
 import { firebaseService } from '../services/firebaseService';
 import { compressImageFile, validateImageFile } from '../utils/imageCompressor';
@@ -239,7 +239,7 @@ export const GaleriaAdmin: React.FC = () => {
                 {editingItem ? 'Editar Foto' : 'Subir Nueva Foto'}
               </h2>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 bg-white p-2 rounded-full shadow-sm">
-                <X size={20} />
+                <XIcon size={20} />
               </button>
             </header>
 

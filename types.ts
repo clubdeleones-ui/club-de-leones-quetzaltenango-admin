@@ -19,6 +19,9 @@ export interface PagoCuota {
   metodo: 'Transferencia' | 'Depósito' | 'Efectivo';
   bancoReferencia?: string;
   numeroReferencia?: string;
+  tipoCuota?: 'inscripcion' | 'ordinaria' | 'extraordinaria' | 'donacion';
+  descripcion?: string;
+  comprobanteUrl?: string;
 }
 
 export interface Socio {
@@ -90,7 +93,25 @@ export interface Actividad {
   publica: boolean;
   conBotonDonacion?: boolean;
   donacionUrl?: string;
+  conBotonVoluntariado?: boolean;
+  conBotonAsistencia?: boolean;
+  costoSocio?: number;
+  costoInvitado?: number;
+  vestimenta?: string;
 }
+
+export interface RegistroParticipacion {
+  id: string;
+  actividadId: string;
+  actividadTitulo: string;
+  nombre: string;
+  esSocio: boolean;
+  telefono: string;
+  llevaInvitados: boolean;
+  cantidadInvitados: number;
+  fechaRegistro: string;
+}
+
 
 export interface GaleriaItem {
   id: string;
