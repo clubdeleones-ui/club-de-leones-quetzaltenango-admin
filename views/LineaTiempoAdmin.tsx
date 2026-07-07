@@ -9,6 +9,13 @@ export const LineaTiempoAdmin: React.FC = () => {
   const { showAlert, showConfirm } = useModal();
   const alert = (msg: string) => showAlert("Notificación", msg);
 
+  const getYoutubeId = (url: string): string | null => {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
   const [items, setItems] = useState<HitoHistorico[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -23,13 +30,15 @@ export const LineaTiempoAdmin: React.FC = () => {
     categoria: 'Club de Leones' | 'Ciudad de Quetzaltenango';
     estado: 'Borrador' | 'Publicado';
     imagenUrl: string;
+    videoUrl: string;
   }>({
     titulo: '',
     fecha: '',
     descripcion: '',
     categoria: 'Club de Leones',
     estado: 'Publicado',
-    imagenUrl: ''
+    imagenUrl: '',
+    videoUrl: ''
   });
   
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -66,7 +75,8 @@ export const LineaTiempoAdmin: React.FC = () => {
         descripcion: item.descripcion,
         categoria: item.categoria,
         estado: item.estado,
-        imagenUrl: item.imagenUrl || ''
+        imagenUrl: item.imagenUrl || '',
+        videoUrl: item.videoUrl || ''
       });
       setImagePreview(item.imagenUrl || '');
     } else {
@@ -77,7 +87,8 @@ export const LineaTiempoAdmin: React.FC = () => {
         descripcion: '',
         categoria: 'Club de Leones',
         estado: 'Publicado',
-        imagenUrl: ''
+        imagenUrl: '',
+        videoUrl: ''
       });
       setImagePreview('');
     }
@@ -112,6 +123,11 @@ export const LineaTiempoAdmin: React.FC = () => {
     setIsUploading(true);
     try {
       let finalImageUrl = formData.imagenUrl;
+      const ytId = getYoutubeId(formData.videoUrl);
+      if (ytId && !imageFile && !finalImageUrl) {
+        finalImageUrl = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
+      }
+
       if (imageFile) {
         // Compress to 1200 max size and 0.8 quality
         const compressedBase64 = await compressImageFile(imageFile, 1200, 1200, 0.8);
@@ -225,7 +241,18 @@ export const LineaTiempoAdmin: React.FC = () => {
               <div key={item.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-lg transition-all group">
                 <div className="h-48 bg-slate-100 relative overflow-hidden">
                   {item.imagenUrl ? (
-                    <img src={item.imagenUrl} alt={item.titulo} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <>
+                      <img src={item.imagenUrl} alt={item.titulo} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      {item.videoUrl && (
+                        <div className="absolute inset-0 bg-slate-900/30 flex items-center justify-center">
+                          <div className="w-12 h-12 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110">
+                            <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                              <path d="M8 5v14l11-7z"/>
+                            </svg>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-slate-200">
                       <Clock className="w-12 h-12 text-slate-400" />
@@ -338,12 +365,50 @@ export const LineaTiempoAdmin: React.FC = () => {
                           <p className="text-white font-bold flex items-center"><UploadCloud className="mr-2" /> Cambiar Imagen</p>
                         </div>
                       </>
+                    ) : getYoutubeId(formData.videoUrl) ? (
+                      <>
+                        <img 
+                          src={`https://img.youtube.com/vi/${getYoutubeId(formData.videoUrl)}/hqdefault.jpg`} 
+                          alt="YouTube Preview" 
+                          className="absolute inset-0 w-full h-full object-cover z-0" 
+                        />
+                        <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center z-10">
+                          <div className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center text-white shadow-lg animate-pulse">
+                            <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+                              <path d="M8 5v14l11-7z"/>
+                            </svg>
+                          </div>
+                        </div>
+                      </>
                     ) : (
                       <>
                         <UploadCloud className="w-10 h-10 text-slate-400 mb-2 group-hover:text-blue-600 transition-colors" />
                         <p className="text-sm text-slate-500 font-medium">Click para subir foto</p>
                       </>
                     )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">O, Enlace de Imagen/Foto (URL)</label>
+                    <input
+                      type="url"
+                      value={formData.imagenUrl}
+                      onChange={(e) => {
+                        setFormData({...formData, imagenUrl: e.target.value});
+                        setImagePreview(e.target.value);
+                      }}
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none transition-all text-xs"
+                      placeholder="https://ejemplo.com/foto.jpg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">Enlace de Video de YouTube (Opcional)</label>
+                    <input
+                      type="url"
+                      value={formData.videoUrl}
+                      onChange={(e) => setFormData({...formData, videoUrl: e.target.value})}
+                      className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none transition-all text-xs"
+                      placeholder="https://www.youtube.com/watch?v=..."
+                    />
                   </div>
                 </div>
               </div>

@@ -129,6 +129,7 @@ export interface HitoHistorico {
   fecha: string;
   descripcion: string;
   imagenUrl?: string;
+  videoUrl?: string;
   categoria: 'Club de Leones' | 'Ciudad de Quetzaltenango';
   estado: 'Borrador' | 'Publicado';
 }

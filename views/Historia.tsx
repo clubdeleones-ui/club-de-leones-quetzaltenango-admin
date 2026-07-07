@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, MapPin, Search, ChevronDown, X } from 'lucide-react';
+import { Clock, MapPin, Search, ChevronDown, X, Play } from 'lucide-react';
 import { HitoHistorico } from '../types';
 import { firebaseService } from '../services/firebaseService';
 
@@ -9,7 +9,15 @@ export const Historia: React.FC = () => {
   const [filter, setFilter] = useState<'Todos' | 'Club de Leones' | 'Ciudad de Quetzaltenango'>('Todos');
   const [searchTerm, setSearchTerm] = useState('');
   const [zoomImage, setZoomImage] = useState<string | null>(null);
+  const [playVideoUrl, setPlayVideoUrl] = useState<string | null>(null);
   const [expandedHitos, setExpandedHitos] = useState<Record<string, boolean>>({});
+
+  const getYoutubeId = (url: string): string | null => {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
 
   const toggleExpand = (id: string) => {
     setExpandedHitos(prev => ({ ...prev, [id]: !prev[id] }));
@@ -138,8 +146,16 @@ export const Historia: React.FC = () => {
                   <div className="w-full md:w-5/12 ml-4 md:ml-0 bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
                     {hito.imagenUrl && (
                       <div 
-                        className="h-48 md:h-64 w-full overflow-hidden relative cursor-zoom-in group/img"
-                        onClick={() => setZoomImage(hito.imagenUrl)}
+                        className={`h-48 md:h-64 w-full overflow-hidden relative group/img ${
+                          hito.videoUrl ? 'cursor-pointer' : 'cursor-zoom-in'
+                        }`}
+                        onClick={() => {
+                          if (hito.videoUrl) {
+                            setPlayVideoUrl(hito.videoUrl);
+                          } else {
+                            setZoomImage(hito.imagenUrl);
+                          }
+                        }}
                       >
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10"></div>
                         <img 
@@ -147,11 +163,22 @@ export const Historia: React.FC = () => {
                           alt={hito.titulo} 
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-115"
                         />
-                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity duration-300 flex items-center justify-center z-20">
-                          <span className="bg-white/10 backdrop-blur-md text-white border border-white/20 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest scale-90 group-hover/img:scale-100 transition-all duration-300">
-                            Hacer Zoom
-                          </span>
-                        </div>
+                        
+                        {/* Play Video Button overlay */}
+                        {hito.videoUrl ? (
+                          <div className="absolute inset-0 bg-black/35 flex items-center justify-center z-20 transition-all group-hover:bg-black/20">
+                            <div className="w-16 h-16 rounded-full bg-red-600/90 hover:bg-red-600 hover:scale-110 text-white flex items-center justify-center shadow-2xl transition-all duration-300">
+                              <Play size={28} className="ml-1 fill-current" />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity duration-300 flex items-center justify-center z-20">
+                            <span className="bg-white/10 backdrop-blur-md text-white border border-white/20 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest scale-90 group-hover/img:scale-100 transition-all duration-300">
+                              Hacer Zoom
+                            </span>
+                          </div>
+                        )}
+
                         <div className="absolute bottom-4 left-4 z-20">
                           <span className={`px-3 py-1 rounded-full text-xs font-bold shadow-sm backdrop-blur-md ${
                             isClub ? 'bg-blue-900/80 text-yellow-400' : 'bg-amber-600/80 text-white'
@@ -229,6 +256,50 @@ export const Historia: React.FC = () => {
               alt="Hito Histórico" 
               className="w-full h-full object-contain max-h-[85vh] mx-auto bg-slate-900/40"
             />
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Reproducción de Video */}
+      {playVideoUrl && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300"
+          onClick={() => setPlayVideoUrl(null)}
+        >
+          <div className="absolute top-4 right-4 z-50">
+            <button 
+              onClick={() => setPlayVideoUrl(null)}
+              className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all active:scale-95 border border-white/10 shadow-lg cursor-pointer"
+            >
+              <X size={24} />
+            </button>
+          </div>
+          
+          <div 
+            className="bg-black rounded-3xl overflow-hidden w-full max-w-4xl aspect-video shadow-2xl border border-slate-800 animate-in zoom-in-95 duration-300 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {getYoutubeId(playVideoUrl) ? (
+              <iframe
+                src={`https://www.youtube.com/embed/${getYoutubeId(playVideoUrl)}?autoplay=1`}
+                title="YouTube video player"
+                className="w-full h-full border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              ></iframe>
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center text-white bg-slate-900 p-6">
+                <p className="text-lg font-bold mb-2">Enlace de video no soportado</p>
+                <a 
+                  href={playVideoUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-blue-400 underline font-bold"
+                >
+                  Abrir enlace en pestaña nueva
+                </a>
+              </div>
+            )}
           </div>
         </div>
       )}
