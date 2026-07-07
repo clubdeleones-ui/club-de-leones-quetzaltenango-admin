@@ -52,11 +52,43 @@ export const LineaTiempoAdmin: React.FC = () => {
     setLoading(true);
     try {
       const data = await firebaseService.getHitosHistoricos();
-      // Sort by date descending safely (handles missing or non-string dates)
+      
+      const getSortableDateValue = (fechaStr: string): number => {
+        if (!fechaStr) return 0;
+        const clean = fechaStr.toLowerCase();
+        const yearMatch = clean.match(/\b(1[89]\d{2}|20\d{2})\b/);
+        const year = yearMatch ? parseInt(yearMatch[0], 10) : 0;
+        
+        let month = 0;
+        if (clean.includes('enero')) month = 1;
+        else if (clean.includes('febrero')) month = 2;
+        else if (clean.includes('marzo')) month = 3;
+        else if (clean.includes('abril')) month = 4;
+        else if (clean.includes('mayo')) month = 5;
+        else if (clean.includes('junio')) month = 6;
+        else if (clean.includes('julio')) month = 7;
+        else if (clean.includes('agosto')) month = 8;
+        else if (clean.includes('septiembre') || clean.includes('setiembre')) month = 9;
+        else if (clean.includes('octubre')) month = 10;
+        else if (clean.includes('noviembre')) month = 11;
+        else if (clean.includes('diciembre')) month = 12;
+        
+        const dayMatchSpecific = clean.match(/^\s*\b(\d{1,2})\b/);
+        let day = 0;
+        if (dayMatchSpecific) {
+          day = parseInt(dayMatchSpecific[1], 10);
+        } else {
+          const genericDayMatch = clean.match(/\b(\d{1,2})\b/);
+          if (genericDayMatch) {
+            day = parseInt(genericDayMatch[1], 10);
+          }
+        }
+        return year * 10000 + month * 100 + day;
+      };
+
+      // Sort by date descending safely (newest first for administration)
       const sorted = data.sort((a, b) => {
-        const dateA = a.fecha || '';
-        const dateB = b.fecha || '';
-        return dateB.localeCompare(dateA);
+        return getSortableDateValue(b.fecha) - getSortableDateValue(a.fecha);
       });
       setItems(sorted);
     } catch (error) {
