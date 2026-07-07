@@ -249,7 +249,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     const initData = async () => {
-      await cleanPaymentsMigration();
+      // await cleanPaymentsMigration();
       await performInitialSync();
     };
 

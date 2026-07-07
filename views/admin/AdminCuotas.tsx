@@ -1523,11 +1523,14 @@ export const AdminCuotas: React.FC = () => {
                                     type="checkbox"
                                     checked={isChecked}
                                     onChange={(e) => {
-                                      let newSelected = [...selectedMonthsToPay];
+                                      let newSelected: string[] = [];
+                                      const clickedKey = key;
+                                      const clickedIndex = unpaidMonthsForSocio.findIndex(x => `${x.month} ${x.year}` === clickedKey);
+                                      
                                       if (e.target.checked) {
-                                        newSelected.push(key);
+                                        newSelected = unpaidMonthsForSocio.slice(0, clickedIndex + 1).map(x => `${x.month} ${x.year}`);
                                       } else {
-                                        newSelected = newSelected.filter(x => x !== key);
+                                        newSelected = unpaidMonthsForSocio.slice(0, clickedIndex).map(x => `${x.month} ${x.year}`);
                                       }
                                       setSelectedMonthsToPay(newSelected);
                                       setRegistrarPagoData(prev => ({
