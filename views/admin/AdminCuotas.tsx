@@ -82,30 +82,153 @@ export const AdminCuotas: React.FC = () => {
 
   const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
-  const isMonthPaid = (socio: Socio, monthName: string, year: number) => {
-    return socio.historialPagos?.some(p => {
-      const pPeriod = (p.periodo || '').toLowerCase();
-      if (pPeriod.includes(String(year))) {
-        if (pPeriod.includes(monthName.toLowerCase())) return true;
-        if (p.tipoPeriodo === 'Anual') return true;
-        if (p.tipoPeriodo === 'Semestral') {
-          const firstSem = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio'];
-          const secondSem = ['julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-          if (pPeriod.includes('1er') && firstSem.includes(monthName.toLowerCase())) return true;
-          if (pPeriod.includes('2do') && secondSem.includes(monthName.toLowerCase())) return true;
+  const getEndMonthAndYear = (startMonthName: string, startYear: number, monthsToAdd: number) => {
+    const startIndex = months.indexOf(startMonthName);
+    if (startIndex === -1) return { month: startMonthName, year: startYear };
+    
+    let endMonthIndex = startIndex + monthsToAdd;
+    let endYear = startYear;
+    while (endMonthIndex > 11) {
+      endMonthIndex -= 12;
+      endYear += 1;
+    }
+    return { month: months[endMonthIndex], year: endYear };
+  };
+
+  const parseMonthYear = (str: string): { monthIndex: number; year: number } | null => {
+    const parts = str.trim().split(/\s+/);
+    if (parts.length < 2) return null;
+    const monthStr = parts[0].toLowerCase();
+    const year = parseInt(parts[1]) || 2026;
+    const monthIndex = months.findIndex(m => m.toLowerCase().startsWith(monthStr.substring(0, 3)));
+    if (monthIndex === -1) return null;
+    return { monthIndex, year };
+  };
+
+  const parseRange = (startStr: string, endStr: string): { month: string; year: number }[] => {
+    const start = parseMonthYear(startStr);
+    const end = parseMonthYear(endStr);
+    if (!start || !end) return [];
+    const list: { month: string; year: number }[] = [];
+    let currM = start.monthIndex;
+    let currY = start.year;
+    const endM = end.monthIndex;
+    const endY = end.year;
+    
+    while (currY < endY || (currY === endY && currM <= endM)) {
+      list.push({ month: months[currM], year: currY });
+      currM++;
+      if (currM > 11) {
+        currM = 0;
+        currY++;
+      }
+      if (list.length > 36) break; // Safeguard
+    }
+    return list;
+  };
+
+  const getMonthsCoveredByPeriod = (p: { periodo: string; tipoPeriodo: string }): { month: string; year: number }[] => {
+    const period = p.periodo || '';
+    const tipo = p.tipoPeriodo || '';
+    
+    if (tipo === 'Mensual') {
+      const parts = period.split(',');
+      const list: { month: string; year: number }[] = [];
+      for (const part of parts) {
+        const parsed = parseMonthYear(part);
+        if (parsed) {
+          list.push({ month: months[parsed.monthIndex], year: parsed.year });
         }
       }
-      return false;
+      return list;
+    }
+    
+    if (period.includes('-')) {
+      const cleanPeriod = period.includes(':') ? period.split(':')[1] : period;
+      const parts = cleanPeriod.split('-');
+      if (parts.length === 2) {
+        return parseRange(parts[0], parts[1]);
+      }
+    }
+    
+    if (tipo === 'Trimestral') {
+      const yearMatch = period.match(/\d{4}/);
+      const year = yearMatch ? parseInt(yearMatch[0]) : 2026;
+      if (period.includes('1er')) {
+        return [
+          { month: 'Enero', year },
+          { month: 'Febrero', year },
+          { month: 'Marzo', year }
+        ];
+      }
+      if (period.includes('2do')) {
+        return [
+          { month: 'Abril', year },
+          { month: 'Mayo', year },
+          { month: 'Junio', year }
+        ];
+      }
+      if (period.includes('3er')) {
+        return [
+          { month: 'Julio', year },
+          { month: 'Agosto', year },
+          { month: 'Septiembre', year }
+        ];
+      }
+      if (period.includes('4to')) {
+        return [
+          { month: 'Octubre', year },
+          { month: 'Noviembre', year },
+          { month: 'Diciembre', year }
+        ];
+      }
+    }
+    
+    if (tipo === 'Semestral') {
+      const yearMatch = period.match(/\d{4}/);
+      const year = yearMatch ? parseInt(yearMatch[0]) : 2026;
+      if (period.includes('1er')) {
+        return [
+          { month: 'Enero', year },
+          { month: 'Febrero', year },
+          { month: 'Marzo', year },
+          { month: 'Abril', year },
+          { month: 'Mayo', year },
+          { month: 'Junio', year }
+        ];
+      }
+      if (period.includes('2do')) {
+        return [
+          { month: 'Julio', year },
+          { month: 'Agosto', year },
+          { month: 'Septiembre', year },
+          { month: 'Octubre', year },
+          { month: 'Noviembre', year },
+          { month: 'Diciembre', year }
+        ];
+      }
+    }
+    
+    if (tipo === 'Anual') {
+      const yearMatch = period.match(/\d{4}/);
+      const year = yearMatch ? parseInt(yearMatch[0]) : 2026;
+      return months.map(m => ({ month: m, year }));
+    }
+    
+    return [];
+  };
+
+  const isMonthPaid = (socio: Socio, monthName: string, year: number) => {
+    return socio.historialPagos?.some(p => {
+      const covered = getMonthsCoveredByPeriod(p);
+      return covered.some(c => c.month === monthName && c.year === year);
     }) || false;
   };
 
   const getSocioUnpaidMonths = (socio: Socio) => {
     const unpaidMonths: { month: string; year: number }[] = [];
-    
-    // We start tracking from January 2026
     let startY = 2026;
-    let startM = 0; // Enero
-    
+    let startM = 0;
     const limitY = currentYear;
     const limitM = currentMonth;
     
@@ -115,7 +238,6 @@ export const AdminCuotas: React.FC = () => {
       if (!paid) {
         unpaidMonths.push({ month: mName, year: startY });
       }
-      
       startM++;
       if (startM > 11) {
         startM = 0;
@@ -123,6 +245,24 @@ export const AdminCuotas: React.FC = () => {
       }
     }
     return unpaidMonths;
+  };
+
+  const getNextUnpaidMonth = (socio: Socio): { month: string; year: number } => {
+    let startY = 2026;
+    let startM = 0;
+    const limitYear = currentYear + 5;
+    while (startY <= limitYear) {
+      const mName = months[startM];
+      if (!isMonthPaid(socio, mName, startY)) {
+        return { month: mName, year: startY };
+      }
+      startM++;
+      if (startM > 11) {
+        startM = 0;
+        startY++;
+      }
+    }
+    return { month: 'Enero', year: currentYear };
   };
 
   const handleEnviarRecordatorio = (socio: Socio) => {
@@ -134,19 +274,17 @@ export const AdminCuotas: React.FC = () => {
   const handleRegistrarPago = (socioId: string) => {
     const socio = socios.find(s => s.id === socioId);
     if (!socio) return;
-    const unpaid = getSocioUnpaidMonths(socio);
-    let defaultSelected: string[] = [];
-    if (unpaid.length > 0) {
-      defaultSelected = unpaid.map(u => `${u.month} ${u.year}`);
-    }
+    const nextUnpaid = getNextUnpaidMonth(socio);
+    const defaultSelected = [`${nextUnpaid.month} ${nextUnpaid.year}`];
     setSelectedMonthsToPay(defaultSelected);
     setEditingPagoId(null);
     setRegistrarPagoData(prev => ({
       ...prev,
       socioId,
       tipoPeriodo: 'Mensual',
-      año: selectedYear,
-      monto: defaultSelected.length * 125,
+      mes: nextUnpaid.month,
+      año: nextUnpaid.year,
+      monto: 125,
       tipoCuota: 'ordinaria',
       descripcion: '',
       trimester: '1er Trimestre (Ene-Mar)',
@@ -282,37 +420,28 @@ export const AdminCuotas: React.FC = () => {
             const yVal = Number(parts[1]) || año;
             monthsToCheck.push({ month: mName, year: yVal });
           });
-        } else if (tipoPeriodo === 'Trimestral') {
-          let qMonths: string[] = [];
-          if (trimester === '1er Trimestre (Ene-Mar)') qMonths = ['Enero', 'Febrero', 'Marzo'];
-          else if (trimester === '2do Trimestre (Abr-Jun)') qMonths = ['Abril', 'Mayo', 'Junio'];
-          else if (trimester === '3er Trimestre (Jul-Sep)') qMonths = ['Julio', 'Agosto', 'Septiembre'];
-          else qMonths = ['Octubre', 'Noviembre', 'Diciembre'];
-          qMonths.forEach(m => monthsToCheck.push({ month: m, year: año }));
-        } else if (tipoPeriodo === 'Semestral') {
-          let sMonths: string[] = [];
-          if (semestre && semestre.includes('1er')) sMonths = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio'];
-          else sMonths = ['Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-          sMonths.forEach(m => monthsToCheck.push({ month: m, year: año }));
-        } else if (tipoPeriodo === 'Anual') {
-          months.forEach(m => monthsToCheck.push({ month: m, year: año }));
+        } else {
+          const startMonth = mes || 'Enero';
+          const startYear = año || 2026;
+          let periodStr = '';
+          if (tipoPeriodo === 'Trimestral') {
+            const end = getEndMonthAndYear(startMonth, startYear, 2);
+            periodStr = `Trimestre: ${startMonth} ${startYear} - ${end.month} ${end.year}`;
+          } else if (tipoPeriodo === 'Semestral') {
+            const end = getEndMonthAndYear(startMonth, startYear, 5);
+            periodStr = `Semestre: ${startMonth} ${startYear} - ${end.month} ${end.year}`;
+          } else if (tipoPeriodo === 'Anual') {
+            const end = getEndMonthAndYear(startMonth, startYear, 11);
+            periodStr = `Anual: ${startMonth} ${startYear} - ${end.month} ${end.year}`;
+          }
+          monthsToCheck = getMonthsCoveredByPeriod({ periodo: periodStr, tipoPeriodo });
         }
 
         const alreadyPaid = monthsToCheck.filter(item => {
           return socio.historialPagos?.some(p => {
             if (editingPagoId && p.id === editingPagoId) return false;
-            const pPeriod = (p.periodo || '').toLowerCase();
-            if (pPeriod.includes(String(item.year))) {
-              if (pPeriod.includes(item.month.toLowerCase())) return true;
-              if (p.tipoPeriodo === 'Anual') return true;
-              if (p.tipoPeriodo === 'Semestral') {
-                const firstSem = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio'];
-                const secondSem = ['julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-                if (pPeriod.includes('1er') && firstSem.includes(item.month.toLowerCase())) return true;
-                if (pPeriod.includes('2do') && secondSem.includes(item.month.toLowerCase())) return true;
-              }
-            }
-            return false;
+            const covered = getMonthsCoveredByPeriod(p);
+            return covered.some(c => c.month === item.month && c.year === item.year);
           });
         });
 
@@ -380,58 +509,33 @@ export const AdminCuotas: React.FC = () => {
             descripcion: descripcion || `Cuota Ordinaria ${monthYear}`,
             comprobanteUrl: metodo !== 'Efectivo' ? finalComprobanteUrl : undefined
           }));
-        } else if (tipoPeriodo === 'Trimestral') {
-          let quarterMonths: string[] = [];
-          if (trimester === '1er Trimestre (Ene-Mar)') {
-            quarterMonths = ['Enero', 'Febrero', 'Marzo'];
-          } else if (trimester === '2do Trimestre (Abr-Jun)') {
-            quarterMonths = ['Abril', 'Mayo', 'Junio'];
-          } else if (trimester === '3er Trimestre (Jul-Sep)') {
-            quarterMonths = ['Julio', 'Agosto', 'Septiembre'];
-          } else {
-            quarterMonths = ['Octubre', 'Noviembre', 'Diciembre'];
+        } else {
+          // Trimestral, Semestral, Anual
+          const startMonth = mes || 'Enero';
+          const startYear = año || 2026;
+          let periodStr = '';
+          if (tipoPeriodo === 'Trimestral') {
+            const end = getEndMonthAndYear(startMonth, startYear, 2);
+            periodStr = `Trimestre: ${startMonth} ${startYear} - ${end.month} ${end.year}`;
+          } else if (tipoPeriodo === 'Semestral') {
+            const end = getEndMonthAndYear(startMonth, startYear, 5);
+            periodStr = `Semestre: ${startMonth} ${startYear} - ${end.month} ${end.year}`;
+          } else if (tipoPeriodo === 'Anual') {
+            const end = getEndMonthAndYear(startMonth, startYear, 11);
+            periodStr = `Anual: ${startMonth} ${startYear} - ${end.month} ${end.year}`;
           }
           
-          const individualAmount = Number(monto) / 3;
-          nuevosPagos = quarterMonths.map((mName, i) => ({
-            id: editingPagoId && i === 0 ? editingPagoId : `pago-${Date.now()}-${i}`,
-            fechaPago,
-            monto: individualAmount,
-            periodo: `${mName} ${año}`,
-            tipoPeriodo: 'Mensual' as const,
-            metodo,
-            bancoReferencia: metodo !== 'Efectivo' ? bancoReferencia : undefined,
-            numeroReferencia: metodo !== 'Efectivo' ? numeroReferencia : undefined,
-            tipoCuota: 'ordinaria' as const,
-            descripcion: descripcion || `Cuota Ordinaria ${mName} ${año} (Trimestral)`,
-            comprobanteUrl: metodo !== 'Efectivo' ? finalComprobanteUrl : undefined
-          }));
-        } else if (tipoPeriodo === 'Semestral') {
           nuevosPagos = [{
             id: editingPagoId || `pago-${Date.now()}`,
             fechaPago,
             monto: Number(monto),
-            periodo: `${semestre} ${año}`,
-            tipoPeriodo: 'Semestral' as const,
+            periodo: periodStr,
+            tipoPeriodo: tipoPeriodo as any,
             metodo,
             bancoReferencia: metodo !== 'Efectivo' ? bancoReferencia : undefined,
             numeroReferencia: metodo !== 'Efectivo' ? numeroReferencia : undefined,
             tipoCuota: 'ordinaria' as const,
-            descripcion: descripcion || `Cuota Ordinaria ${semestre} ${año}`,
-            comprobanteUrl: metodo !== 'Efectivo' ? finalComprobanteUrl : undefined
-          }];
-        } else if (tipoPeriodo === 'Anual') {
-          nuevosPagos = [{
-            id: editingPagoId || `pago-${Date.now()}`,
-            fechaPago,
-            monto: Number(monto),
-            periodo: `Año ${año}`,
-            tipoPeriodo: 'Anual' as const,
-            metodo,
-            bancoReferencia: metodo !== 'Efectivo' ? bancoReferencia : undefined,
-            numeroReferencia: metodo !== 'Efectivo' ? numeroReferencia : undefined,
-            tipoCuota: 'ordinaria' as const,
-            descripcion: descripcion || `Cuota Ordinaria Anual ${año}`,
+            descripcion: descripcion || `Cuota Ordinaria ${periodStr}`,
             comprobanteUrl: metodo !== 'Efectivo' ? finalComprobanteUrl : undefined
           }];
         }
@@ -472,9 +576,24 @@ export const AdminCuotas: React.FC = () => {
       else if (tipoCuota === 'donacion') displayPeriod = 'Donación';
       else {
         if (tipoPeriodo === 'Mensual') displayPeriod = selectedMonthsToPay.join(', ');
-        else if (tipoPeriodo === 'Trimestral') displayPeriod = trimester;
-        else if (tipoPeriodo === 'Semestral') displayPeriod = semestre;
-        else displayPeriod = `Año ${año}`;
+        else if (tipoPeriodo === 'Trimestral') {
+          const startMonth = mes || 'Enero';
+          const startYear = año || 2026;
+          const end = getEndMonthAndYear(startMonth, startYear, 2);
+          displayPeriod = `Trimestre: ${startMonth} ${startYear} - ${end.month} ${end.year}`;
+        }
+        else if (tipoPeriodo === 'Semestral') {
+          const startMonth = mes || 'Enero';
+          const startYear = año || 2026;
+          const end = getEndMonthAndYear(startMonth, startYear, 5);
+          displayPeriod = `Semestre: ${startMonth} ${startYear} - ${end.month} ${end.year}`;
+        }
+        else {
+          const startMonth = mes || 'Enero';
+          const startYear = año || 2026;
+          const end = getEndMonthAndYear(startMonth, startYear, 11);
+          displayPeriod = `Anual: ${startMonth} ${startYear} - ${end.month} ${end.year}`;
+        }
       }
 
       setPaymentSuccessData({
@@ -1332,17 +1451,17 @@ export const AdminCuotas: React.FC = () => {
                                     key={s.id}
                                     type="button"
                                     onClick={() => {
-                                      const unpaidMonths = getSocioUnpaidMonths(s);
-                                      let defaultSelected: string[] = [];
-                                      if (unpaidMonths.length > 0) {
-                                        defaultSelected = [`${unpaidMonths[0].month} ${unpaidMonths[0].year}`];
-                                      }
+                                      const nextUnpaid = getNextUnpaidMonth(s);
+                                      const defaultSelected = [`${nextUnpaid.month} ${nextUnpaid.year}`];
                                       setSelectedMonthsToPay(defaultSelected);
                                       setRegistrarPagoData(prev => ({
                                         ...prev,
                                         socioId: s.id,
-                                        monto: defaultSelected.length * 125
+                                        mes: nextUnpaid.month,
+                                        año: nextUnpaid.year,
+                                        monto: 125
                                       }));
+                                      setModalSocioSearch('');
                                     }}
                                     className="w-full flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg transition-colors text-left"
                                   >
@@ -1490,108 +1609,84 @@ export const AdminCuotas: React.FC = () => {
                   {registrarPagoData.tipoPeriodo === 'Mensual' && (
                     <div>
                       <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                        Seleccionar Meses a Pagar ({selectedMonthsToPay.length})
+                        Mes a Cancelar
                       </label>
-                      {unpaidMonthsForSocio.length === 0 && !editingPagoId ? (
-                        <p className="text-xs text-slate-455 italic p-2.5 bg-slate-50 rounded-xl border">El socio no tiene meses pendientes de pago.</p>
-                      ) : (
-                        <div className="grid grid-cols-2 gap-1.5 max-h-[120px] overflow-y-auto p-1.5 bg-slate-50 rounded-xl border border-slate-200/60">
-                          {editingPagoId ? (
-                            selectedMonthsToPay.map(monthYear => (
-                              <div 
-                                key={monthYear}
-                                className="flex items-center space-x-2 p-1.5 rounded-lg border bg-green-50 border-green-300 text-green-800 font-bold select-none"
-                              >
-                                <Check size={12} className="text-green-600" />
-                                <span className="text-[10px] uppercase font-black">{monthYear}</span>
-                              </div>
-                            ))
+                      {registrarPagoData.socioId ? (
+                        <div className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 select-none">
+                          {selectedMonthsToPay.length > 0 ? (
+                            selectedMonthsToPay[0]
                           ) : (
-                            unpaidMonthsForSocio.map(m => {
-                              const key = `${m.month} ${m.year}`;
-                              const isChecked = selectedMonthsToPay.includes(key);
-                              return (
-                                <label 
-                                  key={`${m.month}-${m.year}`}
-                                  className={`flex items-center space-x-2 p-1.5 rounded-lg border cursor-pointer transition-all ${
-                                    isChecked 
-                                      ? 'bg-green-55 border-green-300 text-green-800 font-bold' 
-                                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-55'
-                                  }`}
-                                >
-                                  <input 
-                                    type="checkbox"
-                                    checked={isChecked}
-                                    onChange={(e) => {
-                                      let newSelected: string[] = [];
-                                      const clickedKey = key;
-                                      const clickedIndex = unpaidMonthsForSocio.findIndex(x => `${x.month} ${x.year}` === clickedKey);
-                                      
-                                      if (e.target.checked) {
-                                        newSelected = unpaidMonthsForSocio.slice(0, clickedIndex + 1).map(x => `${x.month} ${x.year}`);
-                                      } else {
-                                        newSelected = unpaidMonthsForSocio.slice(0, clickedIndex).map(x => `${x.month} ${x.year}`);
-                                      }
-                                      setSelectedMonthsToPay(newSelected);
-                                      setRegistrarPagoData(prev => ({
-                                        ...prev,
-                                        monto: newSelected.length * 125
-                                      }));
-                                    }}
-                                    className="rounded text-green-600 focus:ring-green-500 w-3.5 h-3.5"
-                                  />
-                                  <span className="text-[10px] uppercase font-black">{m.month.substring(0,3)} {m.year}</span>
-                                </label>
-                              );
-                            })
+                            (() => {
+                              const s = socios.find(x => x.id === registrarPagoData.socioId);
+                              if (s) {
+                                const nextU = getNextUnpaidMonth(s);
+                                return `${nextU.month} ${nextU.year}`;
+                              }
+                              return 'Cargando...';
+                            })()
                           )}
                         </div>
+                      ) : (
+                        <select
+                          disabled
+                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-400 cursor-not-allowed"
+                        >
+                          <option>Seleccione un socio primero</option>
+                        </select>
                       )}
                     </div>
                   )}
 
-                  {/* Trimestral Specific Selector */}
-                  {registrarPagoData.tipoPeriodo === 'Trimestral' && (
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Seleccionar Trimestre</label>
-                      <select
-                        value={registrarPagoData.trimester}
-                        onChange={e => setRegistrarPagoData(prev => ({ ...prev, trimester: e.target.value as any }))}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none text-xs font-semibold text-slate-750"
-                      >
-                        <option value="1er Trimestre (Ene-Mar)">1er Trimestre (Ene-Mar)</option>
-                        <option value="2do Trimestre (Abr-Jun)">2do Trimestre (Abr-Jun)</option>
-                        <option value="3er Trimestre (Jul-Sep)">3er Trimestre (Jul-Sep)</option>
-                        <option value="4to Trimestre (Oct-Dic)">4to Trimestre (Oct-Dic)</option>
-                      </select>
-                    </div>
-                  )}
-
-                  {/* Semestral Specific Selector */}
-                  {registrarPagoData.tipoPeriodo === 'Semestral' && (
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Seleccionar Semestre</label>
-                      <select
-                        value={registrarPagoData.semestre}
-                        onChange={e => setRegistrarPagoData(prev => ({ ...prev, semestre: e.target.value }))}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none text-xs font-semibold text-slate-750"
-                      >
-                        <option value="1er Semestre (Ene-Jun)">1er Semestre (Ene-Jun)</option>
-                        <option value="2do Semestre (Jul-Dic)">2do Semestre (Jul-Dic)</option>
-                      </select>
-                    </div>
-                  )}
-
-                  {/* Year selector for Trimestral, Semestral, Anual */}
+                  {/* Trimestral, Semestral, Anual Selection */}
                   {registrarPagoData.tipoPeriodo !== 'Mensual' && (
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Año de Cobertura</label>
-                      <input 
-                        type="number"
-                        value={registrarPagoData.año}
-                        onChange={e => setRegistrarPagoData(prev => ({ ...prev, año: parseInt(e.target.value) || 2026 }))}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none text-xs font-semibold text-slate-800"
-                      />
+                    <div className="space-y-3.5">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Mes de Inicio</label>
+                          <select
+                            value={registrarPagoData.mes || 'Enero'}
+                            onChange={e => setRegistrarPagoData(prev => ({ ...prev, mes: e.target.value }))}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none text-xs font-semibold text-slate-800"
+                          >
+                            {months.map(m => (
+                              <option key={m} value={m}>{m}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Año de Inicio</label>
+                          <input 
+                            type="number"
+                            value={registrarPagoData.año || 2026}
+                            onChange={e => setRegistrarPagoData(prev => ({ ...prev, año: parseInt(e.target.value) || 2026 }))}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none text-xs font-semibold text-slate-800"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Preview of coverage */}
+                      {(() => {
+                        const startMonth = registrarPagoData.mes || 'Enero';
+                        const startYear = registrarPagoData.año || 2026;
+                        let monthsToAdd = 2; // Trimestral
+                        let periodLabel = 'Trimestre';
+                        if (registrarPagoData.tipoPeriodo === 'Semestral') {
+                          monthsToAdd = 5;
+                          periodLabel = 'Semestre';
+                        } else if (registrarPagoData.tipoPeriodo === 'Anual') {
+                          monthsToAdd = 11;
+                          periodLabel = 'Año';
+                        }
+                        const end = getEndMonthAndYear(startMonth, startYear, monthsToAdd);
+                        return (
+                          <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-650 font-bold select-none">
+                            <span className="block text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">Periodo de Cobertura</span>
+                            <span className="text-slate-800 font-extrabold uppercase">
+                              {periodLabel}: {startMonth} {startYear} &rarr; {end.month} {end.year}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>

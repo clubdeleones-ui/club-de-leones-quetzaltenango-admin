@@ -15,7 +15,7 @@ export interface PagoCuota {
   fechaPago: string; // "YYYY-MM-DD"
   monto: number;
   periodo: string; // e.g., "Enero 2026", "1er Semestre 2026", "Año 2026"
-  tipoPeriodo: 'Mensual' | 'Semestral' | 'Anual';
+  tipoPeriodo: 'Mensual' | 'Semestral' | 'Anual' | 'Trimestral';
   metodo: 'Transferencia' | 'Depósito' | 'Efectivo';
   bancoReferencia?: string;
   numeroReferencia?: string;

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
-  FileText, Plus, Search, Filter, Trash2, Edit, Download, X, Clock, Users, Mail, Briefcase, CheckCircle, Pencil, Building
+  FileText, Plus, Search, Filter, Trash2, Edit, Download, X, Clock, Users, Mail, Briefcase, CheckCircle, Pencil, Building, BookOpen
 } from 'lucide-react';
 import { Acta, Socio, Solicitud, UserRole } from '../../types';
 import { firebaseService } from '../../services/firebaseService';
@@ -35,6 +35,8 @@ export const AdminActas: React.FC<AdminActasProps> = ({ user }) => {
   const [editingActaId, setEditingActaId] = useState<string | null>(null);
   const [deleteActaConfirmId, setDeleteActaConfirmId] = useState<string | null>(null);
   const [deleteActaConfirmText, setDeleteActaConfirmText] = useState('');
+  const [showInvocacionModal, setShowInvocacionModal] = useState(false);
+  const [showSaludoModal, setShowSaludoModal] = useState(false);
 
   // Wizard state for structured minutes
   const [actaWizardStep, setActaWizardStep] = useState<'datos' | 'asistencia' | 'protocolo' | 'solicitudes' | 'libre' | 'vista_previa'>(() => {
@@ -901,10 +903,21 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 {/* Invocación */}
                 <div className="bg-slate-50/50 p-4 sm:p-8 rounded-3xl border border-slate-100/60 shadow-sm space-y-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <h5 className="text-lg font-extrabold text-blue-900 flex items-center">
-                      <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xs mr-3">1</span>
-                      Invocación Leonística
-                    </h5>
+                    <div className="flex items-center justify-between sm:justify-start space-x-3.5 w-full sm:w-auto">
+                      <h5 className="text-lg font-extrabold text-blue-900 flex items-center">
+                        <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xs mr-3">1</span>
+                        Invocación Leonística
+                      </h5>
+                      <button
+                        type="button"
+                        onClick={() => setShowInvocacionModal(true)}
+                        className="inline-flex items-center px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 hover:border-amber-300 text-amber-700 hover:text-amber-800 rounded-xl transition-all font-bold text-[10px] uppercase tracking-wider shadow-sm hover:shadow active:scale-95 space-x-1"
+                        title="Leer texto de la Invocación Leonística"
+                      >
+                        <BookOpen size={12} className="text-amber-600" />
+                        <span>Texto</span>
+                      </button>
+                    </div>
                     
                     <div className="flex bg-white p-1.5 rounded-2xl border border-slate-200 w-fit shadow-sm">
                       <button
@@ -962,10 +975,21 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 {/* Saludo a la Bandera */}
                 <div className="bg-slate-50/50 p-4 sm:p-8 rounded-3xl border border-slate-100/60 shadow-sm space-y-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <h5 className="text-lg font-extrabold text-blue-900 flex items-center">
-                      <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xs mr-3">2</span>
-                      Saludo a la Bandera
-                    </h5>
+                    <div className="flex items-center justify-between sm:justify-start space-x-3.5 w-full sm:w-auto">
+                      <h5 className="text-lg font-extrabold text-blue-900 flex items-center">
+                        <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xs mr-3">2</span>
+                        Saludo a la Bandera
+                      </h5>
+                      <button
+                        type="button"
+                        onClick={() => setShowSaludoModal(true)}
+                        className="inline-flex items-center px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 hover:border-amber-300 text-amber-700 hover:text-amber-800 rounded-xl transition-all font-bold text-[10px] uppercase tracking-wider shadow-sm hover:shadow active:scale-95 space-x-1"
+                        title="Leer texto del Saludo a la Bandera"
+                      >
+                        <BookOpen size={12} className="text-amber-600" />
+                        <span>Texto</span>
+                      </button>
+                    </div>
                     
                     <div className="flex bg-white p-1.5 rounded-2xl border border-slate-200 w-fit shadow-sm">
                       <button
@@ -1736,6 +1760,154 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 <span>Eliminar</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invocación Leonística Modal */}
+      {showInvocacionModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2rem] max-w-lg w-full shadow-2xl border border-amber-200 animate-in zoom-in-95 duration-200 text-center relative overflow-hidden flex flex-col max-h-[90vh]">
+            
+            {/* Header/Banner Decorativo */}
+            <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-blue-900 via-amber-500 to-blue-900"></div>
+            
+            {/* Botón de Cerrar Esquina */}
+            <button
+              onClick={() => setShowInvocacionModal(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all"
+            >
+              <X size={18} />
+            </button>
+
+            {/* Contenido */}
+            <div className="p-6 sm:p-8 overflow-y-auto space-y-6">
+              
+              {/* Icono / Titulo */}
+              <div className="flex flex-col items-center pt-2">
+                <div className="w-12 h-12 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 mb-3 shadow-inner">
+                  <BookOpen size={24} />
+                </div>
+                <h3 className="text-xl font-black text-blue-900 tracking-wider uppercase">
+                  Invocación Leonística
+                </h3>
+                <div className="w-16 h-1 bg-amber-400 rounded-full mt-2"></div>
+              </div>
+
+              {/* Texto de la Invocación */}
+              <div className="text-slate-755 space-y-4 text-sm sm:text-base leading-relaxed italic font-medium px-2 sm:px-4">
+                <p>
+                  Haznos, Señor, Instrumento de tu paz<br />
+                  danos serenidad para aceptar aquellas<br />
+                  cosas que no podemos modificar,<br />
+                  Valor para enmendar las que si podemos<br />
+                  y sabiduría para conocer la diferencia.
+                </p>
+                
+                <p>
+                  Llena con tu luz nuestro entendimiento,<br />
+                  para que pudiendo comprender más,<br />
+                  podamos perdonar mejor.
+                </p>
+                
+                <p>
+                  Concédenos la gracia de estar entre los<br />
+                  bienaventurados que saben dar sin recordar<br />
+                  y recibir sin olvidar.
+                </p>
+                
+                <p>
+                  Danos Fe para ver tu rostro en el hermano,<br />
+                  danos fortaleza para servir sin desánimo,<br />
+                  danos alegría para sonreír en las dificultades,<br />
+                  humildad para no envanecernos con el éxito,<br />
+                  y un inmenso amor para que nuestra labor<br />
+                  esté llena de tu espíritu.
+                </p>
+                
+                <p className="not-italic font-black text-blue-900 tracking-widest text-sm pt-2">
+                  ASÍ SEA.
+                </p>
+              </div>
+
+              {/* Botón de Cerrar */}
+              <div className="pt-2">
+                <button
+                  onClick={() => setShowInvocacionModal(false)}
+                  className="w-full sm:w-auto px-8 py-3 bg-blue-900 hover:bg-blue-800 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md shadow-blue-900/10 active:scale-95"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Saludo a la Bandera Modal */}
+      {showSaludoModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2rem] max-w-lg w-full shadow-2xl border border-amber-200 animate-in zoom-in-95 duration-200 text-center relative overflow-hidden flex flex-col max-h-[90vh]">
+            
+            {/* Header/Banner Decorativo */}
+            <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-blue-900 via-amber-500 to-blue-900"></div>
+            
+            {/* Botón de Cerrar Esquina */}
+            <button
+              onClick={() => setShowSaludoModal(false)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all"
+            >
+              <X size={18} />
+            </button>
+
+            {/* Contenido */}
+            <div className="p-6 sm:p-8 overflow-y-auto space-y-6">
+              
+              {/* Icono / Titulo */}
+              <div className="flex flex-col items-center pt-2">
+                <div className="w-12 h-12 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 mb-3 shadow-inner">
+                  <BookOpen size={24} />
+                </div>
+                <h3 className="text-xl font-black text-blue-900 tracking-wider uppercase">
+                  Saludo a la Bandera
+                </h3>
+                <div className="w-16 h-1 bg-amber-400 rounded-full mt-2"></div>
+              </div>
+
+              {/* Texto de la Bandera */}
+              <div className="text-slate-755 space-y-4 text-sm sm:text-base leading-relaxed italic font-medium px-2 sm:px-4">
+                <p>
+                  Bandera de mi Patria,<br />
+                  sublime enseña de libertad y honor,<br />
+                  los leones te juramos respeto y lealtad.
+                </p>
+                <p>
+                  Apasionados de servir a nuestra Patria<br />
+                  con humildad y dignidad cada día.
+                </p>
+                <p>
+                  Unidos en pensamiento y obra,<br />
+                  en un solo rugir,<br />
+                  velamos porque tu ondear sea libre,<br />
+                  eterno y puro.
+                </p>
+                <p className="not-italic font-black text-blue-900 tracking-widest text-sm pt-2">
+                  SALVE AMADA PATRIA, DULCE GUATEMALA.
+                </p>
+              </div>
+
+              {/* Botón de Cerrar */}
+              <div className="pt-2">
+                <button
+                  onClick={() => setShowSaludoModal(false)}
+                  className="w-full sm:w-auto px-8 py-3 bg-blue-900 hover:bg-blue-800 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md shadow-blue-900/10 active:scale-95"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       )}
