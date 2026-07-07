@@ -134,18 +134,6 @@ export const PublicPagoCuota: React.FC = () => {
     let startY = 2026;
     let startM = 0;
     
-    if (socio.fechaIngreso) {
-      const parts = socio.fechaIngreso.split('-');
-      const ingresoY = Number(parts[0]);
-      const ingresoM = Number(parts[1]) - 1; // 0-indexado
-      if (!isNaN(ingresoY) && !isNaN(ingresoM)) {
-        if (ingresoY > 2026 || (ingresoY === 2026 && ingresoM > 0)) {
-          startY = ingresoY;
-          startM = ingresoM;
-        }
-      }
-    }
-
     while (startY < limitY || (startY === limitY && startM <= limitM)) {
       const mName = months[startM];
       if (!isMonthPaid(socio, mName, startY)) {

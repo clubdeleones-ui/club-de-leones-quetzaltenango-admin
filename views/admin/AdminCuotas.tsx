@@ -102,21 +102,9 @@ export const AdminCuotas: React.FC = () => {
   const getSocioUnpaidMonths = (socio: Socio) => {
     const unpaidMonths: { month: string; year: number }[] = [];
     
-    // We start tracking from January 2026 or registration date
+    // We start tracking from January 2026
     let startY = 2026;
     let startM = 0; // Enero
-    
-    if (socio.fechaIngreso) {
-      const parts = socio.fechaIngreso.split('-');
-      const ingresoY = Number(parts[0]);
-      const ingresoM = Number(parts[1]) - 1; // 0-indexado
-      if (!isNaN(ingresoY) && !isNaN(ingresoM)) {
-        if (ingresoY > 2026 || (ingresoY === 2026 && ingresoM > 0)) {
-          startY = ingresoY;
-          startM = ingresoM;
-        }
-      }
-    }
     
     const limitY = currentYear;
     const limitM = currentMonth;
