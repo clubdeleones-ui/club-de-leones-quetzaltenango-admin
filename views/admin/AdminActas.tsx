@@ -1767,7 +1767,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       {/* Invocación Leonística Modal */}
       {showInvocacionModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-[2rem] max-w-2xl w-full shadow-2xl border border-amber-200 animate-in zoom-in-95 duration-200 text-center relative overflow-hidden">
+          <div className="bg-white rounded-[2rem] max-w-4xl w-full shadow-2xl border border-amber-200 animate-in zoom-in-95 duration-200 text-center relative overflow-y-auto max-h-[95vh] sm:overflow-hidden">
             
             {/* Header/Banner Decorativo */}
             <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-blue-900 via-amber-500 to-blue-900"></div>
@@ -1795,8 +1795,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               </div>
 
               {/* Texto de la Invocación */}
-              <div className="text-slate-800 space-y-5 text-sm sm:text-base leading-relaxed px-1 sm:px-4">
-                <div className="relative p-4 sm:p-5 bg-amber-50/45 rounded-2xl border border-amber-100/50 shadow-sm text-center">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-slate-800 text-xs sm:text-sm leading-relaxed px-1 sm:px-4">
+                <div className="relative p-4 sm:p-5 bg-amber-50/45 rounded-2xl border border-amber-100/50 shadow-sm text-center flex flex-col justify-center">
                   <span className="absolute -top-3 left-6 px-2.5 py-0.5 bg-white text-[8px] uppercase tracking-widest text-amber-600 font-extrabold border border-amber-100 rounded-md">Paz y Serenidad</span>
                   <p className="italic text-slate-700 font-medium">
                     Haznos, Señor, Instrumento de tu paz<br />
@@ -1807,7 +1807,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   </p>
                 </div>
                 
-                <div className="relative p-4 sm:p-5 bg-blue-50/45 rounded-2xl border border-blue-100/50 shadow-sm text-center">
+                <div className="relative p-4 sm:p-5 bg-blue-50/45 rounded-2xl border border-blue-100/50 shadow-sm text-center flex flex-col justify-center">
                   <span className="absolute -top-3 left-6 px-2.5 py-0.5 bg-white text-[8px] uppercase tracking-widest text-blue-700 font-extrabold border border-blue-100 rounded-md">Entendimiento</span>
                   <p className="italic text-slate-700 font-medium">
                     Llena con tu luz nuestro entendimiento,<br />
@@ -1816,7 +1816,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   </p>
                 </div>
                 
-                <div className="relative p-4 sm:p-5 bg-amber-50/45 rounded-2xl border border-amber-100/50 shadow-sm text-center">
+                <div className="relative p-4 sm:p-5 bg-amber-50/45 rounded-2xl border border-amber-100/50 shadow-sm text-center flex flex-col justify-center">
                   <span className="absolute -top-3 left-6 px-2.5 py-0.5 bg-white text-[8px] uppercase tracking-widest text-amber-600 font-extrabold border border-amber-100 rounded-md">Gracia y Generosidad</span>
                   <p className="italic text-slate-700 font-medium">
                     Concédenos la gracia de estar entre los<br />
@@ -1825,7 +1825,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   </p>
                 </div>
                 
-                <div className="relative p-4 sm:p-5 bg-blue-50/45 rounded-2xl border border-blue-100/50 shadow-sm text-center">
+                <div className="relative p-4 sm:p-5 bg-blue-50/45 rounded-2xl border border-blue-100/50 shadow-sm text-center flex flex-col justify-center">
                   <span className="absolute -top-3 left-6 px-2.5 py-0.5 bg-white text-[8px] uppercase tracking-widest text-blue-700 font-extrabold border border-blue-100 rounded-md">Servicio y Amor</span>
                   <p className="italic text-slate-700 font-medium">
                     Danos Fe para ver tu rostro en el hermano,<br />
@@ -1836,17 +1836,17 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     esté llena de tu espíritu.
                   </p>
                 </div>
-                
-                <p className="not-italic font-black text-blue-900 tracking-widest text-base sm:text-lg pt-2 text-center uppercase">
+              </div>
+              
+              <div className="flex flex-col items-center space-y-4 pt-2">
+                <p className="not-italic font-black text-blue-900 tracking-widest text-base sm:text-lg uppercase">
                   ASÍ SEA.
                 </p>
-              </div>
-
-              {/* Botón de Cerrar */}
-              <div className="pt-2">
+                
+                {/* Botón de Cerrar */}
                 <button
                   onClick={() => setShowInvocacionModal(false)}
-                  className="w-full sm:w-auto px-8 py-3 bg-blue-900 hover:bg-blue-800 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md shadow-blue-900/10 active:scale-95"
+                  className="px-10 py-3 bg-blue-900 hover:bg-blue-800 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md shadow-blue-900/10 active:scale-95"
                 >
                   Cerrar
                 </button>
