@@ -1767,7 +1767,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       {/* Invocación Leonística Modal */}
       {showInvocacionModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-[2rem] max-w-lg w-full shadow-2xl border border-amber-200 animate-in zoom-in-95 duration-200 text-center relative overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="bg-white rounded-[2rem] max-w-2xl w-full shadow-2xl border border-amber-200 animate-in zoom-in-95 duration-200 text-center relative overflow-hidden">
             
             {/* Header/Banner Decorativo */}
             <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-blue-900 via-amber-500 to-blue-900"></div>
@@ -1781,7 +1781,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
             </button>
 
             {/* Contenido */}
-            <div className="p-6 sm:p-8 overflow-y-auto space-y-6">
+            <div className="p-6 sm:p-8 space-y-6">
               
               {/* Icono / Titulo */}
               <div className="flex flex-col items-center pt-2">
@@ -1795,37 +1795,49 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               </div>
 
               {/* Texto de la Invocación */}
-              <div className="text-slate-755 space-y-4 text-sm sm:text-base leading-relaxed italic font-medium px-2 sm:px-4">
-                <p>
-                  Haznos, Señor, Instrumento de tu paz<br />
-                  danos serenidad para aceptar aquellas<br />
-                  cosas que no podemos modificar,<br />
-                  Valor para enmendar las que si podemos<br />
-                  y sabiduría para conocer la diferencia.
-                </p>
+              <div className="text-slate-800 space-y-5 text-sm sm:text-base leading-relaxed px-1 sm:px-4">
+                <div className="relative p-4 sm:p-5 bg-amber-50/45 rounded-2xl border border-amber-100/50 shadow-sm text-center">
+                  <span className="absolute -top-3 left-6 px-2.5 py-0.5 bg-white text-[8px] uppercase tracking-widest text-amber-600 font-extrabold border border-amber-100 rounded-md">Paz y Serenidad</span>
+                  <p className="italic text-slate-700 font-medium">
+                    Haznos, Señor, Instrumento de tu paz<br />
+                    danos serenidad para aceptar aquellas<br />
+                    cosas que no podemos modificar,<br />
+                    Valor para enmendar las que sí podemos<br />
+                    y sabiduría para conocer la diferencia.
+                  </p>
+                </div>
                 
-                <p>
-                  Llena con tu luz nuestro entendimiento,<br />
-                  para que pudiendo comprender más,<br />
-                  podamos perdonar mejor.
-                </p>
+                <div className="relative p-4 sm:p-5 bg-blue-50/45 rounded-2xl border border-blue-100/50 shadow-sm text-center">
+                  <span className="absolute -top-3 left-6 px-2.5 py-0.5 bg-white text-[8px] uppercase tracking-widest text-blue-700 font-extrabold border border-blue-100 rounded-md">Entendimiento</span>
+                  <p className="italic text-slate-700 font-medium">
+                    Llena con tu luz nuestro entendimiento,<br />
+                    para que pudiendo comprender más,<br />
+                    podamos perdonar mejor.
+                  </p>
+                </div>
                 
-                <p>
-                  Concédenos la gracia de estar entre los<br />
-                  bienaventurados que saben dar sin recordar<br />
-                  y recibir sin olvidar.
-                </p>
+                <div className="relative p-4 sm:p-5 bg-amber-50/45 rounded-2xl border border-amber-100/50 shadow-sm text-center">
+                  <span className="absolute -top-3 left-6 px-2.5 py-0.5 bg-white text-[8px] uppercase tracking-widest text-amber-600 font-extrabold border border-amber-100 rounded-md">Gracia y Generosidad</span>
+                  <p className="italic text-slate-700 font-medium">
+                    Concédenos la gracia de estar entre los<br />
+                    bienaventurados que saben dar sin recordar<br />
+                    y recibir sin olvidar.
+                  </p>
+                </div>
                 
-                <p>
-                  Danos Fe para ver tu rostro en el hermano,<br />
-                  danos fortaleza para servir sin desánimo,<br />
-                  danos alegría para sonreír en las dificultades,<br />
-                  humildad para no envanecernos con el éxito,<br />
-                  y un inmenso amor para que nuestra labor<br />
-                  esté llena de tu espíritu.
-                </p>
+                <div className="relative p-4 sm:p-5 bg-blue-50/45 rounded-2xl border border-blue-100/50 shadow-sm text-center">
+                  <span className="absolute -top-3 left-6 px-2.5 py-0.5 bg-white text-[8px] uppercase tracking-widest text-blue-700 font-extrabold border border-blue-100 rounded-md">Servicio y Amor</span>
+                  <p className="italic text-slate-700 font-medium">
+                    Danos Fe para ver tu rostro en el hermano,<br />
+                    danos fortaleza para servir sin desánimo,<br />
+                    danos alegría para sonreír en las dificultades,<br />
+                    humildad para no envanecernos con el éxito,<br />
+                    y un inmenso amor para que nuestra labor<br />
+                    esté llena de tu espíritu.
+                  </p>
+                </div>
                 
-                <p className="not-italic font-black text-blue-900 tracking-widest text-sm pt-2">
+                <p className="not-italic font-black text-blue-900 tracking-widest text-base sm:text-lg pt-2 text-center uppercase">
                   ASÍ SEA.
                 </p>
               </div>
@@ -1848,7 +1860,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       {/* Saludo a la Bandera Modal */}
       {showSaludoModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-[2rem] max-w-lg w-full shadow-2xl border border-amber-200 animate-in zoom-in-95 duration-200 text-center relative overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="bg-white rounded-[2rem] max-w-2xl w-full shadow-2xl border border-amber-200 animate-in zoom-in-95 duration-200 text-center relative overflow-hidden">
             
             {/* Header/Banner Decorativo */}
             <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-blue-900 via-amber-500 to-blue-900"></div>
@@ -1862,7 +1874,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
             </button>
 
             {/* Contenido */}
-            <div className="p-6 sm:p-8 overflow-y-auto space-y-6">
+            <div className="p-6 sm:p-8 space-y-6">
               
               {/* Icono / Titulo */}
               <div className="flex flex-col items-center pt-2">
@@ -1876,23 +1888,35 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               </div>
 
               {/* Texto de la Bandera */}
-              <div className="text-slate-755 space-y-4 text-sm sm:text-base leading-relaxed italic font-medium px-2 sm:px-4">
-                <p>
-                  Bandera de mi Patria,<br />
-                  sublime enseña de libertad y honor,<br />
-                  los leones te juramos respeto y lealtad.
-                </p>
-                <p>
-                  Apasionados de servir a nuestra Patria<br />
-                  con humildad y dignidad cada día.
-                </p>
-                <p>
-                  Unidos en pensamiento y obra,<br />
-                  en un solo rugir,<br />
-                  velamos porque tu ondear sea libre,<br />
-                  eterno y puro.
-                </p>
-                <p className="not-italic font-black text-blue-900 tracking-widest text-sm pt-2">
+              <div className="text-slate-800 space-y-5 text-sm sm:text-base leading-relaxed px-1 sm:px-4">
+                <div className="relative p-4 sm:p-5 bg-blue-50/45 rounded-2xl border border-blue-100/50 shadow-sm text-center">
+                  <span className="absolute -top-3 left-6 px-2.5 py-0.5 bg-white text-[8px] uppercase tracking-widest text-blue-700 font-extrabold border border-blue-100 rounded-md">Juramento</span>
+                  <p className="italic text-slate-700 font-medium">
+                    Bandera de mi Patria,<br />
+                    sublime enseña de libertad y honor,<br />
+                    los leones te juramos respeto y lealtad.
+                  </p>
+                </div>
+
+                <div className="relative p-4 sm:p-5 bg-amber-50/45 rounded-2xl border border-amber-100/50 shadow-sm text-center">
+                  <span className="absolute -top-3 left-6 px-2.5 py-0.5 bg-white text-[8px] uppercase tracking-widest text-amber-600 font-extrabold border border-amber-100 rounded-md">Servicio</span>
+                  <p className="italic text-slate-700 font-medium">
+                    Apasionados de servir a nuestra Patria<br />
+                    con humildad y dignidad cada día.
+                  </p>
+                </div>
+
+                <div className="relative p-4 sm:p-5 bg-blue-50/45 rounded-2xl border border-blue-100/50 shadow-sm text-center">
+                  <span className="absolute -top-3 left-6 px-2.5 py-0.5 bg-white text-[8px] uppercase tracking-widest text-blue-700 font-extrabold border border-blue-100 rounded-md">Unión</span>
+                  <p className="italic text-slate-700 font-medium">
+                    Unidos en pensamiento y obra,<br />
+                    en un solo rugir,<br />
+                    velamos porque tu ondear sea libre,<br />
+                    eterno y puro.
+                  </p>
+                </div>
+
+                <p className="not-italic font-black text-blue-900 tracking-widest text-base sm:text-lg pt-2 text-center uppercase">
                   SALVE AMADA PATRIA, DULCE GUATEMALA.
                 </p>
               </div>
