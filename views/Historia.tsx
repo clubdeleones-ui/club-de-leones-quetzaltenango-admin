@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Clock, MapPin, Search, ChevronDown, X, Play } from 'lucide-react';
 import { HitoHistorico } from '../types';
 import { firebaseService } from '../services/firebaseService';
+import { formatDisplayDate } from '../utils/dateSpanishFormatter';
 
 export const Historia: React.FC = () => {
   const [hitos, setHitos] = useState<HitoHistorico[]>([]);
@@ -232,7 +233,7 @@ export const Historia: React.FC = () => {
                       <h3 className="font-extrabold text-2xl text-slate-800 mb-2 leading-tight">{hito.titulo}</h3>
                       <div className="inline-flex items-center space-x-2 text-blue-900 font-bold mb-4 bg-blue-50 px-3 py-1 rounded-lg">
                         <Clock size={16} />
-                        <span>{hito.fecha}</span>
+                        <span>{formatDisplayDate(hito.fecha)}</span>
                       </div>
                       
                       {(() => {

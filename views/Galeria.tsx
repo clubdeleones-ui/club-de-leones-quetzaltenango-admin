@@ -3,6 +3,7 @@ import { Camera, Calendar, Tag } from 'lucide-react';
 import { GaleriaItem } from '../types';
 import { firebaseService } from '../services/firebaseService';
 import { MOCK_GALERIA } from '../constants';
+import { formatDisplayDate } from '../utils/dateSpanishFormatter';
 
 const Galeria: React.FC = () => {
   const [items, setItems] = useState<GaleriaItem[]>([]);
@@ -96,7 +97,7 @@ const Galeria: React.FC = () => {
                           />
                           <div className="absolute top-4 right-4 bg-blue-900/90 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center shadow-lg">
                             <Calendar size={12} className="mr-1.5" />
-                            {item.fecha}
+                            {formatDisplayDate(item.fecha)}
                           </div>
                         </div>
                         <div className="p-6 flex-1 flex flex-col justify-between bg-white">

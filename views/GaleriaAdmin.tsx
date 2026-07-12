@@ -4,6 +4,7 @@ import { GaleriaItem } from '../types';
 import { firebaseService } from '../services/firebaseService';
 import { compressImageFile, validateImageFile } from '../utils/imageCompressor';
 import { useModal } from '../context/ModalContext';
+import { formatDisplayDate } from '../utils/dateSpanishFormatter';
 
 const CATEGORIAS_GALERIA = [
   'Inauguraciones',
@@ -215,7 +216,7 @@ export const GaleriaAdmin: React.FC = () => {
                   <h3 className="font-extrabold text-lg text-slate-800 line-clamp-1">{item.titulo}</h3>
                   <div className="flex items-center text-xs text-slate-500 mt-2 mb-3 font-medium">
                     <Calendar size={14} className="mr-1.5" />
-                    {item.fecha}
+                    {formatDisplayDate(item.fecha)}
                   </div>
                   <p className="text-slate-600 text-sm line-clamp-2">{item.descripcion}</p>
                   {item.contextoPremium && (

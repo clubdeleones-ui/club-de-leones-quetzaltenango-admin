@@ -4,6 +4,7 @@ import { useClubData } from '../context/ClubDataContext';
 import { Comision, Socio, MinutaComision, MinutaPunto, Solicitud, Responsable, TareaComision } from '../types';
 import { generateMinutaPDF } from '../utils/pdfGenerator';
 import { useModal } from '../context/ModalContext';
+import { formatDisplayDate } from '../utils/dateSpanishFormatter';
 import { 
   Plus, 
   Search, 
@@ -752,7 +753,7 @@ export const MinutasComisiones: React.FC = () => {
                                 </span>
                                 {t.fechaLimite && (
                                   <span className="text-[10px] font-medium text-slate-400">
-                                    Límite: {t.fechaLimite}
+                                    Límite: {formatDisplayDate(t.fechaLimite)}
                                   </span>
                                 )}
                               </div>

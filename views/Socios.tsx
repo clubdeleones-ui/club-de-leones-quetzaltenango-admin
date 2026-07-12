@@ -15,6 +15,7 @@ import {
   MapPin,
   Briefcase
 } from 'lucide-react';
+import { formatDisplayDate } from '../utils/dateSpanishFormatter';
 
 interface SociosProps {
   user?: Socio | null;
@@ -209,7 +210,9 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                       <Calendar size={16} className="text-slate-400 flex-shrink-0" />
                       <span>Fecha Nacimiento</span>
                     </span>
-                    <span className="font-bold text-slate-800 text-left sm:text-right break-words w-full sm:w-auto">{socio.fechaNacimiento || 'No indicado'}</span>
+                    <span className="font-bold text-slate-800 text-left sm:text-right break-words w-full sm:w-auto">
+                      {socio.fechaNacimiento ? formatDisplayDate(socio.fechaNacimiento) : 'No indicado'}
+                    </span>
                   </div>
 
                   {/* Profesión */}

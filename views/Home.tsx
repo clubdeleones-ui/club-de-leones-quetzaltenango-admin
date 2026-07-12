@@ -30,6 +30,7 @@ import { useClubData } from '../context/ClubDataContext';
 import { Actividad } from '../types';
 import { MOCK_ACTIVIDADES } from '../constants';
 import { InscripcionVoluntarioModal } from '../components/InscripcionVoluntarioModal';
+import { formatDisplayDate } from '../utils/dateSpanishFormatter';
 
 const CAUSAS_GLOBALES = [
   {
@@ -516,7 +517,7 @@ const Home: React.FC = () => {
                       <div className="space-y-1.5">
                         <div className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider">
                           <Clock size={13} className="mr-2 text-yellow-600 shrink-0" />
-                          <span>{act.fecha}</span>
+                          <span>{formatDisplayDate(act.fecha)}</span>
                         </div>
                         <div className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider">
                           <MapPin size={13} className="mr-2 text-blue-900 shrink-0" />

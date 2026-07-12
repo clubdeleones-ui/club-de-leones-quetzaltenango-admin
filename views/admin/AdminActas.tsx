@@ -5,7 +5,7 @@ import {
 import { Acta, Socio, Solicitud, UserRole } from '../../types';
 import { firebaseService } from '../../services/firebaseService';
 import { useClubData } from '../../context/ClubDataContext';
-import { getWrittenDateTimeSpanish } from '../../utils/dateSpanishFormatter';
+import { getWrittenDateTimeSpanish, formatDisplayDate } from '../../utils/dateSpanishFormatter';
 import { generateActaPDF, generateActaCode } from '../../utils/pdfGenerator';
 import { FormattedActa } from '../../components/FormattedActa';
 
@@ -688,7 +688,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                           return false;
                         })
                         .map(a => (
-                          <option key={a.id} value={a.id}>{a.fecha} - {a.titulo}</option>
+                          <option key={a.id} value={a.id}>{formatDisplayDate(a.fecha)} - {a.titulo}</option>
                         ))}
                     </select>
                   </div>
@@ -1672,7 +1672,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   <div className="min-w-0 flex-grow w-full">
                     <h4 className="font-extrabold text-slate-800 text-base md:text-lg break-words leading-tight">{acta.titulo}</h4>
                     <p className="text-xs text-slate-450 mt-1.5">
-                      Redactada por <span className="font-bold text-blue-900/60 uppercase">{acta.autor}</span> • {acta.fecha}
+                      Redactada por <span className="font-bold text-blue-900/60 uppercase">{acta.autor}</span> • {formatDisplayDate(acta.fecha)}
                     </p>
                   </div>
                 </div>

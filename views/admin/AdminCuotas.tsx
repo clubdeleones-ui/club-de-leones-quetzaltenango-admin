@@ -7,6 +7,7 @@ import { firebaseService } from '../../services/firebaseService';
 import { useClubData } from '../../context/ClubDataContext';
 import { generateReciboPagoPDF } from '../../utils/pdfGenerator';
 import { useToast } from '../../context/ToastContext';
+import { formatDisplayDate } from '../../utils/dateSpanishFormatter';
 
 export const AdminCuotas: React.FC = () => {
   const { socios: dbSocios } = useClubData();
@@ -1079,7 +1080,7 @@ export const AdminCuotas: React.FC = () => {
                           <span className="font-extrabold block">Cuenta Solvente</span>
                           <p className="mt-1 leading-relaxed text-xs">
                             El socio se encuentra completamente al día con sus cuotas mensuales de Q 125.00.
-                            Último pago registrado el <strong className="font-bold">{s.fechaUltimoPago || 'N/A'}</strong>.
+                             Último pago registrado el <strong className="font-bold">{s.fechaUltimoPago ? formatDisplayDate(s.fechaUltimoPago) : 'N/A'}</strong>.
                           </p>
                         </div>
                       </div>
@@ -1128,7 +1129,7 @@ export const AdminCuotas: React.FC = () => {
                                 <span className="font-black text-slate-800 text-sm leading-none">Q {pago.monto.toFixed(2)}</span>
                               </div>
                               <div className="flex justify-between text-slate-500 font-semibold text-[11px] leading-none pt-1">
-                                <span>Fecha: {pago.fechaPago}</span>
+                                 <span>Fecha: {formatDisplayDate(pago.fechaPago)}</span>
                                 <span>Método: {pago.metodo}</span>
                               </div>
                               {pago.metodo !== 'Efectivo' && (
@@ -1200,7 +1201,7 @@ export const AdminCuotas: React.FC = () => {
                             ) : (
                               s.historialPagos.map(pago => (
                                 <tr key={pago.id} className="hover:bg-slate-50 transition-colors">
-                                  <td className="p-3 font-semibold text-slate-800">{pago.fechaPago}</td>
+                                   <td className="p-3 font-semibold text-slate-800">{formatDisplayDate(pago.fechaPago)}</td>
                                   <td className="p-3 font-bold text-blue-900">{pago.periodo}</td>
                                   <td className="p-3 font-extrabold text-slate-850">Q {pago.monto.toFixed(2)}</td>
                                   <td className="p-3 text-slate-600 font-semibold">{pago.metodo}</td>

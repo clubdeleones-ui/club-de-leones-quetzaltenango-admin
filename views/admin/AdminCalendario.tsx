@@ -7,6 +7,7 @@ import { firebaseService } from '../../services/firebaseService';
 import { useClubData } from '../../context/ClubDataContext';
 import { useModal } from '../../context/ModalContext';
 import { compressImageFile, validateImageFile } from '../../utils/imageCompressor';
+import { formatDisplayDate } from '../../utils/dateSpanishFormatter';
 
 export const AdminCalendario: React.FC = () => {
   const { 
@@ -944,7 +945,7 @@ export const AdminCalendario: React.FC = () => {
                       <div className="space-y-2 mb-4">
                         <div className="flex items-start space-x-2 text-slate-500">
                           <Calendar size={14} className="mt-0.5 shrink-0 text-blue-900/60" />
-                          <span className="text-xs font-semibold">{act.fecha}</span>
+                          <span className="text-xs font-semibold">{formatDisplayDate(act.fecha)}</span>
                         </div>
                         <div className="flex items-start space-x-2 text-slate-500">
                           <Building size={14} className="mt-0.5 shrink-0 text-blue-900/60" />

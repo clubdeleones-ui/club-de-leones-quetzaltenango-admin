@@ -36,6 +36,7 @@ import {
   Save
 } from 'lucide-react';
 import { generateCartaOficialPDF, formatFechaCarta } from '../utils/pdfGenerator';
+import { formatDisplayDate } from '../utils/dateSpanishFormatter';
 
 
 interface SolicitudesProps {
@@ -1077,7 +1078,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                     </h3>
                     <div className="flex items-center text-xs font-semibold text-slate-400">
                       <Calendar size={12} className="mr-1 text-slate-400 flex-shrink-0" />
-                      <span>Edad: {sol.edadBeneficiario} años • Registro: {sol.fechaCreacion}</span>
+                      <span>Edad: {sol.edadBeneficiario} años • Registro: {formatDisplayDate(sol.fechaCreacion)}</span>
                     </div>
                   </div>
 
@@ -1182,7 +1183,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                     </h3>
                     <div className="flex items-center text-xs font-semibold text-slate-400">
                       <User size={12} className="mr-1 text-slate-400 flex-shrink-0" />
-                      <span>Solicitado por: <strong className="text-slate-655 font-extrabold">{sol.agendaSocioNombre}</strong> • {sol.fechaCreacion}</span>
+                      <span>Solicitado por: <strong className="text-slate-655 font-extrabold">{sol.agendaSocioNombre}</strong> • {formatDisplayDate(sol.fechaCreacion)}</span>
                     </div>
                   </div>
 
@@ -1393,7 +1394,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                   </h3>
                   <div className="flex items-center text-xs font-semibold text-slate-405">
                     <Calendar size={12} className="mr-1 text-slate-400 flex-shrink-0" />
-                    <span>Fecha: {sol.fecha}</span>
+                    <span>Fecha: {formatDisplayDate(sol.fecha)}</span>
                   </div>
                 </div>
 
@@ -2083,7 +2084,7 @@ Club de Leones de Quetzaltenango`;
                   <div key={d.id} className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs hover:border-slate-300 transition-all">
                     <div className="min-w-0 flex-1 mr-2 cursor-pointer text-left" onClick={() => loadDraft(d)}>
                       <p className="font-extrabold text-slate-700 truncate">{d.destinatario || '(Sin destinatario)'}</p>
-                      <p className="text-[10px] text-slate-450 font-semibold truncate mt-0.5">{d.asunto || '(Sin asunto)'} - {d.fecha}</p>
+                      <p className="text-[10px] text-slate-450 font-semibold truncate mt-0.5">{d.asunto || '(Sin asunto)'} - {formatDisplayDate(d.fecha)}</p>
                     </div>
                     <button
                       type="button"
@@ -2489,7 +2490,7 @@ Club de Leones de Quetzaltenango`;
                               </div>
                               <div className="text-left sm:text-right">
                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Fecha de Envío</span>
-                                <span className="text-xs font-bold text-slate-755 block mt-0.5">{searchedSolicitud.fechaCreacion}</span>
+                                <span className="text-xs font-bold text-slate-755 block mt-0.5">{formatDisplayDate(searchedSolicitud.fechaCreacion)}</span>
                               </div>
                             </div>
 
@@ -2567,7 +2568,7 @@ Club de Leones de Quetzaltenango`;
                                       <p className="leading-relaxed text-slate-655 font-semibold">{searchedSolicitud.resolucionRazon}</p>
                                     )}
                                     {searchedSolicitud.fechaResolucion && (
-                                      <span className="text-[10px] text-slate-400 block font-normal mt-1.5">Fecha: {searchedSolicitud.fechaResolucion}</span>
+                                      <span className="text-[10px] text-slate-400 block font-normal mt-1.5">Fecha: {formatDisplayDate(searchedSolicitud.fechaResolucion)}</span>
                                     )}
                                   </div>
                                 </div>

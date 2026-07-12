@@ -67,9 +67,11 @@ export function getWrittenDateTimeSpanish(date: Date): string {
 
 export function formatDisplayDate(dateStr: string): string {
   if (!dateStr) return '';
-  const parts = dateStr.split('-');
+  const [datePart, timePart] = dateStr.split(' ');
+  const parts = datePart.split('-');
   if (parts.length === 3) {
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    const formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return timePart ? `${formattedDate} ${timePart}` : formattedDate;
   }
   return dateStr;
 }
