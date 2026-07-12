@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Socio, UserRole, RequerimientoActividad, ComisionRequerimiento, TareaVoluntario, MaterialNecesidad } from '../types';
 import { useClubData } from '../context/ClubDataContext';
 import { useModal } from '../context/ModalContext';
@@ -26,7 +26,9 @@ import {
   Layers,
   Sparkles,
   Share2,
-  Link
+  Link,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { formatDisplayDate } from '../utils/dateSpanishFormatter';
 
@@ -87,6 +89,22 @@ export const RequerimientosActividades: React.FC<RequerimientosActividadesProps>
       user.rol === UserRole.PRESIDENTE_AFILIACION
     );
   }, [user.rol]);
+
+  // Accordion state to toggle expanded/collapsed commissions
+  const [expandedComisiones, setExpandedComisiones] = useState<Record<string, boolean>>({});
+
+  // Auto-expand first comision when selectedReqId changes
+  useEffect(() => {
+    if (selectedReqId && selectedReq && selectedReq.comisionesRequeridas && selectedReq.comisionesRequeridas.length > 0) {
+      const initial: Record<string, boolean> = {};
+      selectedReq.comisionesRequeridas.forEach((com, idx) => {
+        initial[com.id] = idx === 0;
+      });
+      setExpandedComisiones(initial);
+    } else {
+      setExpandedComisiones({});
+    }
+  }, [selectedReqId, requerimientosActividades]);
 
   // Filtered requirements list
   const filteredReqs = useMemo(() => {
@@ -1053,15 +1071,24 @@ export const RequerimientosActividades: React.FC<RequerimientosActividadesProps>
                 {(selectedReq.comisionesRequeridas || []).map((com) => {
                   const numAccionesCubiertas = (com.acciones || []).filter(a => a.socioId !== null).length;
                   const numNecesidadesCubiertas = (com.necesidades || []).filter(n => n.socioId !== null).length;
+                  const isExpanded = !!expandedComisiones[com.id];
 
                   return (
                     <div 
                       key={com.id} 
                       className="border border-slate-200 bg-white rounded-3xl overflow-hidden shadow-md shadow-slate-100/50 hover:shadow-lg transition-all duration-300 flex flex-col"
                     >
-                      {/* Tab Header - simulated folder index tab */}
-                      <div className="bg-gradient-to-r from-blue-900 to-indigo-900 px-6 py-4.5 text-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <div>
+                      {/* Tab Header - simulated folder index tab (Clickable) */}
+                      <div 
+                        onClick={() => {
+                          setExpandedComisiones(prev => ({
+                            ...prev,
+                            [com.id]: !prev[com.id]
+                          }));
+                        }}
+                        className="bg-gradient-to-r from-blue-900 to-indigo-900 px-6 py-4.5 text-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 cursor-pointer select-none hover:from-blue-800 hover:to-indigo-800 transition-colors"
+                      >
+                        <div className="flex-1">
                           <h5 className="text-base font-black flex items-center space-x-2">
                             <span className="w-2.5 h-2.5 bg-yellow-400 rounded-full inline-block animate-pulse" />
                             <span>{com.nombreComision}</span>
@@ -1070,15 +1097,21 @@ export const RequerimientosActividades: React.FC<RequerimientosActividadesProps>
                             <p className="text-xs text-blue-200 font-semibold mt-1 pr-4">{com.objetivo}</p>
                           )}
                         </div>
-                        <div className="flex shrink-0">
+                        <div className="flex items-center space-x-3 shrink-0">
                           <span className="text-[10px] font-black bg-white/10 text-white px-3.5 py-1.5 rounded-full uppercase tracking-wider border border-white/10 backdrop-blur-md">
-                            {numAccionesCubiertas + numNecesidadesCubiertas} de {(com.acciones || []).length + (com.necesidades || []).length} requerimientos cubiertos
+                            {numAccionesCubiertas + numNecesidadesCubiertas} de {(com.acciones || []).length + (com.necesidades || []).length} cubiertos
                           </span>
+                          {isExpanded ? (
+                            <ChevronUp size={18} className="text-yellow-400 shrink-0" />
+                          ) : (
+                            <ChevronDown size={18} className="text-slate-300 shrink-0" />
+                          )}
                         </div>
                       </div>
 
-                      {/* Folder Body Content */}
-                      <div className="p-6 md:p-8 space-y-8">
+                      {/* Folder Body Content - collapsible */}
+                      {isExpanded && (
+                        <div className="p-6 md:p-8 space-y-8 animate-fade-in">
                         {/* 1. Tareas de Trabajo */}
                         <div className="space-y-4">
                           <div className="flex items-center space-x-2 pb-2 border-b border-slate-100">
@@ -1223,6 +1256,7 @@ export const RequerimientosActividades: React.FC<RequerimientosActividadesProps>
                         </div>
 
                       </div>
+                      )}
                     </div>
                   );
                 })}

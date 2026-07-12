@@ -17,7 +17,9 @@ import {
   X, 
   ShieldAlert, 
   Info,
-  Sparkles
+  Sparkles,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { formatDisplayDate } from '../utils/dateSpanishFormatter';
 
@@ -29,7 +31,9 @@ export const RequerimientoPublico: React.FC = () => {
 
   const [req, setReq] = useState<RequerimientoActividad | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeComisionId, setActiveComisionId] = useState<string | null>(null);
+  
+  // Accordion state to toggle expanded/collapsed commissions
+  const [expandedComisiones, setExpandedComisiones] = useState<Record<string, boolean>>({});
 
   // Volunteer Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -65,7 +69,11 @@ export const RequerimientoPublico: React.FC = () => {
       if (data) {
         setReq(data);
         if (data.comisionesRequeridas && data.comisionesRequeridas.length > 0) {
-          setActiveComisionId(data.comisionesRequeridas[0].id);
+          const initial: Record<string, boolean> = {};
+          data.comisionesRequeridas.forEach((com, idx) => {
+            initial[com.id] = idx === 0;
+          });
+          setExpandedComisiones(initial);
         }
       } else {
         showAlert('Error', 'La convocatoria solicitada no existe o fue eliminada.');
@@ -86,11 +94,6 @@ export const RequerimientoPublico: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('club_leones_public_signups', JSON.stringify(mySignedUpItems));
   }, [mySignedUpItems]);
-
-  const activeComision = useMemo(() => {
-    if (!req) return null;
-    return (req.comisionesRequeridas || []).find(c => c.id === activeComisionId) || null;
-  }, [req, activeComisionId]);
 
   // Open modal to sign up
   const handleOpenSignUp = (
@@ -331,229 +334,225 @@ export const RequerimientoPublico: React.FC = () => {
             </div>
           )}
         </div>
-      </div>
-
-      {/* BODY CONTENT - HORIZONTAL TABS FOR AREAS */}
+      </div>      {/* BODY CONTENT - ACCORDION LIST FOR AREAS */}
       <div className="max-w-2xl mx-auto px-4 mt-6">
         
-        {/* Area tabs title */}
-        <div className="flex items-center space-x-2 mb-4 px-1">
+        {/* Area accordions title */}
+        <div className="flex items-center space-x-2 mb-6 px-1">
           <Sparkles size={16} className="text-blue-900" />
-          <h2 className="text-xs font-black uppercase text-slate-500 tracking-wider">Selecciona un Área de Trabajo</h2>
+          <h2 className="text-xs font-black uppercase text-slate-500 tracking-wider">Requerimientos por Comisión</h2>
         </div>
 
-        {/* Scrollable Tabs */}
-        <div className="flex space-x-2 overflow-x-auto pb-3 scrollbar-none snap-x">
+        <div className="space-y-6">
           {(req.comisionesRequeridas || []).map((com) => {
-            const isActive = com.id === activeComisionId;
-            const total = (com.acciones || []).length + (com.necesidades || []).length;
-            const filled = (com.acciones || []).filter(a => a.socioId !== null).length + 
-                           (com.necesidades || []).filter(n => n.socioId !== null).length;
+            const isExpanded = !!expandedComisiones[com.id];
+            const numAccionesCubiertas = (com.acciones || []).filter(a => a.socioId !== null).length;
+            const numNecesidadesCubiertas = (com.necesidades || []).filter(n => n.socioId !== null).length;
 
             return (
-              <button
-                key={com.id}
-                type="button"
-                onClick={() => setActiveComisionId(com.id)}
-                className={`snap-center shrink-0 flex flex-col items-start p-3.5 rounded-2xl border transition-all text-left min-w-[150px] ${
-                  isActive 
-                    ? 'bg-blue-900 text-white border-blue-900 shadow-md shadow-blue-900/10' 
-                    : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
-                }`}
+              <div 
+                key={com.id} 
+                className="border border-slate-200 bg-white rounded-3xl overflow-hidden shadow-md shadow-slate-100/50 hover:shadow-lg transition-all duration-300 flex flex-col"
               >
-                <span className="text-xs font-extrabold line-clamp-1">{com.nombreComision}</span>
-                <span className={`text-[10px] font-bold mt-1.5 ${isActive ? 'text-slate-200' : 'text-slate-400'}`}>
-                  {filled}/{total} Cubiertos
-                </span>
-              </button>
+                {/* Accordion Tab Header */}
+                <div 
+                  onClick={() => {
+                    setExpandedComisiones(prev => ({
+                      ...prev,
+                      [com.id]: !prev[com.id]
+                    }));
+                  }}
+                  className="bg-gradient-to-r from-blue-900 to-indigo-900 px-6 py-4.5 text-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 cursor-pointer select-none hover:from-blue-800 hover:to-indigo-800 transition-colors"
+                >
+                  <div className="flex-1">
+                    <h5 className="text-base font-black flex items-center space-x-2">
+                      <span className="w-2.5 h-2.5 bg-yellow-400 rounded-full inline-block animate-pulse" />
+                      <span>{com.nombreComision}</span>
+                    </h5>
+                    {com.objetivo && (
+                      <p className="text-xs text-blue-200 font-semibold mt-1 pr-4">{com.objetivo}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center space-x-3 shrink-0">
+                    <span className="text-[10px] font-black bg-white/10 text-white px-3.5 py-1.5 rounded-full uppercase tracking-wider border border-white/10 backdrop-blur-md">
+                      {numAccionesCubiertas + numNecesidadesCubiertas} de {(com.acciones || []).length + (com.necesidades || []).length} cubiertos
+                    </span>
+                    {isExpanded ? (
+                      <ChevronUp size={18} className="text-yellow-400 shrink-0" />
+                    ) : (
+                      <ChevronDown size={18} className="text-slate-300 shrink-0" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Collapsible Content */}
+                {isExpanded && (
+                  <div className="p-6 md:p-8 space-y-8 animate-fade-in">
+                    {/* 1. Tareas de Trabajo */}
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-2 pb-2 border-b border-slate-100">
+                        <ListTodo size={16} className="text-blue-900 stroke-[2.5]" />
+                        <span className="text-xs font-black text-slate-800 uppercase tracking-widest">Tareas de Trabajo ({(com.acciones || []).length})</span>
+                      </div>
+
+                      {(com.acciones || []).length === 0 ? (
+                        <p className="text-xs text-slate-400 italic py-2">No hay tareas de trabajo en esta comisión.</p>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {(com.acciones || []).map(acc => {
+                            const isTaken = acc.socioId !== null;
+                            const isMySignUp = mySignedUpItems.includes(acc.id);
+
+                            return (
+                              <div 
+                                key={acc.id}
+                                className={`p-4.5 border rounded-2xl flex flex-col justify-between gap-4 transition-all hover:shadow-sm ${
+                                  isMySignUp ? 'bg-emerald-50/20 border-emerald-350' :
+                                  isTaken ? 'bg-slate-50/60 border-slate-100 opacity-90' :
+                                  'bg-white border-slate-200 hover:border-slate-350'
+                                }`}
+                              >
+                                <div className="space-y-2">
+                                  <p className="text-xs font-bold text-slate-700 leading-normal">
+                                    {acc.descripcion}
+                                  </p>
+                                  {isTaken && (
+                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                      <span className="flex items-center space-x-1.5">
+                                        <User size={12} className="text-slate-400" />
+                                        <span>Voluntario: <span className="text-blue-900 font-extrabold">{acc.socioNombre}</span></span>
+                                      </span>
+                                      {acc.socioTelefono && (
+                                        <span className="flex items-center space-x-1.5">
+                                          <Phone size={12} className="text-slate-400" />
+                                          <a href={`tel:${acc.socioTelefono}`} className="text-slate-500 hover:underline">{acc.socioTelefono}</a>
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Action Button */}
+                                <div className="flex items-center pt-2.5 border-t border-slate-50">
+                                  {isMySignUp ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCancelSupport(com.id, acc.id, 'accion')}
+                                      className="w-full inline-flex items-center justify-center space-x-1.5 bg-red-50 hover:bg-red-105 text-red-750 text-[10px] font-black px-3.5 py-2.5 rounded-xl border border-red-200 transition-all uppercase tracking-wider"
+                                    >
+                                      <X size={12} />
+                                      <span>Cancelar mi apoyo</span>
+                                    </button>
+                                  ) : isTaken ? (
+                                    <div className="w-full inline-flex items-center justify-center space-x-1 text-slate-500 bg-slate-105 text-[10px] font-black px-3 py-2.5 rounded-xl border border-slate-200">
+                                      <Check size={12} className="text-emerald-500 stroke-[2.5]" />
+                                      <span>Cubierto</span>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenSignUp(com.id, acc.id, 'accion', acc.descripcion)}
+                                      className="w-full inline-flex items-center justify-center space-x-1.5 bg-blue-900 hover:bg-blue-800 text-white text-[10px] font-black px-3.5 py-2.5 rounded-xl transition-all shadow-md shadow-blue-900/10 active:scale-[0.98] uppercase tracking-wider"
+                                    >
+                                      <span>🙋‍♂️ Ofrecerme</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 2. Materiales e Insumos */}
+                    <div className="space-y-4 pt-4 border-t border-slate-100">
+                      <div className="flex items-center space-x-2 pb-2 border-b border-slate-100">
+                        <Package size={16} className="text-blue-900 stroke-[2.5]" />
+                        <span className="text-xs font-black text-slate-805 uppercase tracking-widest">Materiales e Insumos Requeridos ({(com.necesidades || []).length})</span>
+                      </div>
+
+                      {(com.necesidades || []).length === 0 ? (
+                        <p className="text-xs text-slate-400 italic py-2">No hay materiales requeridos en esta comisión.</p>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {(com.necesidades || []).map(nec => {
+                            const isTaken = nec.socioId !== null;
+                            const isMySignUp = mySignedUpItems.includes(nec.id);
+
+                            return (
+                              <div 
+                                key={nec.id}
+                                className={`p-4.5 border rounded-2xl flex flex-col justify-between gap-4 transition-all hover:shadow-sm ${
+                                  isMySignUp ? 'bg-emerald-50/20 border-emerald-350' :
+                                  isTaken ? 'bg-slate-50/60 border-slate-100 opacity-90' :
+                                  'bg-white border-slate-200 hover:border-slate-350'
+                                }`}
+                              >
+                                <div className="space-y-2">
+                                  <div className="flex items-center space-x-2">
+                                    <span className="px-2 py-0.5 bg-blue-50 text-blue-900 rounded-md text-[9px] font-black shrink-0">
+                                      Cant. {nec.cantidad}
+                                    </span>
+                                    <p className="text-xs font-bold text-slate-700 leading-normal">{nec.descripcion}</p>
+                                  </div>
+                                  
+                                  {isTaken && (
+                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                      <span className="flex items-center space-x-1.5">
+                                        <User size={12} className="text-slate-400" />
+                                        <span>Voluntario: <span className="text-blue-900 font-extrabold">{nec.socioNombre}</span></span>
+                                      </span>
+                                      {nec.socioTelefono && (
+                                        <span className="flex items-center space-x-1.5">
+                                          <Phone size={12} className="text-slate-400" />
+                                          <a href={`tel:${nec.socioTelefono}`} className="text-slate-500 hover:underline">{nec.socioTelefono}</a>
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Action Button */}
+                                <div className="flex items-center pt-2.5 border-t border-slate-55">
+                                  {isMySignUp ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCancelSupport(com.id, nec.id, 'necesidad')}
+                                      className="w-full inline-flex items-center justify-center space-x-1.5 bg-red-50 hover:bg-red-105 text-red-755 text-[10px] font-black px-3.5 py-2.5 rounded-xl border border-red-200 transition-all uppercase tracking-wider"
+                                    >
+                                      <X size={12} />
+                                      <span>Cancelar apoyo</span>
+                                    </button>
+                                  ) : isTaken ? (
+                                    <div className="w-full inline-flex items-center justify-center space-x-1 text-slate-500 bg-slate-105 text-[10px] font-black px-3 py-2.5 rounded-xl border border-slate-200">
+                                      <Check size={12} className="text-emerald-500 stroke-[2.5]" />
+                                      <span>Cubierto</span>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenSignUp(com.id, nec.id, 'necesidad', nec.descripcion, nec.cantidad)}
+                                      className="w-full inline-flex items-center justify-center space-x-1.5 bg-blue-900 hover:bg-blue-800 text-white text-[10px] font-black px-3.5 py-2.5 rounded-xl transition-all shadow-md shadow-blue-900/10 active:scale-[0.98] uppercase tracking-wider"
+                                    >
+                                      <span>📦 Aportar</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
-
-        {/* ACTIVE AREA CONTENT */}
-        {activeComision ? (
-          <div className="mt-4 space-y-6 animate-fade-in">
-            {/* Folder tab layout for active comision */}
-            <div className="border border-slate-200 bg-white rounded-3xl overflow-hidden shadow-md shadow-slate-100/50 flex flex-col">
-              
-              {/* Tab Header for folder simulation */}
-              <div className="bg-gradient-to-r from-blue-900 to-indigo-900 px-6 py-4.5 text-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div>
-                  <h5 className="text-base font-black flex items-center space-x-2">
-                    <span className="w-2.5 h-2.5 bg-yellow-400 rounded-full inline-block animate-pulse" />
-                    <span>{activeComision.nombreComision}</span>
-                  </h5>
-                  {activeComision.objetivo && (
-                    <p className="text-xs text-blue-200 font-semibold mt-1 pr-4">{activeComision.objetivo}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Folder Body Content */}
-              <div className="p-6 md:p-8 space-y-8">
-                {/* 1. Tareas de Trabajo */}
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2 pb-2 border-b border-slate-100">
-                    <ListTodo size={16} className="text-blue-900 stroke-[2.5]" />
-                    <span className="text-xs font-black text-slate-800 uppercase tracking-widest">Tareas de Trabajo ({(activeComision.acciones || []).length})</span>
-                  </div>
-
-                  {(activeComision.acciones || []).length === 0 ? (
-                    <p className="text-xs text-slate-400 italic py-2">No hay tareas de trabajo en esta comisión.</p>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {(activeComision.acciones || []).map(acc => {
-                        const isTaken = acc.socioId !== null;
-                        const isMySignUp = mySignedUpItems.includes(acc.id);
-
-                        return (
-                          <div 
-                            key={acc.id}
-                            className={`p-4.5 border rounded-2xl flex flex-col justify-between gap-4 transition-all hover:shadow-sm ${
-                              isMySignUp ? 'bg-emerald-50/20 border-emerald-350' :
-                              isTaken ? 'bg-slate-50/60 border-slate-100 opacity-90' :
-                              'bg-white border-slate-200 hover:border-slate-350'
-                            }`}
-                          >
-                            <div className="space-y-2">
-                              <p className="text-xs font-bold text-slate-700 leading-normal">
-                                {acc.descripcion}
-                              </p>
-                              {isTaken && (
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                  <span className="flex items-center space-x-1.5">
-                                    <User size={12} className="text-slate-400" />
-                                    <span>Voluntario: <span className="text-blue-900 font-extrabold">{acc.socioNombre}</span></span>
-                                  </span>
-                                  {acc.socioTelefono && (
-                                    <span className="flex items-center space-x-1.5">
-                                      <Phone size={12} className="text-slate-400" />
-                                      <a href={`tel:${acc.socioTelefono}`} className="text-slate-500 hover:underline">{acc.socioTelefono}</a>
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Action Button */}
-                            <div className="flex items-center pt-2.5 border-t border-slate-50">
-                              {isMySignUp ? (
-                                <button
-                                  type="button"
-                                  onClick={() => handleCancelSupport(activeComision.id, acc.id, 'accion')}
-                                  className="w-full inline-flex items-center justify-center space-x-1.5 bg-red-50 hover:bg-red-105 text-red-750 text-[10px] font-black px-3.5 py-2.5 rounded-xl border border-red-200 transition-all uppercase tracking-wider"
-                                >
-                                  <X size={12} />
-                                  <span>Cancelar mi apoyo</span>
-                                </button>
-                              ) : isTaken ? (
-                                <div className="w-full inline-flex items-center justify-center space-x-1 text-slate-500 bg-slate-100 text-[10px] font-black px-3 py-2.5 rounded-xl border border-slate-200">
-                                  <Check size={12} className="text-emerald-500 stroke-[2.5]" />
-                                  <span>Cubierto</span>
-                                </div>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenSignUp(activeComision.id, acc.id, 'accion', acc.descripcion)}
-                                  className="w-full inline-flex items-center justify-center space-x-1.5 bg-blue-900 hover:bg-blue-800 text-white text-[10px] font-black px-3.5 py-2.5 rounded-xl transition-all shadow-md shadow-blue-900/10 active:scale-[0.98] uppercase tracking-wider"
-                                >
-                                  <span>🙋‍♂️ Ofrecerme</span>
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* 2. Materiales e Insumos */}
-                <div className="space-y-4 pt-4 border-t border-slate-100">
-                  <div className="flex items-center space-x-2 pb-2 border-b border-slate-100">
-                    <Package size={16} className="text-blue-900 stroke-[2.5]" />
-                    <span className="text-xs font-black text-slate-805 uppercase tracking-widest">Materiales e Insumos Requeridos ({(activeComision.necesidades || []).length})</span>
-                  </div>
-
-                  {(activeComision.necesidades || []).length === 0 ? (
-                    <p className="text-xs text-slate-400 italic py-2">No hay materiales requeridos en esta comisión.</p>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {(activeComision.necesidades || []).map(nec => {
-                        const isTaken = nec.socioId !== null;
-                        const isMySignUp = mySignedUpItems.includes(nec.id);
-
-                        return (
-                          <div 
-                            key={nec.id}
-                            className={`p-4.5 border rounded-2xl flex flex-col justify-between gap-4 transition-all hover:shadow-sm ${
-                              isMySignUp ? 'bg-emerald-50/20 border-emerald-350' :
-                              isTaken ? 'bg-slate-50/60 border-slate-100 opacity-90' :
-                              'bg-white border-slate-200 hover:border-slate-350'
-                            }`}
-                          >
-                            <div className="space-y-2">
-                              <div className="flex items-center space-x-2">
-                                <span className="px-2 py-0.5 bg-blue-50 text-blue-900 rounded-md text-[9px] font-black shrink-0">
-                                  Cant. {nec.cantidad}
-                                </span>
-                                <p className="text-xs font-bold text-slate-700 leading-normal">{nec.descripcion}</p>
-                              </div>
-                              
-                              {isTaken && (
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                  <span className="flex items-center space-x-1.5">
-                                    <User size={12} className="text-slate-400" />
-                                    <span>Voluntario: <span className="text-blue-900 font-extrabold">{nec.socioNombre}</span></span>
-                                  </span>
-                                  {nec.socioTelefono && (
-                                    <span className="flex items-center space-x-1.5">
-                                      <Phone size={12} className="text-slate-400" />
-                                      <a href={`tel:${nec.socioTelefono}`} className="text-slate-500 hover:underline">{nec.socioTelefono}</a>
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Action Button */}
-                            <div className="flex items-center pt-2.5 border-t border-slate-55">
-                              {isMySignUp ? (
-                                <button
-                                  type="button"
-                                  onClick={() => handleCancelSupport(activeComision.id, nec.id, 'necesidad')}
-                                  className="w-full inline-flex items-center justify-center space-x-1.5 bg-red-50 hover:bg-red-105 text-red-755 text-[10px] font-black px-3.5 py-2.5 rounded-xl border border-red-200 transition-all uppercase tracking-wider"
-                                >
-                                  <X size={12} />
-                                  <span>Cancelar apoyo</span>
-                                </button>
-                              ) : isTaken ? (
-                                <div className="w-full inline-flex items-center justify-center space-x-1 text-slate-500 bg-slate-105 text-[10px] font-black px-3 py-2.5 rounded-xl border border-slate-200">
-                                  <Check size={12} className="text-emerald-500 stroke-[2.5]" />
-                                  <span>Cubierto</span>
-                                </div>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenSignUp(activeComision.id, nec.id, 'necesidad', nec.descripcion, nec.cantidad)}
-                                  className="w-full inline-flex items-center justify-center space-x-1.5 bg-blue-900 hover:bg-blue-800 text-white text-[10px] font-black px-3.5 py-2.5 rounded-xl transition-all shadow-md shadow-blue-900/10 active:scale-[0.98] uppercase tracking-wider"
-                                >
-                                  <span>📦 Aportar</span>
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-            </div>
-          </div>
-        </div>
-      ) : null}
-    </div>
+      </div>
 
       {/* SIGN UP DIALOG / BOTTOM MODAL */}
       {modalOpen && selectedItem && (
