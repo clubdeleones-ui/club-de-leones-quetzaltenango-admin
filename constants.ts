@@ -1,5 +1,5 @@
 
-import { Socio, UserRole, Acta, Actividad, GaleriaItem, Donacion, Beneficio, PropuestaSocio } from './types';
+import { Socio, UserRole, Acta, Actividad, GaleriaItem, Donacion, Beneficio, PropuestaSocio, RequerimientoActividad } from './types';
 export const MOCK_SOCIOS: Socio[] = [
   {
     id: '1',
@@ -595,6 +595,100 @@ export const MOCK_PROPUESTAS: PropuestaSocio[] = [
     estadoCivil: 'Casado',
     hijos: 'Con hijos',
     nombreEsposa: 'María Fernanda López'
+  }
+];
+
+export const MOCK_REQUERIMIENTOS: RequerimientoActividad[] = [
+  {
+    id: 'req-junta-2026',
+    tituloActividad: 'Fiesta de Protocolo Cambio de Junta Directiva',
+    comisionCreadoraId: 'cambio-junta-directiva',
+    comisionCreadoraNombre: 'Comisión Cambio de Junta Directiva',
+    fechaActividad: '2026-07-15',
+    lugarActividad: 'Sede La Cueva, Quetzaltenango',
+    descripcionActividad: 'Celebración solemne del cambio de Junta Directiva del Club de Leones de Quetzaltenango para el periodo 2026-2027. Convocatoria general a los compañeros Leones para sumarse a las comisiones de trabajo y asegurar el éxito y lucidez de nuestra fiesta.',
+    fechaLimiteConvocatoria: '2026-07-14',
+    estado: 'Activa',
+    fechaCreacion: '2026-07-01',
+    creadoPorNombre: 'Edwin Ernesto Pacheco López',
+    comisionesRequeridas: [
+      {
+        id: 'c1',
+        nombreComision: 'Comisión de Protocolo y Agenda Leonística',
+        objetivo: 'Garantizar la solemnidad del acto formal, el cumplimiento de los estatutos y la fluidez de la agenda oficial corta pero sustancial.',
+        acciones: [
+          { id: 'c1-a1', descripcion: 'Coordinar el orden del día (Invocación leonística, juramentación, discursos y lectura del pergamino de la patria).', socioId: null, socioNombre: null },
+          { id: 'c1-a2', descripcion: 'Asignar los roles de maestro de ceremonias y maceró de la sesión.', socioId: null, socioNombre: null },
+          { id: 'c1-a3', descripcion: 'Verificar la confirmación de autoridades distritales o invitados de honor.', socioId: null, socioNombre: null }
+        ],
+        necesidades: [
+          { id: 'c1-n1', descripcion: 'Campana y mallete protocolario en la mesa principal.', cantidad: 1, socioId: null, socioNombre: null, completado: false },
+          { id: 'c1-n2', descripcion: 'Banderas oficiales (Guatemala y Lions International) con pedestales.', cantidad: 2, socioId: null, socioNombre: null, completado: false },
+          { id: 'c1-n3', descripcion: 'Estandarte del Club de Leones de Quetzaltenango.', cantidad: 1, socioId: null, socioNombre: null, completado: false },
+          { id: 'c1-n4', descripcion: 'Pines oficiales para la nueva Junta Directiva.', cantidad: 15, socioId: null, socioNombre: null, completado: false },
+          { id: 'c1-n5', descripcion: 'Copias impresas de la agenda leonística para la mesa directiva.', cantidad: 10, socioId: null, socioNombre: null, completado: false }
+        ]
+      },
+      {
+        id: 'c2',
+        nombreComision: 'Comisión de Logística, Alimentos y Bebidas',
+        objetivo: 'Coordinar el montaje del salón, la preparación de la cena y el servicio general para los asistentes.',
+        acciones: [
+          { id: 'c2-a1', descripcion: 'Coordinar con instructores/estudiantes de INTECAP para el menú (Pastas Alfredo y Boloñesa, ensalada) y servicio de bartenders.', socioId: null, socioNombre: null },
+          { id: 'c2-a2', descripcion: 'Supervisar la compra y entrega anticipada de los ingredientes e insumos solicitados por INTECAP.', socioId: null, socioNombre: null },
+          { id: 'c2-a3', descripcion: 'Organizar la distribución de mesas en La Cueva para 50-70 personas.', socioId: null, socioNombre: null }
+        ],
+        necesidades: [
+          { id: 'c2-n1', descripcion: 'Mobiliario: Mesas redondas, sillas con fundas (azul/oro), mesa principal y mantelería fina.', cantidad: 1, socioId: null, socioNombre: null, completado: false },
+          { id: 'c2-n2', descripcion: 'Vajilla completa, cubiertos y cristalería para cena y bar.', cantidad: 70, socioId: null, socioNombre: null, completado: false },
+          { id: 'c2-n3', descripcion: 'Insumos de limpieza para la cocina.', cantidad: 1, socioId: null, socioNombre: null, completado: false },
+          { id: 'c2-n4', descripcion: 'Bebidas con/sin alcohol, hielo y cristalería complementaria.', cantidad: 1, socioId: null, socioNombre: null, completado: false }
+        ]
+      },
+      {
+        id: 'c3',
+        nombreComision: 'Comisión de Entretenimiento y Convivencia',
+        objetivo: 'Desarrollar la agenda posterior al protocolo para asegurar un ambiente ameno, festivo y de compañerismo.',
+        acciones: [
+          { id: 'c3-a1', descripcion: 'Contratar y coordinar el entretenimiento (música en vivo, saxofonista para la cena o DJ).', socioId: null, socioNombre: null },
+          { id: 'c3-a2', descripcion: 'Diseñar las dinámicas de convivencia o sorpresas planificadas.', socioId: null, socioNombre: null },
+          { id: 'c3-a3', descripcion: 'Establecer la transición del cierre de protocolo al inicio del tiempo social.', socioId: null, socioNombre: null }
+        ],
+        necesidades: [
+          { id: 'c3-n1', descripcion: 'Sistema de sonido profesional con micrófonos inalámbricos.', cantidad: 1, socioId: null, socioNombre: null, completado: false },
+          { id: 'c3-n2', descripcion: 'Iluminación ambiental para la sección de la fiesta.', cantidad: 1, socioId: null, socioNombre: null, completado: false },
+          { id: 'c3-n3', descripcion: 'Elementos para dinámicas o rifas internas.', cantidad: 1, socioId: null, socioNombre: null, completado: false }
+        ]
+      },
+      {
+        id: 'c4',
+        nombreComision: 'Comisión de Administración y Finanzas (Inscripciones)',
+        objetivo: 'Controlar el ingreso, validar el quórum de socios y gestionar el cobro de los invitados.',
+        acciones: [
+          { id: 'c4-a1', descripcion: 'Monitorear y descargar los reportes de confirmación del enlace web (límite 13 de julio).', socioId: null, socioNombre: null },
+          { id: 'c4-a2', descripcion: 'Cuadrar el listado de socios activos (acceso gratuito) e invitados (Q100.00 por persona).', socioId: null, socioNombre: null },
+          { id: 'c4-a3', descripcion: 'Habilitar una mesa de registro y recepción a la entrada de La Cueva.', socioId: null, socioNombre: null }
+        ],
+        necesidades: [
+          { id: 'c4-n1', descripcion: 'Listado impreso de asistencia ordenado alfabéticamente.', cantidad: 2, socioId: null, socioNombre: null, completado: false },
+          { id: 'c4-n2', descripcion: 'Caja chica para vueltos (efectivo) o dispositivo de transferencias.', cantidad: 1, socioId: null, socioNombre: null, completado: false },
+          { id: 'c4-n3', descripcion: 'Marbetes, identificadores o brazaletes para control.', cantidad: 80, socioId: null, socioNombre: null, completado: false }
+        ]
+      },
+      {
+        id: 'c5',
+        nombreComision: 'Comisión de Relaciones Públicas y Medios',
+        objetivo: 'Documentar el evento e inmortalizar el cambio de ciclo de la selva leonística.',
+        acciones: [
+          { id: 'c5-a1', descripcion: 'Coordinar la toma de fotografías oficiales de la nueva Junta Directiva con el chaleco protocolario.', socioId: null, socioNombre: null },
+          { id: 'c5-a2', descripcion: 'Diseñar un área de Photo Opportunity o fondo de prensa a la entrada.', socioId: null, socioNombre: null }
+        ],
+        necesidades: [
+          { id: 'c5-n1', descripcion: 'Cámara fotográfica profesional o fotógrafo contratado.', cantidad: 1, socioId: null, socioNombre: null, completado: false },
+          { id: 'c5-n2', descripcion: 'Backdrop elegante con logotipos oficiales.', cantidad: 1, socioId: null, socioNombre: null, completado: false }
+        ]
+      }
+    ]
   }
 ];
 

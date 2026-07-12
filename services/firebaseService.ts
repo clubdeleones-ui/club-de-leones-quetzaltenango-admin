@@ -13,7 +13,7 @@ import {
   writeBatch
 } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda, Acta, HitoHistorico, SolicitudVoluntario, ReunionAgenda, TareaComision, Asistencia, BienInventario, CategoriaInventario, ConvencionConfig, ConvencionRegistro, RegistroParticipacion } from "../types";
+import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda, Acta, HitoHistorico, SolicitudVoluntario, ReunionAgenda, TareaComision, Asistencia, BienInventario, CategoriaInventario, ConvencionConfig, ConvencionRegistro, RegistroParticipacion, RequerimientoActividad } from "../types";
 
 export const firebaseService = {
   // Upload candidate photo to Firebase Storage (Supports Base64 data_url format)
@@ -1176,4 +1176,66 @@ export const firebaseService = {
       throw new Error(`Error al subir la imagen a Storage: ${error.message || error}`);
     }
   },
+
+  // ================= REQUERIMIENTOS DE ACTIVIDADES =================
+  getRequerimientosActividades: async (): Promise<RequerimientoActividad[]> => {
+    try {
+      const colRef = collection(db, "requerimientos_actividades");
+      const snapshot = await getDocs(colRef);
+      const list: RequerimientoActividad[] = [];
+      snapshot.forEach(doc => {
+        list.push({ id: doc.id, ...doc.data() } as RequerimientoActividad);
+      });
+      return list;
+    } catch (error) {
+      console.error("Error fetching requerimientos de actividades:", error);
+      throw error;
+    }
+  },
+
+  saveRequerimientoActividad: async (req: RequerimientoActividad): Promise<void> => {
+    try {
+      const { id, ...data } = req;
+      if (id) {
+        const docRef = doc(db, "requerimientos_actividades", id);
+        await setDoc(docRef, data, { merge: true });
+      } else {
+        const newDocRef = doc(collection(db, "requerimientos_actividades"));
+        await setDoc(newDocRef, data);
+      }
+    } catch (error) {
+      console.error("Error saving requerimiento de actividad:", error);
+      throw error;
+    }
+  },
+
+  deleteRequerimientoActividad: async (id: string): Promise<void> => {
+    try {
+      const docRef = doc(db, "requerimientos_actividades", id);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting requerimiento de actividad:", error);
+      throw error;
+    }
+  },
+
+  syncInitialRequerimientos: async (initialList: RequerimientoActividad[]): Promise<void> => {
+    try {
+      const colRef = collection(db, "requerimientos_actividades");
+      const snapshot = await getDocs(colRef);
+      if (snapshot.empty) {
+        const batch = writeBatch(db);
+        initialList.forEach(item => {
+          const newDocRef = doc(colRef);
+          const { id, ...data } = item;
+          batch.set(newDocRef, data);
+        });
+        await batch.commit();
+        console.log("Mock requerimientos synchronized to Firestore successfully.");
+      }
+    } catch (error) {
+      console.error("Error syncing initial requerimientos:", error);
+    }
+  },
 };
+

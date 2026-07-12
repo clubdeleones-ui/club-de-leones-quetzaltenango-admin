@@ -30,7 +30,8 @@ import {
   Plus,
   Trash2,
   QrCode,
-  MapPin
+  MapPin,
+  ClipboardList
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { MOCK_DONACIONES, MOCK_SOCIOS } from '../constants';
@@ -39,6 +40,7 @@ import { compressImageFile, validateImageFile } from '../utils/imageCompressor';
 import { firebaseService } from '../services/firebaseService';
 import { useModal } from '../context/ModalContext';
 import { useToast } from '../context/ToastContext';
+import { RequerimientosActividades } from './RequerimientosActividades';
 
 const PUESTOS_PREDEFINIDOS = [
   'Presidente',
@@ -125,9 +127,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
       });
   };
 
-  const [activeTab, setActiveTab] = useState<'resumen' | 'perfil'>(() => {
+  const [activeTab, setActiveTab] = useState<'resumen' | 'requerimientos' | 'perfil'>(() => {
     const saved = sessionStorage.getItem('dashboard_active_tab');
-    if (saved) return saved as 'resumen' | 'perfil';
+    if (saved && ['resumen', 'requerimientos', 'perfil'].includes(saved)) return saved as 'resumen' | 'requerimientos' | 'perfil';
     return 'resumen';
   });
 
@@ -323,13 +325,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
             <div className="flex items-center space-x-2.5">
               {activeTab === 'resumen' ? (
                 <TrendingUp size={18} className="text-yellow-400" />
-              ) : activeTab === 'perfil' ? (
-                <User size={18} className="text-yellow-400" />
+              ) : activeTab === 'requerimientos' ? (
+                <ClipboardList size={18} className="text-yellow-400" />
               ) : (
-                <Users size={18} className="text-yellow-400" />
+                <User size={18} className="text-yellow-400" />
               )}
               <span>
-                {activeTab === 'resumen' ? 'Resumen General' : activeTab === 'perfil' ? 'Mi Perfil' : 'Gestionar Socios'}
+                {activeTab === 'resumen' ? 'Resumen General' : activeTab === 'requerimientos' ? 'Convocatorias de Servicio' : 'Mi Perfil'}
               </span>
             </div>
             <ChevronDown size={18} className={`text-slate-300 transition-transform duration-300 ${isMobileTabMenuOpen ? 'rotate-180' : ''}`} />
@@ -349,6 +351,19 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
               >
                 <TrendingUp size={18} className={activeTab === 'resumen' ? 'text-blue-900' : 'text-slate-400'} />
                 <span>Resumen General</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('requerimientos');
+                  setIsMobileTabMenuOpen(false);
+                }}
+                className={`w-full flex items-center space-x-3 px-5 py-3 text-sm font-extrabold transition-colors text-left ${
+                  activeTab === 'requerimientos' ? 'bg-blue-50 text-blue-900' : 'text-slate-655 hover:bg-slate-50'
+                }`}
+              >
+                <ClipboardList size={18} className={activeTab === 'requerimientos' ? 'text-blue-900' : 'text-slate-400'} />
+                <span>Convocatorias de Servicio</span>
               </button>
               <button
                 type="button"
@@ -382,6 +397,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
             <span>Resumen General</span>
           </button>
           <button
+            onClick={() => setActiveTab('requerimientos')}
+            className={`flex items-center space-x-2.5 px-5 py-3 rounded-xl font-bold text-sm transition-all ${
+              activeTab === 'requerimientos'
+                ? 'bg-blue-900 text-white shadow-md'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
+            }`}
+          >
+            <ClipboardList size={16} />
+            <span>Convocatorias de Servicio</span>
+          </button>
+          <button
             onClick={() => setActiveTab('perfil')}
             className={`flex items-center space-x-2.5 px-5 py-3 rounded-xl font-bold text-sm transition-all ${
               activeTab === 'perfil'
@@ -392,7 +418,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
             <User size={16} />
             <span>Mi Perfil</span>
           </button>
-
         </div>
       </div>
 
@@ -1011,6 +1036,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
               </button>
             )}
           </div>
+        </div>
+      )}
+
+      {activeTab === 'requerimientos' && (
+        <div className="py-6 animate-in fade-in duration-500">
+          <RequerimientosActividades user={user} />
         </div>
       )}
 

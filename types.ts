@@ -441,3 +441,43 @@ export interface ConvencionRegistro {
   distrito: string;
   fechaRegistro: string;
 }
+
+export interface TareaVoluntario {
+  id: string;
+  descripcion: string;
+  socioId: string | null;
+  socioNombre: string | null;
+}
+
+export interface MaterialNecesidad {
+  id: string;
+  descripcion: string;
+  cantidad: number;
+  socioId: string | null;
+  socioNombre: string | null;
+  completado: boolean;
+}
+
+export interface ComisionRequerimiento {
+  id: string;
+  nombreComision: string;
+  objetivo: string;
+  acciones: TareaVoluntario[];
+  necesidades: MaterialNecesidad[];
+}
+
+export interface RequerimientoActividad {
+  id: string;
+  tituloActividad: string;
+  comisionCreadoraId: string;
+  comisionCreadoraNombre: string;
+  fechaActividad: string;
+  lugarActividad: string;
+  descripcionActividad: string;
+  fechaLimiteConvocatoria: string;
+  estado: 'Borrador' | 'Activa' | 'Cerrada';
+  comisionesRequeridas: ComisionRequerimiento[];
+  fechaCreacion: string;
+  creadoPorNombre: string;
+}
+

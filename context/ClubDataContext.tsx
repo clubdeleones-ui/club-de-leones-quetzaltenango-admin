@@ -27,14 +27,16 @@ import {
   AsignacionComision,
   ReunionAgenda,
   TareaComision,
-  Asistencia
+  Asistencia,
+  RequerimientoActividad
 } from '../types';
 import { 
   MOCK_SOCIOS, 
   MOCK_PROPUESTAS, 
   MOCK_ACTIVIDADES, 
   MOCK_ACTAS, 
-  MOCK_GALERIA 
+  MOCK_GALERIA,
+  MOCK_REQUERIMIENTOS
 } from '../constants';
 import { firebaseService } from '../services/firebaseService';
 
@@ -84,6 +86,7 @@ const KEYS = {
   REUNION_AGENDAS: 'club_leones_reunion_agendas',
   TAREAS_COMISIONES: 'club_leones_tareas_comisiones',
   ASISTENCIAS: 'club_leones_asistencias',
+  REQUERIMIENTOS: 'club_leones_requerimientos',
 };
 
 // Local storage helper
@@ -115,6 +118,7 @@ interface ClubDataContextType {
   agendas: ReunionAgenda[];
   tareasComisiones: TareaComision[];
   asistencias: Asistencia[];
+  requerimientosActividades: RequerimientoActividad[];
   
   rolesConfig: any[];
   puestosList: any[];
@@ -142,6 +146,7 @@ interface ClubDataContextType {
     agendas: boolean;
     tareasComisiones: boolean;
     asistencias: boolean;
+    requerimientosActividades: boolean;
   };
 }
 
@@ -166,6 +171,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [agendas, setAgendas] = useState<ReunionAgenda[]>(() => getLocalData(KEYS.REUNION_AGENDAS, []));
   const [tareasComisiones, setTareasComisiones] = useState<TareaComision[]>(() => getLocalData(KEYS.TAREAS_COMISIONES, []));
   const [asistencias, setAsistencias] = useState<Asistencia[]>(() => getLocalData(KEYS.ASISTENCIAS, []));
+  const [requerimientosActividades, setRequerimientosActividades] = useState<RequerimientoActividad[]>(() => getLocalData(KEYS.REQUERIMIENTOS, []));
   const [rolesConfig, setRolesConfig] = useState<any[]>(() => getLocalData('club_leones_roles_config', DEFAULT_ROLES_CONFIG));
   const [puestosList, setPuestosList] = useState<any[]>(() => getLocalData('club_leones_puestos_list', DEFAULT_PUESTOS));
 
@@ -187,6 +193,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     agendas: true,
     tareasComisiones: true,
     asistencias: true,
+    requerimientosActividades: true,
   });
 
   // 2. Sync mock data to Firestore once if collection is empty, and run cleaning migrations
@@ -207,6 +214,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         await firebaseService.syncInitialActividades(MOCK_ACTIVIDADES);
         await firebaseService.syncInitialGaleria(MOCK_GALERIA);
         await firebaseService.syncInitialActas(MOCK_ACTAS);
+        await firebaseService.syncInitialRequerimientos(MOCK_REQUERIMIENTOS);
         
         await firebaseService.setSystemInitialized();
         console.log("Datos de prueba sincronizados e inicialización guardada en Firestore.");
@@ -452,6 +460,18 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLoading(prev => ({ ...prev, asistencias: false }));
     });
 
+    // 3r. Requerimientos Actividades
+    const qRequerimientos = query(collection(db, 'requerimientos_actividades'));
+    const unsubRequerimientos = onSnapshot(qRequerimientos, (snapshot) => {
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as RequerimientoActividad);
+      setRequerimientosActividades(list);
+      localStorage.setItem(KEYS.REQUERIMIENTOS, JSON.stringify(list));
+      setLoading(prev => ({ ...prev, requerimientosActividades: false }));
+    }, (err) => {
+      console.error("Error subscribing to requerimientos_actividades:", err);
+      setLoading(prev => ({ ...prev, requerimientosActividades: false }));
+    });
+
     const unsubRoles = onSnapshot(collection(db, 'config_roles'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       if (list.length === 0) {
@@ -460,12 +480,27 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         });
       } else {
         // Dynamic migration: Ensure SUPER_ADMIN and PRESIDENTE_AFILIACION have 'convencion_admin'
+        // and also ensure target roles have 'requerimientos_actividades'
         list.forEach(async (role: any) => {
+          let updatedTabs = [...(role.allowedTabs || [])];
+          let changed = false;
+
           if (role.id === 'SUPER_ADMIN' || role.id === 'PRESIDENTE_AFILIACION') {
-            if (role.allowedTabs && !role.allowedTabs.includes('convencion_admin')) {
-              const updatedTabs = [...role.allowedTabs, 'convencion_admin'];
-              await setDoc(doc(db, 'config_roles', role.id), { label: role.label, allowedTabs: updatedTabs, orden: role.orden }, { merge: true });
+            if (!updatedTabs.includes('convencion_admin')) {
+              updatedTabs.push('convencion_admin');
+              changed = true;
             }
+          }
+
+          if (['SUPER_ADMIN', 'SECRETARIO', 'ASESOR_SERVICIOS', 'PRESIDENTE_AFILIACION'].includes(role.id)) {
+            if (!updatedTabs.includes('requerimientos_actividades')) {
+              updatedTabs.push('requerimientos_actividades');
+              changed = true;
+            }
+          }
+
+          if (changed) {
+            await setDoc(doc(db, 'config_roles', role.id), { label: role.label, allowedTabs: updatedTabs, orden: role.orden }, { merge: true });
           }
         });
 
@@ -509,6 +544,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       unsubAgendas();
       unsubTareasComisiones();
       unsubAsistencias();
+      unsubRequerimientos();
       unsubRoles();
       unsubPuestos();
     };
@@ -582,6 +618,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       agendas,
       tareasComisiones,
       asistencias,
+      requerimientosActividades,
       rolesConfig,
       puestosList,
       saveRoleConfig,

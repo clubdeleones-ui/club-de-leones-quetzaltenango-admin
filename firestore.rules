@@ -104,6 +104,12 @@ service cloud.firestore {
                    && isValidString(request.resource.data, 'comisionId', false);
     }
 
+    match /requerimientos_actividades/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'tituloActividad', false)
+                   && isValidString(request.resource.data, 'comisionCreadoraId', false);
+    }
+
     match /agenda/{document} {
       allow read: if true;
       allow write: if isValidString(request.resource.data, 'nombre', false);
@@ -183,7 +189,7 @@ service cloud.firestore {
           'solicitudes_voluntarios', 'galeria', 'linea_tiempo', 'comisiones', 
           'minutas', 'agenda', 'agendas', 'tareas_comisiones', 'asistencias', 
           'presupuestos_rubros', 'presupuestos_fondos', 'presupuestos_asignaciones', 
-          'config_roles', 'config_puestos', 'parqueo', 'convencion_config', 'convencion_registros', 'registro_participaciones'
+          'config_roles', 'config_puestos', 'parqueo', 'convencion_config', 'convencion_registros', 'registro_participaciones', 'requerimientos_actividades'
         ]);
     }
   }

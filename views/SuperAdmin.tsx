@@ -83,7 +83,8 @@ import {
   Crown,
   ShieldCheck,
   Settings,
-  Key
+  Key,
+  ClipboardList
 } from 'lucide-react';
 import { generateActaPDF, generateActaCode, generateReciboPagoPDF, generateAgendaPDF } from '../utils/pdfGenerator';
 import { FormattedActa } from '../components/FormattedActa';
@@ -98,6 +99,7 @@ import { GaleriaAdmin } from './GaleriaAdmin';
 import { AgendaContactos } from './AgendaContactos';
 import { LineaTiempoAdmin } from './LineaTiempoAdmin';
 import { AsignacionFunciones } from './AsignacionFunciones';
+import { RequerimientosActividades } from './RequerimientosActividades';
 import { AdminActas } from './admin/AdminActas';
 import { AdminCuotas } from './admin/AdminCuotas';
 import { AdminCalendario } from './admin/AdminCalendario';
@@ -154,7 +156,8 @@ const CATEGORIAS_MODULOS = [
   {
     category: 'Comité de Servicio',
     items: [
-      { id: 'minutas', label: 'Minutas de Comisiones', icon: FileText }
+      { id: 'minutas', label: 'Minutas de Comisiones', icon: FileText },
+      { id: 'requerimientos_actividades', label: 'Requerimientos de Actividad', icon: ClipboardList }
     ]
   },
   {
@@ -5320,6 +5323,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           )}
           {activeTab === 'minutas' && (
             <MinutasComisiones />
+          )}
+          {activeTab === 'requerimientos_actividades' && (
+            <RequerimientosActividades user={user} />
           )}
           {activeTab === 'afiliacion' && (
             <Afiliacion user={user} />
