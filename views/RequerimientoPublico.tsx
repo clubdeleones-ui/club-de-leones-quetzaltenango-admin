@@ -19,6 +19,7 @@ import {
   Info,
   Sparkles
 } from 'lucide-react';
+import { formatDisplayDate } from '../utils/dateSpanishFormatter';
 
 export const RequerimientoPublico: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -311,7 +312,7 @@ export const RequerimientoPublico: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-4 border-t border-white/10 text-xs font-semibold text-slate-200">
             <div className="flex items-center space-x-2">
               <Calendar size={15} className="text-slate-400 shrink-0" />
-              <span className="truncate">{req.fechaActividad}</span>
+              <span className="truncate">{formatDisplayDate(req.fechaActividad)}</span>
             </div>
             <div className="flex items-center space-x-2">
               <MapPin size={15} className="text-slate-400 shrink-0" />
@@ -319,7 +320,7 @@ export const RequerimientoPublico: React.FC = () => {
             </div>
             <div className="flex items-center space-x-2">
               <Clock size={15} className="text-slate-400 shrink-0" />
-              <span className="truncate text-yellow-300">Límite: {req.fechaLimiteConvocatoria}</span>
+              <span className="truncate text-yellow-300">Límite: {formatDisplayDate(req.fechaLimiteConvocatoria)}</span>
             </div>
           </div>
 

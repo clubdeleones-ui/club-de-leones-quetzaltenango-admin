@@ -28,6 +28,7 @@ import {
   Share2,
   Link
 } from 'lucide-react';
+import { formatDisplayDate } from '../utils/dateSpanishFormatter';
 
 interface RequerimientosActividadesProps {
   user: Socio;
@@ -484,7 +485,7 @@ export const RequerimientosActividades: React.FC<RequerimientosActividadesProps>
                       <div className="grid grid-cols-2 gap-4 text-slate-600 border-t border-b border-slate-100 py-3">
                         <div className="flex items-center space-x-2">
                           <Calendar size={14} className="text-slate-400" />
-                          <span className="text-xs font-semibold truncate">{req.fechaActividad}</span>
+                          <span className="text-xs font-semibold truncate">{formatDisplayDate(req.fechaActividad)}</span>
                         </div>
                         <div className="flex items-center space-x-2">
                           <MapPin size={14} className="text-slate-400" />
@@ -917,7 +918,7 @@ export const RequerimientosActividades: React.FC<RequerimientosActividadesProps>
                 <div className="flex flex-wrap items-center gap-4 text-slate-500 text-xs font-semibold mt-2.5">
                   <div className="flex items-center space-x-1.5">
                     <Calendar size={14} className="text-slate-400" />
-                    <span>{selectedReq.fechaActividad}</span>
+                    <span>{formatDisplayDate(selectedReq.fechaActividad)}</span>
                   </div>
                   <div className="flex items-center space-x-1.5">
                     <MapPin size={14} className="text-slate-400" />
@@ -925,7 +926,7 @@ export const RequerimientosActividades: React.FC<RequerimientosActividadesProps>
                   </div>
                   <div className="flex items-center space-x-1.5">
                     <Clock size={14} className="text-slate-400" />
-                    <span>Límite convocatoria: {selectedReq.fechaLimiteConvocatoria}</span>
+                    <span>Límite convocatoria: {formatDisplayDate(selectedReq.fechaLimiteConvocatoria)}</span>
                   </div>
                 </div>
               </div>
