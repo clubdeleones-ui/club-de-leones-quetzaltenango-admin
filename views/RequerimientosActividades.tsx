@@ -24,7 +24,9 @@ import {
   Check, 
   X,
   Layers,
-  Sparkles
+  Sparkles,
+  Share2,
+  Link
 } from 'lucide-react';
 
 interface RequerimientosActividadesProps {
@@ -35,6 +37,23 @@ export const RequerimientosActividades: React.FC<RequerimientosActividadesProps>
   const { requerimientosActividades, comisiones } = useClubData();
   const { showAlert, showConfirm } = useModal();
   const { showToast } = useToast();
+
+  const getShareUrl = (reqId: string) => {
+    return `${window.location.origin}${window.location.pathname}#/convocatoria/${reqId}`;
+  };
+
+  const handleCopyLink = (reqId: string) => {
+    const url = getShareUrl(reqId);
+    navigator.clipboard.writeText(url);
+    showToast('Enlace copiado al portapapeles', 'success');
+  };
+
+  const handleShareWhatsApp = (req: RequerimientoActividad) => {
+    const url = getShareUrl(req.id);
+    const text = `¡Hola! Te invito a apoyarnos como voluntario en la actividad "${req.tituloActividad}" del Club de Leones Quetzaltenango. Puedes ver las tareas y materiales necesarios y apuntarte aquí: ${url}`;
+    const encodedText = encodeURIComponent(text);
+    window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
+  };
 
   const [activeSubTab, setActiveSubTab] = useState<'lista' | 'nuevo' | 'detalle'>('lista');
   const [selectedReqId, setSelectedReqId] = useState<string | null>(null);
@@ -920,6 +939,28 @@ export const RequerimientosActividades: React.FC<RequerimientosActividadesProps>
                   {getCoverageStats(selectedReq).porcentaje}% Completado
                 </span>
               </div>
+
+              {/* Share actions */}
+              <div className="flex space-x-2">
+                <button
+                  type="button"
+                  onClick={() => handleCopyLink(selectedReq.id)}
+                  className="inline-flex items-center space-x-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs font-bold px-3 py-2 rounded-xl border border-blue-200 transition-all"
+                  title="Copiar enlace público de la convocatoria"
+                >
+                  <Link size={12} />
+                  <span>Compartir Enlace</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleShareWhatsApp(selectedReq)}
+                  className="inline-flex items-center space-x-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-2 rounded-xl border border-emerald-200 transition-all"
+                  title="Compartir por WhatsApp"
+                >
+                  <Share2 size={12} />
+                  <span>WhatsApp</span>
+                </button>
+              </div>
               
               {isAdministrative && (
                 <div className="flex space-x-2">
@@ -1029,7 +1070,7 @@ export const RequerimientosActividades: React.FC<RequerimientosActividadesProps>
                                         <div className="flex items-center space-x-1.5 mt-2">
                                           <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full inline-block" />
                                           <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
-                                            Asignado a: <span className="text-blue-900">{acc.socioNombre} {isMe && '(Tú)'}</span>
+                                            Asignado a: <span className="text-blue-900">{acc.socioNombre} {isMe && '(Tú)'} {acc.socioTelefono && `(Tel: ${acc.socioTelefono})`}</span>
                                           </span>
                                         </div>
                                       )}
@@ -1103,7 +1144,7 @@ export const RequerimientosActividades: React.FC<RequerimientosActividadesProps>
                                         <div className="flex items-center space-x-1.5 mt-2">
                                           <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full inline-block" />
                                           <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
-                                            Aportará: <span className="text-blue-900">{nec.socioNombre} {isMe && '(Tú)'}</span>
+                                            Aportará: <span className="text-blue-900">{nec.socioNombre} {isMe && '(Tú)'} {nec.socioTelefono && `(Tel: ${nec.socioTelefono})`}</span>
                                           </span>
                                         </div>
                                       )}

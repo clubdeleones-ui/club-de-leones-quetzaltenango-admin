@@ -447,6 +447,7 @@ export interface TareaVoluntario {
   descripcion: string;
   socioId: string | null;
   socioNombre: string | null;
+  socioTelefono?: string | null;
 }
 
 export interface MaterialNecesidad {
@@ -455,6 +456,7 @@ export interface MaterialNecesidad {
   cantidad: number;
   socioId: string | null;
   socioNombre: string | null;
+  socioTelefono?: string | null;
   completado: boolean;
 }
 

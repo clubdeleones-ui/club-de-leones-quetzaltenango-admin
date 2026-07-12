@@ -1219,6 +1219,20 @@ export const firebaseService = {
     }
   },
 
+  getRequerimientoActividadById: async (id: string): Promise<RequerimientoActividad | null> => {
+    try {
+      const docRef = doc(db, "requerimientos_actividades", id);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as RequerimientoActividad;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching requerimiento de actividad by id:", error);
+      throw error;
+    }
+  },
+
   syncInitialRequerimientos: async (initialList: RequerimientoActividad[]): Promise<void> => {
     try {
       const colRef = collection(db, "requerimientos_actividades");
