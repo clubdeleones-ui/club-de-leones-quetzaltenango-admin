@@ -73,6 +73,8 @@ export const RequerimientosActividades: React.FC<RequerimientosActividadesProps>
   const [comisionesRequeridas, setComisionesRequeridas] = useState<ComisionRequerimiento[]>([]);
 
   // Helpers to add/remove dynamic fields in Form
+  const [tempComisionId, setTempComisionId] = useState('');
+  const [isCustomComision, setIsCustomComision] = useState(false);
   const [tempComisionNombre, setTempComisionNombre] = useState('');
   const [tempComisionObjetivo, setTempComisionObjetivo] = useState('');
 
@@ -117,6 +119,8 @@ export const RequerimientosActividades: React.FC<RequerimientosActividadesProps>
     setFechaLimiteConvocatoria('');
     setEstadoActividad('Activa');
     setComisionesRequeridas([]);
+    setTempComisionId('');
+    setIsCustomComision(false);
     setTempComisionNombre('');
     setTempComisionObjetivo('');
     setActiveSubTab('nuevo');
@@ -133,13 +137,17 @@ export const RequerimientosActividades: React.FC<RequerimientosActividadesProps>
     setFechaLimiteConvocatoria(req.fechaLimiteConvocatoria);
     setEstadoActividad(req.estado);
     setComisionesRequeridas(JSON.parse(JSON.stringify(req.comisionesRequeridas || []))); // Deep copy
+    setTempComisionId('');
+    setIsCustomComision(false);
+    setTempComisionNombre('');
+    setTempComisionObjetivo('');
     setActiveSubTab('nuevo');
   };
 
   // Add sub-commission to the sheet
   const handleAddComisionRequerida = () => {
     if (!tempComisionNombre.trim()) {
-      showAlert('Atención', 'Ingresa el nombre de la comisión requerida.');
+      showAlert('Atención', 'Selecciona o ingresa el nombre de la comisión requerida.');
       return;
     }
     const newCom: ComisionRequerimiento = {
@@ -150,6 +158,8 @@ export const RequerimientosActividades: React.FC<RequerimientosActividadesProps>
       necesidades: []
     };
     setComisionesRequeridas(prev => [...prev, newCom]);
+    setTempComisionId('');
+    setIsCustomComision(false);
     setTempComisionNombre('');
     setTempComisionObjetivo('');
     showToast('Comisión agregada a la lista', 'info');
@@ -685,15 +695,44 @@ export const RequerimientosActividades: React.FC<RequerimientosActividadesProps>
             <div className="bg-slate-50/40 border border-slate-100 p-6 rounded-3xl space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Nombre del Área / Comisión Requerida</label>
-                  <input 
-                    type="text"
-                    value={tempComisionNombre}
-                    onChange={(e) => setTempComisionNombre(e.target.value)}
-                    placeholder="Ej. Comisión de Protocolo y Agenda"
-                    className="w-full px-4 py-2.5 text-xs font-semibold bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 transition-all outline-none"
-                  />
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Comisión / Área Requerida *</label>
+                  <select
+                    value={tempComisionId}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setTempComisionId(val);
+                      if (val === 'custom') {
+                        setIsCustomComision(true);
+                        setTempComisionNombre('');
+                      } else {
+                        setIsCustomComision(false);
+                        const com = comisiones.find(c => c.id === val);
+                        setTempComisionNombre(com ? com.nombre : '');
+                      }
+                    }}
+                    className="w-full px-4 py-2.5 text-xs font-semibold bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 transition-all outline-none cursor-pointer"
+                  >
+                    <option value="">-- Seleccionar Comisión --</option>
+                    {comisiones.map(c => (
+                      <option key={c.id} value={c.id}>{c.nombre}</option>
+                    ))}
+                    <option value="custom">Otro (Especificar...)</option>
+                  </select>
                 </div>
+
+                {isCustomComision && (
+                  <div>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Especificar Nombre del Área</label>
+                    <input 
+                      type="text"
+                      value={tempComisionNombre}
+                      onChange={(e) => setTempComisionNombre(e.target.value)}
+                      placeholder="Ej. Comisión de Decoración"
+                      className="w-full px-4 py-2.5 text-xs font-semibold bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 transition-all outline-none"
+                    />
+                  </div>
+                )}
+
                 <div>
                   <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Objetivo o Propósito del Área</label>
                   <input 
@@ -1010,7 +1049,7 @@ export const RequerimientosActividades: React.FC<RequerimientosActividadesProps>
                 No hay áreas o subcomisiones declaradas en este requerimiento.
               </p>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-8">
                 {(selectedReq.comisionesRequeridas || []).map((com) => {
                   const numAccionesCubiertas = (com.acciones || []).filter(a => a.socioId !== null).length;
                   const numNecesidadesCubiertas = (com.necesidades || []).filter(n => n.socioId !== null).length;
@@ -1018,40 +1057,39 @@ export const RequerimientosActividades: React.FC<RequerimientosActividadesProps>
                   return (
                     <div 
                       key={com.id} 
-                      className="border border-slate-200 bg-white hover:border-slate-350 rounded-3xl overflow-hidden shadow-sm transition-all"
+                      className="border border-slate-200 bg-white rounded-3xl overflow-hidden shadow-md shadow-slate-100/50 hover:shadow-lg transition-all duration-300 flex flex-col"
                     >
-                      {/* Subcomision Title Header */}
-                      <div className="bg-gradient-to-r from-slate-50 to-white px-6 py-4 border-b border-slate-150 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      {/* Tab Header - simulated folder index tab */}
+                      <div className="bg-gradient-to-r from-blue-900 to-indigo-900 px-6 py-4.5 text-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div>
-                          <h5 className="text-base font-black text-slate-800 flex items-center space-x-2">
-                            <span className="w-2.5 h-2.5 bg-blue-900 rounded-full inline-block" />
+                          <h5 className="text-base font-black flex items-center space-x-2">
+                            <span className="w-2.5 h-2.5 bg-yellow-400 rounded-full inline-block animate-pulse" />
                             <span>{com.nombreComision}</span>
                           </h5>
                           {com.objetivo && (
-                            <p className="text-xs text-slate-500 font-semibold mt-1 pr-4">{com.objetivo}</p>
+                            <p className="text-xs text-blue-200 font-semibold mt-1 pr-4">{com.objetivo}</p>
                           )}
                         </div>
                         <div className="flex shrink-0">
-                          <span className="text-[10px] font-black bg-blue-50 text-blue-900 px-3 py-1.5 rounded-full uppercase tracking-wider">
-                            {numAccionesCubiertas + numNecesidadesCubiertas} / {(com.acciones || []).length + (com.necesidades || []).length} cubiertos
+                          <span className="text-[10px] font-black bg-white/10 text-white px-3.5 py-1.5 rounded-full uppercase tracking-wider border border-white/10 backdrop-blur-md">
+                            {numAccionesCubiertas + numNecesidadesCubiertas} de {(com.acciones || []).length + (com.necesidades || []).length} requerimientos cubiertos
                           </span>
                         </div>
                       </div>
 
-                      {/* Content split in Actions and Needs */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100">
-                        
-                        {/* Tasks Column */}
-                        <div className="p-6 space-y-4">
-                          <div className="flex items-center space-x-2 pb-2 border-b border-slate-50">
-                            <ListTodo size={14} className="text-blue-900 stroke-[2.5]" />
-                            <span className="text-xs font-black text-slate-800 uppercase tracking-wider">Tareas de Trabajo ({(com.acciones || []).length})</span>
+                      {/* Folder Body Content */}
+                      <div className="p-6 md:p-8 space-y-8">
+                        {/* 1. Tareas de Trabajo */}
+                        <div className="space-y-4">
+                          <div className="flex items-center space-x-2 pb-2 border-b border-slate-100">
+                            <ListTodo size={16} className="text-blue-900 stroke-[2.5]" />
+                            <span className="text-xs font-black text-slate-800 uppercase tracking-widest">Tareas de Trabajo ({(com.acciones || []).length})</span>
                           </div>
 
                           {(com.acciones || []).length === 0 ? (
-                            <p className="text-xs text-slate-400 italic py-4">No hay tareas listadas para esta área.</p>
+                            <p className="text-xs text-slate-400 italic py-2">No hay tareas de trabajo listadas para esta área.</p>
                           ) : (
-                            <div className="space-y-3">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               {(com.acciones || []).map(acc => {
                                 const isVolunteered = acc.socioId !== null;
                                 const isMe = acc.socioId === user.id;
@@ -1059,45 +1097,45 @@ export const RequerimientosActividades: React.FC<RequerimientosActividadesProps>
                                 return (
                                   <div 
                                     key={acc.id} 
-                                    className={`p-3.5 border rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
+                                    className={`p-4.5 border rounded-2xl flex flex-col justify-between gap-4 transition-all hover:shadow-sm ${
                                       isMe ? 'bg-blue-50/40 border-blue-200' :
-                                      isVolunteered ? 'bg-slate-50/50 border-slate-100 opacity-80' :
-                                      'bg-white border-slate-200 hover:border-slate-300'
+                                      isVolunteered ? 'bg-slate-50/60 border-slate-100 opacity-90' :
+                                      'bg-white border-slate-200 hover:border-slate-350'
                                     }`}
                                   >
-                                    <div className="flex-1">
-                                      <p className="text-xs font-semibold text-slate-700 leading-normal">{acc.descripcion}</p>
+                                    <div className="space-y-2">
+                                      <p className="text-xs font-bold text-slate-700 leading-normal">{acc.descripcion}</p>
                                       {isVolunteered && (
-                                        <div className="flex items-center space-x-1.5 mt-2">
+                                        <div className="flex items-center space-x-1.5">
                                           <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full inline-block" />
                                           <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
-                                            Asignado a: <span className="text-blue-900">{acc.socioNombre} {isMe && '(Tú)'} {acc.socioTelefono && `(Tel: ${acc.socioTelefono})`}</span>
+                                            Asignado: <span className="text-blue-900 font-extrabold">{acc.socioNombre} {isMe && '(Tú)'} {acc.socioTelefono && `(Tel: ${acc.socioTelefono})`}</span>
                                           </span>
                                         </div>
                                       )}
                                     </div>
 
-                                    {/* Action button */}
-                                    <div className="shrink-0 flex items-center">
+                                    {/* Action Button */}
+                                    <div className="flex items-center pt-2.5 border-t border-slate-50">
                                       {isMe ? (
                                         <button
                                           type="button"
                                           onClick={() => handleVolunteerTask(selectedReq, com.id, acc.id, 'accion', false)}
-                                          className="w-full sm:w-auto inline-flex items-center justify-center space-x-1.5 bg-red-50 hover:bg-red-100 text-red-700 text-[10px] font-black px-3.5 py-2 rounded-xl border border-red-200 transition-all"
+                                          className="w-full inline-flex items-center justify-center space-x-1.5 bg-red-50 hover:bg-red-105 text-red-750 text-[10px] font-black px-3.5 py-2.5 rounded-xl border border-red-200 transition-all uppercase tracking-wider"
                                         >
                                           <X size={12} />
                                           <span>Cancelar mi apoyo</span>
                                         </button>
                                       ) : isVolunteered ? (
-                                        <div className="inline-flex items-center space-x-1 text-slate-500 bg-slate-105 text-[10px] font-black px-3 py-1.5 rounded-xl border border-slate-200">
-                                          <Check size={12} className="text-emerald-500" />
+                                        <div className="w-full inline-flex items-center justify-center space-x-1 text-slate-500 bg-slate-100 text-[10px] font-black px-3 py-2.5 rounded-xl border border-slate-200">
+                                          <Check size={12} className="text-emerald-500 stroke-[2.5]" />
                                           <span>Cubierto</span>
                                         </div>
                                       ) : (
                                         <button
                                           type="button"
                                           onClick={() => handleVolunteerTask(selectedReq, com.id, acc.id, 'accion', true)}
-                                          className="w-full sm:w-auto inline-flex items-center justify-center space-x-1.5 bg-blue-900 hover:bg-blue-800 text-white text-[10px] font-black px-3.5 py-2 rounded-xl transition-all shadow-md shadow-blue-900/10 scale-100 active:scale-95"
+                                          className="w-full inline-flex items-center justify-center space-x-1.5 bg-blue-900 hover:bg-blue-800 text-white text-[10px] font-black px-3.5 py-2.5 rounded-xl transition-all shadow-md shadow-blue-900/10 active:scale-[0.98] uppercase tracking-wider"
                                         >
                                           <span>🙋‍♂️ Apuntarme</span>
                                         </button>
@@ -1110,17 +1148,17 @@ export const RequerimientosActividades: React.FC<RequerimientosActividadesProps>
                           )}
                         </div>
 
-                        {/* Needs Column */}
-                        <div className="p-6 space-y-4">
-                          <div className="flex items-center space-x-2 pb-2 border-b border-slate-50">
-                            <Package size={14} className="text-blue-900 stroke-[2.5]" />
-                            <span className="text-xs font-black text-slate-800 uppercase tracking-wider">Materiales y Recursos ({(com.necesidades || []).length})</span>
+                        {/* 2. Materiales e Insumos */}
+                        <div className="space-y-4 pt-4 border-t border-slate-100">
+                          <div className="flex items-center space-x-2 pb-2 border-b border-slate-100">
+                            <Package size={16} className="text-blue-900 stroke-[2.5]" />
+                            <span className="text-xs font-black text-slate-805 uppercase tracking-widest">Materiales e Insumos Requeridos ({(com.necesidades || []).length})</span>
                           </div>
 
                           {(com.necesidades || []).length === 0 ? (
-                            <p className="text-xs text-slate-400 italic py-4">No hay materiales listados para esta área.</p>
+                            <p className="text-xs text-slate-400 italic py-2">No hay materiales listados para esta área.</p>
                           ) : (
-                            <div className="space-y-3">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               {(com.necesidades || []).map(nec => {
                                 const isVolunteered = nec.socioId !== null;
                                 const isMe = nec.socioId === user.id;
@@ -1128,50 +1166,50 @@ export const RequerimientosActividades: React.FC<RequerimientosActividadesProps>
                                 return (
                                   <div 
                                     key={nec.id} 
-                                    className={`p-3.5 border rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
+                                    className={`p-4.5 border rounded-2xl flex flex-col justify-between gap-4 transition-all hover:shadow-sm ${
                                       isMe ? 'bg-blue-50/40 border-blue-200' :
-                                      isVolunteered ? 'bg-slate-50/50 border-slate-100 opacity-80' :
+                                      isVolunteered ? 'bg-slate-50/60 border-slate-100 opacity-90' :
                                       'bg-white border-slate-200 hover:border-slate-300'
                                     }`}
                                   >
-                                    <div className="flex-1">
+                                    <div className="space-y-2">
                                       <div className="flex items-center space-x-2">
-                                        <span className="px-2 py-0.5 bg-blue-50 text-blue-900 rounded-md text-[9px] font-black">
+                                        <span className="px-2 py-0.5 bg-blue-50 text-blue-900 rounded-md text-[9px] font-black shrink-0">
                                           Cant. {nec.cantidad}
                                         </span>
-                                        <p className="text-xs font-semibold text-slate-700 leading-normal">{nec.descripcion}</p>
+                                        <p className="text-xs font-bold text-slate-700 leading-normal">{nec.descripcion}</p>
                                       </div>
                                       {isVolunteered && (
                                         <div className="flex items-center space-x-1.5 mt-2">
                                           <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full inline-block" />
                                           <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
-                                            Aportará: <span className="text-blue-900">{nec.socioNombre} {isMe && '(Tú)'} {nec.socioTelefono && `(Tel: ${nec.socioTelefono})`}</span>
+                                            Aportará: <span className="text-blue-900 font-extrabold">{nec.socioNombre} {isMe && '(Tú)'} {nec.socioTelefono && `(Tel: ${nec.socioTelefono})`}</span>
                                           </span>
                                         </div>
                                       )}
                                     </div>
 
-                                    {/* Action button */}
-                                    <div className="shrink-0 flex items-center">
+                                    {/* Action Button */}
+                                    <div className="flex items-center pt-2.5 border-t border-slate-55">
                                       {isMe ? (
                                         <button
                                           type="button"
                                           onClick={() => handleVolunteerTask(selectedReq, com.id, nec.id, 'necesidad', false)}
-                                          className="w-full sm:w-auto inline-flex items-center justify-center space-x-1.5 bg-red-50 hover:bg-red-100 text-red-700 text-[10px] font-black px-3.5 py-2 rounded-xl border border-red-200 transition-all"
+                                          className="w-full inline-flex items-center justify-center space-x-1.5 bg-red-50 hover:bg-red-105 text-red-750 text-[10px] font-black px-3.5 py-2.5 rounded-xl border border-red-200 transition-all uppercase tracking-wider"
                                         >
                                           <X size={12} />
                                           <span>Cancelar mi apoyo</span>
                                         </button>
                                       ) : isVolunteered ? (
-                                        <div className="inline-flex items-center space-x-1 text-slate-500 bg-slate-105 text-[10px] font-black px-3 py-1.5 rounded-xl border border-slate-200">
-                                          <Check size={12} className="text-emerald-500" />
+                                        <div className="w-full inline-flex items-center justify-center space-x-1 text-slate-500 bg-slate-105 text-[10px] font-black px-3 py-2.5 rounded-xl border border-slate-200">
+                                          <Check size={12} className="text-emerald-500 stroke-[2.5]" />
                                           <span>Cubierto</span>
                                         </div>
                                       ) : (
                                         <button
                                           type="button"
                                           onClick={() => handleVolunteerTask(selectedReq, com.id, nec.id, 'necesidad', true)}
-                                          className="w-full sm:w-auto inline-flex items-center justify-center space-x-1.5 bg-blue-900 hover:bg-blue-800 text-white text-[10px] font-black px-3.5 py-2 rounded-xl transition-all shadow-md shadow-blue-900/10 scale-100 active:scale-95"
+                                          className="w-full inline-flex items-center justify-center space-x-1.5 bg-blue-900 hover:bg-blue-800 text-white text-[10px] font-black px-3.5 py-2.5 rounded-xl transition-all shadow-md shadow-blue-900/10 active:scale-[0.98] uppercase tracking-wider"
                                         >
                                           <span>📦 Aportar</span>
                                         </button>

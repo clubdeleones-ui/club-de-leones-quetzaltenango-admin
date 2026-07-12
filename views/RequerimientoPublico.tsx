@@ -373,177 +373,187 @@ export const RequerimientoPublico: React.FC = () => {
         {/* ACTIVE AREA CONTENT */}
         {activeComision ? (
           <div className="mt-4 space-y-6 animate-fade-in">
-            {/* Area objective banner */}
-            {activeComision.objetivo && (
-              <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 flex items-start space-x-3">
-                <Info size={16} className="text-blue-900 shrink-0 mt-0.5" />
-                <div className="text-xs font-semibold text-slate-700 leading-normal">
-                  <strong className="text-blue-900 block font-black mb-0.5">Objetivo de este Área:</strong>
-                  {activeComision.objetivo}
+            {/* Folder tab layout for active comision */}
+            <div className="border border-slate-200 bg-white rounded-3xl overflow-hidden shadow-md shadow-slate-100/50 flex flex-col">
+              
+              {/* Tab Header for folder simulation */}
+              <div className="bg-gradient-to-r from-blue-900 to-indigo-900 px-6 py-4.5 text-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <h5 className="text-base font-black flex items-center space-x-2">
+                    <span className="w-2.5 h-2.5 bg-yellow-400 rounded-full inline-block animate-pulse" />
+                    <span>{activeComision.nombreComision}</span>
+                  </h5>
+                  {activeComision.objetivo && (
+                    <p className="text-xs text-blue-200 font-semibold mt-1 pr-4">{activeComision.objetivo}</p>
+                  )}
                 </div>
               </div>
-            )}
 
-            {/* Split: Tasks list */}
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2 border-b border-slate-200 pb-2">
-                <ListTodo size={15} className="text-blue-900 stroke-[2.5]" />
-                <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">Tareas de Trabajo ({(activeComision.acciones || []).length})</h3>
-              </div>
+              {/* Folder Body Content */}
+              <div className="p-6 md:p-8 space-y-8">
+                {/* 1. Tareas de Trabajo */}
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2 pb-2 border-b border-slate-100">
+                    <ListTodo size={16} className="text-blue-900 stroke-[2.5]" />
+                    <span className="text-xs font-black text-slate-800 uppercase tracking-widest">Tareas de Trabajo ({(activeComision.acciones || []).length})</span>
+                  </div>
 
-              {(activeComision.acciones || []).length === 0 ? (
-                <p className="text-xs text-slate-400 italic py-2">No hay tareas de trabajo en esta comisión.</p>
-              ) : (
-                <div className="space-y-3">
-                  {(activeComision.acciones || []).map(acc => {
-                    const isTaken = acc.socioId !== null;
-                    const isMySignUp = mySignedUpItems.includes(acc.id);
+                  {(activeComision.acciones || []).length === 0 ? (
+                    <p className="text-xs text-slate-400 italic py-2">No hay tareas de trabajo en esta comisión.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {(activeComision.acciones || []).map(acc => {
+                        const isTaken = acc.socioId !== null;
+                        const isMySignUp = mySignedUpItems.includes(acc.id);
 
-                    return (
-                      <div 
-                        key={acc.id}
-                        className={`p-4 border rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 transition-all ${
-                          isMySignUp ? 'bg-emerald-50/20 border-emerald-300' :
-                          isTaken ? 'bg-slate-50/50 border-slate-100 opacity-75' :
-                          'bg-white border-slate-200 hover:border-slate-350 shadow-sm'
-                        }`}
-                      >
-                        <div className="flex-1">
-                          <p className="text-xs font-semibold text-slate-800 leading-relaxed">
-                            {acc.descripcion}
-                          </p>
-                          {isTaken && (
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2.5 text-[10px] font-bold text-slate-450 uppercase tracking-wider">
-                              <span className="flex items-center space-x-1.5">
-                                <User size={12} className="text-slate-400" />
-                                <span>Voluntario: <span className="text-blue-900 font-extrabold">{acc.socioNombre}</span></span>
-                              </span>
-                              {acc.socioTelefono && (
-                                <span className="flex items-center space-x-1.5">
-                                  <Phone size={12} className="text-slate-400" />
-                                  <a href={`tel:${acc.socioTelefono}`} className="text-slate-500 hover:underline">{acc.socioTelefono}</a>
-                                </span>
+                        return (
+                          <div 
+                            key={acc.id}
+                            className={`p-4.5 border rounded-2xl flex flex-col justify-between gap-4 transition-all hover:shadow-sm ${
+                              isMySignUp ? 'bg-emerald-50/20 border-emerald-350' :
+                              isTaken ? 'bg-slate-50/60 border-slate-100 opacity-90' :
+                              'bg-white border-slate-200 hover:border-slate-350'
+                            }`}
+                          >
+                            <div className="space-y-2">
+                              <p className="text-xs font-bold text-slate-700 leading-normal">
+                                {acc.descripcion}
+                              </p>
+                              {isTaken && (
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                  <span className="flex items-center space-x-1.5">
+                                    <User size={12} className="text-slate-400" />
+                                    <span>Voluntario: <span className="text-blue-900 font-extrabold">{acc.socioNombre}</span></span>
+                                  </span>
+                                  {acc.socioTelefono && (
+                                    <span className="flex items-center space-x-1.5">
+                                      <Phone size={12} className="text-slate-400" />
+                                      <a href={`tel:${acc.socioTelefono}`} className="text-slate-500 hover:underline">{acc.socioTelefono}</a>
+                                    </span>
+                                  )}
+                                </div>
                               )}
                             </div>
-                          )}
-                        </div>
 
-                        {/* Action buttons */}
-                        <div className="shrink-0 flex items-center">
-                          {isMySignUp ? (
-                            <button
-                              type="button"
-                              onClick={() => handleCancelSupport(activeComision.id, acc.id, 'accion')}
-                              className="w-full sm:w-auto text-[10px] font-black uppercase text-red-650 bg-red-50 hover:bg-red-100 border border-red-200 px-3.5 py-2.5 rounded-xl transition-all"
-                            >
-                              Cancelar apoyo
-                            </button>
-                          ) : isTaken ? (
-                            <div className="inline-flex items-center space-x-1 text-[10px] font-black text-slate-450 bg-slate-100 px-3 py-2 rounded-xl border border-slate-150">
-                              <Check size={12} className="text-emerald-600 stroke-[3]" />
-                              <span>Cubierto</span>
+                            {/* Action Button */}
+                            <div className="flex items-center pt-2.5 border-t border-slate-50">
+                              {isMySignUp ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleCancelSupport(activeComision.id, acc.id, 'accion')}
+                                  className="w-full inline-flex items-center justify-center space-x-1.5 bg-red-50 hover:bg-red-105 text-red-750 text-[10px] font-black px-3.5 py-2.5 rounded-xl border border-red-200 transition-all uppercase tracking-wider"
+                                >
+                                  <X size={12} />
+                                  <span>Cancelar mi apoyo</span>
+                                </button>
+                              ) : isTaken ? (
+                                <div className="w-full inline-flex items-center justify-center space-x-1 text-slate-500 bg-slate-100 text-[10px] font-black px-3 py-2.5 rounded-xl border border-slate-200">
+                                  <Check size={12} className="text-emerald-500 stroke-[2.5]" />
+                                  <span>Cubierto</span>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenSignUp(activeComision.id, acc.id, 'accion', acc.descripcion)}
+                                  className="w-full inline-flex items-center justify-center space-x-1.5 bg-blue-900 hover:bg-blue-800 text-white text-[10px] font-black px-3.5 py-2.5 rounded-xl transition-all shadow-md shadow-blue-900/10 active:scale-[0.98] uppercase tracking-wider"
+                                >
+                                  <span>🙋‍♂️ Ofrecerme</span>
+                                </button>
+                              )}
                             </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenSignUp(activeComision.id, acc.id, 'accion', acc.descripcion)}
-                              className="w-full sm:w-auto text-[10px] font-black uppercase text-white bg-blue-900 hover:bg-blue-800 px-4 py-2.5 rounded-xl transition-all shadow-md shadow-blue-900/10 active:scale-[0.98]"
-                            >
-                              🙋‍♂️ Ofrecerme
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Split: Materials list */}
-            <div className="space-y-4 pt-4">
-              <div className="flex items-center space-x-2 border-b border-slate-200 pb-2">
-                <Package size={15} className="text-blue-900 stroke-[2.5]" />
-                <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">Materiales y Recursos Necesarios ({(activeComision.necesidades || []).length})</h3>
-              </div>
-
-              {(activeComision.necesidades || []).length === 0 ? (
-                <p className="text-xs text-slate-400 italic py-2">No hay materiales requeridos en esta comisión.</p>
-              ) : (
-                <div className="space-y-3">
-                  {(activeComision.necesidades || []).map(nec => {
-                    const isTaken = nec.socioId !== null;
-                    const isMySignUp = mySignedUpItems.includes(nec.id);
-
-                    return (
-                      <div 
-                        key={nec.id}
-                        className={`p-4 border rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 transition-all ${
-                          isMySignUp ? 'bg-emerald-50/20 border-emerald-300' :
-                          isTaken ? 'bg-slate-50/50 border-slate-100 opacity-75' :
-                          'bg-white border-slate-200 hover:border-slate-350 shadow-sm'
-                        }`}
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2">
-                            <span className="px-2 py-0.5 bg-blue-50 text-blue-900 rounded-md text-[10px] font-black">
-                              Cant. {nec.cantidad}
-                            </span>
-                            <p className="text-xs font-semibold text-slate-850 leading-relaxed">
-                              {nec.descripcion}
-                            </p>
                           </div>
-                          
-                          {isTaken && (
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2.5 text-[10px] font-bold text-slate-450 uppercase tracking-wider">
-                              <span className="flex items-center space-x-1.5">
-                                <User size={12} className="text-slate-400" />
-                                <span>Voluntario: <span className="text-blue-900 font-extrabold">{nec.socioNombre}</span></span>
-                              </span>
-                              {nec.socioTelefono && (
-                                <span className="flex items-center space-x-1.5">
-                                  <Phone size={12} className="text-slate-400" />
-                                  <a href={`tel:${nec.socioTelefono}`} className="text-slate-500 hover:underline">{nec.socioTelefono}</a>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Materiales e Insumos */}
+                <div className="space-y-4 pt-4 border-t border-slate-100">
+                  <div className="flex items-center space-x-2 pb-2 border-b border-slate-100">
+                    <Package size={16} className="text-blue-900 stroke-[2.5]" />
+                    <span className="text-xs font-black text-slate-805 uppercase tracking-widest">Materiales e Insumos Requeridos ({(activeComision.necesidades || []).length})</span>
+                  </div>
+
+                  {(activeComision.necesidades || []).length === 0 ? (
+                    <p className="text-xs text-slate-400 italic py-2">No hay materiales requeridos en esta comisión.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {(activeComision.necesidades || []).map(nec => {
+                        const isTaken = nec.socioId !== null;
+                        const isMySignUp = mySignedUpItems.includes(nec.id);
+
+                        return (
+                          <div 
+                            key={nec.id}
+                            className={`p-4.5 border rounded-2xl flex flex-col justify-between gap-4 transition-all hover:shadow-sm ${
+                              isMySignUp ? 'bg-emerald-50/20 border-emerald-350' :
+                              isTaken ? 'bg-slate-50/60 border-slate-100 opacity-90' :
+                              'bg-white border-slate-200 hover:border-slate-350'
+                            }`}
+                          >
+                            <div className="space-y-2">
+                              <div className="flex items-center space-x-2">
+                                <span className="px-2 py-0.5 bg-blue-50 text-blue-900 rounded-md text-[9px] font-black shrink-0">
+                                  Cant. {nec.cantidad}
                                 </span>
+                                <p className="text-xs font-bold text-slate-700 leading-normal">{nec.descripcion}</p>
+                              </div>
+                              
+                              {isTaken && (
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                  <span className="flex items-center space-x-1.5">
+                                    <User size={12} className="text-slate-400" />
+                                    <span>Voluntario: <span className="text-blue-900 font-extrabold">{nec.socioNombre}</span></span>
+                                  </span>
+                                  {nec.socioTelefono && (
+                                    <span className="flex items-center space-x-1.5">
+                                      <Phone size={12} className="text-slate-400" />
+                                      <a href={`tel:${nec.socioTelefono}`} className="text-slate-500 hover:underline">{nec.socioTelefono}</a>
+                                    </span>
+                                  )}
+                                </div>
                               )}
                             </div>
-                          )}
-                        </div>
 
-                        {/* Action buttons */}
-                        <div className="shrink-0 flex items-center">
-                          {isMySignUp ? (
-                            <button
-                              type="button"
-                              onClick={() => handleCancelSupport(activeComision.id, nec.id, 'necesidad')}
-                              className="w-full sm:w-auto text-[10px] font-black uppercase text-red-655 bg-red-50 hover:bg-red-100 border border-red-200 px-3.5 py-2.5 rounded-xl transition-all"
-                            >
-                              Cancelar apoyo
-                            </button>
-                          ) : isTaken ? (
-                            <div className="inline-flex items-center space-x-1 text-[10px] font-black text-slate-450 bg-slate-100 px-3 py-2 rounded-xl border border-slate-150">
-                              <Check size={12} className="text-emerald-600 stroke-[3]" />
-                              <span>Cubierto</span>
+                            {/* Action Button */}
+                            <div className="flex items-center pt-2.5 border-t border-slate-55">
+                              {isMySignUp ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleCancelSupport(activeComision.id, nec.id, 'necesidad')}
+                                  className="w-full inline-flex items-center justify-center space-x-1.5 bg-red-50 hover:bg-red-105 text-red-755 text-[10px] font-black px-3.5 py-2.5 rounded-xl border border-red-200 transition-all uppercase tracking-wider"
+                                >
+                                  <X size={12} />
+                                  <span>Cancelar apoyo</span>
+                                </button>
+                              ) : isTaken ? (
+                                <div className="w-full inline-flex items-center justify-center space-x-1 text-slate-500 bg-slate-105 text-[10px] font-black px-3 py-2.5 rounded-xl border border-slate-200">
+                                  <Check size={12} className="text-emerald-500 stroke-[2.5]" />
+                                  <span>Cubierto</span>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenSignUp(activeComision.id, nec.id, 'necesidad', nec.descripcion, nec.cantidad)}
+                                  className="w-full inline-flex items-center justify-center space-x-1.5 bg-blue-900 hover:bg-blue-800 text-white text-[10px] font-black px-3.5 py-2.5 rounded-xl transition-all shadow-md shadow-blue-900/10 active:scale-[0.98] uppercase tracking-wider"
+                                >
+                                  <span>📦 Aportar</span>
+                                </button>
+                              )}
                             </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenSignUp(activeComision.id, nec.id, 'necesidad', nec.descripcion, nec.cantidad)}
-                              className="w-full sm:w-auto text-[10px] font-black uppercase text-white bg-blue-900 hover:bg-blue-800 px-4 py-2.5 rounded-xl transition-all shadow-md shadow-blue-900/10 active:scale-[0.98]"
-                            >
-                              📦 Aportar
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              )}
+
             </div>
           </div>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
+    </div>
 
       {/* SIGN UP DIALOG / BOTTOM MODAL */}
       {modalOpen && selectedItem && (
