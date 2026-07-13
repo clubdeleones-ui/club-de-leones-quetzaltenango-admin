@@ -84,6 +84,12 @@ export const AdminCalendario: React.FC = () => {
 
   const [participacionSearch, setParticipacionSearch] = useState('');
   const [participacionFilterActividad, setParticipacionFilterActividad] = useState('Todas');
+  const [participacionSort, setParticipacionSort] = useState<'fechaDesc' | 'fechaAsc' | 'nombreAsc' | 'nombreDesc'>('fechaDesc');
+  const [participacionesPage, setParticipacionesPage] = useState(1);
+
+  React.useEffect(() => {
+    setParticipacionesPage(1);
+  }, [participacionSearch, participacionFilterActividad, participacionSort]);
 
   // Pagination
   const [actividadesPage, setActividadesPage] = useState(1);
@@ -177,8 +183,31 @@ export const AdminCalendario: React.FC = () => {
     if (participacionFilterActividad !== 'Todas') {
       result = result.filter(p => p.actividadId === participacionFilterActividad);
     }
+
+    // Sort participaciones
+    result.sort((a, b) => {
+      if (participacionSort === 'fechaDesc') {
+        return new Date(b.fechaRegistro).getTime() - new Date(a.fechaRegistro).getTime();
+      } else if (participacionSort === 'fechaAsc') {
+        return new Date(a.fechaRegistro).getTime() - new Date(b.fechaRegistro).getTime();
+      } else if (participacionSort === 'nombreAsc') {
+        return a.nombre.localeCompare(b.nombre);
+      } else {
+        return b.nombre.localeCompare(a.nombre);
+      }
+    });
+
     return result;
-  }, [participaciones, participacionSearch, participacionFilterActividad]);
+  }, [participaciones, participacionSearch, participacionFilterActividad, participacionSort]);
+
+  const paginatedParticipaciones = useMemo(() => {
+    const start = (participacionesPage - 1) * 12;
+    return filteredParticipaciones.slice(start, start + 12);
+  }, [filteredParticipaciones, participacionesPage]);
+
+  const totalParticipacionesPages = useMemo(() => {
+    return Math.ceil(filteredParticipaciones.length / 12);
+  }, [filteredParticipaciones]);
 
   const handleDeleteParticipacion = async (id: string) => {
     if (!(await showConfirm("Eliminar Confirmación", "¿Está seguro de eliminar esta confirmación de participación?", { type: 'danger', confirmText: 'Eliminar', cancelText: 'Cancelar' }))) return;
@@ -1258,8 +1287,8 @@ export const AdminCalendario: React.FC = () => {
         /* Asistentes / RSVP Section */
         <div className="space-y-6 animate-in fade-in duration-300">
           {/* Filters & Search */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div className="relative w-full md:w-1/3 text-left">
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col xl:flex-row gap-4 items-center justify-between">
+            <div className="relative w-full xl:w-1/3 text-left">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input 
                 type="text" 
@@ -1270,18 +1299,34 @@ export const AdminCalendario: React.FC = () => {
               />
             </div>
             
-            <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto items-center">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Actividad:</span>
-              <select
-                value={participacionFilterActividad}
-                onChange={e => setParticipacionFilterActividad(e.target.value)}
-                className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:bg-white text-xs font-bold text-slate-700 outline-none w-full md:w-auto"
-              >
-                <option value="Todas">Todas las actividades</option>
-                {actividades.filter(a => a.conBotonAsistencia).map(act => (
-                  <option key={act.id} value={act.id}>{act.titulo}</option>
-                ))}
-              </select>
+            <div className="flex flex-col md:flex-row gap-4 w-full xl:w-auto items-center justify-end">
+              <div className="flex items-center space-x-2 w-full md:w-auto">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider shrink-0">Actividad:</span>
+                <select
+                  value={participacionFilterActividad}
+                  onChange={e => setParticipacionFilterActividad(e.target.value)}
+                  className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:bg-white text-xs font-bold text-slate-700 outline-none w-full md:w-auto"
+                >
+                  <option value="Todas">Todas las actividades</option>
+                  {actividades.filter(a => a.conBotonAsistencia).map(act => (
+                    <option key={act.id} value={act.id}>{act.titulo}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center space-x-2 w-full md:w-auto">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider shrink-0">Ordenar:</span>
+                <select
+                  value={participacionSort}
+                  onChange={e => setParticipacionSort(e.target.value as any)}
+                  className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:bg-white text-xs font-bold text-slate-700 outline-none w-full md:w-auto"
+                >
+                  <option value="fechaDesc">Fecha de Registro (Reciente)</option>
+                  <option value="fechaAsc">Fecha de Registro (Antigua)</option>
+                  <option value="nombreAsc">Nombre (A - Z)</option>
+                  <option value="nombreDesc">Nombre (Z - A)</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -1294,89 +1339,132 @@ export const AdminCalendario: React.FC = () => {
               No se encontraron registros de asistencia confirmada.
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 text-left">
-              {filteredParticipaciones.map(p => (
-                <div 
-                  key={p.id} 
-                  className="bg-white rounded-[2rem] p-6 border border-slate-200/80 shadow-md shadow-slate-100/50 hover:shadow-lg hover:border-slate-300 transition-all duration-300 flex flex-col justify-between relative overflow-hidden"
-                >
-                  {/* Accent color bar based on membership */}
-                  <div className={`absolute top-0 left-0 w-full h-1.5 ${
-                    p.esSocio ? 'bg-blue-900' :
-                    p.esSocioLeo ? 'bg-indigo-600' :
-                    'bg-slate-355'
-                  }`} />
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-left">
+                {paginatedParticipaciones.map(p => (
+                  <div 
+                    key={p.id} 
+                    className="bg-white rounded-[2rem] p-6 border border-slate-200/80 shadow-md shadow-slate-100/50 hover:shadow-lg hover:border-slate-350 transition-all duration-300 flex flex-col justify-between relative overflow-hidden"
+                  >
+                    {/* Accent color bar based on membership */}
+                    <div className={`absolute top-0 left-0 w-full h-1.5 ${
+                      p.esSocio ? 'bg-blue-900' :
+                      p.esSocioLeo ? 'bg-indigo-600' :
+                      'bg-slate-355'
+                    }`} />
 
-                  <div className="space-y-4">
-                    {/* Header */}
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-1.5 pr-6 text-left">
-                        <h4 className="text-base font-black text-slate-805 tracking-tight leading-tight">{p.nombre}</h4>
-                        <div className="flex flex-wrap gap-1.5">
-                          {p.esSocio && (
-                            <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-50 text-blue-900 border border-blue-150">
-                              🦁 Socio León
-                            </span>
-                          )}
-                          {p.esSocioLeo && (
-                            <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-900 border border-indigo-150">
-                              🐾 Socio Leo
-                            </span>
-                          )}
-                          {!p.esSocio && !p.esSocioLeo && (
-                            <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-slate-50 text-slate-550 border border-slate-200">
-                              👤 Externo / Invitado
-                            </span>
-                          )}
+                    <div className="space-y-4">
+                      {/* Header */}
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-1.5 pr-6 text-left">
+                          <h4 className="text-base font-black text-slate-855 tracking-tight leading-tight">{p.nombre}</h4>
+                          <div className="flex flex-wrap gap-1.5">
+                            {p.esSocio && (
+                              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-50 text-blue-900 border border-blue-150">
+                                🦁 Socio León
+                              </span>
+                            )}
+                            {p.esSocioLeo && (
+                              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-900 border border-indigo-150">
+                                🐾 Socio Leo
+                              </span>
+                            )}
+                            {!p.esSocio && !p.esSocioLeo && (
+                              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-slate-50 text-slate-550 border border-slate-200">
+                                👤 Externo / Invitado
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <button
+                          onClick={() => handleDeleteParticipacion(p.id)}
+                          className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-650 flex items-center justify-center transition-all shadow-sm active:scale-95 cursor-pointer shrink-0"
+                          title="Eliminar Registro"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+
+                      {/* RSVP Info */}
+                      <div className="space-y-2.5 pt-3 border-t border-slate-100/80 text-xs font-bold text-slate-700">
+                        <div className="flex items-center space-x-2.5">
+                          <Calendar size={14} className="text-slate-400 shrink-0" />
+                          <span className="text-[10px] text-slate-400 uppercase tracking-wider mr-1">Actividad:</span>
+                          <span className="text-blue-900 font-extrabold line-clamp-1">{p.actividadTitulo}</span>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2.5">
+                          <Phone size={14} className="text-slate-400 shrink-0" />
+                          <span className="text-[10px] text-slate-400 uppercase tracking-wider mr-1">Contacto:</span>
+                          <a href={`tel:${p.telefono}`} className="text-slate-600 hover:text-blue-950 font-mono">{p.telefono}</a>
+                        </div>
+
+                        <div className="flex items-center space-x-2.5">
+                          <Users size={14} className="text-slate-400 shrink-0" />
+                          <span className="text-[10px] text-slate-400 uppercase tracking-wider mr-1">Acompañantes:</span>
+                          <span>
+                            {p.llevaInvitados ? (
+                              <span className="text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-100 text-[10px] font-black">
+                                {p.cantidadInvitados} invitados
+                              </span>
+                            ) : (
+                              <span className="text-slate-450 font-semibold">Ninguno</span>
+                            )}
+                          </span>
                         </div>
                       </div>
-                      
-                      <button
-                        onClick={() => handleDeleteParticipacion(p.id)}
-                        className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-650 flex items-center justify-center transition-all shadow-sm active:scale-95 cursor-pointer shrink-0"
-                        title="Eliminar Registro"
-                      >
-                        <Trash2 size={15} />
-                      </button>
                     </div>
 
-                    {/* RSVP Info */}
-                    <div className="space-y-2.5 pt-3 border-t border-slate-100/80 text-xs font-bold text-slate-700">
-                      <div className="flex items-center space-x-2.5">
-                        <Calendar size={14} className="text-slate-400 shrink-0" />
-                        <span className="text-[10px] text-slate-400 uppercase tracking-wider mr-1">Actividad:</span>
-                        <span className="text-blue-900 font-extrabold line-clamp-1">{p.actividadTitulo}</span>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2.5">
-                        <Phone size={14} className="text-slate-400 shrink-0" />
-                        <span className="text-[10px] text-slate-400 uppercase tracking-wider mr-1">Contacto:</span>
-                        <a href={`tel:${p.telefono}`} className="text-slate-600 hover:text-blue-950 font-mono">{p.telefono}</a>
-                      </div>
-
-                      <div className="flex items-center space-x-2.5">
-                        <Users size={14} className="text-slate-400 shrink-0" />
-                        <span className="text-[10px] text-slate-400 uppercase tracking-wider mr-1">Acompañantes:</span>
-                        <span>
-                          {p.llevaInvitados ? (
-                            <span className="text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-100 text-[10px] font-black">
-                              {p.cantidadInvitados} invitados
-                            </span>
-                          ) : (
-                            <span className="text-slate-450 font-semibold">Ninguno</span>
-                          )}
-                        </span>
-                      </div>
+                    {/* Date Footer */}
+                    <div className="mt-4 pt-3 border-t border-slate-55 flex items-center justify-between text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">
+                      <span>Registro</span>
+                      <span>{formatDisplayDate(p.fechaRegistro)}</span>
                     </div>
                   </div>
+                ))}
+              </div>
 
-                  {/* Date Footer */}
-                  <div className="mt-4 pt-3 border-t border-slate-55 flex items-center justify-between text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">
-                    <span>Registro</span>
-                    <span>{formatDisplayDate(p.fechaRegistro)}</span>
+              {/* Pagination controls */}
+              {totalParticipacionesPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between pt-6 border-t border-slate-100 gap-4">
+                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">
+                    Mostrando {Math.min(filteredParticipaciones.length, (participacionesPage - 1) * 12 + 1)} - {Math.min(filteredParticipaciones.length, participacionesPage * 12)} de {filteredParticipaciones.length} asistentes
+                  </p>
+                  <div className="flex items-center space-x-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setParticipacionesPage(prev => Math.max(1, prev - 1))}
+                      disabled={participacionesPage === 1}
+                      className="p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100 disabled:opacity-50 disabled:hover:bg-slate-50 transition-all cursor-pointer active:scale-95"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    {Array.from({ length: totalParticipacionesPages }, (_, i) => i + 1).map(pageNum => (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => setParticipacionesPage(pageNum)}
+                        className={`w-9 h-9 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                          participacionesPage === pageNum
+                            ? 'bg-blue-900 text-white shadow-md shadow-blue-900/10'
+                            : 'bg-white border border-slate-200 text-slate-650 hover:bg-slate-50'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setParticipacionesPage(prev => Math.min(totalParticipacionesPages, prev + 1))}
+                      disabled={participacionesPage === totalParticipacionesPages}
+                      className="p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-550 hover:bg-slate-100 disabled:opacity-50 disabled:hover:bg-slate-50 transition-all cursor-pointer active:scale-95"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
                   </div>
                 </div>
-              ))}
+              )}
             </div>
           )}
         </div>
