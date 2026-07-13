@@ -106,6 +106,7 @@ export interface RegistroParticipacion {
   actividadTitulo: string;
   nombre: string;
   esSocio: boolean;
+  esSocioLeo?: boolean;
   telefono: string;
   llevaInvitados: boolean;
   cantidadInvitados: number;

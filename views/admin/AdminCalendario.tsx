@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  Plus, Calendar, Search, Filter, Edit, Trash2, Gift, Building, X, Loader2, Users, Check, Upload, ChevronLeft, ChevronRight
+  Plus, Calendar, Search, Filter, Edit, Trash2, Gift, Building, X, Loader2, Users, Check, Upload, ChevronLeft, ChevronRight, Phone
 } from 'lucide-react';
 import { Actividad, SolicitudVoluntario, RegistroParticipacion } from '../../types';
 import { firebaseService } from '../../services/firebaseService';
@@ -1294,107 +1294,90 @@ export const AdminCalendario: React.FC = () => {
               No se encontraron registros de asistencia confirmada.
             </div>
           ) : (
-            <>
-              {/* Desktop Table View */}
-              <div className="hidden lg:block bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50/75 border-b border-slate-200 text-slate-405 text-[10px] font-black uppercase tracking-wider">
-                        <th className="px-6 py-4">Nombre del Asistente</th>
-                        <th className="px-6 py-4">¿Es Socio?</th>
-                        <th className="px-6 py-4">Teléfono</th>
-                        <th className="px-6 py-4">Actividad</th>
-                        <th className="px-6 py-4">Invitados</th>
-                        <th className="px-6 py-4">Fecha de Registro</th>
-                        <th className="px-6 py-4 text-right">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-xs font-bold text-slate-700">
-                      {filteredParticipaciones.map(p => (
-                        <tr key={p.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-6 py-4 font-extrabold text-slate-900">{p.nombre}</td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase border ${
-                              p.esSocio 
-                                ? 'bg-blue-50 text-blue-800 border-blue-150' 
-                                : 'bg-slate-50 text-slate-500 border-slate-200'
-                            }`}>
-                              {p.esSocio ? 'Sí' : 'No'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 font-mono text-slate-600">{p.telefono}</td>
-                          <td className="px-6 py-4 text-blue-900">{p.actividadTitulo}</td>
-                          <td className="px-6 py-4">
-                            {p.llevaInvitados ? (
-                              <span className="text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-100">
-                                {p.cantidadInvitados} acompañantes
-                              </span>
-                            ) : (
-                              <span className="text-slate-400 font-medium">Ninguno</span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-slate-400">{new Date(p.fechaRegistro).toLocaleDateString()}</td>
-                          <td className="px-6 py-4 text-right">
-                            <button
-                              onClick={() => handleDeleteParticipacion(p.id)}
-                              className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-red-50 text-slate-500 hover:text-red-650 inline-flex items-center justify-center transition-all shadow-sm active:scale-95 cursor-pointer"
-                              title="Eliminar Registro"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 text-left">
+              {filteredParticipaciones.map(p => (
+                <div 
+                  key={p.id} 
+                  className="bg-white rounded-[2rem] p-6 border border-slate-200/80 shadow-md shadow-slate-100/50 hover:shadow-lg hover:border-slate-300 transition-all duration-300 flex flex-col justify-between relative overflow-hidden"
+                >
+                  {/* Accent color bar based on membership */}
+                  <div className={`absolute top-0 left-0 w-full h-1.5 ${
+                    p.esSocio ? 'bg-blue-900' :
+                    p.esSocioLeo ? 'bg-indigo-600' :
+                    'bg-slate-355'
+                  }`} />
 
-              {/* Mobile Cards View */}
-              <div className="lg:hidden space-y-4 text-left">
-                {filteredParticipaciones.map(p => (
-                  <div key={p.id} className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm space-y-4">
+                  <div className="space-y-4">
+                    {/* Header */}
                     <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-extrabold text-slate-800 text-base">{p.nombre}</p>
-                        <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase border ${
-                          p.esSocio 
-                            ? 'bg-blue-50 text-blue-800 border-blue-150' 
-                            : 'bg-slate-50 text-slate-500 border-slate-200'
-                        }`}>
-                          {p.esSocio ? 'Socio' : 'Externo'}
-                        </span>
+                      <div className="space-y-1.5 pr-6 text-left">
+                        <h4 className="text-base font-black text-slate-805 tracking-tight leading-tight">{p.nombre}</h4>
+                        <div className="flex flex-wrap gap-1.5">
+                          {p.esSocio && (
+                            <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-50 text-blue-900 border border-blue-150">
+                              🦁 Socio León
+                            </span>
+                          )}
+                          {p.esSocioLeo && (
+                            <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-900 border border-indigo-150">
+                              🐾 Socio Leo
+                            </span>
+                          )}
+                          {!p.esSocio && !p.esSocioLeo && (
+                            <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-slate-50 text-slate-550 border border-slate-200">
+                              👤 Externo / Invitado
+                            </span>
+                          )}
+                        </div>
                       </div>
+                      
                       <button
                         onClick={() => handleDeleteParticipacion(p.id)}
-                        className="p-2 rounded-xl bg-slate-50 hover:bg-red-50 text-slate-550 hover:text-red-600 transition-all active:scale-95 cursor-pointer"
-                        title="Eliminar"
+                        className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-650 flex items-center justify-center transition-all shadow-sm active:scale-95 cursor-pointer shrink-0"
+                        title="Eliminar Registro"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={15} />
                       </button>
                     </div>
-                    
-                    <div className="grid grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-3">
-                      <div>
-                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Actividad:</span>
-                        <p className="text-slate-750 font-extrabold mt-0.5">{p.actividadTitulo}</p>
+
+                    {/* RSVP Info */}
+                    <div className="space-y-2.5 pt-3 border-t border-slate-100/80 text-xs font-bold text-slate-700">
+                      <div className="flex items-center space-x-2.5">
+                        <Calendar size={14} className="text-slate-400 shrink-0" />
+                        <span className="text-[10px] text-slate-400 uppercase tracking-wider mr-1">Actividad:</span>
+                        <span className="text-blue-900 font-extrabold line-clamp-1">{p.actividadTitulo}</span>
                       </div>
-                      <div>
-                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Teléfono:</span>
-                        <p className="text-slate-750 font-extrabold mt-0.5">{p.telefono}</p>
+                      
+                      <div className="flex items-center space-x-2.5">
+                        <Phone size={14} className="text-slate-400 shrink-0" />
+                        <span className="text-[10px] text-slate-400 uppercase tracking-wider mr-1">Contacto:</span>
+                        <a href={`tel:${p.telefono}`} className="text-slate-600 hover:text-blue-950 font-mono">{p.telefono}</a>
                       </div>
-                      <div className="col-span-2 mt-2">
-                        <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px]">Invitados:</span>
-                        <p className="text-slate-750 font-extrabold mt-0.5">
-                          {p.llevaInvitados ? `${p.cantidadInvitados} acompañantes` : 'Ninguno'}
-                        </p>
+
+                      <div className="flex items-center space-x-2.5">
+                        <Users size={14} className="text-slate-400 shrink-0" />
+                        <span className="text-[10px] text-slate-400 uppercase tracking-wider mr-1">Acompañantes:</span>
+                        <span>
+                          {p.llevaInvitados ? (
+                            <span className="text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-100 text-[10px] font-black">
+                              {p.cantidadInvitados} invitados
+                            </span>
+                          ) : (
+                            <span className="text-slate-450 font-semibold">Ninguno</span>
+                          )}
+                        </span>
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            </>
+
+                  {/* Date Footer */}
+                  <div className="mt-4 pt-3 border-t border-slate-55 flex items-center justify-between text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">
+                    <span>Registro</span>
+                    <span>{formatDisplayDate(p.fechaRegistro)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}

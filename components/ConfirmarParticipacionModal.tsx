@@ -20,6 +20,7 @@ export const ConfirmarParticipacionModal: React.FC<ConfirmarParticipacionModalPr
   const { showToast } = useToast();
   const [nombre, setNombre] = useState('');
   const [esSocio, setEsSocio] = useState(false);
+  const [esSocioLeo, setEsSocioLeo] = useState(false);
   const [telefonoDigitos, setTelefonoDigitos] = useState('');
   const [llevaInvitados, setLlevaInvitados] = useState(false);
   const [cantidadInvitados, setCantidadInvitados] = useState(1);
@@ -48,6 +49,7 @@ export const ConfirmarParticipacionModal: React.FC<ConfirmarParticipacionModalPr
         actividadTitulo,
         nombre: nombre.trim(),
         esSocio,
+        esSocioLeo,
         telefono: `+502${telefonoDigitos}`,
         llevaInvitados,
         cantidadInvitados: llevaInvitados ? cantidadInvitados : 0,
@@ -60,6 +62,7 @@ export const ConfirmarParticipacionModal: React.FC<ConfirmarParticipacionModalPr
       // Reset form
       setNombre('');
       setEsSocio(false);
+      setEsSocioLeo(false);
       setTelefonoDigitos('');
       setLlevaInvitados(false);
       setCantidadInvitados(1);
@@ -145,17 +148,37 @@ export const ConfirmarParticipacionModal: React.FC<ConfirmarParticipacionModalPr
             </div>
           </div>
 
-          {/* Checkbox: ¿Es socio del club? */}
+          {/* Checkbox: ¿Es socio del club de leones? */}
           <div className="flex items-center space-x-3 bg-slate-50/50 border border-slate-200/60 rounded-2xl p-4">
             <input
               type="checkbox"
               id="esSocio"
               checked={esSocio}
-              onChange={e => setEsSocio(e.target.checked)}
+              onChange={e => {
+                setEsSocio(e.target.checked);
+                if (e.target.checked) setEsSocioLeo(false);
+              }}
               className="w-5 h-5 text-blue-900 border-slate-300 rounded focus:ring-blue-900 cursor-pointer accent-blue-900"
             />
             <label htmlFor="esSocio" className="text-xs font-bold text-slate-700 cursor-pointer select-none">
               Soy socio activo del Club de Leones Quetzaltenango
+            </label>
+          </div>
+
+          {/* Checkbox: ¿Es socio del club Leo? */}
+          <div className="flex items-center space-x-3 bg-slate-50/50 border border-slate-200/60 rounded-2xl p-4">
+            <input
+              type="checkbox"
+              id="esSocioLeo"
+              checked={esSocioLeo}
+              onChange={e => {
+                setEsSocioLeo(e.target.checked);
+                if (e.target.checked) setEsSocio(false);
+              }}
+              className="w-5 h-5 text-blue-900 border-slate-300 rounded focus:ring-blue-900 cursor-pointer accent-blue-900"
+            />
+            <label htmlFor="esSocioLeo" className="text-xs font-bold text-slate-700 cursor-pointer select-none">
+              Soy socio activo del Club Leo Quetzaltenango
             </label>
           </div>
 
