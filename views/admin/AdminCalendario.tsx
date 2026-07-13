@@ -209,6 +209,14 @@ export const AdminCalendario: React.FC = () => {
     return Math.ceil(filteredParticipaciones.length / 12);
   }, [filteredParticipaciones]);
 
+  const totalInvitados = useMemo(() => {
+    return participaciones.reduce((sum, p) => sum + (p.cantidadInvitados || 0), 0);
+  }, [participaciones]);
+
+  const filteredTotalInvitados = useMemo(() => {
+    return filteredParticipaciones.reduce((sum, p) => sum + (p.cantidadInvitados || 0), 0);
+  }, [filteredParticipaciones]);
+
   const handleDeleteParticipacion = async (id: string) => {
     if (!(await showConfirm("Eliminar Confirmación", "¿Está seguro de eliminar esta confirmación de participación?", { type: 'danger', confirmText: 'Eliminar', cancelText: 'Cancelar' }))) return;
     try {
@@ -892,7 +900,7 @@ export const AdminCalendario: React.FC = () => {
               : 'text-slate-400 hover:text-slate-600'
           }`}
         >
-          Asistentes Confirmados ({participaciones.length})
+          Asistentes Confirmados ({participaciones.length} + {totalInvitados} invitados)
         </button>
       </div>
 
@@ -1286,6 +1294,22 @@ export const AdminCalendario: React.FC = () => {
       ) : (
         /* Asistentes / RSVP Section */
         <div className="space-y-6 animate-in fade-in duration-300">
+          {/* Stats Summary Dashboard */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
+            <div className="bg-gradient-to-r from-blue-900 to-indigo-900 p-5 rounded-[1.8rem] text-white shadow-md shadow-blue-900/10">
+              <span className="text-[9px] font-black uppercase tracking-wider opacity-80">Registros de Asistencia</span>
+              <p className="text-2xl font-black mt-1">{filteredParticipaciones.length} confirmados</p>
+            </div>
+            <div className="bg-white p-5 rounded-[1.8rem] border border-slate-200/80 shadow-sm">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Acompañantes / Invitados</span>
+              <p className="text-2xl font-black text-slate-800 mt-1">{filteredTotalInvitados} invitados</p>
+            </div>
+            <div className="bg-white p-5 rounded-[1.8rem] border border-slate-200/80 shadow-sm">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Aforo Total Estimado</span>
+              <p className="text-2xl font-black text-blue-900 mt-1">{filteredParticipaciones.length + filteredTotalInvitados} personas</p>
+            </div>
+          </div>
+
           {/* Filters & Search */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col xl:flex-row gap-4 items-center justify-between">
             <div className="relative w-full xl:w-1/3 text-left">
