@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  Plus, Calendar, Search, Filter, Edit, Trash2, Gift, Building, X, Loader2, Users, Check, Upload, ChevronLeft, ChevronRight, Phone
+  Plus, Calendar, Search, Filter, Edit, Trash2, Gift, Building, X, Loader2, Users, Check, Upload, ChevronLeft, ChevronRight, Phone, Printer
 } from 'lucide-react';
 import { Actividad, SolicitudVoluntario, RegistroParticipacion } from '../../types';
 import { firebaseService } from '../../services/firebaseService';
@@ -344,6 +344,385 @@ export const AdminCalendario: React.FC = () => {
       console.error("Error deleting volunteer request:", err);
       showAlert("No se pudo eliminar la solicitud.", "error");
     }
+  };
+
+  const handlePrintVoluntarios = () => {
+    const sorted = [...filteredVoluntarios].sort((a, b) =>
+      a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })
+    );
+
+    const actName = voluntarioFilterActividad === 'Todas'
+      ? 'Todas las Actividades'
+      : (actividades.find(a => a.id === voluntarioFilterActividad)?.titulo || 'Actividad Desconocida');
+
+    const estadoText = voluntarioFilterEstado === 'Todos'
+      ? 'Todos los Estados'
+      : `Estado: ${voluntarioFilterEstado}`;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showAlert("No se pudo abrir la ventana de impresión. Por favor, permite las ventanas emergentes.", "error");
+      return;
+    }
+
+    const todayStr = new Date().toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const rowsHtml = sorted.map((v, idx) => `
+      <tr>
+        <td style="text-align: center;">${idx + 1}</td>
+        <td>
+          <div style="font-weight: bold; color: #111827;">${v.nombre}</div>
+          <div style="font-size: 8px; color: #6b7280; font-family: monospace;">${v.correo}</div>
+        </td>
+        <td>${v.telefono}</td>
+        <td>${formatDisplayDate(v.fechaRegistro)}</td>
+        <td style="text-align: center; color: #9ca3af;">-</td>
+      </tr>
+    `).join('');
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Lista de Voluntarios - Club de Leones Quetzaltenango</title>
+        <style>
+          body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #1f2937;
+            margin: 30px;
+            font-size: 10px;
+            line-height: 1.4;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #1e3a8a;
+            padding-bottom: 12px;
+          }
+          .header h1 {
+            font-size: 18px;
+            margin: 0;
+            color: #1e3a8a;
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+          }
+          .header h2 {
+            font-size: 12px;
+            margin: 5px 0 0 0;
+            color: #4b5563;
+            font-weight: 600;
+            text-transform: uppercase;
+          }
+          .meta-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 9px;
+            color: #4b5563;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 8px;
+            font-weight: 500;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+          }
+          th {
+            background-color: #f3f4f6;
+            border: 1px solid #d1d5db;
+            padding: 6px 8px;
+            text-align: left;
+            font-weight: 700;
+            color: #374151;
+            text-transform: uppercase;
+            font-size: 8px;
+            letter-spacing: 0.5px;
+          }
+          td {
+            border: 1px solid #e5e7eb;
+            padding: 5px 8px;
+            font-size: 9.5px;
+            vertical-align: middle;
+          }
+          tr:nth-child(even) {
+            background-color: #f9fafb;
+          }
+          .footer-sig {
+            margin-top: 60px;
+            display: flex;
+            justify-content: space-around;
+            page-break-inside: avoid;
+          }
+          .sig-box {
+            text-align: center;
+            width: 200px;
+          }
+          .sig-line {
+            border-top: 1px solid #9ca3af;
+            margin-top: 45px;
+            padding-top: 5px;
+            font-size: 8.5px;
+            color: #4b5563;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          @media print {
+            body {
+              margin: 15px;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Club de Leones Quetzaltenango</h1>
+          <h2>Lista Oficial de Voluntarios</h2>
+        </div>
+        <div class="meta-info">
+          <div><strong>Actividad:</strong> ${actName}</div>
+          <div><strong>Filtro:</strong> ${estadoText}</div>
+          <div><strong>Fecha:</strong> ${todayStr}</div>
+          <div><strong>Total:</strong> ${sorted.length} voluntarios</div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 5%; text-align: center;">#</th>
+              <th style="width: 45%;">Nombre Completo / Correo</th>
+              <th style="width: 20%;">Teléfono</th>
+              <th style="width: 20%;">Fecha de Inscripción</th>
+              <th style="width: 10%; text-align: center;">Invitados</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml || '<tr><td colspan="5" style="text-align: center; color: #9ca3af; padding: 15px;">No hay voluntarios registrados</td></tr>'}
+          </tbody>
+        </table>
+        <div class="footer-sig">
+          <div class="sig-box">
+            <div class="sig-line">Secretario del Club</div>
+          </div>
+          <div class="sig-box">
+            <div class="sig-line">Presidente del Club</div>
+          </div>
+        </div>
+        <script>
+          window.onload = function() {
+            window.print();
+            window.onafterprint = function() {
+              window.close();
+            };
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const handlePrintAsistentes = () => {
+    const sorted = [...filteredParticipaciones].sort((a, b) =>
+      a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })
+    );
+
+    const actName = participacionFilterActividad === 'Todas'
+      ? 'Todas las Actividades'
+      : (actividades.find(a => a.id === participacionFilterActividad)?.titulo || 'Actividad Desconocida');
+
+    const totalPersonas = sorted.length + sorted.reduce((sum, p) => sum + (p.cantidadInvitados || 0), 0);
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showAlert("No se pudo abrir la ventana de impresión. Por favor, permite las ventanas emergentes.", "error");
+      return;
+    }
+
+    const todayStr = new Date().toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const rowsHtml = sorted.map((p, idx) => {
+      const invitadosStr = p.llevaInvitados && p.cantidadInvitados > 0
+        ? `Sí (${p.cantidadInvitados})`
+        : 'No';
+      
+      const tipoSocio = p.esSocio 
+        ? 'Socio León' 
+        : p.esSocioLeo 
+          ? 'Socio Leo' 
+          : 'Externo';
+
+      return `
+        <tr>
+          <td style="text-align: center;">${idx + 1}</td>
+          <td>
+            <div style="font-weight: bold; color: #111827;">${p.nombre}</div>
+            <div style="font-size: 8px; color: #4b5563;">Tipo: ${tipoSocio}</div>
+          </td>
+          <td>${p.telefono}</td>
+          <td>${formatDisplayDate(p.fechaRegistro)}</td>
+          <td style="text-align: center; font-weight: ${p.llevaInvitados ? 'bold' : 'normal'}; color: ${p.llevaInvitados ? '#b45309' : '#4b5563'};">
+            ${invitadosStr}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Lista de Asistentes - Club de Leones Quetzaltenango</title>
+        <style>
+          body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #1f2937;
+            margin: 30px;
+            font-size: 10px;
+            line-height: 1.4;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #1e3a8a;
+            padding-bottom: 12px;
+          }
+          .header h1 {
+            font-size: 18px;
+            margin: 0;
+            color: #1e3a8a;
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+          }
+          .header h2 {
+            font-size: 12px;
+            margin: 5px 0 0 0;
+            color: #4b5563;
+            font-weight: 600;
+            text-transform: uppercase;
+          }
+          .meta-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 9px;
+            color: #4b5563;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 8px;
+            font-weight: 500;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+          }
+          th {
+            background-color: #f3f4f6;
+            border: 1px solid #d1d5db;
+            padding: 6px 8px;
+            text-align: left;
+            font-weight: 700;
+            color: #374151;
+            text-transform: uppercase;
+            font-size: 8px;
+            letter-spacing: 0.5px;
+          }
+          td {
+            border: 1px solid #e5e7eb;
+            padding: 5px 8px;
+            font-size: 9.5px;
+            vertical-align: middle;
+          }
+          tr:nth-child(even) {
+            background-color: #f9fafb;
+          }
+          .footer-sig {
+            margin-top: 60px;
+            display: flex;
+            justify-content: space-around;
+            page-break-inside: avoid;
+          }
+          .sig-box {
+            text-align: center;
+            width: 200px;
+          }
+          .sig-line {
+            border-top: 1px solid #9ca3af;
+            margin-top: 45px;
+            padding-top: 5px;
+            font-size: 8.5px;
+            color: #4b5563;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          @media print {
+            body {
+              margin: 15px;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Club de Leones Quetzaltenango</h1>
+          <h2>Lista Oficial de Asistentes Confirmados</h2>
+        </div>
+        <div class="meta-info">
+          <div><strong>Actividad:</strong> ${actName}</div>
+          <div><strong>Fecha:</strong> ${todayStr}</div>
+          <div><strong>Registros:</strong> ${sorted.length} personas (${totalPersonas} en total con invitados)</div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 5%; text-align: center;">#</th>
+              <th style="width: 45%;">Nombre Completo / Tipo</th>
+              <th style="width: 20%;">Teléfono</th>
+              <th style="width: 20%;">Fecha de Inscripción</th>
+              <th style="width: 10%; text-align: center;">Invitados</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml || '<tr><td colspan="5" style="text-align: center; color: #9ca3af; padding: 15px;">No hay asistentes confirmados</td></tr>'}
+          </tbody>
+        </table>
+        <div class="footer-sig">
+          <div class="sig-box">
+            <div class="sig-line">Secretario del Club</div>
+          </div>
+          <div class="sig-box">
+            <div class="sig-line">Presidente del Club</div>
+          </div>
+        </div>
+        <script>
+          window.onload = function() {
+            window.print();
+            window.onafterprint = function() {
+              window.close();
+            };
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   return (
@@ -1132,6 +1511,16 @@ export const AdminCalendario: React.FC = () => {
                 <option value="Aprobado">Aprobados</option>
                 <option value="Rechazado">Rechazados</option>
               </select>
+
+              <button
+                type="button"
+                onClick={handlePrintVoluntarios}
+                className="flex items-center justify-center gap-2 bg-blue-900 hover:bg-blue-800 text-white font-bold text-sm px-4 py-2.5 rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer w-full sm:w-auto"
+                title="Imprimir Lista de Voluntarios"
+              >
+                <Printer size={16} />
+                <span>Imprimir</span>
+              </button>
             </div>
           </div>
 
@@ -1351,6 +1740,16 @@ export const AdminCalendario: React.FC = () => {
                   <option value="nombreDesc">Nombre (Z - A)</option>
                 </select>
               </div>
+
+              <button
+                type="button"
+                onClick={handlePrintAsistentes}
+                className="flex items-center justify-center gap-2 bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer w-full md:w-auto"
+                title="Imprimir Lista de Asistentes"
+              >
+                <Printer size={15} />
+                <span>Imprimir</span>
+              </button>
             </div>
           </div>
 
