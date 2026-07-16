@@ -629,12 +629,18 @@ const Home: React.FC = () => {
               </div>
               
               {/* Details footer */}
-              <div className="mt-4 text-center text-white max-w-3xl px-4 shrink-0">
-                <h3 className="text-xl md:text-2xl font-black tracking-tight text-yellow-400 drop-shadow-md">{activeFondo.titulo}</h3>
-                {activeFondo.descripcion && (
-                  <p className="text-xs md:text-sm mt-1.5 text-slate-200 font-medium leading-relaxed drop-shadow-sm line-clamp-2">{activeFondo.descripcion}</p>
-                )}
-              </div>
+              {activeFondo.titulo && 
+               !activeFondo.titulo.toLowerCase().includes('fondo') && 
+               !activeFondo.titulo.toLowerCase().includes('pantalla') && (
+                <div className="mt-4 text-center text-white max-w-3xl px-4 shrink-0">
+                  <h3 className="text-xl md:text-2xl font-black tracking-tight text-yellow-400 drop-shadow-md">{activeFondo.titulo}</h3>
+                  {activeFondo.descripcion && 
+                   !activeFondo.descripcion.toLowerCase().includes('fondo') && 
+                   !activeFondo.descripcion.toLowerCase().includes('pantalla') && (
+                    <p className="text-xs md:text-sm mt-1.5 text-slate-200 font-medium leading-relaxed drop-shadow-sm line-clamp-2">{activeFondo.descripcion}</p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
