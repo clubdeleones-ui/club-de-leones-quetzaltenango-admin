@@ -606,12 +606,12 @@ const Home: React.FC = () => {
 
       {/* Wallpaper/Seasonal Message Modal */}
       {showFondoModal && activeFondo && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="relative max-w-5xl w-full bg-transparent rounded-3xl overflow-hidden flex flex-col justify-center items-center max-h-[90vh]">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="relative max-w-7xl w-full bg-transparent rounded-3xl overflow-hidden flex flex-col justify-center items-center max-h-[98vh] p-2">
             {/* Close Button */}
             <button
               onClick={() => setShowFondoModal(false)}
-              className="absolute top-4 right-4 z-50 bg-white/95 text-slate-800 p-3 rounded-full hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-black/20"
+              className="absolute top-4 right-4 z-50 bg-white/95 text-slate-800 p-3 rounded-full hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-black/25"
               title="Cerrar Anuncio"
             >
               <X size={20} />
@@ -619,19 +619,19 @@ const Home: React.FC = () => {
 
             {/* Content Container */}
             <div className="w-full flex flex-col items-center">
-              <div className="relative w-full max-h-[75vh] flex justify-center items-center">
+              <div className="relative w-full max-h-[82vh] flex justify-center items-center">
                 <img 
                   src={activeFondo.url} 
                   alt={activeFondo.titulo} 
-                  className="max-w-full max-h-[70vh] object-contain rounded-2xl shadow-2xl border-4 border-white/10"
+                  className="max-w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl border-4 border-white/10"
                 />
               </div>
               
               {/* Details footer */}
-              <div className="mt-6 text-center text-white max-w-2xl px-4">
-                <h3 className="text-2xl font-black tracking-tight text-yellow-400 drop-shadow-md">{activeFondo.titulo}</h3>
+              <div className="mt-4 text-center text-white max-w-3xl px-4 shrink-0">
+                <h3 className="text-xl md:text-2xl font-black tracking-tight text-yellow-400 drop-shadow-md">{activeFondo.titulo}</h3>
                 {activeFondo.descripcion && (
-                  <p className="text-sm mt-2 text-slate-200 font-medium leading-relaxed drop-shadow-sm">{activeFondo.descripcion}</p>
+                  <p className="text-xs md:text-sm mt-1.5 text-slate-200 font-medium leading-relaxed drop-shadow-sm line-clamp-2">{activeFondo.descripcion}</p>
                 )}
               </div>
             </div>

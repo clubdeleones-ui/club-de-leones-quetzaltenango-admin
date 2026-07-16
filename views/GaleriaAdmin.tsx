@@ -187,10 +187,10 @@ export const GaleriaAdmin: React.FC = () => {
         }
       }
       
-      alert(newVal ? "Imagen establecida como fondo de pantalla (Pop-up de temporada) exitosamente." : "Se ha desactivado la imagen como fondo de pantalla.");
+      alert(newVal ? "Imagen establecida como anuncio destacado (Pop-up de temporada) exitosamente." : "Se ha desactivado la imagen como anuncio destacado.");
     } catch (error) {
       console.error("Error toggling wallpaper flag:", error);
-      alert("Hubo un error al establecer la imagen como fondo de pantalla.");
+      alert("Hubo un error al establecer la imagen como anuncio.");
       fetchItems();
     }
   };
@@ -275,7 +275,7 @@ export const GaleriaAdmin: React.FC = () => {
                       )}
                       {item.esFondoPantalla && (
                         <div className="text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg inline-block border border-emerald-150">
-                          🌟 Fondo Activo (Pop-up)
+                          🌟 Anuncio Activo (Pop-up)
                         </div>
                       )}
                     </div>
@@ -291,7 +291,7 @@ export const GaleriaAdmin: React.FC = () => {
                       }`}
                     >
                       <ImageIcon size={14} />
-                      <span>{item.esFondoPantalla ? 'Desactivar Fondo' : 'Establecer como Fondo (Pop-up)'}</span>
+                      <span>{item.esFondoPantalla ? 'Desactivar Anuncio' : 'Establecer como Anuncio (Pop-up)'}</span>
                     </button>
                   </div>
                 </div>
@@ -416,7 +416,7 @@ export const GaleriaAdmin: React.FC = () => {
                       className="w-5 h-5 rounded text-blue-900 border-slate-300 focus:ring-blue-900 mt-0.5 shrink-0"
                     />
                     <div>
-                      <label htmlFor="edit-esFondoPantalla" className="text-sm font-bold text-slate-700 select-none cursor-pointer block">Establecer como Fondo de Pantalla (Pop-up)</label>
+                      <label htmlFor="edit-esFondoPantalla" className="text-sm font-bold text-slate-700 select-none cursor-pointer block">Establecer como Anuncio Destacado (Pop-up)</label>
                       <p className="text-xs text-slate-500 font-medium mt-0.5">Esta imagen se abrirá automáticamente en pantalla completa (Pop-up) para los visitantes al entrar al sitio web (útil para mensajes navideños, aniversarios o anuncios importantes).</p>
                     </div>
                   </div>
