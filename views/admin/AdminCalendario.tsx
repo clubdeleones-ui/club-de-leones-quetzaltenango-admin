@@ -725,6 +725,203 @@ export const AdminCalendario: React.FC = () => {
     printWindow.document.close();
   };
 
+  const handlePrintAsistentesPorActividad = (actId: string, actTitulo: string) => {
+    const list = participaciones.filter(p => p.actividadId === actId);
+    if (list.length === 0) {
+      showAlert("No hay asistentes confirmados para esta actividad.", "info");
+      return;
+    }
+
+    const sorted = [...list].sort((a, b) =>
+      a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })
+    );
+
+    const totalPersonas = sorted.length + sorted.reduce((sum, p) => sum + (p.cantidadInvitados || 0), 0);
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showAlert("No se pudo abrir la ventana de impresión. Por favor, permite las ventanas emergentes.", "error");
+      return;
+    }
+
+    const todayStr = new Date().toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const rowsHtml = sorted.map((p, idx) => {
+      const invitadosStr = p.llevaInvitados && p.cantidadInvitados > 0
+        ? `Sí (${p.cantidadInvitados})`
+        : 'No';
+      
+      const tipoSocio = p.esSocio 
+        ? 'Socio León' 
+        : p.esSocioLeo 
+          ? 'Socio Leo' 
+          : 'Externo';
+
+      return `
+        <tr>
+          <td style="text-align: center;">${idx + 1}</td>
+          <td>
+            <div style="font-weight: bold; color: #111827;">${p.nombre}</div>
+            <div style="font-size: 8px; color: #4b5563;">Tipo: ${tipoSocio}</div>
+          </td>
+          <td>${p.telefono}</td>
+          <td>${formatDisplayDate(p.fechaRegistro)}</td>
+          <td style="text-align: center; font-weight: ${p.llevaInvitados ? 'bold' : 'normal'}; color: ${p.llevaInvitados ? '#b45309' : '#4b5563'};">
+            ${invitadosStr}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Lista de Asistentes - ${actTitulo}</title>
+        <style>
+          body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #1f2937;
+            margin: 30px;
+            font-size: 10px;
+            line-height: 1.4;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #1e3a8a;
+            padding-bottom: 12px;
+          }
+          .header h1 {
+            font-size: 18px;
+            margin: 0;
+            color: #1e3a8a;
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+          }
+          .header h2 {
+            font-size: 12px;
+            margin: 5px 0 0 0;
+            color: #4b5563;
+            font-weight: 600;
+            text-transform: uppercase;
+          }
+          .meta-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 9px;
+            color: #4b5563;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 8px;
+            font-weight: 500;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+          }
+          th {
+            background-color: #f3f4f6;
+            border: 1px solid #d1d5db;
+            padding: 6px 8px;
+            text-align: left;
+            font-weight: 700;
+            color: #374151;
+            text-transform: uppercase;
+            font-size: 8px;
+            letter-spacing: 0.5px;
+          }
+          td {
+            border: 1px solid #e5e7eb;
+            padding: 5px 8px;
+            font-size: 9.5px;
+            vertical-align: middle;
+          }
+          tr:nth-child(even) {
+            background-color: #f9fafb;
+          }
+          .footer-sig {
+            margin-top: 60px;
+            display: flex;
+            justify-content: space-around;
+            page-break-inside: avoid;
+          }
+          .sig-box {
+            text-align: center;
+            width: 200px;
+          }
+          .sig-line {
+            border-top: 1px solid #9ca3af;
+            margin-top: 45px;
+            padding-top: 5px;
+            font-size: 8.5px;
+            color: #4b5563;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          @media print {
+            body {
+              margin: 15px;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Club de Leones Quetzaltenango</h1>
+          <h2>Lista Oficial de Asistentes Confirmados</h2>
+        </div>
+        <div class="meta-info">
+          <div><strong>Actividad:</strong> ${actTitulo}</div>
+          <div><strong>Fecha:</strong> ${todayStr}</div>
+          <div><strong>Registros:</strong> ${sorted.length} personas (${totalPersonas} en total con invitados)</div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 5%; text-align: center;">#</th>
+              <th style="width: 45%;">Nombre Completo / Tipo</th>
+              <th style="width: 20%;">Teléfono</th>
+              <th style="width: 20%;">Fecha de Inscripción</th>
+              <th style="width: 10%; text-align: center;">Invitados</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+        <div class="footer-sig">
+          <div class="sig-box">
+            <div class="sig-line">Secretario del Club</div>
+          </div>
+          <div class="sig-box">
+            <div class="sig-line">Presidente del Club</div>
+          </div>
+        </div>
+        <script>
+          window.onload = function() {
+            window.print();
+            window.onafterprint = function() {
+              window.close();
+            };
+          };
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-left">
@@ -1341,6 +1538,19 @@ export const AdminCalendario: React.FC = () => {
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         alt={act.titulo}
                       />
+                      <div className="absolute top-4 right-4 flex gap-2 z-10">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePrintAsistentesPorActividad(act.id, act.titulo);
+                          }}
+                          className="bg-white/90 hover:bg-white text-slate-700 hover:text-blue-900 p-2 rounded-xl shadow-md backdrop-blur-md transition-all active:scale-95 cursor-pointer flex items-center justify-center border border-slate-100"
+                          title="Imprimir Asistentes"
+                        >
+                          <Printer size={15} />
+                        </button>
+                      </div>
                       <div className="absolute top-4 left-4 flex flex-col gap-2">
                         <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase shadow-sm backdrop-blur-md ${
                           act.publica ? 'bg-green-500/90 text-white' : 'bg-slate-800/90 text-white'
@@ -1721,7 +1931,7 @@ export const AdminCalendario: React.FC = () => {
                   className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:bg-white text-xs font-bold text-slate-700 outline-none w-full md:w-auto"
                 >
                   <option value="Todas">Todas las actividades</option>
-                  {actividades.filter(a => a.conBotonAsistencia).map(act => (
+                  {actividades.map(act => (
                     <option key={act.id} value={act.id}>{act.titulo}</option>
                   ))}
                 </select>
