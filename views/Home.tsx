@@ -123,6 +123,8 @@ const CAUSAS_GLOBALES = [
   }
 ];
 
+let popupHasBeenShown = false;
+
 const Home: React.FC = () => {
   const navigate = useNavigate();
   const { actividades: dbActividades, loading: dbLoading } = useClubData();
@@ -140,10 +142,9 @@ const Home: React.FC = () => {
         const fondo = items.find(item => item.esFondoPantalla);
         if (fondo) {
           setActiveFondo(fondo);
-          const hasSeen = sessionStorage.getItem('seenFondoPantalla');
-          if (!hasSeen) {
+          if (!popupHasBeenShown) {
             setShowFondoModal(true);
-            sessionStorage.setItem('seenFondoPantalla', 'true');
+            popupHasBeenShown = true;
           }
         }
       } catch (err) {
