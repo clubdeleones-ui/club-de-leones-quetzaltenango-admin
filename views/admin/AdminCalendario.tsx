@@ -409,7 +409,8 @@ export const AdminCalendario: React.FC = () => {
         </td>
         <td>${v.telefono}</td>
         <td>${formatDisplayDate(v.fechaRegistro)}</td>
-        <td style="text-align: center; color: #9ca3af;">-</td>
+        <td style="text-align: center;">0</td>
+        <td style="height: 25px;"></td>
       </tr>
     `).join('');
 
@@ -420,10 +421,14 @@ export const AdminCalendario: React.FC = () => {
         <meta charset="utf-8">
         <title>Lista de Voluntarios - Club de Leones Quetzaltenango</title>
         <style>
+          @page {
+            size: letter portrait;
+            margin: 12mm;
+          }
           body {
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             color: #1f2937;
-            margin: 30px;
+            margin: 0;
             font-size: 10px;
             line-height: 1.4;
           }
@@ -503,11 +508,6 @@ export const AdminCalendario: React.FC = () => {
             text-transform: uppercase;
             letter-spacing: 0.5px;
           }
-          @media print {
-            body {
-              margin: 15px;
-            }
-          }
         </style>
       </head>
       <body>
@@ -525,14 +525,15 @@ export const AdminCalendario: React.FC = () => {
           <thead>
             <tr>
               <th style="width: 5%; text-align: center;">#</th>
-              <th style="width: 45%;">Nombre Completo / Correo</th>
-              <th style="width: 20%;">Teléfono</th>
-              <th style="width: 20%;">Fecha de Inscripción</th>
+              <th style="width: 35%;">Nombre Completo / Correo</th>
+              <th style="width: 15%;">Teléfono</th>
+              <th style="width: 15%;">Fecha de Inscripción</th>
               <th style="width: 10%; text-align: center;">Invitados</th>
+              <th style="width: 20%; text-align: center;">Colaboración</th>
             </tr>
           </thead>
           <tbody>
-            ${rowsHtml || '<tr><td colspan="5" style="text-align: center; color: #9ca3af; padding: 15px;">No hay voluntarios registrados</td></tr>'}
+            ${rowsHtml || '<tr><td colspan="6" style="text-align: center; color: #9ca3af; padding: 15px;">No hay voluntarios registrados</td></tr>'}
           </tbody>
         </table>
         <div class="footer-sig">
@@ -583,9 +584,7 @@ export const AdminCalendario: React.FC = () => {
     });
 
     const rowsHtml = sorted.map((p, idx) => {
-      const invitadosStr = p.llevaInvitados && p.cantidadInvitados > 0
-        ? `Sí (${p.cantidadInvitados})`
-        : 'No';
+      const invitadosVal = p.llevaInvitados ? (p.cantidadInvitados || 0) : 0;
       
       const tipoSocio = p.esSocio 
         ? 'Socio León' 
@@ -602,9 +601,10 @@ export const AdminCalendario: React.FC = () => {
           </td>
           <td>${p.telefono}</td>
           <td>${formatDisplayDate(p.fechaRegistro)}</td>
-          <td style="text-align: center; font-weight: ${p.llevaInvitados ? 'bold' : 'normal'}; color: ${p.llevaInvitados ? '#b45309' : '#4b5563'};">
-            ${invitadosStr}
+          <td style="text-align: center; font-weight: ${invitadosVal > 0 ? 'bold' : 'normal'};">
+            ${invitadosVal}
           </td>
+          <td style="height: 25px;"></td>
         </tr>
       `;
     }).join('');
@@ -616,10 +616,14 @@ export const AdminCalendario: React.FC = () => {
         <meta charset="utf-8">
         <title>Lista de Asistentes - Club de Leones Quetzaltenango</title>
         <style>
+          @page {
+            size: letter portrait;
+            margin: 12mm;
+          }
           body {
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             color: #1f2937;
-            margin: 30px;
+            margin: 0;
             font-size: 10px;
             line-height: 1.4;
           }
@@ -699,11 +703,6 @@ export const AdminCalendario: React.FC = () => {
             text-transform: uppercase;
             letter-spacing: 0.5px;
           }
-          @media print {
-            body {
-              margin: 15px;
-            }
-          }
         </style>
       </head>
       <body>
@@ -720,14 +719,15 @@ export const AdminCalendario: React.FC = () => {
           <thead>
             <tr>
               <th style="width: 5%; text-align: center;">#</th>
-              <th style="width: 45%;">Nombre Completo / Tipo</th>
-              <th style="width: 20%;">Teléfono</th>
-              <th style="width: 20%;">Fecha de Inscripción</th>
+              <th style="width: 35%;">Nombre Completo / Tipo</th>
+              <th style="width: 15%;">Teléfono</th>
+              <th style="width: 15%;">Fecha de Inscripción</th>
               <th style="width: 10%; text-align: center;">Invitados</th>
+              <th style="width: 20%; text-align: center;">Colaboración</th>
             </tr>
           </thead>
           <tbody>
-            ${rowsHtml || '<tr><td colspan="5" style="text-align: center; color: #9ca3af; padding: 15px;">No hay asistentes confirmados</td></tr>'}
+            ${rowsHtml || '<tr><td colspan="6" style="text-align: center; color: #9ca3af; padding: 15px;">No hay asistentes confirmados</td></tr>'}
           </tbody>
         </table>
         <div class="footer-sig">
@@ -780,9 +780,7 @@ export const AdminCalendario: React.FC = () => {
     });
 
     const rowsHtml = sorted.map((p, idx) => {
-      const invitadosStr = p.llevaInvitados && p.cantidadInvitados > 0
-        ? `Sí (${p.cantidadInvitados})`
-        : 'No';
+      const invitadosVal = p.llevaInvitados ? (p.cantidadInvitados || 0) : 0;
       
       const tipoSocio = p.esSocio 
         ? 'Socio León' 
@@ -799,9 +797,10 @@ export const AdminCalendario: React.FC = () => {
           </td>
           <td>${p.telefono}</td>
           <td>${formatDisplayDate(p.fechaRegistro)}</td>
-          <td style="text-align: center; font-weight: ${p.llevaInvitados ? 'bold' : 'normal'}; color: ${p.llevaInvitados ? '#b45309' : '#4b5563'};">
-            ${invitadosStr}
+          <td style="text-align: center; font-weight: ${invitadosVal > 0 ? 'bold' : 'normal'};">
+            ${invitadosVal}
           </td>
+          <td style="height: 25px;"></td>
         </tr>
       `;
     }).join('');
@@ -813,10 +812,14 @@ export const AdminCalendario: React.FC = () => {
         <meta charset="utf-8">
         <title>Lista de Asistentes - ${actTitulo}</title>
         <style>
+          @page {
+            size: letter portrait;
+            margin: 12mm;
+          }
           body {
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             color: #1f2937;
-            margin: 30px;
+            margin: 0;
             font-size: 10px;
             line-height: 1.4;
           }
@@ -896,11 +899,6 @@ export const AdminCalendario: React.FC = () => {
             text-transform: uppercase;
             letter-spacing: 0.5px;
           }
-          @media print {
-            body {
-              margin: 15px;
-            }
-          }
         </style>
       </head>
       <body>
@@ -917,10 +915,11 @@ export const AdminCalendario: React.FC = () => {
           <thead>
             <tr>
               <th style="width: 5%; text-align: center;">#</th>
-              <th style="width: 45%;">Nombre Completo / Tipo</th>
-              <th style="width: 20%;">Teléfono</th>
-              <th style="width: 20%;">Fecha de Inscripción</th>
+              <th style="width: 35%;">Nombre Completo / Tipo</th>
+              <th style="width: 15%;">Teléfono</th>
+              <th style="width: 15%;">Fecha de Inscripción</th>
               <th style="width: 10%; text-align: center;">Invitados</th>
+              <th style="width: 20%; text-align: center;">Colaboración</th>
             </tr>
           </thead>
           <tbody>
