@@ -33,7 +33,8 @@ export const GaleriaAdmin: React.FC = () => {
     descripcion: '',
     categoria: 'Historia del Club',
     contextoPremium: '',
-    url: ''
+    url: '',
+    esFondoPantalla: false
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
@@ -62,7 +63,8 @@ export const GaleriaAdmin: React.FC = () => {
         descripcion: item.descripcion,
         categoria: item.categoria || 'Historia del Club',
         contextoPremium: item.contextoPremium || '',
-        url: item.url
+        url: item.url,
+        esFondoPantalla: !!item.esFondoPantalla
       });
       setImagePreview(item.url);
     } else {
@@ -73,7 +75,8 @@ export const GaleriaAdmin: React.FC = () => {
         descripcion: '',
         categoria: 'Historia del Club',
         contextoPremium: '',
-        url: ''
+        url: '',
+        esFondoPantalla: false
       });
       setImagePreview('');
     }
@@ -123,10 +126,19 @@ export const GaleriaAdmin: React.FC = () => {
         descripcion: formData.descripcion,
         categoria: formData.categoria,
         contextoPremium: formData.contextoPremium,
-        url: finalUrl
+        url: finalUrl,
+        esFondoPantalla: formData.esFondoPantalla
       };
 
       await firebaseService.saveGaleriaItem(galeriaItem);
+
+      if (formData.esFondoPantalla) {
+        const otherActive = items.find(item => item.id !== galeriaItem.id && item.esFondoPantalla);
+        if (otherActive) {
+          await firebaseService.saveGaleriaItem({ ...otherActive, esFondoPantalla: false });
+        }
+      }
+
       setIsModalOpen(false);
       fetchItems();
     } catch (error) {
@@ -146,6 +158,40 @@ export const GaleriaAdmin: React.FC = () => {
         console.error("Error deleting galeria item:", error);
         alert("Hubo un error al eliminar la foto.");
       }
+    }
+  };
+
+  const handleToggleFondoPantalla = async (itemId: string, currentVal: boolean) => {
+    try {
+      const newVal = !currentVal;
+      
+      const updatedItems = items.map(item => {
+        if (item.id === itemId) {
+          return { ...item, esFondoPantalla: newVal };
+        } else if (newVal) {
+          return { ...item, esFondoPantalla: false };
+        }
+        return item;
+      });
+      setItems(updatedItems);
+
+      const selectedItem = items.find(item => item.id === itemId);
+      if (selectedItem) {
+        await firebaseService.saveGaleriaItem({ ...selectedItem, esFondoPantalla: newVal });
+      }
+
+      if (newVal) {
+        const otherActive = items.find(item => item.id !== itemId && item.esFondoPantalla);
+        if (otherActive) {
+          await firebaseService.saveGaleriaItem({ ...otherActive, esFondoPantalla: false });
+        }
+      }
+      
+      alert(newVal ? "Imagen establecida como fondo de pantalla (Pop-up de temporada) exitosamente." : "Se ha desactivado la imagen como fondo de pantalla.");
+    } catch (error) {
+      console.error("Error toggling wallpaper flag:", error);
+      alert("Hubo un error al establecer la imagen como fondo de pantalla.");
+      fetchItems();
     }
   };
 
@@ -186,8 +232,8 @@ export const GaleriaAdmin: React.FC = () => {
             </div>
           ) : (
             items.map(item => (
-              <div key={item.id} className="bg-white rounded-3xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-lg transition-all group">
-                <div className="relative h-48 bg-slate-100 overflow-hidden">
+              <div key={item.id} className="bg-white rounded-3xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-lg transition-all group flex flex-col h-full">
+                <div className="relative h-48 bg-slate-100 overflow-hidden shrink-0">
                   <img 
                     src={item.url} 
                     alt={item.titulo} 
@@ -212,18 +258,42 @@ export const GaleriaAdmin: React.FC = () => {
                     </button>
                   </div>
                 </div>
-                <div className="p-5">
-                  <h3 className="font-extrabold text-lg text-slate-800 line-clamp-1">{item.titulo}</h3>
-                  <div className="flex items-center text-xs text-slate-500 mt-2 mb-3 font-medium">
-                    <Calendar size={14} className="mr-1.5" />
-                    {formatDisplayDate(item.fecha)}
-                  </div>
-                  <p className="text-slate-600 text-sm line-clamp-2">{item.descripcion}</p>
-                  {item.contextoPremium && (
-                    <div className="mt-3 text-[10px] font-black uppercase text-yellow-600 bg-yellow-50 px-2 py-1 rounded-lg inline-block">
-                      Contiene Ficha Premium
+                <div className="p-5 flex flex-col justify-between flex-1">
+                  <div>
+                    <h3 className="font-extrabold text-lg text-slate-800 line-clamp-1">{item.titulo}</h3>
+                    <div className="flex items-center text-xs text-slate-500 mt-2 mb-3 font-medium">
+                      <Calendar size={14} className="mr-1.5" />
+                      {formatDisplayDate(item.fecha)}
                     </div>
-                  )}
+                    <p className="text-slate-600 text-sm line-clamp-2">{item.descripcion}</p>
+                    
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {item.contextoPremium && (
+                        <div className="text-[10px] font-black uppercase text-yellow-600 bg-yellow-50 px-2.5 py-1 rounded-lg inline-block border border-yellow-150">
+                          Contiene Ficha Premium
+                        </div>
+                      )}
+                      {item.esFondoPantalla && (
+                        <div className="text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg inline-block border border-emerald-150">
+                          🌟 Fondo Activo (Pop-up)
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-5 pt-4 border-t border-slate-100">
+                    <button
+                      onClick={() => handleToggleFondoPantalla(item.id, !!item.esFondoPantalla)}
+                      className={`w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all border ${
+                        item.esFondoPantalla
+                          ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                          : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200'
+                      }`}
+                    >
+                      <ImageIcon size={14} />
+                      <span>{item.esFondoPantalla ? 'Desactivar Fondo' : 'Establecer como Fondo (Pop-up)'}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             ))
@@ -334,6 +404,22 @@ export const GaleriaAdmin: React.FC = () => {
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:bg-white transition-all font-medium resize-none custom-scrollbar"
                     placeholder="Escribe aquí el contexto histórico detallado, anécdotas, o nombres de las personas en la fotografía..."
                   />
+                </div>
+                
+                <div className="md:col-span-2 pt-2">
+                  <div className="flex items-start space-x-3 bg-slate-50/50 p-4 rounded-2xl border border-slate-150 text-left">
+                    <input 
+                      type="checkbox" 
+                      id="edit-esFondoPantalla" 
+                      checked={formData.esFondoPantalla} 
+                      onChange={e => setFormData({...formData, esFondoPantalla: e.target.checked})}
+                      className="w-5 h-5 rounded text-blue-900 border-slate-300 focus:ring-blue-900 mt-0.5 shrink-0"
+                    />
+                    <div>
+                      <label htmlFor="edit-esFondoPantalla" className="text-sm font-bold text-slate-700 select-none cursor-pointer block">Establecer como Fondo de Pantalla (Pop-up)</label>
+                      <p className="text-xs text-slate-500 font-medium mt-0.5">Esta imagen se abrirá automáticamente en pantalla completa (Pop-up) para los visitantes al entrar al sitio web (útil para mensajes navideños, aniversarios o anuncios importantes).</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 

@@ -122,6 +122,7 @@ export interface GaleriaItem {
   descripcion: string;
   categoria?: string;
   contextoPremium?: string;
+  esFondoPantalla?: boolean;
 }
 
 export interface HitoHistorico {

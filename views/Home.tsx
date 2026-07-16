@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
 import { useClubData } from '../context/ClubDataContext';
-import { Actividad } from '../types';
+import { Actividad, GaleriaItem } from '../types';
 import { MOCK_ACTIVIDADES } from '../constants';
 import { InscripcionVoluntarioModal } from '../components/InscripcionVoluntarioModal';
 import { formatDisplayDate } from '../utils/dateSpanishFormatter';
@@ -130,6 +130,28 @@ const Home: React.FC = () => {
   const [selectedActForVol, setSelectedActForVol] = useState<Actividad | null>(null);
   const [isVolModalOpen, setIsVolModalOpen] = useState(false);
   const [selectedCausaIndex, setSelectedCausaIndex] = useState<number>(0);
+  const [activeFondo, setActiveFondo] = useState<GaleriaItem | null>(null);
+  const [showFondoModal, setShowFondoModal] = useState(false);
+
+  useEffect(() => {
+    const checkFondoPantalla = async () => {
+      try {
+        const items = await firebaseService.getGaleriaItems();
+        const fondo = items.find(item => item.esFondoPantalla);
+        if (fondo) {
+          setActiveFondo(fondo);
+          const hasSeen = sessionStorage.getItem('seenFondoPantalla');
+          if (!hasSeen) {
+            setShowFondoModal(true);
+            sessionStorage.setItem('seenFondoPantalla', 'true');
+          }
+        }
+      } catch (err) {
+        console.error("Error loading gallery items for wallpaper check:", err);
+      }
+    };
+    checkFondoPantalla();
+  }, []);
 
   const actividades = React.useMemo(() => {
     const publicSorted = dbActividades
@@ -580,6 +602,41 @@ const Home: React.FC = () => {
           actividadId={selectedActForVol.id}
           actividadTitulo={selectedActForVol.titulo}
         />
+      )}
+
+      {/* Wallpaper/Seasonal Message Modal */}
+      {showFondoModal && activeFondo && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="relative max-w-5xl w-full bg-transparent rounded-3xl overflow-hidden flex flex-col justify-center items-center max-h-[90vh]">
+            {/* Close Button */}
+            <button
+              onClick={() => setShowFondoModal(false)}
+              className="absolute top-4 right-4 z-50 bg-white/95 text-slate-800 p-3 rounded-full hover:bg-slate-100 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-black/20"
+              title="Cerrar Anuncio"
+            >
+              <X size={20} />
+            </button>
+
+            {/* Content Container */}
+            <div className="w-full flex flex-col items-center">
+              <div className="relative w-full max-h-[75vh] flex justify-center items-center">
+                <img 
+                  src={activeFondo.url} 
+                  alt={activeFondo.titulo} 
+                  className="max-w-full max-h-[70vh] object-contain rounded-2xl shadow-2xl border-4 border-white/10"
+                />
+              </div>
+              
+              {/* Details footer */}
+              <div className="mt-6 text-center text-white max-w-2xl px-4">
+                <h3 className="text-2xl font-black tracking-tight text-yellow-400 drop-shadow-md">{activeFondo.titulo}</h3>
+                {activeFondo.descripcion && (
+                  <p className="text-sm mt-2 text-slate-200 font-medium leading-relaxed drop-shadow-sm">{activeFondo.descripcion}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
