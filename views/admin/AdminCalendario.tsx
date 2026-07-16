@@ -51,6 +51,9 @@ export const AdminCalendario: React.FC = () => {
   const [showAddActividad, setShowAddActividad] = useState(false);
   const [showEditActividad, setShowEditActividad] = useState(false);
   const [editingActividad, setEditingActividad] = useState<Actividad | null>(null);
+  const [showEditParticipacion, setShowEditParticipacion] = useState(false);
+  const [editingParticipacion, setEditingParticipacion] = useState<RegistroParticipacion | null>(null);
+  const [isSavingParticipacion, setIsSavingParticipacion] = useState(false);
   const [newActividad, setNewActividad] = useState({ 
     titulo: '', 
     descripcion: '', 
@@ -226,6 +229,30 @@ export const AdminCalendario: React.FC = () => {
     } catch (error) {
       console.error("Error deleting RSVP:", error);
       showAlert("No se pudo eliminar la confirmación", "error");
+    }
+  };
+
+  const handleSaveEditedParticipacion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingParticipacion || !editingParticipacion.nombre || !editingParticipacion.telefono) return;
+    setIsSavingParticipacion(true);
+    try {
+      const selectedAct = actividades.find(a => a.id === editingParticipacion.actividadId);
+      const updated: RegistroParticipacion = {
+        ...editingParticipacion,
+        actividadTitulo: selectedAct ? selectedAct.titulo : editingParticipacion.actividadTitulo
+      };
+
+      await firebaseService.saveRegistroParticipacion(updated);
+      setParticipaciones(participaciones.map(p => p.id === updated.id ? updated : p));
+      showAlert("Participación actualizada exitosamente", "success");
+      setShowEditParticipacion(false);
+      setEditingParticipacion(null);
+    } catch (err: any) {
+      console.error("Error saving updated participation in Firestore:", err);
+      showAlert(err.message || "Error al actualizar la participación", "error");
+    } finally {
+      setIsSavingParticipacion(false);
     }
   };
 
@@ -1446,6 +1473,149 @@ export const AdminCalendario: React.FC = () => {
         </div>
       )}
 
+      {/* Edit Attendee Form Modal */}
+      {showEditParticipacion && editingParticipacion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md overflow-y-auto animate-in fade-in duration-300">
+          <form onSubmit={handleSaveEditedParticipacion} className="bg-white rounded-[2.5rem] p-6 sm:p-10 max-w-lg w-full space-y-6 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-300 my-8 text-left">
+            <div className="flex justify-between items-center">
+              <div>
+                <h4 className="text-2xl font-black text-blue-900">Editar Asistente</h4>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Modificación de Datos de Participación</p>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => {
+                  setShowEditParticipacion(false);
+                  setEditingParticipacion(null);
+                }} 
+                className="p-2 text-slate-400 hover:text-slate-655 hover:bg-slate-50 rounded-xl transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nombre Completo</label>
+                <input 
+                  type="text" 
+                  required 
+                  value={editingParticipacion.nombre} 
+                  onChange={e => setEditingParticipacion({...editingParticipacion, nombre: e.target.value})}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Teléfono</label>
+                <input 
+                  type="text" 
+                  required 
+                  value={editingParticipacion.telefono} 
+                  onChange={e => setEditingParticipacion({...editingParticipacion, telefono: e.target.value})}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Actividad Relacionada</label>
+                <select
+                  value={editingParticipacion.actividadId}
+                  onChange={e => setEditingParticipacion({...editingParticipacion, actividadId: e.target.value})}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-800 bg-white"
+                >
+                  {actividades.map(act => (
+                    <option key={act.id} value={act.id}>{act.titulo}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tipo de Integrante</label>
+                <select
+                  value={editingParticipacion.esSocio ? 'socio' : editingParticipacion.esSocioLeo ? 'socio_leo' : 'externo'}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setEditingParticipacion({
+                      ...editingParticipacion,
+                      esSocio: val === 'socio',
+                      esSocioLeo: val === 'socio_leo'
+                    });
+                  }}
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-800 bg-white"
+                >
+                  <option value="socio">🦁 Socio León</option>
+                  <option value="socio_leo">🐾 Socio Leo</option>
+                  <option value="externo">👤 Externo / Invitado</option>
+                </select>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center space-x-3">
+                  <input 
+                    type="checkbox" 
+                    id="edit-part-llevaInvitados" 
+                    checked={editingParticipacion.llevaInvitados} 
+                    onChange={e => {
+                      const checked = e.target.checked;
+                      setEditingParticipacion({
+                        ...editingParticipacion,
+                        llevaInvitados: checked,
+                        cantidadInvitados: checked ? (editingParticipacion.cantidadInvitados || 1) : 0
+                      });
+                    }}
+                    className="w-5 h-5 rounded text-blue-900 border-slate-300 focus:ring-blue-900"
+                  />
+                  <label htmlFor="edit-part-llevaInvitados" className="text-sm font-bold text-slate-700 select-none cursor-pointer">¿Lleva Acompañantes / Invitados?</label>
+                </div>
+
+                {editingParticipacion.llevaInvitados && (
+                  <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Cantidad de Invitados</label>
+                    <input 
+                      type="number" 
+                      min="1"
+                      required
+                      value={editingParticipacion.cantidadInvitados} 
+                      onChange={e => setEditingParticipacion({...editingParticipacion, cantidadInvitados: parseInt(e.target.value) || 1})}
+                      className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-800"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex space-x-3 pt-4 border-t border-slate-100">
+              <button 
+                type="button" 
+                onClick={() => {
+                  setShowEditParticipacion(false);
+                  setEditingParticipacion(null);
+                }}
+                className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl transition-colors text-sm"
+                disabled={isSavingParticipacion}
+              >
+                Cancelar
+              </button>
+              <button 
+                type="submit" 
+                disabled={isSavingParticipacion}
+                className="w-1/2 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-black py-3.5 rounded-2xl transition-all shadow-md hover:shadow-lg text-sm flex items-center justify-center space-x-2"
+              >
+                {isSavingParticipacion ? (
+                  <>
+                    <Loader2 className="animate-spin" size={16} />
+                    <span>Guardando...</span>
+                  </>
+                ) : (
+                  <span>Guardar Cambios</span>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* Sub tabs for Calendario: Actividades vs Voluntarios vs Asistentes */}
       <div className="flex border-b border-slate-200 gap-6 mb-2">
         <button
@@ -2011,13 +2181,27 @@ export const AdminCalendario: React.FC = () => {
                           </div>
                         </div>
                         
-                        <button
-                          onClick={() => handleDeleteParticipacion(p.id)}
-                          className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-650 flex items-center justify-center transition-all shadow-sm active:scale-95 cursor-pointer shrink-0"
-                          title="Eliminar Registro"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        <div className="flex items-center space-x-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingParticipacion(p);
+                              setShowEditParticipacion(true);
+                            }}
+                            className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-900 flex items-center justify-center transition-all shadow-sm active:scale-95 cursor-pointer"
+                            title="Editar Registro"
+                          >
+                            <Edit size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteParticipacion(p.id)}
+                            className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-650 flex items-center justify-center transition-all shadow-sm active:scale-95 cursor-pointer"
+                            title="Eliminar Registro"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
                       </div>
 
                       {/* RSVP Info */}
