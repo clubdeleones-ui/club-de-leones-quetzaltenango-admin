@@ -1538,19 +1538,6 @@ export const AdminCalendario: React.FC = () => {
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         alt={act.titulo}
                       />
-                      <div className="absolute top-4 right-4 flex gap-2 z-10">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handlePrintAsistentesPorActividad(act.id, act.titulo);
-                          }}
-                          className="bg-white/90 hover:bg-white text-slate-700 hover:text-blue-900 p-2 rounded-xl shadow-md backdrop-blur-md transition-all active:scale-95 cursor-pointer flex items-center justify-center border border-slate-100"
-                          title="Imprimir Asistentes"
-                        >
-                          <Printer size={15} />
-                        </button>
-                      </div>
                       <div className="absolute top-4 left-4 flex flex-col gap-2">
                         <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase shadow-sm backdrop-blur-md ${
                           act.publica ? 'bg-green-500/90 text-white' : 'bg-slate-800/90 text-white'
@@ -1722,15 +1709,6 @@ export const AdminCalendario: React.FC = () => {
                 <option value="Rechazado">Rechazados</option>
               </select>
 
-              <button
-                type="button"
-                onClick={handlePrintVoluntarios}
-                className="flex items-center justify-center gap-2 bg-blue-900 hover:bg-blue-800 text-white font-bold text-sm px-4 py-2.5 rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer w-full sm:w-auto"
-                title="Imprimir Lista de Voluntarios"
-              >
-                <Printer size={16} />
-                <span>Imprimir</span>
-              </button>
             </div>
           </div>
 
@@ -1742,7 +1720,23 @@ export const AdminCalendario: React.FC = () => {
               <p className="text-slate-400 text-xs mt-1">Las personas que se apunten en la web pública aparecerán aquí.</p>
             </div>
           ) : (
-            <>
+            <div className="space-y-6">
+              {/* Header Bar with Print Button */}
+              <div className="flex flex-col sm:flex-row justify-between items-center bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm gap-4">
+                <div className="text-left font-sans">
+                  <p className="text-sm font-black text-slate-800 uppercase tracking-wider">Solicitudes de Voluntariado</p>
+                  <p className="text-xs text-slate-450 mt-0.5">La lista a continuación está filtrada y lista para imprimir.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handlePrintVoluntarios}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-sm px-6 py-3.5 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
+                >
+                  <Printer size={16} />
+                  <span>Imprimir Lista de Voluntarios (PDF)</span>
+                </button>
+              </div>
+
               {/* Desktop Table View */}
               <div className="hidden lg:block bg-white rounded-[2.5rem] border border-slate-200/80 shadow-sm overflow-hidden text-left">
                 <div className="overflow-x-auto">
@@ -1887,7 +1881,7 @@ export const AdminCalendario: React.FC = () => {
                   </div>
                 ))}
               </div>
-            </>
+            </div>
           )}
         </div>
       ) : (
@@ -1951,15 +1945,6 @@ export const AdminCalendario: React.FC = () => {
                 </select>
               </div>
 
-              <button
-                type="button"
-                onClick={handlePrintAsistentes}
-                className="flex items-center justify-center gap-2 bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer w-full md:w-auto"
-                title="Imprimir Lista de Asistentes"
-              >
-                <Printer size={15} />
-                <span>Imprimir</span>
-              </button>
             </div>
           </div>
 
@@ -1973,6 +1958,22 @@ export const AdminCalendario: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-6">
+              {/* Header Bar with Print Button */}
+              <div className="flex flex-col sm:flex-row justify-between items-center bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm gap-4">
+                <div className="text-left font-sans">
+                  <p className="text-sm font-black text-slate-800 uppercase tracking-wider">Registros de Asistencia</p>
+                  <p className="text-xs text-slate-450 mt-0.5">La lista a continuación está filtrada y lista para imprimir.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handlePrintAsistentes}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-sm px-6 py-3.5 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
+                >
+                  <Printer size={16} />
+                  <span>Imprimir Lista Oficial (PDF)</span>
+                </button>
+              </div>
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-left">
                 {paginatedParticipaciones.map(p => (
                   <div 
