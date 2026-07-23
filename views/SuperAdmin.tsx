@@ -167,7 +167,7 @@ const CATEGORIAS_MODULOS = [
     category: 'Comité de Patrimonio',
     items: [
       { id: 'inventario', label: 'Inventario', icon: Archive },
-      { id: 'galeria_admin', label: 'Gestión de Galería', icon: Camera },
+      { id: 'galeria_admin', label: 'Galería & Museo', icon: Crown },
       { id: 'linea_tiempo_admin', label: 'Línea de Tiempo', icon: Clock }
     ]
   },

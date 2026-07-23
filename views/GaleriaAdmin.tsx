@@ -7,6 +7,7 @@ import { useModal } from '../context/ModalContext';
 import { formatDisplayDate } from '../utils/dateSpanishFormatter';
 
 const CATEGORIAS_GALERIA = [
+  'Museo de Personajes',
   'Inauguraciones',
   'Cenas de Gala',
   'Jornadas Médicas',
@@ -26,15 +27,23 @@ export const GaleriaAdmin: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<GaleriaItem | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [filterCategory, setFilterCategory] = useState<'todos' | 'museo' | 'eventos'>('todos');
 
   const [formData, setFormData] = useState({
     titulo: '',
     fecha: '',
     descripcion: '',
-    categoria: 'Historia del Club',
+    categoria: 'Museo de Personajes',
     contextoPremium: '',
     url: '',
-    esFondoPantalla: false
+    esFondoPantalla: false,
+
+    // Campos del Museo de Personajes
+    tipoPersonaje: 'presidente' as 'presidente' | 'directiva' | 'relevante' | 'fundador',
+    periodoServicio: '',
+    puestoCargo: '',
+    logrosDestacadosText: '',
+    citaHonorifica: ''
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
@@ -61,10 +70,15 @@ export const GaleriaAdmin: React.FC = () => {
         titulo: item.titulo,
         fecha: item.fecha,
         descripcion: item.descripcion,
-        categoria: item.categoria || 'Historia del Club',
+        categoria: item.categoria || 'Museo de Personajes',
         contextoPremium: item.contextoPremium || '',
         url: item.url,
-        esFondoPantalla: !!item.esFondoPantalla
+        esFondoPantalla: !!item.esFondoPantalla,
+        tipoPersonaje: item.tipoPersonaje || 'presidente',
+        periodoServicio: item.periodoServicio || '',
+        puestoCargo: item.puestoCargo || '',
+        logrosDestacadosText: item.logrosDestacados ? item.logrosDestacados.join('\n') : '',
+        citaHonorifica: item.citaHonorifica || ''
       });
       setImagePreview(item.url);
     } else {
@@ -73,10 +87,15 @@ export const GaleriaAdmin: React.FC = () => {
         titulo: '',
         fecha: new Date().toISOString().split('T')[0],
         descripcion: '',
-        categoria: 'Historia del Club',
+        categoria: 'Museo de Personajes',
         contextoPremium: '',
         url: '',
-        esFondoPantalla: false
+        esFondoPantalla: false,
+        tipoPersonaje: 'presidente',
+        periodoServicio: '',
+        puestoCargo: '',
+        logrosDestacadosText: '',
+        citaHonorifica: ''
       });
       setImagePreview('');
     }
@@ -119,6 +138,12 @@ export const GaleriaAdmin: React.FC = () => {
         finalUrl = await firebaseService.uploadGaleriaImage(compressedBase64, 'gal');
       }
 
+      // Parse achievements line by line or by comma
+      const logros = formData.logrosDestacadosText
+        .split('\n')
+        .map(l => l.trim())
+        .filter(l => l.length > 0);
+
       const galeriaItem: GaleriaItem = {
         id: editingItem?.id || `gal_${Date.now()}`,
         titulo: formData.titulo,
@@ -127,7 +152,12 @@ export const GaleriaAdmin: React.FC = () => {
         categoria: formData.categoria,
         contextoPremium: formData.contextoPremium,
         url: finalUrl,
-        esFondoPantalla: formData.esFondoPantalla
+        esFondoPantalla: formData.esFondoPantalla,
+        tipoPersonaje: formData.categoria === 'Museo de Personajes' ? formData.tipoPersonaje : undefined,
+        periodoServicio: formData.categoria === 'Museo de Personajes' ? formData.periodoServicio : undefined,
+        puestoCargo: formData.categoria === 'Museo de Personajes' ? formData.puestoCargo : undefined,
+        logrosDestacados: formData.categoria === 'Museo de Personajes' ? logros : undefined,
+        citaHonorifica: formData.categoria === 'Museo de Personajes' ? formData.citaHonorifica : undefined
       };
 
       await firebaseService.saveGaleriaItem(galeriaItem);
@@ -195,34 +225,73 @@ export const GaleriaAdmin: React.FC = () => {
     }
   };
 
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      const isMuseo = item.categoria === 'Museo de Personajes' || !!item.tipoPersonaje;
+      if (filterCategory === 'museo' && !isMuseo) return false;
+      if (filterCategory === 'eventos' && isMuseo) return false;
+      return true;
+    });
+  }, [items, filterCategory]);
+
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500 text-left">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-[2rem] border border-slate-200/60 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="bg-blue-100/50 p-3 rounded-2xl">
-            <Camera className="text-blue-900 w-8 h-8" />
+          <div className="bg-amber-100/60 p-3 rounded-2xl border border-amber-300">
+            <Camera className="text-amber-900 w-8 h-8" />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-slate-800 tracking-tight">Gestión de Galería</h1>
-            <p className="text-slate-500 font-medium">Administra las fotos y el archivo histórico del club.</p>
+            <h1 className="text-2xl font-black text-slate-800 tracking-tight">Gestión de Galería & Museo</h1>
+            <p className="text-slate-500 font-medium">Administra el archivo fotográfico y las fichas del Museo de Personajes Ilustres.</p>
           </div>
         </div>
-        <button
-          onClick={() => openModal()}
-          className="flex items-center space-x-2 bg-blue-900 hover:bg-blue-800 text-white px-5 py-3 rounded-2xl font-bold transition-all hover:scale-105 active:scale-95 shadow-md"
-        >
-          <Plus size={20} />
-          <span>Nueva Foto</span>
-        </button>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="inline-flex p-1 bg-slate-100 rounded-2xl border border-slate-200">
+            <button
+              onClick={() => setFilterCategory('todos')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                filterCategory === 'todos' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600'
+              }`}
+            >
+              📋 Todos
+            </button>
+            <button
+              onClick={() => setFilterCategory('museo')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                filterCategory === 'museo' ? 'bg-amber-900 text-amber-300 shadow-xs' : 'text-slate-600'
+              }`}
+            >
+              🏛️ Museo
+            </button>
+            <button
+              onClick={() => setFilterCategory('eventos')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                filterCategory === 'eventos' ? 'bg-blue-900 text-white shadow-xs' : 'text-slate-600'
+              }`}
+            >
+              🖼️ Fotos Eventos
+            </button>
+          </div>
+
+          <button
+            onClick={() => openModal()}
+            className="flex items-center space-x-2 bg-amber-900 hover:bg-amber-800 text-white px-5 py-2.5 rounded-2xl font-bold transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer text-xs"
+          >
+            <Plus size={18} />
+            <span>Nueva Foto / Personaje</span>
+          </button>
+        </div>
       </header>
 
       {loading ? (
         <div className="flex justify-center items-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-900"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-900"></div>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
-          {items.length === 0 ? (
+          {filteredItems.length === 0 ? (
             <div className="col-span-full text-center py-12 bg-white rounded-3xl border border-dashed border-slate-300">
               <Camera size={48} className="mx-auto text-slate-300 mb-4" />
               <p className="text-slate-500 text-lg">Aún no hay fotos en la galería.</p>
@@ -231,7 +300,7 @@ export const GaleriaAdmin: React.FC = () => {
               </button>
             </div>
           ) : (
-            items.map(item => (
+            filteredItems.map(item => (
               <div key={item.id} className="bg-white rounded-3xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-lg transition-all group flex flex-col h-full">
                 <div className="relative h-48 bg-slate-100 overflow-hidden shrink-0">
                   <img 
@@ -372,7 +441,7 @@ export const GaleriaAdmin: React.FC = () => {
                   <select 
                     value={formData.categoria}
                     onChange={(e) => setFormData({...formData, categoria: e.target.value})}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-medium appearance-none"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-medium cursor-pointer"
                   >
                     {CATEGORIAS_GALERIA.map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
@@ -380,14 +449,82 @@ export const GaleriaAdmin: React.FC = () => {
                   </select>
                 </div>
 
+                {formData.categoria === 'Museo de Personajes' && (
+                  <div className="md:col-span-2 bg-amber-50/70 p-5 rounded-2xl border border-amber-200 space-y-4">
+                    <h4 className="text-xs font-black text-amber-900 uppercase tracking-widest flex items-center">
+                      🏛️ Ficha de Personaje Ilustre / Directiva
+                    </h4>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Tipo de Personaje / Elemento</label>
+                        <select
+                          value={formData.tipoPersonaje}
+                          onChange={(e) => setFormData({...formData, tipoPersonaje: e.target.value as any})}
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
+                        >
+                          <option value="presidente">👑 Presidente Histórico</option>
+                          <option value="directiva">👥 Junta Directiva</option>
+                          <option value="relevante">⭐ Personaje Relevante</option>
+                          <option value="fundador">🏛️ Socio Fundador</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Periodo de Servicio (Año / Rango)</label>
+                        <input
+                          type="text"
+                          value={formData.periodoServicio}
+                          onChange={(e) => setFormData({...formData, periodoServicio: e.target.value})}
+                          placeholder="Ej. 1952 - 1953"
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Puesto / Cargo Oficial</label>
+                        <input
+                          type="text"
+                          value={formData.puestoCargo}
+                          onChange={(e) => setFormData({...formData, puestoCargo: e.target.value})}
+                          placeholder="Ej. Presidente Fundador Honorario / Secretario de Directiva"
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Logros y Legado Destacados (un logro por línea)</label>
+                        <textarea
+                          rows={3}
+                          value={formData.logrosDestacadosText}
+                          onChange={(e) => setFormData({...formData, logrosDestacadosText: e.target.value})}
+                          placeholder="Escribe cada logro en una línea distinta..."
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 resize-none"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold text-slate-700 mb-1">Cita u Oración Honorífica</label>
+                        <input
+                          type="text"
+                          value={formData.citaHonorifica}
+                          onChange={(e) => setFormData({...formData, citaHonorifica: e.target.value})}
+                          placeholder='Ej. "El servicio a los desvalidos es nuestra razón de ser."'
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 italic"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="md:col-span-2 space-y-1">
-                  <label className="text-sm font-bold text-slate-700">Descripción Corta</label>
+                  <label className="text-sm font-bold text-slate-700">Descripción / Biografía *</label>
                   <textarea 
-                    rows={2}
+                    rows={3}
                     value={formData.descripcion}
                     onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-medium resize-none custom-scrollbar"
-                    placeholder="Breve descripción para mostrar debajo de la foto..."
+                    placeholder="Reseña biográfica o descripción corta..."
                   />
                 </div>
 

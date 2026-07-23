@@ -123,6 +123,13 @@ export interface GaleriaItem {
   categoria?: string;
   contextoPremium?: string;
   esFondoPantalla?: boolean;
+  
+  // Museo de Personajes Ilustres
+  tipoPersonaje?: 'presidente' | 'directiva' | 'relevante' | 'fundador';
+  periodoServicio?: string;
+  puestoCargo?: string;
+  logrosDestacados?: string[];
+  citaHonorifica?: string;
 }
 
 export interface HitoHistorico {

@@ -216,15 +216,103 @@ export const MOCK_GALERIA: GaleriaItem[] = [
     id: 'g1',
     titulo: 'Inauguración del Club 1945',
     fecha: '1945-10-25',
-    url: 'https://picsum.photos/seed/hist1/800/600',
-    descripcion: 'Miembros fundadores frente a la primera sede.'
+    url: 'https://images.unsplash.com/photo-1541872703-74c5e44368f9?q=80&w=800&auto=format&fit=crop',
+    descripcion: 'Miembros fundadores frente a la primera sede social del Club de Leones de Quetzaltenango.',
+    categoria: 'Historia del Club'
   },
   {
     id: 'g2',
     titulo: 'Cena de Gala 1970',
     fecha: '1970-12-15',
-    url: 'https://picsum.photos/seed/hist2/800/600',
-    descripcion: 'Celebración del 25 aniversario.'
+    url: 'https://images.unsplash.com/photo-1511578314322-379afb476865?q=80&w=800&auto=format&fit=crop',
+    descripcion: 'Celebración del 25 aniversario con delegaciones distritales invitadas.',
+    categoria: 'Cenas de Gala'
+  },
+  // Museo de Personajes Ilustres (Ejemplos)
+  {
+    id: 'mp-1',
+    titulo: 'Dr. Rodolfo Robles Valverde',
+    fecha: '1952-06-01',
+    url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop',
+    descripcion: 'Médico cirujano quetzalteco, descubridor de la Oncocercosis (Enfermedad de Robles). Presidente Honorario y Socio Fundador fundamental de la filantropía en el occidente del país.',
+    categoria: 'Museo de Personajes',
+    tipoPersonaje: 'presidente',
+    periodoServicio: '1952 - 1953',
+    puestoCargo: 'Presidente Fundador Honorario',
+    logrosDestacados: [
+      'Descubridor de la Oncocercosis en Guatemala (1915)',
+      'Fundador del servicio lionístico en Quetzaltenango',
+      'Impulsor de la primera clínica social de atención médica'
+    ],
+    citaHonorifica: '"El servicio a los desvalidos no es un deber social, es la mayor expresión de la dignidad humana."'
+  },
+  {
+    id: 'mp-2',
+    titulo: 'Ing. Fernando Pacheco Asturias',
+    fecha: '1978-07-01',
+    url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=800&auto=format&fit=crop',
+    descripcion: 'Ingeniero civil visionario. Durante su gestión presidencial se diseñó y construyó la Sede Social "La Cueva", consolidando la sede permanente del club.',
+    categoria: 'Museo de Personajes',
+    tipoPersonaje: 'presidente',
+    periodoServicio: '1978 - 1979',
+    puestoCargo: 'Presidente del Club (Gestión 1978-1979)',
+    logrosDestacados: [
+      'Diseño y construcción de la Sede Social "La Cueva" en Calle Rodolfo Robles',
+      'Organización de la Conferencia Distrital B-3',
+      'Expansión de la membresía con jóvenes profesionales'
+    ],
+    citaHonorifica: '"Edificar para servir: cada ladrillo de La Cueva se colocó pensando en la comunidad quetzalteca."'
+  },
+  {
+    id: 'mp-3',
+    titulo: 'Licda. Ana Sofía de León',
+    fecha: '2010-07-01',
+    url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=800&auto=format&fit=crop',
+    descripcion: 'Abogada y notaria. Primera mujer electa como Presidenta de la Directiva del Club de Leones de Quetzaltenango, modernizando los estatutos e impulsando la equidad.',
+    categoria: 'Museo de Personajes',
+    tipoPersonaje: 'presidente',
+    periodoServicio: '2010 - 2011',
+    puestoCargo: 'Primera Presidenta de Directiva',
+    logrosDestacados: [
+      'Primera mujer en asumir la Presidencia del Club',
+      'Creación del Programa Institucional de Sillas de Ruedas',
+      'Modernización del marco normativo y estatutos'
+    ],
+    citaHonorifica: '"El liderazgo lionístico no tiene género, solo el compromiso firme de servir con excelencia."'
+  },
+  {
+    id: 'mp-4',
+    titulo: 'Directiva Histórica "Bodas de Oro"',
+    fecha: '2002-10-15',
+    url: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=800&auto=format&fit=crop',
+    descripcion: 'Junta Directiva Conmemorativa que dirigió la celebración de los 50 años de servicio ininterrumpido del club en el departamento de Quetzaltenango.',
+    categoria: 'Museo de Personajes',
+    tipoPersonaje: 'directiva',
+    periodoServicio: '2002 - 2003',
+    puestoCargo: 'Junta Directiva Conmemorativa 50 Años',
+    logrosDestacados: [
+      'Organización de los actos de las Bodas de Oro (1952-2002)',
+      'Publicación del Libro Histórico del Lionismo Quetzalteco',
+      'Entrega de 500 becas escolares a niños de escasos recursos'
+    ],
+    citaHonorifica: '"Medio siglo de historia nos respalda; los próximos 50 años nos desafían a servir más y mejor."'
+  },
+  {
+    id: 'mp-5',
+    titulo: 'Don Mario René Morales',
+    fecha: '1985-07-01',
+    url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=800&auto=format&fit=crop',
+    descripcion: 'Empresario quetzalteco que ejerció la Tesorería del club durante más de dos décadas con impecable probidad, resguardando el patrimonio e infraestructura.',
+    categoria: 'Museo de Personajes',
+    tipoPersonaje: 'relevante',
+    periodoServicio: '1985 - 2005',
+    puestoCargo: 'Tesorero de Honor (20 Años de Servicio)',
+    logrosDestacados: [
+      'Gestión financiera ininterrumpida durante 20 periodos de directiva',
+      'Galardonado con la Medalla al Mérito Lionístico Distrital',
+      'Creador del Fondo de Reserva para Proyectos de Emergencia'
+    ],
+    citaHonorifica: '"La transparencia en los recursos del club es la garantía de nuestro compromiso con el pueblo."'
   }
 ];
 

@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, Calendar, Tag } from 'lucide-react';
+import { Camera, Calendar, Tag, Crown, ImageIcon } from 'lucide-react';
 import { GaleriaItem } from '../types';
 import { firebaseService } from '../services/firebaseService';
 import { MOCK_GALERIA } from '../constants';
 import { formatDisplayDate } from '../utils/dateSpanishFormatter';
+import { MuseoPersonajes } from './MuseoPersonajes';
 
 const Galeria: React.FC = () => {
   const [items, setItems] = useState<GaleriaItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'museo' | 'fotos'>('museo');
 
   useEffect(() => {
     const initializeGaleria = async () => {
@@ -26,8 +28,11 @@ const Galeria: React.FC = () => {
     initializeGaleria();
   }, []);
 
+  // Filter regular gallery items (exclude Museo de Personajes items from standard photo categories)
+  const itemsGaleriaNormal = items.filter(i => i.categoria !== 'Museo de Personajes' && !i.tipoPersonaje);
+
   // Group items by category
-  const itemsPorCategoria = items.reduce((acc, item) => {
+  const itemsPorCategoria = itemsGaleriaNormal.reduce((acc, item) => {
     const cat = item.categoria || 'Historia del Club';
     if (!acc[cat]) {
       acc[cat] = [];
@@ -39,24 +44,54 @@ const Galeria: React.FC = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center py-32">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-900"></div>
+        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-amber-800"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-16 animate-in fade-in duration-700 pb-16">
-      <header className="text-center max-w-3xl mx-auto">
-        <div className="bg-yellow-100/50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-          <Camera className="text-blue-900 w-10 h-10" />
+    <div className="space-y-12 animate-in fade-in duration-700 pb-16 text-left">
+      <header className="text-center max-w-3xl mx-auto space-y-4">
+        <div className="bg-amber-100/60 w-20 h-20 rounded-full flex items-center justify-center mx-auto shadow-inner border border-amber-300">
+          <Crown className="text-amber-900 w-10 h-10" />
         </div>
-        <h1 className="text-5xl font-extrabold text-blue-900 tracking-tight">Galería Interactiva</h1>
-        <p className="text-xl text-slate-500 mt-5 leading-relaxed italic">
-          Preservando el legado de servicio y hermandad del <span className="font-bold text-blue-900">Club de Leones Quetzaltenango</span> a través del tiempo.
+        <h1 className="text-4xl sm:text-5xl font-black text-blue-950 tracking-tight">Galería & Patrimonio</h1>
+        <p className="text-lg text-slate-500 font-medium leading-relaxed italic">
+          Preservando la memoria, historia y liderazgo del <span className="font-bold text-amber-900">Club de Leones Quetzaltenango</span> a través del tiempo.
         </p>
+
+        {/* Tab Switcher */}
+        <div className="inline-flex p-1.5 bg-slate-100 rounded-3xl border border-slate-200 shadow-inner mt-4">
+          <button
+            onClick={() => setActiveTab('museo')}
+            className={`px-6 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center space-x-2 cursor-pointer ${
+              activeTab === 'museo'
+                ? 'bg-gradient-to-r from-amber-900 to-slate-900 text-amber-300 shadow-md scale-102'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Crown size={16} className="text-amber-400" />
+            <span>🏛️ Museo de Personajes Ilustres</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('fotos')}
+            className={`px-6 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center space-x-2 cursor-pointer ${
+              activeTab === 'fotos'
+                ? 'bg-blue-900 text-white shadow-md scale-102'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <ImageIcon size={16} />
+            <span>🖼️ Galería Fotográfica</span>
+          </button>
+        </div>
       </header>
 
-      {Object.entries(itemsPorCategoria).length === 0 ? (
+      {/* Main Tab Content */}
+      {activeTab === 'museo' ? (
+        <MuseoPersonajes items={items} />
+      ) : (
+        Object.entries(itemsPorCategoria).length === 0 ? (
         <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-300">
           <Camera size={48} className="mx-auto text-slate-300 mb-4" />
           <p className="text-slate-500 text-lg">Aún no hay fotos en la galería.</p>
@@ -151,16 +186,19 @@ const Galeria: React.FC = () => {
             </section>
           ))}
         </div>
-      )}
+      ))}
+    )
 
-      <section className="bg-slate-50 rounded-3xl p-12 text-center border-2 border-dashed border-slate-300 shadow-sm mt-12">
-        <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100">
-          <Camera className="text-slate-400 w-8 h-8" />
-        </div>
-        <p className="text-slate-500 font-medium max-w-lg mx-auto">
-          ¿Tienes fotos antiguas del Club? Compártelas con el <strong className="text-blue-900">Comité de Patrimonio</strong> para incluirlas en nuestro archivo digital y preservar juntos nuestra historia.
-        </p>
-      </section>
+      {activeTab === 'fotos' && (
+        <section className="bg-slate-50 rounded-3xl p-12 text-center border-2 border-dashed border-slate-300 shadow-sm mt-12">
+          <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100">
+            <Camera className="text-slate-400 w-8 h-8" />
+          </div>
+          <p className="text-slate-500 font-medium max-w-lg mx-auto">
+            ¿Tienes fotos antiguas del Club? Compártelas con el <strong className="text-blue-900">Comité de Patrimonio</strong> para incluirlas en nuestro archivo digital y preservar juntos nuestra historia.
+          </p>
+        </section>
+      )}
     </div>
   );
 };
