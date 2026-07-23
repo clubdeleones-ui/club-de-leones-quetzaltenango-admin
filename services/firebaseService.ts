@@ -831,6 +831,20 @@ export const firebaseService = {
     }
   },
 
+  getAgendaById: async (id: string): Promise<ReunionAgenda | null> => {
+    try {
+      const docRef = doc(db, "agendas", id);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        return { id: snap.id, ...snap.data() } as ReunionAgenda;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching agenda by id:", error);
+      return null;
+    }
+  },
+
   saveAgenda: async (agenda: ReunionAgenda): Promise<void> => {
     try {
       const { id, ...data } = agenda;

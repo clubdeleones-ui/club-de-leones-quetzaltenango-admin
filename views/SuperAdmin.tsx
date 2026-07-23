@@ -1941,6 +1941,23 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     }));
   };
 
+  const handleLoadStandardAgendaTemplate = () => {
+    const puntosEstandar: AgendaPunto[] = [
+      { id: `p-std-1-${Date.now()}`, titulo: '1. Invocación Leonística y Saludo a la Bandera', descripcion: 'Lectura de la invocación oficial y respeto a los símbolos patrios y leoneses.', origenTipo: 'manual', agregadoAActas: true },
+      { id: `p-std-2-${Date.now()}`, titulo: '2. Lectura y Aprobación del Acta de la Sesión Anterior', descripcion: 'Revisión de observaciones y firma del acta previa por Secretaría.', origenTipo: 'manual', agregadoAActas: true },
+      { id: `p-std-3-${Date.now()}`, titulo: '3. Informe de la Presidencia', descripcion: 'Mensaje de la Presidencia sobre avances, correspondencia recibida y eventos distritales.', origenTipo: 'manual', agregadoAActas: true },
+      { id: `p-std-4-${Date.now()}`, titulo: '4. Informes de Tesorería y Comisiones de Trabajo', descripcion: 'Presentación del estado financiero y reportes de comisiones de servicio e inventario.', origenTipo: 'manual', agregadoAActas: true },
+      { id: `p-std-5-${Date.now()}`, titulo: '5. Asuntos Pendientes y Nuevos Proyectos de Servicio', descripcion: 'Debate de propuestas aprobadas y coordinación de próximas actividades del club.', origenTipo: 'manual', agregadoAActas: true },
+      { id: `p-std-6-${Date.now()}`, titulo: '6. Asuntos Varios y Palabras Libres de los Socios', descripcion: 'Espacio para sugerencias, felicitaciones y avisos generales.', origenTipo: 'manual', agregadoAActas: true },
+      { id: `p-std-7-${Date.now()}`, titulo: '7. Clausura de la Sesión', descripcion: 'Palabras finales y toque de campana por la Presidencia.', origenTipo: 'manual', agregadoAActas: true }
+    ];
+    setAgendaForm(prev => ({
+      ...prev,
+      puntos: [...prev.puntos, ...puntosEstandar]
+    }));
+    showToast("Plantilla con orden del día leonístico cargada exitosamente", "info");
+  };
+
   // Filter requests that can be imported to the agenda
   const availableRequestsToImport = useMemo(() => {
     return solicitudes.filter(sol => {
@@ -2199,14 +2216,25 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   <span className="bg-blue-100 text-blue-800 text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">1</span>
                   <span>Puntos del Orden del Día ({agendaForm.puntos.length})</span>
                 </h4>
-                <button
-                  type="button"
-                  onClick={handleAddManualPunto}
-                  className="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-900 text-[11px] font-black rounded-lg transition-all flex items-center space-x-1 cursor-pointer"
-                >
-                  <Plus size={12} />
-                  <span>Añadir Punto Manual</span>
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={handleLoadStandardAgendaTemplate}
+                    className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 text-[11px] font-black rounded-lg transition-all flex items-center space-x-1 cursor-pointer shadow-xs"
+                    title="Cargar los 7 puntos estándar del protocolo leonístico"
+                  >
+                    <FileText size={12} />
+                    <span>Plantilla Leonística</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddManualPunto}
+                    className="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-900 text-[11px] font-black rounded-lg transition-all flex items-center space-x-1 cursor-pointer"
+                  >
+                    <Plus size={12} />
+                    <span>Añadir Punto Manual</span>
+                  </button>
+                </div>
               </div>
 
               {agendaForm.puntos.length === 0 ? (
@@ -2568,6 +2596,18 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     <div className="flex items-center space-x-1.5">
                       <button
                         type="button"
+                        onClick={() => {
+                          const publicUrl = `${window.location.origin}/#/agenda-publica/${agenda.id}`;
+                          navigator.clipboard.writeText(publicUrl);
+                          showToast("Enlace de agenda digital copiado al portapapeles", "success");
+                        }}
+                        className="p-2 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 border border-slate-200/60 hover:border-emerald-200 rounded-xl transition-all cursor-pointer"
+                        title="Copiar Enlace Público para WhatsApp / Compartir"
+                      >
+                        <Share2 size={13} />
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => handleEditAgenda(agenda)}
                         className="p-2 text-slate-400 hover:text-blue-900 hover:bg-slate-50 border border-slate-200/60 rounded-xl transition-all cursor-pointer"
                         title="Editar Agenda"
@@ -2585,14 +2625,24 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     </div>
 
                     <div className="flex items-center space-x-1.5">
+                      <a
+                        href={`/#/agenda-publica/${agenda.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 rounded-xl text-[10px] font-black transition-all flex items-center space-x-1 cursor-pointer"
+                        title="Ver versión digital pública"
+                      >
+                        <Share2 size={11} />
+                        <span>Ver Digital</span>
+                      </a>
                       <button
                         type="button"
                         onClick={async () => await generateAgendaPDF(agenda, 'open')}
-                        className="px-3 py-1.5 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-[10px] font-black transition-all flex items-center space-x-1 hover:text-slate-800 cursor-pointer"
+                        className="px-2.5 py-1.5 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-[10px] font-black transition-all flex items-center space-x-1 hover:text-slate-800 cursor-pointer"
                         title="Ver PDF"
                       >
                         <Printer size={11} />
-                        <span>Ver</span>
+                        <span>Ver PDF</span>
                       </button>
                       <button
                         type="button"
@@ -2601,7 +2651,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                         title="Descargar PDF"
                       >
                         <Download size={11} />
-                        <span>Descargar</span>
+                        <span>PDF</span>
                       </button>
                     </div>
                   </div>
