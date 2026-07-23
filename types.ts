@@ -207,6 +207,9 @@ export interface Solicitud {
   fechaCreacion: string;
   resolucionRazon?: string;
   fechaResolucion?: string;
+  documentoUrl?: string; // URL de la imagen o PDF de la carta/solicitud adjunta
+  documentoNombre?: string; // Nombre original del archivo adjunto
+  archivada?: boolean; // Indicador de si la solicitud ha sido archivada
 
   // Campos específicos para solicitudes de Sillas de Ruedas
   nombreSolicitante?: string;

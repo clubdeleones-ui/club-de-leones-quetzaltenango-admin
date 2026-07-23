@@ -33,7 +33,9 @@ import {
   DollarSign,
   AlertTriangle,
   Layers,
-  Save
+  Save,
+  Upload,
+  Archive
 } from 'lucide-react';
 import { generateCartaOficialPDF, formatFechaCarta } from '../utils/pdfGenerator';
 import { formatDisplayDate } from '../utils/dateSpanishFormatter';
@@ -254,7 +256,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   };
 
   const { solicitudes: dbSolicitudes, socios, loading, rolesConfig } = useClubData();
-  const [activeTab, setActiveTab] = useState<'abiertas' | 'sillas' | 'internas' | 'agenda' | 'cartas' | 'salon' | null>(null);
+  const [activeTab, setActiveTab] = useState<'abiertas' | 'sillas' | 'internas' | 'agenda' | 'cartas' | 'salon' | 'archivo' | null>(null);
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>(dbSolicitudes);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -262,6 +264,10 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   const [trackingCode, setTrackingCode] = useState('');
   const [searchedSolicitud, setSearchedSolicitud] = useState<Solicitud | null>(null);
   const [trackingError, setTrackingError] = useState('');
+
+  // Document Attachment State (PDF or Image)
+  const [docDataUrl, setDocDataUrl] = useState('');
+  const [docFileName, setDocFileName] = useState('');
 
   useEffect(() => {
     setTrackingCode('');
@@ -281,16 +287,17 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   // Count calculations
   const counts = useMemo(() => {
     return {
-      abiertas: solicitudes.filter(s => s.tipo === 'abiertas').length,
-      abiertasPendientes: solicitudes.filter(s => s.tipo === 'abiertas' && s.estado === 'Pendiente').length,
-      internas: solicitudes.filter(s => s.tipo === 'internas').length,
-      internasPendientes: solicitudes.filter(s => s.tipo === 'internas' && s.estado === 'Pendiente').length,
-      sillas: solicitudes.filter(s => s.tipo === 'sillas').length,
-      sillasPendientes: solicitudes.filter(s => s.tipo === 'sillas' && s.estado === 'Pendiente').length,
-      agenda: solicitudes.filter(s => s.tipo === 'agenda').length,
-      agendaPendientes: solicitudes.filter(s => s.tipo === 'agenda' && s.estado === 'Pendiente').length,
-      salon: solicitudes.filter(s => s.tipo === 'salon').length,
-      salonPendientes: solicitudes.filter(s => s.tipo === 'salon' && s.estado === 'Pendiente').length,
+      abiertas: solicitudes.filter(s => s.tipo === 'abiertas' && !s.archivada).length,
+      abiertasPendientes: solicitudes.filter(s => s.tipo === 'abiertas' && s.estado === 'Pendiente' && !s.archivada).length,
+      internas: solicitudes.filter(s => s.tipo === 'internas' && !s.archivada).length,
+      internasPendientes: solicitudes.filter(s => s.tipo === 'internas' && s.estado === 'Pendiente' && !s.archivada).length,
+      sillas: solicitudes.filter(s => s.tipo === 'sillas' && !s.archivada).length,
+      sillasPendientes: solicitudes.filter(s => s.tipo === 'sillas' && s.estado === 'Pendiente' && !s.archivada).length,
+      agenda: solicitudes.filter(s => s.tipo === 'agenda' && !s.archivada).length,
+      agendaPendientes: solicitudes.filter(s => s.tipo === 'agenda' && s.estado === 'Pendiente' && !s.archivada).length,
+      salon: solicitudes.filter(s => s.tipo === 'salon' && !s.archivada).length,
+      salonPendientes: solicitudes.filter(s => s.tipo === 'salon' && s.estado === 'Pendiente' && !s.archivada).length,
+      archivadas: solicitudes.filter(s => s.archivada === true).length
     };
   }, [solicitudes]);
 
@@ -331,8 +338,51 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       setCreatedSolicitudId('');
       setSaveSuccess(false);
       setSaveError(null);
+      setDocDataUrl('');
+      setDocFileName('');
     }
   }, [isModalOpen]);
+
+  const handleDocFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("El archivo excede el tamaño máximo permitido de 10MB.");
+      return;
+    }
+
+    const isImage = file.type.startsWith('image/');
+    const isPdf = file.type === 'application/pdf';
+    if (!isImage && !isPdf) {
+      alert("Únicamente se permiten archivos de imagen (PNG, JPG) o PDF.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      setDocDataUrl(result);
+      setDocFileName(file.name);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleToggleArchive = async (id: string, newArchivedState: boolean) => {
+    try {
+      const sol = solicitudes.find(s => s.id === id);
+      if (!sol) return;
+      const updated: Solicitud = { ...sol, archivada: newArchivedState };
+      await firebaseService.saveSolicitud(updated);
+      const updatedList = solicitudes.map(s => s.id === id ? updated : s);
+      setSolicitudes(updatedList);
+      localStorage.setItem('club_leones_solicitudes', JSON.stringify(updatedList));
+      alert(newArchivedState ? "Solicitud movida al Archivo con éxito." : "Solicitud restaurada a la lista activa.");
+    } catch (err) {
+      console.error("Error toggling archive status:", err);
+      alert("Ocurrió un error al actualizar el estado de la solicitud.");
+    }
+  };
   const [nombre, setNombre] = useState('');
   const [fecha, setFecha] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -780,6 +830,15 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     setIsSaving(true);
 
     try {
+      if (docDataUrl) {
+        let uploadedDocUrl = docDataUrl;
+        if (docDataUrl.startsWith('data:')) {
+          uploadedDocUrl = await firebaseService.uploadSolicitudDocumento(docDataUrl, docFileName || 'carta.pdf');
+        }
+        nuevaSolicitud.documentoUrl = uploadedDocUrl;
+        nuevaSolicitud.documentoNombre = docFileName || 'Documento adjunto';
+      }
+
       await firebaseService.saveSolicitud(nuevaSolicitud);
       const updatedList = [nuevaSolicitud, ...solicitudes];
       setSolicitudes(updatedList);
@@ -787,6 +846,10 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
 
       setCreatedSolicitudId(nuevaSolicitud.id);
       setSaveSuccess(true);
+
+      // Reset document states
+      setDocDataUrl('');
+      setDocFileName('');
 
       // Reset form
       setNombre('');
@@ -974,6 +1037,20 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       showAction: true,
       actionText: 'Proponer Punto',
       colorTheme: 'indigo'
+    },
+    {
+      id: 'archivo',
+      title: 'Archivo de Solicitudes',
+      subtitle: 'Histórico General',
+      description: 'Consultatorio histórico de solicitudes archivadas, cartas de petición comunitarias y documentos adjuntos procesados.',
+      icon: <Archive size={20} />,
+      visible: true,
+      allowed: true,
+      audience: 'General',
+      pendingCount: 0,
+      registeredCount: counts.archivadas,
+      showAction: false,
+      colorTheme: 'blue'
     }
   ];
   const renderRestrictedAccess = () => {
@@ -1014,8 +1091,10 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     }
   };
 
-  const renderSolicitudesList = (tipo: 'abiertas' | 'sillas' | 'internas' | 'agenda' | 'salon') => {
-    const list = solicitudes.filter(s => s.tipo === tipo);
+  const renderSolicitudesList = (tipo: 'abiertas' | 'sillas' | 'internas' | 'agenda' | 'salon' | 'archivo') => {
+    const list = tipo === 'archivo'
+      ? solicitudes.filter(s => s.archivada === true)
+      : solicitudes.filter(s => s.tipo === tipo && !s.archivada);
     if (isLoading) {
       return (
         <div className="flex flex-col items-center justify-center py-20 space-y-4 w-full">
@@ -1135,6 +1214,21 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                             <X size={12} />
                           </button>
                         </>
+                      )}
+                      {isAdministrative && (
+                        <button
+                          type="button"
+                          onClick={() => handleToggleArchive(sol.id, !sol.archivada)}
+                          className={`p-1.5 rounded-lg border transition-all active:scale-95 flex items-center space-x-1 ${
+                            sol.archivada
+                              ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+                              : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                          }`}
+                          title={sol.archivada ? "Desarchivar Solicitud" : "Archivar Solicitud"}
+                        >
+                          <Archive size={12} />
+                          <span className="hidden sm:inline">{sol.archivada ? 'Desarchivar' : 'Archivar'}</span>
+                        </button>
                       )}
                       <button
                         onClick={() => handleDeleteSolicitud(sol.id)}
@@ -1403,6 +1497,22 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                   {sol.descripcion}
                 </p>
 
+                {/* Document Attached Link */}
+                {sol.documentoUrl && (
+                  <div className="pt-1">
+                    <a
+                      href={sol.documentoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-900 rounded-xl text-xs font-black transition-all cursor-pointer shadow-2xs"
+                      title={sol.documentoNombre || 'Ver carta o archivo adjunto'}
+                    >
+                      <FileText size={13} />
+                      <span>📄 Ver Carta / Adjunto ({sol.documentoNombre || 'PDF/Imagen'})</span>
+                    </a>
+                  </div>
+                )}
+
                 {/* Responsibles Section */}
                 <div className="space-y-2 pt-2 border-t border-slate-100">
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center">
@@ -1449,6 +1559,21 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                           <X size={12} />
                         </button>
                       </>
+                    )}
+                    {isAdministrative && (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleArchive(sol.id, !sol.archivada)}
+                        className={`p-1.5 rounded-lg border transition-all active:scale-95 flex items-center space-x-1 ${
+                          sol.archivada
+                            ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+                            : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                        }`}
+                        title={sol.archivada ? "Desarchivar Solicitud" : "Archivar Solicitud"}
+                      >
+                        <Archive size={12} />
+                        <span className="hidden sm:inline">{sol.archivada ? 'Desarchivar' : 'Archivar'}</span>
+                      </button>
                     )}
                     <button
                       onClick={() => handleDeleteSolicitud(sol.id)}
@@ -3000,6 +3125,48 @@ Club de Leones de Quetzaltenango`;
                     placeholder="Detalla los objetivos, recursos necesarios e impacto comunitario..."
                     className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold resize-none"
                   />
+                </div>
+
+                {/* Document / Letter Attachment Field */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                    Carta o Documento Adjunto (Imagen o PDF, Máx. 10MB) - Opcional
+                  </label>
+                  <div className="border-2 border-dashed border-slate-200 hover:border-blue-300 rounded-2xl p-4 text-center transition-all bg-slate-50/50">
+                    {docFileName ? (
+                      <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl p-3 shadow-xs">
+                        <div className="flex items-center space-x-2.5 min-w-0">
+                          <div className="p-2 bg-blue-50 text-blue-900 rounded-lg flex-shrink-0">
+                            <FileText size={18} />
+                          </div>
+                          <div className="min-w-0 text-left">
+                            <p className="text-xs font-bold text-slate-800 truncate">{docFileName}</p>
+                            <p className="text-[10px] text-slate-400 font-semibold">Documento listo para enviar</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { setDocDataUrl(''); setDocFileName(''); }}
+                          className="p-1 text-slate-400 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
+                          title="Quitar archivo"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="cursor-pointer flex flex-col items-center justify-center space-y-1.5 py-2">
+                        <Upload size={22} className="text-slate-400" />
+                        <span className="text-xs font-bold text-blue-900">Adjuntar Carta de Solicitud (PDF o Foto)</span>
+                        <span className="text-[10px] text-slate-400">Archivos PDF, PNG o JPG hasta 10MB</span>
+                        <input
+                          type="file"
+                          accept="image/*,application/pdf"
+                          onChange={handleDocFileChange}
+                          className="hidden"
+                        />
+                      </label>
+                    )}
+                  </div>
                 </div>
 
                 {/* Responsibles Dynamic Header */}

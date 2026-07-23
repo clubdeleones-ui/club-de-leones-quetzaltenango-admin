@@ -15,6 +15,14 @@ service firebase.storage {
       allow read: if true;
       allow write: if request.resource.size < 5 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
+    match /solicitudes_documentos/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.resource.size < 10 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*|application/pdf');
+    }
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if request.resource.size < 10 * 1024 * 1024;
     }
   }
 }

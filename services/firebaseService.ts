@@ -1207,6 +1207,22 @@ export const firebaseService = {
     }
   },
 
+  uploadSolicitudDocumento: async (dataUrl: string, fileName: string): Promise<string> => {
+    try {
+      if (!dataUrl.startsWith('data:')) {
+        return dataUrl;
+      }
+      const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const uniqueName = `doc_${Date.now()}_${safeName}`;
+      const storageRef = ref(storage, `solicitudes_documentos/${uniqueName}`);
+      await uploadString(storageRef, dataUrl, 'data_url');
+      return await getDownloadURL(storageRef);
+    } catch (error: any) {
+      console.error("Error al subir documento de solicitud a Storage:", error);
+      return dataUrl; // Fallback to data_url if storage upload fails
+    }
+  },
+
   // ================= REQUERIMIENTOS DE ACTIVIDADES =================
   getRequerimientosActividades: async (): Promise<RequerimientoActividad[]> => {
     try {

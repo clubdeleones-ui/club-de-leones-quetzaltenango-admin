@@ -424,6 +424,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   // States para "Control de Solicitudes"
   const [controlSolicitudesFilterType, setControlSolicitudesFilterType] = useState<'todos' | 'abiertas' | 'internas' | 'sillas' | 'salon'>('todos');
   const [controlSolicitudesFilterStatus, setControlSolicitudesFilterStatus] = useState<'todos' | 'Pendiente' | 'Aprobada' | 'Rechazada'>('todos');
+  const [controlSolicitudesArchiveFilter, setControlSolicitudesArchiveFilter] = useState<'activas' | 'archivadas' | 'todas'>('activas');
   const [controlSolicitudesSearchQuery, setControlSolicitudesSearchQuery] = useState('');
 
   // States para "Agenda Presidencia"
@@ -1627,9 +1628,30 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       await firebaseService.saveSolicitud(updated);
       const newList = solicitudes.map(s => s.id === solicitudId ? updated : s);
       setSolicitudes(newList);
+      alert("Fase de seguimiento actualizada.");
     } catch (err) {
       console.error("Error updating tracking phase:", err);
       alert("Error al actualizar la fase de seguimiento.");
+    }
+  };
+
+  const handleToggleArchiveSolicitud = async (solicitudId: string, newArchivedState: boolean) => {
+    const solicitud = solicitudes.find(s => s.id === solicitudId);
+    if (!solicitud) return;
+
+    const updated: Solicitud = {
+      ...solicitud,
+      archivada: newArchivedState
+    };
+
+    try {
+      await firebaseService.saveSolicitud(updated);
+      const newList = solicitudes.map(s => s.id === solicitudId ? updated : s);
+      setSolicitudes(newList);
+      alert(newArchivedState ? "La solicitud ha sido enviada al archivo." : "La solicitud ha sido restaurada a la lista activa.");
+    } catch (err) {
+      console.error("Error toggling archive status:", err);
+      alert("Error al cambiar el estado de archivo de la solicitud.");
     }
   };
 
@@ -3655,6 +3677,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       // Exclude 'agenda' and 'cartas' from the unified list
       if (sol.tipo === 'agenda') return false; 
       
+      if (controlSolicitudesArchiveFilter === 'activas' && sol.archivada) return false;
+      if (controlSolicitudesArchiveFilter === 'archivadas' && !sol.archivada) return false;
+
       const matchesType = controlSolicitudesFilterType === 'todos' || sol.tipo === controlSolicitudesFilterType;
       const matchesStatus = controlSolicitudesFilterStatus === 'todos' || sol.estado === controlSolicitudesFilterStatus;
       
@@ -3709,7 +3734,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           </div>
 
           {/* Filtros de Búsqueda */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2">
             <div>
               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
                 Buscar por Nombre / Detalle
@@ -3751,6 +3776,20 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 <option value="Pendiente">🟡 Pendientes</option>
                 <option value="Aprobada">🟢 Aprobadas</option>
                 <option value="Rechazada">🔴 Rechazadas</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Visualización / Archivo
+              </label>
+              <select
+                value={controlSolicitudesArchiveFilter}
+                onChange={(e) => setControlSolicitudesArchiveFilter(e.target.value as any)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-xs font-bold text-blue-900 bg-white cursor-pointer"
+              >
+                <option value="activas">📥 Activas</option>
+                <option value="archivadas">🗃️ Archivadas</option>
+                <option value="todas">📋 Todas</option>
               </select>
             </div>
           </div>
@@ -3935,6 +3974,21 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                           {sol.descripcion}
                         </p>
 
+                        {sol.documentoUrl && (
+                          <div className="pt-1">
+                            <a
+                              href={sol.documentoUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-900 rounded-xl text-xs font-black transition-all cursor-pointer shadow-2xs"
+                              title={sol.documentoNombre || 'Ver carta o archivo adjunto'}
+                            >
+                              <FileText size={13} />
+                              <span>📄 Ver Carta / Adjunto ({sol.documentoNombre || 'PDF/Imagen'})</span>
+                            </a>
+                          </div>
+                        )}
+
                         <div className="space-y-1 pt-1.5">
                           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Responsables:</span>
                           <div className="space-y-1">
@@ -4023,6 +4077,18 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                           </button>
                         </>
                       )}
+                      <button
+                        onClick={() => handleToggleArchiveSolicitud(sol.id, !sol.archivada)}
+                        className={`p-1.5 rounded-lg border transition-all active:scale-95 flex items-center space-x-1 ${
+                          sol.archivada
+                            ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+                            : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                        }`}
+                        title={sol.archivada ? "Desarchivar Solicitud" : "Archivar Solicitud"}
+                      >
+                        <Archive size={12} />
+                        <span className="hidden sm:inline">{sol.archivada ? 'Desarchivar' : 'Archivar'}</span>
+                      </button>
                       <button
                         onClick={() => handleDeleteSolicitud(sol.id)}
                         className="bg-slate-200 hover:bg-red-50 text-slate-500 hover:text-red-600 p-1.5 rounded-lg border border-slate-300/30 transition-all active:scale-95"
