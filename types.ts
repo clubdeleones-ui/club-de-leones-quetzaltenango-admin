@@ -331,6 +331,8 @@ export interface AgendaPunto {
   fechaLimite?: string;
   comisionNombre?: string;
   agregadoAActas?: boolean;
+  proponenteNombre?: string; // Nombre del socio o persona tercera que propone el punto (Opcional)
+  proponenteSocioId?: string; // ID del socio si fue seleccionado de la lista (Opcional)
 }
 
 export interface ReunionAgenda {

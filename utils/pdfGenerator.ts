@@ -1604,7 +1604,7 @@ export const generateAgendaPDF = async (agenda: ReunionAgenda, action: 'download
       y = 30; // reset Y for new page
     }
 
-    const titleText = `${idx + 1}. ${p.titulo}`;
+    const titleText = `${idx + 1}. ${p.titulo}${p.proponenteNombre ? ` (Propuesto por: ${p.proponenteNombre})` : ''}`;
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 23, 42);
     doc.text(titleText, margin, y);

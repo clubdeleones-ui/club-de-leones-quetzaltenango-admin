@@ -311,13 +311,21 @@ export const AgendaPublica: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Badges de comisión / urgencia si existen */}
-                      {punto.comisionNombre && (
+                      {/* Badges de proponente / comisión / urgencia si existen */}
+                      {(punto.proponenteNombre || punto.comisionNombre) && (
                         <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-2 text-[10px] font-bold">
-                          <span className="inline-flex items-center space-x-1 bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-md">
-                            <Users size={12} />
-                            <span>Comisión Asignada: <strong>{punto.comisionNombre}</strong></span>
-                          </span>
+                          {punto.proponenteNombre && (
+                            <span className="inline-flex items-center space-x-1 bg-amber-50 text-amber-900 border border-amber-250 px-2.5 py-0.5 rounded-md">
+                              <User size={11} />
+                              <span>Propuesto por: <strong>{punto.proponenteNombre}</strong></span>
+                            </span>
+                          )}
+                          {punto.comisionNombre && (
+                            <span className="inline-flex items-center space-x-1 bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-md">
+                              <Users size={12} />
+                              <span>Comisión Asignada: <strong>{punto.comisionNombre}</strong></span>
+                            </span>
+                          )}
                           {punto.urgencia && (
                             <span className={`px-2 py-0.5 rounded-md border ${
                               punto.urgencia === 'Alta' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-slate-50 text-slate-600 border-slate-200'

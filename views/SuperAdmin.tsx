@@ -2250,15 +2250,16 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     return (
                       <div
                         key={p.id}
-                        className="bg-slate-50 border border-slate-200/80 p-5 rounded-2xl relative space-y-4 shadow-sm animate-in slide-in-from-bottom-2 duration-300"
+                        className="bg-white border border-slate-200/90 hover:border-blue-300 p-3.5 sm:p-4 rounded-2xl relative space-y-2.5 shadow-xs transition-all animate-in slide-in-from-bottom-2 duration-300"
                       >
-                        <div className="flex justify-between items-center border-b border-slate-200/50 pb-2">
+                        {/* Header row: badge, tags & actions */}
+                        <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                           <div className="flex items-center space-x-2">
-                            <span className="text-[10px] font-black bg-blue-900 text-white w-5 h-5 rounded-full flex items-center justify-center">
+                            <span className="text-[10px] font-black bg-blue-900 text-white w-5 h-5 rounded-full flex items-center justify-center shadow-xs">
                               {index + 1}
                             </span>
                             {p.origenTipo === 'solicitud' && (
-                              <span className="text-[9px] font-black bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                              <span className="text-[9px] font-black bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
                                 Vinculado a Solicitud
                               </span>
                             )}
@@ -2268,143 +2269,204 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                               type="button"
                               disabled={index === 0}
                               onClick={() => handleMovePunto(index, 'up')}
-                              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded disabled:opacity-30 cursor-pointer"
-                              title="Subir"
+                              className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded disabled:opacity-30 cursor-pointer"
+                              title="Subir punto"
                             >
-                              <ArrowUp size={12} />
+                              <ArrowUp size={13} />
                             </button>
                             <button
                               type="button"
                               disabled={index === agendaForm.puntos.length - 1}
                               onClick={() => handleMovePunto(index, 'down')}
-                              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded disabled:opacity-30 cursor-pointer"
-                              title="Bajar"
+                              className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded disabled:opacity-30 cursor-pointer"
+                              title="Bajar punto"
                             >
-                              <ArrowDown size={12} />
+                              <ArrowDown size={13} />
                             </button>
                             <button
                               type="button"
                               onClick={() => handleRemovePuntoField(p.id)}
-                              className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded cursor-pointer"
-                              title="Eliminar"
+                              className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded cursor-pointer"
+                              title="Eliminar punto"
                             >
-                              <Trash2 size={12} />
+                              <Trash2 size={13} />
                             </button>
                           </div>
                         </div>
 
-                        <div className="space-y-3">
-                          <div>
-                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Título del Punto</label>
+                        {/* Main Form Fields Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                          {/* Título (2 cols) */}
+                          <div className="sm:col-span-2">
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block mb-1">
+                              Título del Punto *
+                            </label>
                             <input
                               type="text"
                               required
                               value={p.titulo}
                               onChange={(e) => handleUpdatePuntoField(p.id, 'titulo', e.target.value)}
-                              className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-700 focus:ring-2 focus:ring-blue-900 outline-none"
+                              className="w-full bg-slate-50/50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-900 outline-none"
                               placeholder="Ej. Presentación del informe financiero mensual"
                             />
                           </div>
-                          <div>
-                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Descripción / Antecedentes</label>
-                            <textarea
-                              rows={2}
-                              value={p.descripcion}
-                              onChange={(e) => handleUpdatePuntoField(p.id, 'descripcion', e.target.value)}
-                              className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-blue-900 outline-none resize-none"
-                              placeholder="Breve contexto para informar a los miembros o secretarios en su posterior redacción..."
-                            />
-                          </div>
 
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="checkbox"
-                                id={`toggle-comision-${p.id}`}
-                                checked={!!showComisionConfigForPunto[p.id]}
+                          {/* Proponente (1 col - Socio u Opción Abierta Terceros) */}
+                          <div>
+                            <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block mb-1">
+                              Proponente <span className="text-[8px] font-normal text-slate-400">(Opcional)</span>
+                            </label>
+                            <div className="space-y-1">
+                              <select
+                                value={
+                                  p.proponenteSocioId 
+                                    ? p.proponenteSocioId 
+                                    : p.proponenteNombre 
+                                    ? 'custom' 
+                                    : ''
+                                }
                                 onChange={(e) => {
-                                  const checked = e.target.checked;
-                                  setShowComisionConfigForPunto(prev => ({ ...prev, [p.id]: checked }));
-                                  if (checked) {
-                                    const firstCom = comisiones.filter(c => c.estado === 'Activa')[0]?.id || '';
-                                    setSelectedComisionForPunto(prev => ({ ...prev, [p.id]: firstCom }));
-                                    setUrgenciaForPunto(prev => ({ ...prev, [p.id]: 'Media' }));
-                                    setFechaLimiteForPunto(prev => ({ ...prev, [p.id]: new Date(Date.now() + 7 * 24 * 365 * 240).toISOString().split('T')[0] }));
+                                  const val = e.target.value;
+                                  if (val === 'custom') {
+                                    handleUpdatePuntoField(p.id, 'proponenteSocioId', '');
+                                    if (!p.proponenteNombre) handleUpdatePuntoField(p.id, 'proponenteNombre', 'Tercero / Persona Externa');
+                                  } else if (val) {
+                                    const matchedSocio = socios.find(s => s.id === val);
+                                    handleUpdatePuntoField(p.id, 'proponenteSocioId', val);
+                                    handleUpdatePuntoField(p.id, 'proponenteNombre', matchedSocio ? matchedSocio.nombre : '');
                                   } else {
-                                    setSelectedComisionForPunto(prev => { const c = { ...prev }; delete c[p.id]; return c; });
-                                    setUrgenciaForPunto(prev => { const c = { ...prev }; delete c[p.id]; return c; });
-                                    setFechaLimiteForPunto(prev => { const c = { ...prev }; delete c[p.id]; return c; });
+                                    handleUpdatePuntoField(p.id, 'proponenteSocioId', '');
+                                    handleUpdatePuntoField(p.id, 'proponenteNombre', '');
                                   }
                                 }}
-                                className="rounded text-blue-900 focus:ring-blue-900 w-4 h-4 cursor-pointer"
-                              />
-                              <label htmlFor={`toggle-comision-${p.id}`} className="text-xs font-bold text-slate-700 cursor-pointer">
-                                Asignar a una Comisión de Trabajo
-                              </label>
-                            </div>
+                                className="w-full bg-slate-50/50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-900 outline-none cursor-pointer"
+                              >
+                                <option value="">-- Sin proponente --</option>
+                                <optgroup label="Socios del Club">
+                                  {socios.map(s => (
+                                    <option key={s.id} value={s.id}>{s.nombre} ({s.puesto || 'Socio'})</option>
+                                  ))}
+                                </optgroup>
+                                <option value="custom">✍️ Otro / Persona Externa (Texto libre)</option>
+                              </select>
 
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="checkbox"
-                                id={`toggle-actas-${p.id}`}
-                                checked={p.agregadoAActas !== false}
-                                onChange={(e) => handleUpdatePuntoField(p.id, 'agregadoAActas', e.target.checked)}
-                                className="rounded text-blue-900 focus:ring-blue-900 w-4 h-4 cursor-pointer"
-                              />
-                              <label htmlFor={`toggle-actas-${p.id}`} className="text-xs font-bold text-slate-700 cursor-pointer">
-                                Pre-cargar en Libro de Actas
-                              </label>
+                              {(!p.proponenteSocioId && (p.proponenteNombre || p.proponenteNombre === '')) && (
+                                <input
+                                  type="text"
+                                  value={p.proponenteNombre || ''}
+                                  onChange={(e) => handleUpdatePuntoField(p.id, 'proponenteNombre', e.target.value)}
+                                  className="w-full bg-white border border-amber-300 rounded-lg px-2.5 py-1 text-[11px] font-semibold text-slate-800 focus:ring-2 focus:ring-blue-900 outline-none animate-in fade-in"
+                                  placeholder="Escriba nombre del proponente o entidad..."
+                                />
+                              )}
                             </div>
                           </div>
-
-                          {showComisionConfigForPunto[p.id] && (
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-250/50 mt-2 pl-6 animate-in slide-in-from-top-1 duration-200">
-                              <div>
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Comisión</label>
-                                <select
-                                  value={selectedComisionForPunto[p.id] || ''}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    setSelectedComisionForPunto(prev => ({ ...prev, [p.id]: val }));
-                                  }}
-                                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-blue-900 outline-none"
-                                >
-                                  <option value="">-- Seleccionar --</option>
-                                  {comisiones.filter(c => c.estado === 'Activa').map(c => (
-                                    <option key={c.id} value={c.id}>{c.nombre}</option>
-                                  ))}
-                                </select>
-                              </div>
-                              <div>
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Urgencia</label>
-                                <select
-                                  value={urgenciaForPunto[p.id] || 'Media'}
-                                  onChange={(e) => {
-                                    const val = e.target.value as 'Alta' | 'Media' | 'Baja';
-                                    setUrgenciaForPunto(prev => ({ ...prev, [p.id]: val }));
-                                  }}
-                                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-blue-900 outline-none"
-                                >
-                                  <option value="Alta">Alta 🚨</option>
-                                  <option value="Media">Media ⚠️</option>
-                                  <option value="Baja">Baja 📋</option>
-                                </select>
-                              </div>
-                              <div>
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Fecha Límite</label>
-                                <input
-                                  type="date"
-                                  value={fechaLimiteForPunto[p.id] || ''}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    setFechaLimiteForPunto(prev => ({ ...prev, [p.id]: val }));
-                                  }}
-                                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-blue-900 outline-none"
-                                />
-                              </div>
-                            </div>
-                          )}
                         </div>
+
+                        {/* Descripción */}
+                        <div>
+                          <label className="text-[9px] font-black text-slate-500 uppercase tracking-wider block mb-1">
+                            Descripción / Breves Antecedentes
+                          </label>
+                          <textarea
+                            rows={1}
+                            value={p.descripcion}
+                            onChange={(e) => handleUpdatePuntoField(p.id, 'descripcion', e.target.value)}
+                            className="w-full bg-slate-50/50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-medium text-slate-700 focus:bg-white focus:ring-2 focus:ring-blue-900 outline-none resize-y min-h-[34px]"
+                            placeholder="Resumen o contexto..."
+                          />
+                        </div>
+
+                        {/* Row 3: Checkboxes & Controls */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 pt-1 text-xs">
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id={`toggle-comision-${p.id}`}
+                              checked={!!showComisionConfigForPunto[p.id]}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                setShowComisionConfigForPunto(prev => ({ ...prev, [p.id]: checked }));
+                                if (checked) {
+                                  const firstCom = comisiones.filter(c => c.estado === 'Activa')[0]?.id || '';
+                                  setSelectedComisionForPunto(prev => ({ ...prev, [p.id]: firstCom }));
+                                  setUrgenciaForPunto(prev => ({ ...prev, [p.id]: 'Media' }));
+                                  setFechaLimiteForPunto(prev => ({ ...prev, [p.id]: new Date(Date.now() + 7 * 24 * 365 * 240).toISOString().split('T')[0] }));
+                                } else {
+                                  setSelectedComisionForPunto(prev => { const c = { ...prev }; delete c[p.id]; return c; });
+                                  setUrgenciaForPunto(prev => { const c = { ...prev }; delete c[p.id]; return c; });
+                                  setFechaLimiteForPunto(prev => { const c = { ...prev }; delete c[p.id]; return c; });
+                                }
+                              }}
+                              className="rounded text-blue-900 focus:ring-blue-900 w-3.5 h-3.5 cursor-pointer"
+                            />
+                            <label htmlFor={`toggle-comision-${p.id}`} className="text-[11px] font-bold text-slate-700 cursor-pointer">
+                              Asignar a Comisión
+                            </label>
+                          </div>
+
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id={`toggle-actas-${p.id}`}
+                              checked={p.agregadoAActas !== false}
+                              onChange={(e) => handleUpdatePuntoField(p.id, 'agregadoAActas', e.target.checked)}
+                              className="rounded text-blue-900 focus:ring-blue-900 w-3.5 h-3.5 cursor-pointer"
+                            />
+                            <label htmlFor={`toggle-actas-${p.id}`} className="text-[11px] font-bold text-slate-700 cursor-pointer">
+                              Pre-cargar en Actas
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Optional Subpanel for Commission Settings */}
+                        {showComisionConfigForPunto[p.id] && (
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-slate-100 bg-slate-50/80 p-2.5 rounded-xl animate-in slide-in-from-top-1 duration-200">
+                            <div>
+                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Comisión</label>
+                              <select
+                                value={selectedComisionForPunto[p.id] || ''}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setSelectedComisionForPunto(prev => ({ ...prev, [p.id]: val }));
+                                }}
+                                className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-700 outline-none"
+                              >
+                                <option value="">-- Seleccionar --</option>
+                                {comisiones.filter(c => c.estado === 'Activa').map(c => (
+                                  <option key={c.id} value={c.id}>{c.nombre}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Urgencia</label>
+                              <select
+                                value={urgenciaForPunto[p.id] || 'Media'}
+                                onChange={(e) => {
+                                  const val = e.target.value as 'Alta' | 'Media' | 'Baja';
+                                  setUrgenciaForPunto(prev => ({ ...prev, [p.id]: val }));
+                                }}
+                                className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-700 outline-none"
+                              >
+                                <option value="Alta">Alta 🚨</option>
+                                <option value="Media">Media ⚠️</option>
+                                <option value="Baja">Baja 📋</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Fecha Límite</label>
+                              <input
+                                type="date"
+                                value={fechaLimiteForPunto[p.id] || ''}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setFechaLimiteForPunto(prev => ({ ...prev, [p.id]: val }));
+                                }}
+                                className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-700 outline-none"
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
