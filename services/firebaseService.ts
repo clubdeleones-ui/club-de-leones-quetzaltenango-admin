@@ -617,15 +617,17 @@ export const firebaseService = {
     try {
       const colRef = collection(db, "galeria");
       const snapshot = await getDocs(colRef);
-      if (snapshot.empty) {
-        let syncedCount = 0;
-        for (const item of initialItems) {
+      const existingIds = new Set(snapshot.docs.map(d => d.id));
+      
+      let syncedCount = 0;
+      for (const item of initialItems) {
+        if (!existingIds.has(item.id)) {
           await setDoc(doc(db, "galeria", item.id), item);
           syncedCount++;
         }
-        if (syncedCount > 0) {
-          console.log(`Sincronizadas ${syncedCount} fotos de galería iniciales en Firestore.`);
-        }
+      }
+      if (syncedCount > 0) {
+        console.log(`Sincronizadas ${syncedCount} fotos de galería iniciales en Firestore.`);
       }
     } catch (error) {
       console.error("Error syncing initial galeria:", error);
