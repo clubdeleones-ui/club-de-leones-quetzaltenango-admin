@@ -19,36 +19,62 @@ import {
 } from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
 import { ReunionAgenda } from '../types';
-import { generateAgendaPDF } from '../utils/pdfGenerator';
 import { useToast } from '../context/ToastContext';
 
 export const AgendaPublica: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { showToast } = useToast();
 
-  const [agenda, setAgenda] = useState<ReunionAgenda | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [agenda, setAgenda] = useState<ReunionAgenda | null>(() => {
+    if (!id) return null;
+    try {
+      // Instant cache lookup for 0ms initial render
+      const cachedSingle = localStorage.getItem(`club_leones_agenda_public_${id}`);
+      if (cachedSingle) return JSON.parse(cachedSingle);
+
+      const cachedList = localStorage.getItem('club_leones_reunion_agendas');
+      if (cachedList) {
+        const list: ReunionAgenda[] = JSON.parse(cachedList);
+        const found = list.find(a => a.id === id);
+        if (found) return found;
+      }
+    } catch (e) {}
+    return null;
+  });
+
+  const [loading, setLoading] = useState(!agenda);
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+
     const fetchAgenda = async () => {
-      if (!id) {
-        setLoading(false);
-        return;
-      }
       try {
         const data = await firebaseService.getAgendaById(id);
-        if (data) {
+        if (data && isMounted) {
           setAgenda(data);
+          try {
+            localStorage.setItem(`club_leones_agenda_public_${id}`, JSON.stringify(data));
+          } catch (e) {}
         }
       } catch (err) {
         console.error("Error al cargar la agenda pública:", err);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
+
     fetchAgenda();
+
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
   const handleCopyLink = () => {
@@ -76,6 +102,7 @@ export const AgendaPublica: React.FC = () => {
     if (!agenda) return;
     setDownloading(true);
     try {
+      const { generateAgendaPDF } = await import('../utils/pdfGenerator');
       await generateAgendaPDF(agenda, 'download');
       showToast("PDF de la agenda generado exitosamente", "success");
     } catch (err) {
@@ -89,6 +116,7 @@ export const AgendaPublica: React.FC = () => {
   const handleOpenPDF = async () => {
     if (!agenda) return;
     try {
+      const { generateAgendaPDF } = await import('../utils/pdfGenerator');
       await generateAgendaPDF(agenda, 'open');
     } catch (err) {
       console.error("Error al abrir PDF de agenda:", err);

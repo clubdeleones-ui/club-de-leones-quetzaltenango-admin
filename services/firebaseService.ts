@@ -836,11 +836,21 @@ export const firebaseService = {
       const docRef = doc(db, "agendas", id);
       const snap = await getDoc(docRef);
       if (snap.exists()) {
-        return { id: snap.id, ...snap.data() } as ReunionAgenda;
+        const item = { id: snap.id, ...snap.data() } as ReunionAgenda;
+        try {
+          localStorage.setItem(`club_leones_agenda_public_${id}`, JSON.stringify(item));
+        } catch (e) {}
+        return item;
       }
-      return null;
+      // Fallback to cache if doc not found
+      const cached = localStorage.getItem(`club_leones_agenda_public_${id}`);
+      return cached ? JSON.parse(cached) : null;
     } catch (error) {
       console.error("Error fetching agenda by id:", error);
+      try {
+        const cached = localStorage.getItem(`club_leones_agenda_public_${id}`);
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
       return null;
     }
   },
@@ -848,13 +858,19 @@ export const firebaseService = {
   saveAgenda: async (agenda: ReunionAgenda): Promise<void> => {
     try {
       const { id, ...data } = agenda;
+      let targetId = id;
       if (id) {
         const docRef = doc(db, "agendas", id);
         await setDoc(docRef, data, { merge: true });
       } else {
         const newDocRef = doc(collection(db, "agendas"));
+        targetId = newDocRef.id;
         await setDoc(newDocRef, { ...data, id: newDocRef.id }, { merge: true });
       }
+      try {
+        const fullItem = { ...agenda, id: targetId };
+        localStorage.setItem(`club_leones_agenda_public_${targetId}`, JSON.stringify(fullItem));
+      } catch (e) {}
     } catch (error) {
       console.error("Error saving agenda:", error);
       throw error;
