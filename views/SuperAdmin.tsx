@@ -1783,6 +1783,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           agregadoAActas: p.agregadoAActas !== false
         };
         if (p.origenId) punto.origenId = p.origenId;
+        if (p.proponenteNombre) punto.proponenteNombre = p.proponenteNombre;
+        if (p.proponenteSocioId) punto.proponenteSocioId = p.proponenteSocioId;
         if (isAssigned && comId) {
           punto.asignadoAComisionId = comId;
           if (comision) punto.comisionNombre = comision.nombre;
@@ -1882,12 +1884,17 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       descPunto = sol.agendaContenido;
     }
     
+    const proponenteName = (sol.tipo === 'agenda' && sol.agendaSocioNombre) 
+      ? sol.agendaSocioNombre 
+      : sol.nombre || '';
+
     const nuevoPunto: AgendaPunto = {
       id: `p-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       titulo: tituloPunto,
       descripcion: descPunto,
       origenTipo: 'solicitud',
       origenId: sol.id,
+      proponenteNombre: proponenteName,
       agregadoAActas: true
     };
     
