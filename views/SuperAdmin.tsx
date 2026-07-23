@@ -78,6 +78,7 @@ import {
   Share2,
   ArrowUp,
   ArrowDown,
+  ArrowUpDown,
   Printer,
   Trophy,
   Crown,
@@ -466,6 +467,9 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
 
   const [showAgendaForm, setShowAgendaForm] = useState(false);
   const [editingAgenda, setEditingAgenda] = useState<ReunionAgenda | null>(null);
+  const [reorderingAgenda, setReorderingAgenda] = useState<ReunionAgenda | null>(null);
+  const [reorderingPuntos, setReorderingPuntos] = useState<AgendaPunto[]>([]);
+  const [isSavingReorder, setIsSavingReorder] = useState(false);
   const [agendaForm, setAgendaForm] = useState<{
     id?: string;
     titulo: string;
@@ -1934,6 +1938,49 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     }));
   };
 
+  const handleOpenReorderModal = (agenda: ReunionAgenda) => {
+    setReorderingAgenda(agenda);
+    setReorderingPuntos([...(agenda.puntos || [])]);
+  };
+
+  const handleMoveReorderPunto = (index: number, direction: 'up' | 'down') => {
+    const list = [...reorderingPuntos];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= list.length) return;
+    const temp = list[index];
+    list[index] = list[targetIndex];
+    list[targetIndex] = temp;
+    setReorderingPuntos(list);
+  };
+
+  const handleSaveReorderPuntos = async () => {
+    if (!reorderingAgenda) return;
+    setIsSavingReorder(true);
+    try {
+      const updatedAgenda: ReunionAgenda = {
+        ...reorderingAgenda,
+        puntos: reorderingPuntos
+      };
+      await firebaseService.saveAgenda(updatedAgenda);
+
+      // If we are currently editing this agenda in the form, sync agendaForm.puntos
+      if (agendaForm.id === reorderingAgenda.id) {
+        setAgendaForm(prev => ({
+          ...prev,
+          puntos: reorderingPuntos
+        }));
+      }
+
+      showToast("Orden de los puntos actualizado correctamente", "success");
+      setReorderingAgenda(null);
+    } catch (e) {
+      console.error("Error al guardar reordenamiento de puntos:", e);
+      showToast("Error al guardar el nuevo orden de los puntos", "error");
+    } finally {
+      setIsSavingReorder(false);
+    }
+  };
+
   const handleAddManualPunto = () => {
     const nuevoPunto: AgendaPunto = {
       id: `p-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -2224,6 +2271,20 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   <span>Puntos del Orden del Día ({agendaForm.puntos.length})</span>
                 </h4>
                 <div className="flex items-center space-x-2">
+                  {agendaForm.puntos.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReorderingAgenda(editingAgenda || ({ id: agendaForm.id || 'temp', titulo: agendaForm.titulo || 'Nueva Agenda', fecha: agendaForm.fecha, hora: agendaForm.hora, lugar: agendaForm.lugar, puntos: agendaForm.puntos, estado: 'Borrador', fechaCreacion: '', autor: '', codigo: '' } as any));
+                        setReorderingPuntos([...agendaForm.puntos]);
+                      }}
+                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] font-black rounded-lg transition-all flex items-center space-x-1 cursor-pointer shadow-2xs"
+                      title="Abrir vista modal rápida para reordenar puntos"
+                    >
+                      <ArrowUpDown size={12} />
+                      <span>Reordenar Puntos</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={handleLoadStandardAgendaTemplate}
@@ -2271,29 +2332,31 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center space-x-1">
+                          <div className="flex items-center space-x-1.5">
                             <button
                               type="button"
                               disabled={index === 0}
                               onClick={() => handleMovePunto(index, 'up')}
-                              className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded disabled:opacity-30 cursor-pointer"
-                              title="Subir punto"
+                              className="px-2 py-1 bg-slate-100 hover:bg-blue-900 hover:text-white text-slate-700 rounded-lg text-[10px] font-bold transition-all disabled:opacity-30 disabled:hover:bg-slate-100 disabled:hover:text-slate-700 flex items-center space-x-0.5 cursor-pointer"
+                              title="Subir posición del punto"
                             >
-                              <ArrowUp size={13} />
+                              <ArrowUp size={11} />
+                              <span>Subir</span>
                             </button>
                             <button
                               type="button"
                               disabled={index === agendaForm.puntos.length - 1}
                               onClick={() => handleMovePunto(index, 'down')}
-                              className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded disabled:opacity-30 cursor-pointer"
-                              title="Bajar punto"
+                              className="px-2 py-1 bg-slate-100 hover:bg-blue-900 hover:text-white text-slate-700 rounded-lg text-[10px] font-bold transition-all disabled:opacity-30 disabled:hover:bg-slate-100 disabled:hover:text-slate-700 flex items-center space-x-0.5 cursor-pointer"
+                              title="Bajar posición del punto"
                             >
-                              <ArrowDown size={13} />
+                              <ArrowDown size={11} />
+                              <span>Bajar</span>
                             </button>
                             <button
                               type="button"
                               onClick={() => handleRemovePuntoField(p.id)}
-                              className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded cursor-pointer"
+                              className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all cursor-pointer ml-1"
                               title="Eliminar punto"
                             >
                               <Trash2 size={13} />
@@ -2677,6 +2740,14 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                       </button>
                       <button
                         type="button"
+                        onClick={() => handleOpenReorderModal(agenda)}
+                        className="p-2 text-slate-400 hover:text-blue-900 hover:bg-slate-50 border border-slate-200/60 rounded-xl transition-all cursor-pointer"
+                        title="Reordenar Puntos de la Agenda"
+                      >
+                        <ArrowUpDown size={13} />
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => handleEditAgenda(agenda)}
                         className="p-2 text-slate-400 hover:text-blue-900 hover:bg-slate-50 border border-slate-200/60 rounded-xl transition-all cursor-pointer"
                         title="Editar Agenda"
@@ -2694,6 +2765,15 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     </div>
 
                     <div className="flex items-center space-x-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenReorderModal(agenda)}
+                        className="px-2.5 py-1.5 border border-slate-200 text-slate-600 hover:bg-blue-50 hover:text-blue-900 rounded-xl text-[10px] font-black transition-all flex items-center space-x-1 cursor-pointer"
+                        title="Reordenar Puntos"
+                      >
+                        <ArrowUpDown size={11} />
+                        <span>Reordenar</span>
+                      </button>
                       <a
                         href={`/#/agenda-publica/${agenda.id}`}
                         target="_blank"
@@ -2727,6 +2807,111 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Modal de Reordenar Puntos */}
+        {reorderingAgenda && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-5 shadow-2xl border border-slate-100 animate-in zoom-in-95 text-left">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center space-x-2.5">
+                  <div className="p-2 bg-blue-50 text-blue-900 rounded-xl">
+                    <ArrowUpDown size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-800">Reordenar Puntos de Agenda</h3>
+                    <p className="text-[11px] text-slate-500 font-semibold line-clamp-1">
+                      {reorderingAgenda.titulo}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setReorderingAgenda(null)}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+                >
+                  <XIcon size={16} />
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-600 font-medium">
+                Organice la secuencia de los temas a tratar durante la reunión utilizando las flechas de posición. Los cambios se actualizarán de inmediato en la versión digital y el PDF.
+              </p>
+
+              {reorderingPuntos.length === 0 ? (
+                <div className="text-center py-6 text-slate-400 text-xs font-bold bg-slate-50 rounded-2xl">
+                  Esta agenda no contiene puntos registrados.
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+                  {reorderingPuntos.map((pt, idx) => (
+                    <div
+                      key={pt.id || idx}
+                      className="flex items-center justify-between bg-slate-50/80 border border-slate-200/90 rounded-2xl p-3 text-xs transition-all hover:bg-white hover:shadow-xs"
+                    >
+                      <div className="flex items-center space-x-3 pr-2 min-w-0">
+                        <span className="w-6 h-6 bg-blue-900 text-white rounded-full flex items-center justify-center font-black text-[11px] flex-shrink-0 shadow-xs">
+                          {idx + 1}
+                        </span>
+                        <div className="min-w-0">
+                          <h5 className="font-bold text-slate-800 truncate" title={pt.titulo}>
+                            {pt.titulo || 'Sin título'}
+                          </h5>
+                          {pt.proponenteNombre && (
+                            <span className="text-[10px] text-amber-700 font-extrabold block">
+                              Propuesto por: {pt.proponenteNombre}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-1 flex-shrink-0">
+                        <button
+                          type="button"
+                          disabled={idx === 0}
+                          onClick={() => handleMoveReorderPunto(idx, 'up')}
+                          className="px-2.5 py-1 bg-white border border-slate-200 text-slate-700 hover:bg-blue-900 hover:text-white rounded-lg text-[10px] font-bold transition-all disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-slate-700 flex items-center space-x-1 cursor-pointer shadow-2xs"
+                          title="Subir posición"
+                        >
+                          <ArrowUp size={12} />
+                          <span>Subir</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={idx === reorderingPuntos.length - 1}
+                          onClick={() => handleMoveReorderPunto(idx, 'down')}
+                          className="px-2.5 py-1 bg-white border border-slate-200 text-slate-700 hover:bg-blue-900 hover:text-white rounded-lg text-[10px] font-bold transition-all disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-slate-700 flex items-center space-x-1 cursor-pointer shadow-2xs"
+                          title="Bajar posición"
+                        >
+                          <ArrowDown size={12} />
+                          <span>Bajar</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setReorderingAgenda(null)}
+                  className="px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-100 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={isSavingReorder || reorderingPuntos.length === 0}
+                  onClick={handleSaveReorderPuntos}
+                  className="px-5 py-2 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-black transition-all flex items-center space-x-1.5 shadow-md cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingReorder ? <Loader2 className="animate-spin" size={14} /> : <Check size={14} />}
+                  <span>Guardar Nuevo Orden</span>
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
