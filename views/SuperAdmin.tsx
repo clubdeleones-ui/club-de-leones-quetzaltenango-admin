@@ -105,6 +105,7 @@ import { AdminActas } from './admin/AdminActas';
 import { AdminCuotas } from './admin/AdminCuotas';
 import { AdminCalendario } from './admin/AdminCalendario';
 import { AdminConvencion } from './admin/AdminConvencion';
+import { BibliotecaSolicitudesSecretaria } from './BibliotecaSolicitudesSecretaria';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
 
 const CATEGORIAS_MODULOS = [
@@ -128,7 +129,8 @@ const CATEGORIAS_MODULOS = [
     category: 'Secretaría',
     items: [
       { id: 'actas', label: 'Libro de Actas', icon: FileText },
-      { id: 'comisiones', label: 'Gestión de Comisiones', icon: Briefcase }
+      { id: 'comisiones', label: 'Gestión de Comisiones', icon: Briefcase },
+      { id: 'archivo_solicitudes_secretaria', label: 'Biblioteca de Solicitudes', icon: Archive }
     ]
   },
   {
@@ -236,7 +238,7 @@ interface SuperAdminProps {
   onUpdateUser?: (user: Socio) => void;
 }
 
-type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas' | 'afiliacion' | 'inventario' | 'galeria_admin' | 'linea_tiempo_admin' | 'agenda_contactos' | 'presidencia' | 'agendas_reunion' | 'ranking_lionistico' | 'asignacion_funciones' | 'convencion_admin';
+type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas' | 'afiliacion' | 'inventario' | 'galeria_admin' | 'linea_tiempo_admin' | 'agenda_contactos' | 'presidencia' | 'agendas_reunion' | 'ranking_lionistico' | 'asignacion_funciones' | 'convencion_admin' | 'archivo_solicitudes_secretaria';
 
 const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const { showAlert, showConfirm } = useModal();
@@ -256,15 +258,15 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     // Fallback switch check
     switch (user.rol) {
       case UserRole.SUPER_ADMIN:
-        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario', 'galeria_admin', 'linea_tiempo_admin', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico', 'asignacion_funciones', 'convencion_admin'];
+        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario', 'galeria_admin', 'linea_tiempo_admin', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico', 'asignacion_funciones', 'convencion_admin', 'archivo_solicitudes_secretaria'];
       case UserRole.TESORERO:
         return ['resumen', 'socios', 'cuotas', 'donaciones', 'parqueo', 'presupuestos', 'inventario', 'galeria_admin', 'linea_tiempo_admin'];
       case UserRole.SECRETARIO:
-        return ['resumen', 'socios', 'calendario', 'actas', 'comisiones', 'minutas', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico'];
+        return ['resumen', 'socios', 'calendario', 'actas', 'comisiones', 'minutas', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico', 'archivo_solicitudes_secretaria'];
       case UserRole.ASESOR_SERVICIOS:
         return ['socios', 'calendario', 'beneficios', 'minutas'];
       case UserRole.PRESIDENTE_AFILIACION:
-        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico'];
+        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico', 'archivo_solicitudes_secretaria'];
       default:
         return [];
     }
@@ -317,7 +319,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     const groups = [
       { category: 'Principal', items: ['resumen', 'asignacion_funciones'] },
       { category: 'Presidencia', items: ['presidencia', 'agendas_reunion', 'ranking_lionistico'] },
-      { category: 'Secretaría', items: ['actas', 'comisiones'] },
+      { category: 'Secretaría', items: ['actas', 'comisiones', 'archivo_solicitudes_secretaria'] },
       { category: 'Comité de Mercadeo', items: ['calendario', 'beneficios'] },
       { category: 'Tesorería', items: ['cuotas', 'parqueo', 'donaciones', 'presupuestos'] },
       { category: 'Comité de Afiliación', items: ['socios', 'afiliacion'] },
@@ -5726,6 +5728,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           )}
           {activeTab === 'convencion_admin' && (
             <AdminConvencion />
+          )}
+          {activeTab === 'archivo_solicitudes_secretaria' && (
+            <BibliotecaSolicitudesSecretaria user={user} />
           )}
         </main>
       </div>
