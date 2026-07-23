@@ -313,6 +313,40 @@ export const MOCK_GALERIA: GaleriaItem[] = [
       'Creador del Fondo de Reserva para Proyectos de Emergencia'
     ],
     citaHonorifica: '"La transparencia en los recursos del club es la garantía de nuestro compromiso con el pueblo."'
+  },
+  {
+    id: 'mp-6',
+    titulo: 'Don Guillermo Morales Rivas',
+    fecha: '1968-07-01',
+    url: './images/presidente_historico_1968.png',
+    descripcion: 'Presidente Histórico de la época de oro del Lionismo en Xela. Lideró la primera gran colecta comunitaria para equipar el laboratorio pediátrico del Hospital Regional de Occidente.',
+    categoria: 'Museo de Personajes',
+    tipoPersonaje: 'presidente',
+    periodoServicio: '1968 - 1969',
+    puestoCargo: 'Presidente Histórico (Gestión 1968-1969)',
+    logrosDestacados: [
+      'Primera Gran Telemaratón Lionística para el Hospital Regional de Occidente',
+      'Fundador del Comité Juvenil Leo Club Quetzaltenango',
+      'Socio Distinguido con la Medalla Internacional Melvin Jones'
+    ],
+    citaHonorifica: '"Ser León es entender que las necesidades de nuestro hermano son nuestra prioridad indiscutible."'
+  },
+  {
+    id: 'mp-7',
+    titulo: 'Dra. María Mercedes Fuentes',
+    fecha: '2015-07-01',
+    url: './images/presidenta_directiva_2015.png',
+    descripcion: 'Médica pediatra y Presidenta de Directiva. Pionera en la descentralización de las jornadas médicas gratuitas en municipios de la periferia de Quetzaltenango.',
+    categoria: 'Museo de Personajes',
+    tipoPersonaje: 'presidente',
+    periodoServicio: '2015 - 2016',
+    puestoCargo: 'Presidenta de Directiva (Gestión 2015-2016)',
+    logrosDestacados: [
+      'Despliegue de 12 Jornadas Médicas Rurales en Salcajá, Almolonga y Olintepeque',
+      'Alianza estratégica con Médicos Internacionales de la Visión',
+      'Construcción de la primera Sala Odontológica en La Cueva'
+    ],
+    citaHonorifica: '"Llevar salud a los cantones más alejados es la firma de amor de nuestro club."'
   }
 ];
 
