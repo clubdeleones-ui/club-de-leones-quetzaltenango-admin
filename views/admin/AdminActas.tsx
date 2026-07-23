@@ -152,7 +152,7 @@ export const AdminActas: React.FC<AdminActasProps> = ({ user }) => {
   }, [presentSocios, sortedAllSocios]);
 
   const agendaProposals = useMemo(() => {
-    return solicitudes.filter(s => s.tipo === 'agenda');
+    return solicitudes.filter(s => s.tipo === 'agenda' && !s.archivada);
   }, [solicitudes]);
 
   const handleInsertMemberMention = (memberName: string) => {
@@ -293,7 +293,7 @@ export const AdminActas: React.FC<AdminActasProps> = ({ user }) => {
         `\n\n   Total de miembros presentes: ${presentNames.length} de ${socios.length}.\n`;
     }
 
-    const pendingSols = solicitudes.filter(s => s.estado === 'Pendiente');
+    const pendingSols = solicitudes.filter(s => s.estado === 'Pendiente' && !s.archivada);
     let solicitudesSection = '';
     if (pendingSols.length === 0) {
       solicitudesSection = 'No se conocieron solicitudes en esta sesión.\n';
@@ -342,7 +342,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     const autoDateTime = getWrittenDateTimeSpanish(new Date());
     
     const initialResoluciones: Record<string, { decision: 'Aprobada' | 'Rechazada' | 'Pendiente', razon: string }> = {};
-    const pendingSols = solicitudes.filter(s => s.estado === 'Pendiente');
+    const pendingSols = solicitudes.filter(s => s.estado === 'Pendiente' && !s.archivada);
     pendingSols.forEach(s => {
       initialResoluciones[s.id] = { decision: 'Pendiente', razon: '' };
     });
@@ -513,7 +513,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     setActas(newActas);
     localStorage.setItem('club_leones_actas', JSON.stringify(newActas));
 
-    const pendingSols = solicitudes.filter(s => s.estado === 'Pendiente');
+    const pendingSols = solicitudes.filter(s => s.estado === 'Pendiente' && !s.archivada);
     
     for (const sol of pendingSols) {
       const res = actaWizardData.solicitudesResoluciones[sol.id];
@@ -1054,12 +1054,12 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 </div>
 
                 <div className="space-y-5 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-                  {solicitudes.filter(s => s.estado === 'Pendiente').length === 0 ? (
+                  {solicitudes.filter(s => s.estado === 'Pendiente' && !s.archivada).length === 0 ? (
                     <div className="text-center py-16 bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-200 text-slate-400 italic text-sm font-medium">
                       No hay solicitudes con estado "Pendiente" registradas en el sistema para evaluar en esta sesión.
                     </div>
                   ) : (
-                    solicitudes.filter(s => s.estado === 'Pendiente').map(sol => {
+                    solicitudes.filter(s => s.estado === 'Pendiente' && !s.archivada).map(sol => {
                       const res = actaWizardData.solicitudesResoluciones[sol.id] || { decision: 'Pendiente', razon: '' };
                       return (
                         <div key={sol.id} className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 space-y-4">

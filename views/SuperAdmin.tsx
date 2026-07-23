@@ -2039,6 +2039,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
   // Filter requests that can be imported to the agenda
   const availableRequestsToImport = useMemo(() => {
     return solicitudes.filter(sol => {
+      // Exclude archived requests
+      if (sol.archivada) return false;
+
       // Exclude rejected requests
       if (sol.estado === 'Rechazado' || sol.estado === 'Rechazada') return false;
       
