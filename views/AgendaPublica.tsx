@@ -190,163 +190,159 @@ export const AgendaPublica: React.FC = () => {
           </div>
         </div>
 
-        {/* Tarjeta Documental Digital Principal */}
-        <div className="bg-white rounded-[2.5rem] border border-slate-200/90 shadow-xl overflow-hidden relative print:shadow-none print:border-none">
-          {/* Header Banner */}
-          <div className="bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-900 text-white p-8 sm:p-10 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-yellow-400/10 rounded-full blur-3xl pointer-events-none" />
+        {/* Cabecera / Banner Principal */}
+        <div className="bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-900 text-white p-6 sm:p-8 rounded-2xl sm:rounded-3xl shadow-lg relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-yellow-400/10 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6 relative z-10">
-              <div className="flex items-center space-x-4">
-                <img
-                  src="images/logo.png"
-                  alt="Club de Leones Quetzaltenango"
-                  className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-md bg-white/10 p-1.5 rounded-2xl border border-white/20"
-                />
-                <div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-yellow-400">
-                    Club de Leones de Quetzaltenango
-                  </span>
-                  <h1 className="text-xl sm:text-2xl font-black tracking-tight mt-0.5 leading-snug">
-                    {agenda.titulo}
-                  </h1>
-                  <span className="text-xs text-blue-200 font-semibold block mt-1">
-                    Código Oficial: {agenda.codigo || 'AG-S/C'}
-                  </span>
-                </div>
-              </div>
-
-              <span className={`px-4 py-1.5 rounded-full text-xs font-black border uppercase tracking-wider shadow-sm self-start ${catCfg.badgeClass}`}>
-                {catCfg.label}
-              </span>
-            </div>
-          </div>
-
-          {/* Ficha de Detalles de la Sesión */}
-          <div className="p-8 sm:p-10 space-y-8">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 border border-slate-200/80 p-5 rounded-2xl">
-              <div className="flex items-center space-x-3">
-                <div className="p-2.5 bg-blue-100 text-blue-900 rounded-xl">
-                  <Calendar size={18} />
-                </div>
-                <div>
-                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Fecha</span>
-                  <span className="text-xs font-black text-slate-800">{agenda.fecha}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <div className="p-2.5 bg-blue-100 text-blue-900 rounded-xl">
-                  <Clock size={18} />
-                </div>
-                <div>
-                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Hora</span>
-                  <span className="text-xs font-black text-slate-800">{agenda.hora}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <div className="p-2.5 bg-blue-100 text-blue-900 rounded-xl">
-                  <Building size={18} />
-                </div>
-                <div>
-                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Lugar</span>
-                  <span className="text-xs font-black text-slate-800">{agenda.lugar}</span>
-                </div>
-              </div>
-            </div>
-
-            {agenda.presidencia && (
-              <div className="flex items-center space-x-3 bg-amber-50/60 border border-amber-200/60 p-4 rounded-2xl">
-                <div className="p-2 bg-amber-100 text-amber-900 rounded-lg">
-                  <User size={16} />
-                </div>
-                <div>
-                  <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-wider block">
-                    Bajo la Presidencia de:
-                  </span>
-                  <span className="text-xs font-black text-slate-800">{agenda.presidencia}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Orden del Día */}
-            <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                <h3 className="text-base font-black text-blue-950 flex items-center space-x-2">
-                  <FileText size={18} className="text-blue-900" />
-                  <span>Puntos del Orden del Día</span>
-                </h3>
-                <span className="text-xs font-extrabold bg-blue-50 text-blue-900 border border-blue-200 px-3 py-1 rounded-full">
-                  {agenda.puntos.length} {agenda.puntos.length === 1 ? 'punto registrado' : 'puntos registrados'}
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-5 relative z-10">
+            <div className="flex items-center space-x-4">
+              <img
+                src="images/logo.png"
+                alt="Club de Leones Quetzaltenango"
+                className="w-14 h-14 sm:w-18 sm:h-18 object-contain drop-shadow-md bg-white/10 p-1.5 rounded-2xl border border-white/20 flex-shrink-0"
+              />
+              <div>
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-yellow-400">
+                  Club de Leones de Quetzaltenango
+                </span>
+                <h1 className="text-xl sm:text-2xl font-black tracking-tight mt-0.5 leading-snug">
+                  {agenda.titulo}
+                </h1>
+                <span className="text-xs text-blue-200 font-semibold block mt-1">
+                  Código Oficial: {agenda.codigo || 'AG-S/C'}
                 </span>
               </div>
-
-              {agenda.puntos.length === 0 ? (
-                <div className="text-center py-10 text-slate-400 text-xs font-bold">
-                  No hay puntos registrados en esta agenda.
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {agenda.puntos.map((punto, idx) => (
-                    <div
-                      key={punto.id || idx}
-                      className="bg-white border border-slate-200/90 hover:border-blue-200 rounded-2xl p-6 shadow-xs space-y-3 transition-all"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start space-x-3">
-                          <span className="w-7 h-7 bg-blue-900 text-white rounded-full flex items-center justify-center font-black text-xs flex-shrink-0 mt-0.5 shadow-xs">
-                            {idx + 1}
-                          </span>
-                          <div>
-                            <h4 className="text-sm font-black text-slate-800 tracking-tight">
-                              {punto.titulo}
-                            </h4>
-                            {punto.descripcion && (
-                              <p className="text-xs text-slate-600 mt-1.5 leading-relaxed font-medium">
-                                {punto.descripcion}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Badges de proponente / comisión / urgencia si existen */}
-                      {(punto.proponenteNombre || punto.comisionNombre) && (
-                        <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-2 text-[10px] font-bold">
-                          {punto.proponenteNombre && (
-                            <span className="inline-flex items-center space-x-1 bg-amber-50 text-amber-900 border border-amber-250 px-2.5 py-0.5 rounded-md">
-                              <User size={11} />
-                              <span>Propuesto por: <strong>{punto.proponenteNombre}</strong></span>
-                            </span>
-                          )}
-                          {punto.comisionNombre && (
-                            <span className="inline-flex items-center space-x-1 bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-md">
-                              <Users size={12} />
-                              <span>Comisión Asignada: <strong>{punto.comisionNombre}</strong></span>
-                            </span>
-                          )}
-                          {punto.urgencia && (
-                            <span className={`px-2 py-0.5 rounded-md border ${
-                              punto.urgencia === 'Alta' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-slate-50 text-slate-600 border-slate-200'
-                            }`}>
-                              Urgencia: {punto.urgencia}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
-            {/* Footer Informativo */}
-            <div className="border-t border-slate-100 pt-6 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-400 font-semibold gap-2">
-              <span>Club de Leones de Quetzaltenango — "Nosotros Servimos"</span>
-              <span>Elaborado por: {agenda.autor || 'Secretaría'}</span>
+            <span className={`px-3.5 py-1.5 rounded-full text-[11px] font-black border uppercase tracking-wider shadow-sm self-start ${catCfg.badgeClass}`}>
+              {catCfg.label}
+            </span>
+          </div>
+        </div>
+
+        {/* Ficha de Detalles (Fecha, Hora, Lugar) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 bg-white border border-slate-200/90 p-4 sm:p-5 rounded-2xl shadow-sm">
+          <div className="flex items-center space-x-3">
+            <div className="p-2.5 bg-blue-50 text-blue-900 rounded-xl border border-blue-100 flex-shrink-0">
+              <Calendar size={18} />
+            </div>
+            <div>
+              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Fecha</span>
+              <span className="text-xs font-black text-slate-800">{agenda.fecha}</span>
             </div>
           </div>
+
+          <div className="flex items-center space-x-3">
+            <div className="p-2.5 bg-blue-50 text-blue-900 rounded-xl border border-blue-100 flex-shrink-0">
+              <Clock size={18} />
+            </div>
+            <div>
+              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Hora</span>
+              <span className="text-xs font-black text-slate-800">{agenda.hora}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <div className="p-2.5 bg-blue-50 text-blue-900 rounded-xl border border-blue-100 flex-shrink-0">
+              <Building size={18} />
+            </div>
+            <div>
+              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Lugar</span>
+              <span className="text-xs font-black text-slate-800">{agenda.lugar}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Presidencia */}
+        {agenda.presidencia && (
+          <div className="flex items-center space-x-3 bg-amber-50/90 border border-amber-200/80 p-4 rounded-2xl shadow-xs">
+            <div className="p-2 bg-amber-100 text-amber-900 rounded-lg flex-shrink-0">
+              <User size={16} />
+            </div>
+            <div>
+              <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-wider block">
+                Bajo la Presidencia de:
+              </span>
+              <span className="text-xs font-black text-slate-800">{agenda.presidencia}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Orden del Día */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-200/80 pb-2.5 pt-2">
+            <h3 className="text-base font-black text-blue-950 flex items-center space-x-2">
+              <FileText size={18} className="text-blue-900" />
+              <span>Puntos del Orden del Día</span>
+            </h3>
+            <span className="text-xs font-extrabold bg-blue-50 text-blue-900 border border-blue-200 px-3 py-1 rounded-full">
+              {agenda.puntos.length} {agenda.puntos.length === 1 ? 'punto registrado' : 'puntos registrados'}
+            </span>
+          </div>
+
+          {agenda.puntos.length === 0 ? (
+            <div className="bg-white border border-slate-200 rounded-2xl text-center py-10 text-slate-400 text-xs font-bold shadow-xs">
+              No hay puntos registrados en esta agenda.
+            </div>
+          ) : (
+            <div className="space-y-3.5">
+              {agenda.puntos.map((punto, idx) => (
+                <div
+                  key={punto.id || idx}
+                  className="bg-white border border-slate-200/90 hover:border-blue-300 rounded-2xl p-5 sm:p-6 shadow-sm space-y-3 transition-all"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start space-x-3">
+                      <span className="w-7 h-7 bg-blue-900 text-white rounded-full flex items-center justify-center font-black text-xs flex-shrink-0 mt-0.5 shadow-xs">
+                        {idx + 1}
+                      </span>
+                      <div>
+                        <h4 className="text-sm font-black text-slate-800 tracking-tight">
+                          {punto.titulo}
+                        </h4>
+                        {punto.descripcion && (
+                          <p className="text-xs text-slate-600 mt-1.5 leading-relaxed font-medium">
+                            {punto.descripcion}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Badges de proponente / comisión / urgencia si existen */}
+                  {(punto.proponenteNombre || punto.comisionNombre) && (
+                    <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-2 text-[10px] font-bold">
+                      {punto.proponenteNombre && (
+                        <span className="inline-flex items-center space-x-1 bg-amber-50 text-amber-900 border border-amber-250 px-2.5 py-0.5 rounded-md">
+                          <User size={11} />
+                          <span>Propuesto por: <strong>{punto.proponenteNombre}</strong></span>
+                        </span>
+                      )}
+                      {punto.comisionNombre && (
+                        <span className="inline-flex items-center space-x-1 bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-md">
+                          <Users size={12} />
+                          <span>Comisión Asignada: <strong>{punto.comisionNombre}</strong></span>
+                        </span>
+                      )}
+                      {punto.urgencia && (
+                        <span className={`px-2 py-0.5 rounded-md border ${
+                          punto.urgencia === 'Alta' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-slate-50 text-slate-600 border-slate-200'
+                        }`}>
+                          Urgencia: {punto.urgencia}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Footer Informativo */}
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 font-semibold gap-2 shadow-xs">
+          <span>Club de Leones de Quetzaltenango — "Nosotros Servimos"</span>
+          <span>Elaborado por: {agenda.autor || 'Secretaría'}</span>
         </div>
       </div>
     </div>
