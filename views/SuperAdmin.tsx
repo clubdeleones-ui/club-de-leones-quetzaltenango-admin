@@ -3679,8 +3679,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
   const renderControlSolicitudesList = () => {
     // Filter list
     const filteredList = solicitudes.filter(sol => {
-      // Exclude 'agenda' and 'cartas' from the unified list
-      if (sol.tipo === 'agenda') return false; 
+      // Exclude 'cartas' from the unified list
+      if (sol.tipo === 'cartas') return false; 
       
       if (controlSolicitudesArchiveFilter === 'activas' && sol.archivada) return false;
       if (controlSolicitudesArchiveFilter === 'archivadas' && !sol.archivada) return false;
@@ -3694,7 +3694,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
         (sol.descripcion && sol.descripcion.toLowerCase().includes(searchLower)) ||
         (sol.nombreBeneficiario && sol.nombreBeneficiario.toLowerCase().includes(searchLower)) ||
         (sol.nombreSolicitante && sol.nombreSolicitante.toLowerCase().includes(searchLower)) ||
-        (sol.salonNombreSolicitante && sol.salonNombreSolicitante.toLowerCase().includes(searchLower));
+        (sol.salonNombreSolicitante && sol.salonNombreSolicitante.toLowerCase().includes(searchLower)) ||
+        (sol.agendaNombrePunto && sol.agendaNombrePunto.toLowerCase().includes(searchLower)) ||
+        (sol.agendaContenido && sol.agendaContenido.toLowerCase().includes(searchLower));
         
       return matchesType && matchesStatus && matchesSearch;
     });
@@ -3735,6 +3737,10 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500 mr-1.5"></span>
                 🏛️ Salón y Parqueo
               </span>
+              <span className="flex items-center px-2 py-1 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 mr-1.5"></span>
+                💬 Puntos de Agenda
+              </span>
             </div>
           </div>
 
@@ -3766,6 +3772,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 <option value="abiertas">🔓 Solicitudes Abiertas</option>
                 <option value="internas">🔒 Solicitudes Internas</option>
                 <option value="salon">🏛️ Salón y Parqueo</option>
+                <option value="agenda">💬 Puntos de Agenda</option>
               </select>
             </div>
             <div>
@@ -3826,6 +3833,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 sol.tipo === 'abiertas' ? 'border-t-4 border-t-emerald-500' :
                 sol.tipo === 'internas' ? 'border-t-4 border-t-purple-500' :
                 sol.tipo === 'salon' ? 'border-t-4 border-t-amber-500' :
+                sol.tipo === 'agenda' ? 'border-t-4 border-t-indigo-500' :
                 'border-t-4 border-t-slate-300';
 
               // Request type tag
@@ -3856,6 +3864,13 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border bg-amber-50 text-amber-700 border-amber-200 flex items-center space-x-1">
                     <Building size={12} className="mr-0.5" />
                     <span>Salón/Parqueo</span>
+                  </span>
+                );
+              } else if (sol.tipo === 'agenda') {
+                typeTag = (
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border bg-indigo-50 text-indigo-700 border-indigo-200 flex items-center space-x-1">
+                    <Calendar size={12} className="mr-0.5" />
+                    <span>Punto de Agenda</span>
                   </span>
                 );
               }
@@ -3962,21 +3977,23 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                       </div>
                     )}
 
-                    {/* Open/Internal standard details */}
-                    {(sol.tipo === 'abiertas' || sol.tipo === 'internas') && (
+                    {/* Open/Internal/Agenda standard details */}
+                    {(sol.tipo === 'abiertas' || sol.tipo === 'internas' || sol.tipo === 'agenda') && (
                       <div className="space-y-2">
                         <div className="space-y-1">
                           <h3 className="font-extrabold text-base text-slate-900 leading-snug break-words">
-                            {sol.nombre}
+                            {sol.tipo === 'agenda' ? sol.agendaNombrePunto || sol.nombre : sol.nombre}
                           </h3>
-                          <div className="flex items-center text-xs font-semibold text-slate-400">
-                            <Calendar size={12} className="mr-1 text-slate-400 flex-shrink-0" />
-                            <span>Fecha límite sugerida: {sol.fecha}</span>
-                          </div>
+                          {sol.fecha && (
+                            <div className="flex items-center text-xs font-semibold text-slate-400">
+                              <Calendar size={12} className="mr-1 text-slate-400 flex-shrink-0" />
+                              <span>Fecha sugerida: {sol.fecha}</span>
+                            </div>
+                          )}
                         </div>
 
                         <p className="text-slate-600 text-xs leading-relaxed font-medium bg-slate-50/50 p-3 rounded-xl border border-slate-100">
-                          {sol.descripcion}
+                          {sol.tipo === 'agenda' ? sol.agendaContenido || sol.descripcion : sol.descripcion}
                         </p>
 
                         {sol.documentoUrl && (
