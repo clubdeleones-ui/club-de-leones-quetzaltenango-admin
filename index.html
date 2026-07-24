@@ -5,6 +5,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Club de Leones Quetzaltenango</title>
+  <script>
+    (function() {
+      var h = window.location.hostname;
+      if (h.includes('web.app') || h.includes('firebaseapp.com')) {
+        window.location.replace('https://clubdeleonesquetzaltenango.org' + window.location.pathname + window.location.search + window.location.hash);
+      }
+    })();
+  </script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 <script type="importmap">
 {

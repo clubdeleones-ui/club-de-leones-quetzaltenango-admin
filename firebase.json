@@ -15,6 +15,13 @@
       "**/.*",
       "**/node_modules/**"
     ],
+    "redirects": [
+      {
+        "source": "/:path*",
+        "destination": "https://clubdeleonesquetzaltenango.org/:path*",
+        "type": 301
+      }
+    ],
     "headers": [
       {
         "source": "/index.html",
