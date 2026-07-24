@@ -41,9 +41,9 @@ import {
 import { firebaseService } from '../services/firebaseService';
 
 export const DEFAULT_ROLES_CONFIG = [
-  { id: 'SUPER_ADMIN', label: 'Super Administrador', allowedTabs: ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario', 'galeria_admin', 'linea_tiempo_admin', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico', 'asignacion_funciones', 'convencion_admin'], orden: 0 },
+  { id: 'SUPER_ADMIN', label: 'Super Administrador', allowedTabs: ['resumen', 'socios', 'calendario', 'cuotas', 'nevera_admin', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario', 'galeria_admin', 'linea_tiempo_admin', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico', 'asignacion_funciones', 'convencion_admin'], orden: 0 },
   { id: 'SECRETARIO', label: 'Secretario', allowedTabs: ['resumen', 'socios', 'calendario', 'actas', 'comisiones', 'minutas', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico'], orden: 1 },
-  { id: 'TESORERO', label: 'Tesorero', allowedTabs: ['resumen', 'socios', 'cuotas', 'donaciones', 'parqueo', 'presupuestos', 'inventario', 'galeria_admin', 'linea_tiempo_admin'], orden: 2 },
+  { id: 'TESORERO', label: 'Tesorero', allowedTabs: ['resumen', 'socios', 'cuotas', 'nevera_admin', 'donaciones', 'parqueo', 'presupuestos', 'inventario', 'galeria_admin', 'linea_tiempo_admin'], orden: 2 },
   { id: 'ASESOR_SERVICIOS', label: 'Asesor de Servicios', allowedTabs: ['socios', 'calendario', 'beneficios', 'minutas'], orden: 3 },
   { id: 'PRESIDENTE_AFILIACION', label: 'Presidente de Afiliación', allowedTabs: ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico', 'convencion_admin'], orden: 4 },
   { id: 'SOCIO', label: 'Socio Regular', allowedTabs: [], orden: 5 },
@@ -488,6 +488,13 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (role.id === 'SUPER_ADMIN' || role.id === 'PRESIDENTE_AFILIACION') {
             if (!updatedTabs.includes('convencion_admin')) {
               updatedTabs.push('convencion_admin');
+              changed = true;
+            }
+          }
+
+          if (role.id === 'SUPER_ADMIN' || role.id === 'TESORERO') {
+            if (!updatedTabs.includes('nevera_admin')) {
+              updatedTabs.push('nevera_admin');
               changed = true;
             }
           }
