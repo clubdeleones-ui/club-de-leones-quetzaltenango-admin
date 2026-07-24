@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Camera, Plus, Edit2, Trash2, X as XIcon, UploadCloud, Save, ImageIcon, Calendar, Tag } from 'lucide-react';
 import { GaleriaItem } from '../types';
 import { firebaseService } from '../services/firebaseService';
