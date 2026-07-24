@@ -15,7 +15,8 @@ import {
   ArrowRight,
   Refrigerator,
   Sparkles,
-  AlertTriangle
+  AlertTriangle,
+  Filter
 } from 'lucide-react';
 import { NeveraProducto, Socio, CategoriaProductoNevera } from '../types';
 import { firebaseService } from '../services/firebaseService';
@@ -227,9 +228,9 @@ export const NeveraPublica: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50/70 text-slate-800 font-sans pb-36">
-      {/* Top Header */}
+      {/* Top Header (Ampliado a max-w-5xl) */}
       <header className="bg-white/90 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-30 p-3.5 sm:p-4 shadow-xs">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="bg-amber-100/80 p-2.5 rounded-2xl border border-amber-300 text-amber-900 shadow-xs">
               <Refrigerator size={24} />
@@ -247,7 +248,8 @@ export const NeveraPublica: React.FC = () => {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto p-3.5 sm:p-5 space-y-5">
+      {/* Main Container (Ampliado a max-w-5xl) */}
+      <main className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
 
         {/* Step 1: Socio Selection */}
         <section className="bg-white rounded-[2rem] p-4 sm:p-5 border border-slate-200/90 space-y-3 shadow-sm">
@@ -257,16 +259,16 @@ export const NeveraPublica: React.FC = () => {
           </div>
 
           {selectedSocio ? (
-            <div className="flex items-center justify-between bg-amber-50/80 border border-amber-200/90 p-3 sm:p-3.5 rounded-2xl">
+            <div className="flex items-center justify-between bg-amber-50/80 border border-amber-200/90 p-3 sm:p-4 rounded-2xl">
               <div className="flex items-center space-x-3">
                 <img 
                   src={selectedSocio.foto || 'https://picsum.photos/100/100'} 
                   alt={selectedSocio.nombre}
-                  className="w-10 h-10 rounded-full object-cover border-2 border-amber-400 shadow-xs"
+                  className="w-11 h-11 rounded-full object-cover border-2 border-amber-400 shadow-xs"
                 />
                 <div>
-                  <h3 className="font-extrabold text-xs sm:text-sm text-slate-900">{selectedSocio.nombre}</h3>
-                  <p className="text-[11px] text-amber-900 font-semibold">{selectedSocio.puesto || 'Socio León'}</p>
+                  <h3 className="font-extrabold text-sm sm:text-base text-slate-900">{selectedSocio.nombre}</h3>
+                  <p className="text-xs text-amber-900 font-semibold">{selectedSocio.puesto || 'Socio León'}</p>
                 </div>
               </div>
               <button
@@ -274,7 +276,7 @@ export const NeveraPublica: React.FC = () => {
                   setSelectedSocio(null);
                   setSocioSearch('');
                 }}
-                className="text-xs text-amber-800 hover:text-amber-950 underline font-extrabold px-2 py-1 cursor-pointer"
+                className="text-xs text-amber-800 hover:text-amber-950 underline font-extrabold px-3 py-1.5 cursor-pointer"
               >
                 Cambiar
               </button>
@@ -282,13 +284,13 @@ export const NeveraPublica: React.FC = () => {
           ) : (
             <div className="space-y-2">
               <div className="relative">
-                <Search size={18} className="absolute left-3.5 top-3.5 text-slate-400" />
+                <Search size={18} className="absolute left-4 top-3.5 text-slate-400" />
                 <input
                   type="text"
                   value={socioSearch}
                   onChange={(e) => setSocioSearch(e.target.value)}
                   placeholder="Escribe tu nombre para buscar..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-10 pr-4 py-3 text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white font-medium placeholder-slate-400 transition-all shadow-inner"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white font-medium placeholder-slate-400 transition-all shadow-inner"
                 />
               </div>
 
@@ -301,12 +303,12 @@ export const NeveraPublica: React.FC = () => {
                         setSelectedSocio(socio);
                         setSocioSearch('');
                       }}
-                      className="w-full p-3 text-left hover:bg-amber-50/50 flex items-center space-x-3 transition-all cursor-pointer"
+                      className="w-full p-3.5 text-left hover:bg-amber-50/50 flex items-center space-x-3 transition-all cursor-pointer"
                     >
                       <img 
                         src={socio.foto || 'https://picsum.photos/100/100'} 
                         alt={socio.nombre}
-                        className="w-8 h-8 rounded-full object-cover border border-slate-200"
+                        className="w-9 h-9 rounded-full object-cover border border-slate-200"
                       />
                       <div>
                         <p className="text-xs font-extrabold text-slate-800">{socio.nombre}</p>
@@ -320,31 +322,28 @@ export const NeveraPublica: React.FC = () => {
           )}
         </section>
 
-        {/* Category Filters */}
-        <section className="flex space-x-2 overflow-x-auto custom-scrollbar pb-1">
-          {[
-            { id: 'todos', label: '📦 Todos', icon: ShoppingBag },
-            { id: 'gaseosas_jugos', label: '🥤 Gaseosas & Jugos', icon: CupSoda },
-            { id: 'cerveza', label: '🍺 Cerveza', icon: Beer },
-            { id: 'vino_licor', label: '🍷 Vino & Licores', icon: Wine },
-            { id: 'snacks', label: '🍿 Snacks', icon: Cookie },
-          ].map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
-              className={`px-3.5 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition-all cursor-pointer flex items-center space-x-1.5 ${
-                activeCategory === cat.id
-                  ? 'bg-amber-900 text-amber-300 shadow-md font-black scale-102'
-                  : 'bg-white text-slate-700 border border-slate-200/90 hover:bg-slate-100 shadow-xs'
-              }`}
-            >
-              <span>{cat.label}</span>
-            </button>
-          ))}
+        {/* Step 2: Menú Desplegable de Categorías (Dropdown Select) */}
+        <section className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <label htmlFor="category-select" className="flex items-center space-x-2 text-xs font-black text-slate-700 uppercase tracking-wider">
+            <Filter size={16} className="text-amber-800" />
+            <span>Categoría de Productos:</span>
+          </label>
+          <select
+            id="category-select"
+            value={activeCategory}
+            onChange={(e) => setActiveCategory(e.target.value)}
+            className="w-full sm:w-auto bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-extrabold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer shadow-inner"
+          >
+            <option value="todos">📦 Todos los Productos</option>
+            <option value="gaseosas_jugos">🥤 Gaseosas & Jugos</option>
+            <option value="cerveza">🍺 Cervezas</option>
+            <option value="vino_licor">🍷 Vinos & Licores</option>
+            <option value="snacks">🍿 Snacks & Botanas</option>
+          </select>
         </section>
 
-        {/* Step 2: Product Catalog Grid (Mobile Optimized 2 Columns) */}
-        <section className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        {/* Step 3: Product Catalog Grid (1 Columna en Móvil, 2-3 en Web) */}
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredProductos.map(prod => {
             const qtyInCart = cart[prod.id] || 0;
             const isOutOfStock = prod.stockActual <= 0;
@@ -352,25 +351,25 @@ export const NeveraPublica: React.FC = () => {
             return (
               <div 
                 key={prod.id} 
-                className={`bg-white rounded-[1.8rem] p-3 sm:p-4 border transition-all flex flex-col justify-between shadow-xs ${
+                className={`bg-white rounded-[1.8rem] p-4 border transition-all flex flex-col justify-between shadow-xs ${
                   qtyInCart > 0 
                     ? 'border-amber-500/90 bg-gradient-to-b from-white to-amber-50/40 shadow-md shadow-amber-500/10' 
                     : 'border-slate-200/90 hover:border-slate-300'
                 }`}
               >
-                <div className="space-y-2.5">
-                  <div className="relative h-28 sm:h-36 rounded-2xl bg-slate-100 overflow-hidden">
+                <div className="space-y-3">
+                  <div className="relative h-44 sm:h-40 rounded-2xl bg-slate-100 overflow-hidden">
                     <img 
                       src={prod.imagenUrl || 'https://images.unsplash.com/photo-1527661591475-527312dd65f5?q=80&w=400&auto=format&fit=crop'} 
                       alt={prod.nombre}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     />
-                    <div className="absolute top-2 right-2 bg-slate-900/90 backdrop-blur-md px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-black text-amber-400 shadow-sm">
+                    <div className="absolute top-2.5 right-2.5 bg-slate-900/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-black text-amber-400 shadow-md">
                       Q. {prod.precio.toFixed(2)}
                     </div>
                     {isOutOfStock && (
                       <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center">
-                        <span className="bg-red-500/90 text-white border border-red-400 text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                        <span className="bg-red-500/90 text-white border border-red-400 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider">
                           Agotado
                         </span>
                       </div>
@@ -378,38 +377,38 @@ export const NeveraPublica: React.FC = () => {
                   </div>
 
                   <div>
-                    <h3 className="font-extrabold text-xs sm:text-sm text-slate-800 line-clamp-2 min-h-[2rem] leading-snug">
+                    <h3 className="font-extrabold text-sm sm:text-base text-slate-800 line-clamp-1 leading-snug">
                       {prod.nombre}
                     </h3>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="text-[10px] sm:text-xs text-slate-500 font-medium">
-                        Stock: <strong className={prod.stockActual <= prod.stockMinimo ? 'text-amber-700 font-black' : 'text-slate-700'}>{prod.stockActual} u.</strong>
+                    <div className="flex items-center justify-between mt-1.5">
+                      <span className="text-xs text-slate-500 font-medium">
+                        Disponibles: <strong className={prod.stockActual <= prod.stockMinimo ? 'text-amber-700 font-black' : 'text-slate-700'}>{prod.stockActual} u.</strong>
                       </span>
                       {prod.stockActual <= prod.stockMinimo && prod.stockActual > 0 && (
-                        <span className="text-[8px] sm:text-[9px] bg-amber-100 text-amber-900 border border-amber-300 px-1 py-0.2 rounded font-bold">Últimas</span>
+                        <span className="text-[10px] bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded font-bold">Últimas unidades</span>
                       )}
                     </div>
                   </div>
                 </div>
 
                 {/* Counter Control */}
-                <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
-                  <span className="text-[10px] sm:text-xs font-bold text-slate-500">Cant:</span>
-                  <div className="flex items-center space-x-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-slate-500">Cantidad:</span>
+                  <div className="flex items-center space-x-2 bg-slate-100 p-1 rounded-xl border border-slate-200">
                     <button
                       onClick={() => handleQuantityChange(prod.id, -1, prod.stockActual)}
                       disabled={qtyInCart === 0}
-                      className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-200 disabled:opacity-30 flex items-center justify-center font-bold text-xs cursor-pointer transition-all shadow-xs"
+                      className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-200 disabled:opacity-30 flex items-center justify-center font-bold text-xs cursor-pointer transition-all shadow-xs"
                     >
-                      <Minus size={12} />
+                      <Minus size={14} />
                     </button>
-                    <span className="w-5 sm:w-6 text-center font-black text-xs sm:text-sm text-slate-900">{qtyInCart}</span>
+                    <span className="w-7 text-center font-black text-sm text-slate-900">{qtyInCart}</span>
                     <button
                       onClick={() => handleQuantityChange(prod.id, 1, prod.stockActual)}
                       disabled={isOutOfStock || qtyInCart >= prod.stockActual}
-                      className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-amber-900 text-amber-300 hover:bg-amber-800 disabled:opacity-30 flex items-center justify-center font-black text-xs cursor-pointer transition-all shadow-xs"
+                      className="w-8 h-8 rounded-lg bg-amber-900 text-amber-300 hover:bg-amber-800 disabled:opacity-30 flex items-center justify-center font-black text-xs cursor-pointer transition-all shadow-xs"
                     >
-                      <Plus size={12} />
+                      <Plus size={14} />
                     </button>
                   </div>
                 </div>
@@ -420,15 +419,15 @@ export const NeveraPublica: React.FC = () => {
 
       </main>
 
-      {/* Floating Bottom Bar / Checkout Drawer */}
+      {/* Floating Bottom Bar / Checkout Drawer (Ampliado a max-w-5xl) */}
       {cartItemsList.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 p-3 sm:p-4 bg-gradient-to-t from-slate-100 via-slate-100/90 to-transparent">
-          <div className="max-w-2xl mx-auto bg-white border-2 border-amber-500/80 rounded-[2.2rem] p-3.5 sm:p-4 shadow-2xl backdrop-blur-md space-y-3">
+        <div className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-gradient-to-t from-slate-100 via-slate-100/90 to-transparent">
+          <div className="max-w-5xl mx-auto bg-white border-2 border-amber-500/80 rounded-[2.2rem] p-4 shadow-2xl backdrop-blur-md space-y-3.5">
             
             {/* Socio summary badge */}
             {!selectedSocio && (
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-2 flex items-center space-x-2 text-amber-900 text-[11px] font-bold">
-                <AlertTriangle size={14} className="shrink-0 text-amber-700" />
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-2.5 flex items-center space-x-2 text-amber-900 text-xs font-bold">
+                <AlertTriangle size={16} className="shrink-0 text-amber-700" />
                 <span>Recuerda seleccionar tu nombre arriba antes de confirmar.</span>
               </div>
             )}
@@ -438,44 +437,44 @@ export const NeveraPublica: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setPaymentMethod('cargo_cuenta')}
-                className={`py-2 px-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
+                className={`py-2.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center space-x-2 cursor-pointer ${
                   paymentMethod === 'cargo_cuenta'
                     ? 'bg-amber-900 text-amber-300 shadow-md font-black'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <CreditCard size={14} />
-                <span>Cargo a Cuenta</span>
+                <CreditCard size={15} />
+                <span>Cargo a Cuenta Personal</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setPaymentMethod('efectivo')}
-                className={`py-2 px-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
+                className={`py-2.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center space-x-2 cursor-pointer ${
                   paymentMethod === 'efectivo'
                     ? 'bg-emerald-700 text-white shadow-md font-black'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <DollarSign size={14} />
-                <span>Pago Efectivo</span>
+                <DollarSign size={15} />
+                <span>Pago en Efectivo</span>
               </button>
             </div>
 
             {/* Total and Submit */}
-            <div className="flex items-center justify-between pt-0.5">
+            <div className="flex items-center justify-between pt-1">
               <div>
-                <span className="text-[11px] text-slate-500 font-bold block">{totalQuantity} productos seleccionados</span>
-                <span className="text-xl sm:text-2xl font-black text-slate-900">Q. {totalAmount.toFixed(2)}</span>
+                <span className="text-xs text-slate-500 font-bold block">{totalQuantity} productos seleccionados</span>
+                <span className="text-2xl sm:text-3xl font-black text-slate-900">Q. {totalAmount.toFixed(2)}</span>
               </div>
 
               <button
                 onClick={handleConfirmOrder}
                 disabled={submitting || !selectedSocio}
-                className="bg-gradient-to-r from-amber-700 to-amber-800 hover:from-amber-800 hover:to-amber-900 text-white font-black px-5 py-3 rounded-2xl transition-all hover:scale-105 active:scale-95 disabled:opacity-40 flex items-center space-x-2 cursor-pointer text-xs sm:text-sm shadow-md"
+                className="bg-gradient-to-r from-amber-700 to-amber-800 hover:from-amber-800 hover:to-amber-900 text-white font-black px-6 py-3.5 rounded-2xl transition-all hover:scale-105 active:scale-95 disabled:opacity-40 flex items-center space-x-2 cursor-pointer text-sm shadow-md"
               >
                 <span>{submitting ? 'Registrando...' : 'Confirmar Consumo'}</span>
-                <ArrowRight size={16} />
+                <ArrowRight size={18} />
               </button>
             </div>
 
