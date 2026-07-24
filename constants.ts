@@ -1,5 +1,5 @@
 
-import { Socio, UserRole, Acta, Actividad, GaleriaItem, Donacion, Beneficio, PropuestaSocio, RequerimientoActividad } from './types';
+import { Socio, UserRole, Acta, Actividad, GaleriaItem, Donacion, Beneficio, PropuestaSocio, RequerimientoActividad, NeveraProducto } from './types';
 export const MOCK_SOCIOS: Socio[] = [
   {
     id: '1',
@@ -346,7 +346,69 @@ export const MOCK_GALERIA: GaleriaItem[] = [
       'Alianza estratégica con Médicos Internacionales de la Visión',
       'Construcción de la primera Sala Odontológica en La Cueva'
     ],
-    citaHonorifica: '"Llevar salud a los cantones más alejados es la firma de amor de nuestro club."'
+  }
+];
+
+export const MOCK_NEVERA_CATALOG: NeveraProducto[] = [
+  {
+    id: 'nev-1',
+    nombre: 'Gaseosa Coca-Cola / Sprite (354ml)',
+    categoria: 'gaseosas_jugos',
+    precio: 10,
+    stockActual: 24,
+    stockMinimo: 6,
+    imagenUrl: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?q=80&w=400&auto=format&fit=crop',
+    activo: true
+  },
+  {
+    id: 'nev-2',
+    nombre: 'Jugo Del Valle / Kerns (354ml)',
+    categoria: 'gaseosas_jugos',
+    precio: 8,
+    stockActual: 18,
+    stockMinimo: 5,
+    imagenUrl: 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?q=80&w=400&auto=format&fit=crop',
+    activo: true
+  },
+  {
+    id: 'nev-3',
+    nombre: 'Cerveza Gallo Fría (350ml)',
+    categoria: 'cerveza',
+    precio: 15,
+    stockActual: 30,
+    stockMinimo: 10,
+    imagenUrl: 'https://images.unsplash.com/photo-1608270586620-248524c67de9?q=80&w=400&auto=format&fit=crop',
+    activo: true
+  },
+  {
+    id: 'nev-4',
+    nombre: 'Cerveza Cabro Reserva (350ml)',
+    categoria: 'cerveza',
+    precio: 18,
+    stockActual: 16,
+    stockMinimo: 6,
+    imagenUrl: 'https://images.unsplash.com/photo-1535958636474-b021ee887b13?q=80&w=400&auto=format&fit=crop',
+    activo: true
+  },
+  {
+    id: 'nev-5',
+    nombre: 'Copa / Botella Vino Tinto Reserva',
+    categoria: 'vino_licor',
+    precio: 35,
+    stockActual: 8,
+    stockMinimo: 2,
+    imagenUrl: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?q=80&w=400&auto=format&fit=crop',
+    activo: true
+  },
+  {
+    id: 'nev-6',
+    nombre: 'Pack Snacks & Botanas Variadas',
+    categoria: 'snacks',
+    precio: 12,
+    stockActual: 20,
+    stockMinimo: 5,
+    imagenUrl: 'https://images.unsplash.com/photo-1566478989037-eec170784d0b?q=80&w=400&auto=format&fit=crop',
+    activo: true
   }
 ];
 

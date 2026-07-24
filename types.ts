@@ -497,3 +497,57 @@ export interface RequerimientoActividad {
   creadoPorNombre: string;
 }
 
+// Interfaces para Control de Nevera / Bar Lionístico
+export type CategoriaProductoNevera = 'gaseosas_jugos' | 'cerveza' | 'vino_licor' | 'snacks' | 'otros';
+
+export interface NeveraProducto {
+  id: string;
+  nombre: string;
+  categoria: CategoriaProductoNevera;
+  precio: number;
+  stockActual: number;
+  stockMinimo: number;
+  imagenUrl?: string;
+  activo: boolean;
+  editadoPor?: string;
+  fechaEdicion?: string;
+}
+
+export interface NeveraConsumoItem {
+  productoId: string;
+  nombreProducto: string;
+  cantidad: number;
+  precioUnitario: number;
+  subtotal: number;
+}
+
+export interface NeveraConsumo {
+  id: string;
+  socioId: string;
+  socioNombre: string;
+  items: NeveraConsumoItem[];
+  montoTotal: number;
+  metodoPago: 'efectivo' | 'cargo_cuenta';
+  fechaConsumo: string; // ISO String
+  estado: 'pagado' | 'pendiente_cobro';
+  notas?: string;
+}
+
+export interface NeveraCuentaAbono {
+  id: string;
+  fecha: string;
+  monto: number;
+  metodo: 'efectivo' | 'transferencia' | 'deposito';
+  referencia?: string;
+  registradoPor?: string;
+}
+
+export interface NeveraSaldoSocio {
+  socioId: string;
+  socioNombre: string;
+  saldoPendiente: number;
+  ultimoConsumoFecha?: string;
+  abonos?: NeveraCuentaAbono[];
+}
+
+

@@ -85,7 +85,8 @@ import {
   ShieldCheck,
   Settings,
   Key,
-  ClipboardList
+  ClipboardList,
+  Refrigerator
 } from 'lucide-react';
 import { generateActaPDF, generateActaCode, generateReciboPagoPDF, generateAgendaPDF } from '../utils/pdfGenerator';
 import { FormattedActa } from '../components/FormattedActa';
@@ -106,6 +107,7 @@ import { AdminCuotas } from './admin/AdminCuotas';
 import { AdminCalendario } from './admin/AdminCalendario';
 import { AdminConvencion } from './admin/AdminConvencion';
 import { BibliotecaSolicitudesSecretaria } from './BibliotecaSolicitudesSecretaria';
+import { NeveraAdmin } from './NeveraAdmin';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
 
 const CATEGORIAS_MODULOS = [
@@ -144,6 +146,7 @@ const CATEGORIAS_MODULOS = [
     category: 'Tesorería',
     items: [
       { id: 'cuotas', label: 'Control de Cuotas', icon: CreditCard },
+      { id: 'nevera_admin', label: 'Control de Nevera / Bar', icon: Refrigerator },
       { id: 'parqueo', label: 'Gestión de Parqueo', icon: Car },
       { id: 'donaciones', label: 'Donaciones Recibidas', icon: Gift },
       { id: 'presupuestos', label: 'Presupuestos', icon: DollarSign }
@@ -238,7 +241,7 @@ interface SuperAdminProps {
   onUpdateUser?: (user: Socio) => void;
 }
 
-type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas' | 'afiliacion' | 'inventario' | 'galeria_admin' | 'linea_tiempo_admin' | 'agenda_contactos' | 'presidencia' | 'agendas_reunion' | 'ranking_lionistico' | 'asignacion_funciones' | 'convencion_admin' | 'archivo_solicitudes_secretaria';
+type TabType = 'resumen' | 'socios' | 'calendario' | 'cuotas' | 'nevera_admin' | 'actas' | 'donaciones' | 'beneficios' | 'parqueo' | 'presupuestos' | 'comisiones' | 'minutas' | 'afiliacion' | 'inventario' | 'galeria_admin' | 'linea_tiempo_admin' | 'agenda_contactos' | 'presidencia' | 'agendas_reunion' | 'ranking_lionistico' | 'asignacion_funciones' | 'convencion_admin' | 'archivo_solicitudes_secretaria';
 
 const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const { showAlert, showConfirm } = useModal();
@@ -258,9 +261,9 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     // Fallback switch check
     switch (user.rol) {
       case UserRole.SUPER_ADMIN:
-        return ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario', 'galeria_admin', 'linea_tiempo_admin', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico', 'asignacion_funciones', 'convencion_admin', 'archivo_solicitudes_secretaria'];
+        return ['resumen', 'socios', 'calendario', 'cuotas', 'nevera_admin', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario', 'galeria_admin', 'linea_tiempo_admin', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico', 'asignacion_funciones', 'convencion_admin', 'archivo_solicitudes_secretaria'];
       case UserRole.TESORERO:
-        return ['resumen', 'socios', 'cuotas', 'donaciones', 'parqueo', 'presupuestos', 'inventario', 'galeria_admin', 'linea_tiempo_admin'];
+        return ['resumen', 'socios', 'cuotas', 'nevera_admin', 'donaciones', 'parqueo', 'presupuestos', 'inventario', 'galeria_admin', 'linea_tiempo_admin'];
       case UserRole.SECRETARIO:
         return ['resumen', 'socios', 'calendario', 'actas', 'comisiones', 'minutas', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico', 'archivo_solicitudes_secretaria'];
       case UserRole.ASESOR_SERVICIOS:
@@ -321,7 +324,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
       { category: 'Presidencia', items: ['presidencia', 'agendas_reunion', 'ranking_lionistico'] },
       { category: 'Secretaría', items: ['actas', 'comisiones', 'archivo_solicitudes_secretaria'] },
       { category: 'Comité de Mercadeo', items: ['calendario', 'beneficios'] },
-      { category: 'Tesorería', items: ['cuotas', 'parqueo', 'donaciones', 'presupuestos'] },
+      { category: 'Tesorería', items: ['cuotas', 'nevera_admin', 'parqueo', 'donaciones', 'presupuestos'] },
       { category: 'Comité de Afiliación', items: ['socios', 'afiliacion'] },
       { category: 'Comité de Servicio', items: ['minutas'] },
       { category: 'Comité de Patrimonio', items: ['inventario', 'galeria_admin', 'linea_tiempo_admin'] },
@@ -4930,7 +4933,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
                   {[
                     { label: 'Control Cuotas', tab: 'cuotas', icon: CreditCard, color: 'text-emerald-700 bg-emerald-50/60 border-emerald-100/80 hover:bg-emerald-100/60' },
-                    { label: 'Ver Calendario', tab: 'calendario', icon: Calendar, color: 'text-amber-700 bg-amber-50/60 border-amber-100/80 hover:bg-amber-100/60' },
+                    { label: 'Nevera / Bar', tab: 'nevera_admin', icon: Refrigerator, color: 'text-amber-700 bg-amber-50/60 border-amber-100/80 hover:bg-amber-100/60' },
+                    { label: 'Ver Calendario', tab: 'calendario', icon: Calendar, color: 'text-blue-700 bg-blue-50/60 border-blue-100/80 hover:bg-blue-100/60' },
                     { label: 'Libro de Actas', tab: 'actas', icon: FileText, color: 'text-indigo-700 bg-indigo-50/60 border-indigo-100/80 hover:bg-indigo-100/60' },
                     { label: 'Ver Solicitudes', tab: 'presidencia', icon: Layers, color: 'text-blue-700 bg-blue-50/60 border-blue-100/80 hover:bg-blue-100/60' },
                     { label: 'Propuestas Socio', tab: 'afiliacion', icon: UserCheck, color: 'text-purple-700 bg-purple-50/60 border-purple-100/80 hover:bg-purple-100/60' },
@@ -5706,6 +5710,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           )}
           {activeTab === 'parqueo' && (
             <ParqueoManager />
+          )}
+          {activeTab === 'nevera_admin' && (
+            <NeveraAdmin />
           )}
           {activeTab === 'presupuestos' && (
             <Presupuestos />

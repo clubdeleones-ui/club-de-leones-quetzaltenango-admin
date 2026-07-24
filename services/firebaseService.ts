@@ -13,7 +13,8 @@ import {
   writeBatch
 } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda, Acta, HitoHistorico, SolicitudVoluntario, ReunionAgenda, TareaComision, Asistencia, BienInventario, CategoriaInventario, ConvencionConfig, ConvencionRegistro, RegistroParticipacion, RequerimientoActividad } from "../types";
+import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda, Acta, HitoHistorico, SolicitudVoluntario, ReunionAgenda, TareaComision, Asistencia, BienInventario, CategoriaInventario, ConvencionConfig, ConvencionRegistro, RegistroParticipacion, RequerimientoActividad, NeveraProducto, NeveraConsumo, NeveraSaldoSocio, NeveraCuentaAbono } from "../types";
+import { MOCK_NEVERA_CATALOG } from "../constants";
 
 export const firebaseService = {
   // Upload candidate photo to Firebase Storage (Supports Base64 data_url format)
@@ -1297,6 +1298,151 @@ export const firebaseService = {
       }
     } catch (error) {
       console.error("Error syncing initial requerimientos:", error);
+    }
+  },
+
+  // --- CONTROL DE NEVERA / BAR LIONÍSTICO ---
+  getNeveraInventario: async (): Promise<NeveraProducto[]> => {
+    try {
+      const colRef = collection(db, "nevera_inventario");
+      const snapshot = await getDocs(colRef);
+      if (snapshot.empty) {
+        return MOCK_NEVERA_CATALOG;
+      }
+      return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as NeveraProducto));
+    } catch (error) {
+      console.error("Error fetching nevera inventario:", error);
+      return MOCK_NEVERA_CATALOG;
+    }
+  },
+
+  saveNeveraProducto: async (producto: NeveraProducto): Promise<void> => {
+    try {
+      const colRef = collection(db, "nevera_inventario");
+      const docRef = producto.id ? doc(colRef, producto.id) : doc(colRef);
+      const dataToSave = { ...producto, id: docRef.id };
+      await setDoc(docRef, dataToSave, { merge: true });
+    } catch (error) {
+      console.error("Error saving nevera producto:", error);
+      throw error;
+    }
+  },
+
+  deleteNeveraProducto: async (id: string): Promise<void> => {
+    try {
+      await deleteDoc(doc(db, "nevera_inventario", id));
+    } catch (error) {
+      console.error("Error deleting nevera producto:", error);
+      throw error;
+    }
+  },
+
+  syncInitialNeveraCatalog: async (): Promise<void> => {
+    try {
+      const colRef = collection(db, "nevera_inventario");
+      const snapshot = await getDocs(colRef);
+      const existingIds = new Set(snapshot.docs.map(d => d.id));
+      for (const item of MOCK_NEVERA_CATALOG) {
+        if (!existingIds.has(item.id)) {
+          await setDoc(doc(colRef, item.id), item);
+        }
+      }
+    } catch (error) {
+      console.error("Error syncing initial nevera catalog:", error);
+    }
+  },
+
+  getNeveraConsumos: async (): Promise<NeveraConsumo[]> => {
+    try {
+      const colRef = collection(db, "nevera_consumos");
+      const snapshot = await getDocs(colRef);
+      const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as NeveraConsumo));
+      return items.sort((a, b) => new Date(b.fechaConsumo).getTime() - new Date(a.fechaConsumo).getTime());
+    } catch (error) {
+      console.error("Error fetching nevera consumos:", error);
+      return [];
+    }
+  },
+
+  registrarConsumoNevera: async (consumo: Omit<NeveraConsumo, 'id'>): Promise<string> => {
+    try {
+      // 1. Create consumption doc
+      const consumosColRef = collection(db, "nevera_consumos");
+      const consumoDocRef = doc(consumosColRef);
+      const nuevoConsumo: NeveraConsumo = {
+        ...consumo,
+        id: consumoDocRef.id
+      };
+      await setDoc(consumoDocRef, nuevoConsumo);
+
+      // 2. Deduct inventory stock for each item consumed
+      const batch = writeBatch(db);
+      for (const item of consumo.items) {
+        const prodRef = doc(db, "nevera_inventario", item.productoId);
+        const prodSnap = await getDoc(prodRef);
+        if (prodSnap.exists()) {
+          const currentStock = prodSnap.data().stockActual || 0;
+          const newStock = Math.max(0, currentStock - item.cantidad);
+          batch.update(prodRef, { stockActual: newStock });
+        }
+      }
+      await batch.commit();
+
+      // 3. If method is 'cargo_cuenta', update socio's pending balance
+      if (consumo.metodoPago === 'cargo_cuenta') {
+        const cuentaRef = doc(db, "nevera_cuentas", consumo.socioId);
+        const cuentaSnap = await getDoc(cuentaRef);
+        let currentSaldo = 0;
+        if (cuentaSnap.exists()) {
+          currentSaldo = cuentaSnap.data().saldoPendiente || 0;
+        }
+        await setDoc(cuentaRef, {
+          socioId: consumo.socioId,
+          socioNombre: consumo.socioNombre,
+          saldoPendiente: currentSaldo + consumo.montoTotal,
+          ultimoConsumoFecha: consumo.fechaConsumo
+        }, { merge: true });
+      }
+
+      return consumoDocRef.id;
+    } catch (error) {
+      console.error("Error registering nevera consumo:", error);
+      throw error;
+    }
+  },
+
+  getNeveraCuentasSocios: async (): Promise<NeveraSaldoSocio[]> => {
+    try {
+      const colRef = collection(db, "nevera_cuentas");
+      const snapshot = await getDocs(colRef);
+      return snapshot.docs.map(d => ({ socioId: d.id, ...d.data() } as NeveraSaldoSocio));
+    } catch (error) {
+      console.error("Error fetching nevera cuentas:", error);
+      return [];
+    }
+  },
+
+  registrarAbonoNevera: async (socioId: string, socioNombre: string, abono: NeveraCuentaAbono): Promise<void> => {
+    try {
+      const cuentaRef = doc(db, "nevera_cuentas", socioId);
+      const cuentaSnap = await getDoc(cuentaRef);
+      let currentSaldo = 0;
+      let existingAbonos: NeveraCuentaAbono[] = [];
+      if (cuentaSnap.exists()) {
+        const data = cuentaSnap.data();
+        currentSaldo = data.saldoPendiente || 0;
+        existingAbonos = data.abonos || [];
+      }
+      const nuevoSaldo = Math.max(0, currentSaldo - abono.monto);
+      await setDoc(cuentaRef, {
+        socioId,
+        socioNombre,
+        saldoPendiente: nuevoSaldo,
+        abonos: [abono, ...existingAbonos]
+      }, { merge: true });
+    } catch (error) {
+      console.error("Error registering nevera abono:", error);
+      throw error;
     }
   },
 };

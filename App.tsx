@@ -33,6 +33,7 @@ const CompletarFichaSocio = lazy(() => import('./views/CompletarFichaSocio'));
 const PublicPagoCuota = lazy(() => import('./views/PublicPagoCuota').then(m => ({ default: m.PublicPagoCuota })));
 const RequerimientoPublico = lazy(() => import('./views/RequerimientoPublico'));
 const AgendaPublica = lazy(() => import('./views/AgendaPublica').then(m => ({ default: m.AgendaPublica })));
+const NeveraPublica = lazy(() => import('./views/NeveraPublica').then(m => ({ default: m.NeveraPublica })));
 
 // ProtectedRoute moved outside of App to resolve typing errors and improve performance
 interface ProtectedRouteProps {
@@ -140,6 +141,7 @@ const App: React.FC = () => {
               <Route path="/pago-cuota" element={<PublicPagoCuota />} />
               <Route path="/convocatoria/:id" element={<RequerimientoPublico />} />
               <Route path="/agenda-publica/:id" element={<AgendaPublica />} />
+              <Route path="/nevera" element={<NeveraPublica />} />
 
               <Route path="/login" element={auth.isAuthenticated ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />} />
 
