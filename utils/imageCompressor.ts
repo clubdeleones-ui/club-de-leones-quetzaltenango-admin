@@ -46,15 +46,35 @@ export const compressImageFile = (
           return;
         }
 
+        const isPngOrWebp = file.type === 'image/png' || 
+                            file.type === 'image/webp' || 
+                            file.name?.toLowerCase().endsWith('.png') || 
+                            file.name?.toLowerCase().endsWith('.webp') ||
+                            quality === 1.0;
+
+        if (isPngOrWebp) {
+          // Preserve 100% alpha channel transparency for PNG/WebP logos and icons
+          ctx.clearRect(0, 0, width, height);
+        } else {
+          // Default white background fill for JPEGs so transparent fallback is white, not black
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, width, height);
+        }
+
         // Draw the image on the canvas with the new dimensions
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Convert the canvas to a JPEG data URL with the specified quality compression
+        // Convert the canvas to data URL preserving PNG transparency when applicable
         try {
-          const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-          resolve(compressedDataUrl);
+          if (isPngOrWebp) {
+            const compressedDataUrl = canvas.toDataURL('image/png');
+            resolve(compressedDataUrl);
+          } else {
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+            resolve(compressedDataUrl);
+          }
         } catch (err) {
-          // Fallback if canvas.toDataURL fails (e.g. security error if image is from tainted source, though not applicable to local files)
+          // Fallback if canvas.toDataURL fails
           resolve(event.target?.result as string);
         }
       };
