@@ -19,6 +19,7 @@ import {
   Check
 } from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
+import { telegramService } from '../services/telegramService';
 import { ConvencionConfig, ConvencionRegistro } from '../types';
 
 interface CountdownState {
@@ -342,6 +343,12 @@ export default function Convencion() {
       };
       
       await firebaseService.saveConvencionRegistro(nuevoRegistro);
+      
+      // Intentar envío de notificación automática por Telegram (si está configurado)
+      telegramService.notifyNuevaInscripcionConvencion(nuevoRegistro).catch(err => {
+        console.warn("No se pudo enviar notificación de Telegram:", err);
+      });
+
       setIsSubmitted(true);
     } catch (error) {
       console.error("Error al registrar participante:", error);
@@ -638,9 +645,9 @@ export default function Convencion() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      {/* Teléfono */}
+                      {/* Teléfono / Telegram */}
                       <div className="space-y-2">
-                        <label className="text-xs font-extrabold uppercase tracking-wider text-slate-350" htmlFor="telefono">Teléfono / WhatsApp</label>
+                        <label className="text-xs font-extrabold uppercase tracking-wider text-slate-350" htmlFor="telefono">Teléfono / Telegram</label>
                         <div className="flex items-center bg-blue-900/50 border border-white/15 focus-within:border-yellow-500 rounded-2xl focus-within:ring-2 focus-within:ring-yellow-500/20 transition-all overflow-hidden">
                           <span className="bg-white/10 px-4 py-3.5 text-white text-sm font-bold border-r border-white/15 select-none">
                             +502
