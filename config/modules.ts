@@ -48,7 +48,7 @@ export const ALL_APP_MODULES: AppModule[] = [
   // Comité de Gestión
   { 
     id: 'convencion_admin', 
-    label: 'Formulario y Página de Convención', 
+    label: 'Gestión Convención', 
     category: 'Comité de Gestión',
     description: 'Administración del formulario de inscripción, apertura/cierre de registros y configuración de la Convención',
     defaultRoles: ['SUPER_ADMIN', 'SECRETARIO', 'PRESIDENTE_AFILIACION'] 

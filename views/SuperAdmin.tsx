@@ -176,7 +176,7 @@ const CATEGORIAS_MODULOS = [
   {
     category: 'Comité de Gestión',
     items: [
-      { id: 'convencion_admin', label: 'Formulario y Página de Convención', icon: Award },
+      { id: 'convencion_admin', label: 'Gestión Convención', icon: Award },
       { id: 'agenda_contactos', label: 'Agenda de Contactos', icon: BookUser }
     ]
   }
