@@ -565,9 +565,12 @@ export default function Convencion() {
               <div>
                 <div className="relative h-56 overflow-hidden">
                   <img 
-                    src="https://images.unsplash.com/photo-1545232979-fbfd4307ef05?auto=format&fit=crop&w=800&q=80" 
+                    src="https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?auto=format&fit=crop&w=800&q=80" 
                     alt="Jardines Colina Country Club"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=800&q=80";
+                    }}
                   />
                   <div className="absolute top-4 left-4 bg-emerald-800/90 backdrop-blur-md text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow">
                     Naturaleza & Vista
@@ -594,6 +597,9 @@ export default function Convencion() {
                     src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=800&q=80" 
                     alt="Capilla y Banquetes Colina Country Club"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=800&q=80";
+                    }}
                   />
                   <div className="absolute top-4 left-4 bg-amber-800/90 backdrop-blur-md text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow">
                     Capilla & Banquetes
