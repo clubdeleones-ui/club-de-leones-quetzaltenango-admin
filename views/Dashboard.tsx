@@ -127,10 +127,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
       });
   };
 
-  const [activeTab, setActiveTab] = useState<'resumen' | 'requerimientos' | 'perfil'>(() => {
+  const [activeTab, setActiveTab] = useState<'perfil' | 'resumen' | 'requerimientos'>(() => {
     const saved = sessionStorage.getItem('dashboard_active_tab');
-    if (saved && ['resumen', 'requerimientos', 'perfil'].includes(saved)) return saved as 'resumen' | 'requerimientos' | 'perfil';
-    return 'resumen';
+    if (saved && ['perfil', 'resumen', 'requerimientos'].includes(saved)) return saved as 'perfil' | 'resumen' | 'requerimientos';
+    return 'perfil';
   });
 
   useEffect(() => {
@@ -323,15 +323,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
             className="w-full flex items-center justify-between px-5 py-3.5 bg-blue-900 text-white font-extrabold rounded-2xl shadow-lg border border-blue-800/60 transition-all hover:bg-blue-850 active:scale-[0.99] text-sm"
           >
             <div className="flex items-center space-x-2.5">
-              {activeTab === 'resumen' ? (
-                <TrendingUp size={18} className="text-yellow-400" />
-              ) : activeTab === 'requerimientos' ? (
-                <ClipboardList size={18} className="text-yellow-400" />
-              ) : (
+              {activeTab === 'perfil' ? (
                 <User size={18} className="text-yellow-400" />
+              ) : activeTab === 'resumen' ? (
+                <TrendingUp size={18} className="text-yellow-400" />
+              ) : (
+                <ClipboardList size={18} className="text-yellow-400" />
               )}
               <span>
-                {activeTab === 'resumen' ? 'Resumen General' : activeTab === 'requerimientos' ? 'Convocatorias de Servicio' : 'Mi Perfil'}
+                {activeTab === 'perfil' ? 'Mi Perfil' : activeTab === 'resumen' ? 'Resumen General' : 'Convocatorias de Servicio'}
               </span>
             </div>
             <ChevronDown size={18} className={`text-slate-300 transition-transform duration-300 ${isMobileTabMenuOpen ? 'rotate-180' : ''}`} />
@@ -339,6 +339,19 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
 
           {isMobileTabMenuOpen && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2.5 z-45 animate-in fade-in slide-in-from-top-1 duration-200">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('perfil');
+                  setIsMobileTabMenuOpen(false);
+                }}
+                className={`w-full flex items-center space-x-3 px-5 py-3 text-sm font-extrabold transition-colors text-left ${
+                  activeTab === 'perfil' ? 'bg-blue-50 text-blue-900' : 'text-slate-655 hover:bg-slate-50'
+                }`}
+              >
+                <User size={18} className={activeTab === 'perfil' ? 'text-blue-900' : 'text-slate-400'} />
+                <span>Mi Perfil</span>
+              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -365,19 +378,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                 <ClipboardList size={18} className={activeTab === 'requerimientos' ? 'text-blue-900' : 'text-slate-400'} />
                 <span>Convocatorias de Servicio</span>
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('perfil');
-                  setIsMobileTabMenuOpen(false);
-                }}
-                className={`w-full flex items-center space-x-3 px-5 py-3 text-sm font-extrabold transition-colors text-left ${
-                  activeTab === 'perfil' ? 'bg-blue-50 text-blue-900' : 'text-slate-655 hover:bg-slate-50'
-                }`}
-              >
-                <User size={18} className={activeTab === 'perfil' ? 'text-blue-900' : 'text-slate-400'} />
-                <span>Mi Perfil</span>
-              </button>
 
             </div>
           )}
@@ -385,6 +385,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
 
         {/* Desktop Tabs Navigation */}
         <div className="hidden md:flex space-x-2">
+          <button
+            onClick={() => setActiveTab('perfil')}
+            className={`flex items-center space-x-2.5 px-5 py-3 rounded-xl font-bold text-sm transition-all ${
+              activeTab === 'perfil'
+                ? 'bg-blue-900 text-white shadow-md'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
+            }`}
+          >
+            <User size={16} />
+            <span>Mi Perfil</span>
+          </button>
           <button
             onClick={() => setActiveTab('resumen')}
             className={`flex items-center space-x-2.5 px-5 py-3 rounded-xl font-bold text-sm transition-all ${
@@ -406,17 +417,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
           >
             <ClipboardList size={16} />
             <span>Convocatorias de Servicio</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('perfil')}
-            className={`flex items-center space-x-2.5 px-5 py-3 rounded-xl font-bold text-sm transition-all ${
-              activeTab === 'perfil'
-                ? 'bg-blue-900 text-white shadow-md'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
-            }`}
-          >
-            <User size={16} />
-            <span>Mi Perfil</span>
           </button>
         </div>
       </div>
