@@ -432,6 +432,15 @@ export interface ConvencionExperiencia {
   badge: string;
 }
 
+export interface ConvencionAlianza {
+  id: string;
+  name: string;
+  category: string;
+  badge: string;
+  icon?: string;
+  logoUrl?: string;
+}
+
 export interface ConvencionConfig {
   titulo: string;
   lema: string;
@@ -447,6 +456,7 @@ export interface ConvencionConfig {
   telegramBotToken?: string;
   telegramChatId?: string;
   mensajeBienvenidaEmail?: string;
+  alianzas?: ConvencionAlianza[];
 }
 
 export interface ConvencionRegistro {

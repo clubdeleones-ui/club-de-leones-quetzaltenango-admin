@@ -145,14 +145,14 @@ const CARGO_OPTIONS = [
 ];
 
 const ALIANZAS_CONVENCION = [
-  { name: 'Lions Clubs International', category: 'Organización Mundial', icon: '🦁', badge: 'Oficial' },
-  { name: 'Distrito D3 Guatemala', category: 'Gobernación Distrital', icon: '🏛️', badge: 'Anfitrión' },
-  { name: 'Colina Country Club', category: 'Sede Oficial', icon: '🏰', badge: 'Complejo' },
-  { name: 'Municipalidad de Quetzaltenango', category: 'Cultura Altense', icon: '🇬🇹', badge: 'Gobierno' },
-  { name: 'INGUAT', category: 'Turismo Guatemala', icon: '🌄', badge: 'Institucional' },
-  { name: 'Club de Leones Quetzaltenango', category: 'Comité Organizador', icon: '👑', badge: 'Anfitriones' },
-  { name: 'Leo Club International', category: 'Liderazgo Juvenil', icon: '⭐', badge: 'Juventud' },
-  { name: 'Cámara de Comercio Xela', category: 'Desarrollo Regional', icon: '🤝', badge: 'Aliado' }
+  { id: 'alianza-1', name: 'Lions Clubs International', category: 'Organización Mundial', icon: '🦁', badge: 'Oficial' },
+  { id: 'alianza-2', name: 'Distrito D3 Guatemala', category: 'Gobernación Distrital', icon: '🏛️', badge: 'Anfitrión' },
+  { id: 'alianza-3', name: 'Colina Country Club', category: 'Sede Oficial', icon: '🏰', badge: 'Complejo' },
+  { id: 'alianza-4', name: 'Municipalidad de Quetzaltenango', category: 'Cultura Altense', icon: '🇬🇹', badge: 'Gobierno' },
+  { id: 'alianza-5', name: 'INGUAT', category: 'Turismo Guatemala', icon: '🌄', badge: 'Institucional' },
+  { id: 'alianza-6', name: 'Club de Leones Quetzaltenango', category: 'Comité Organizador', icon: '👑', badge: 'Anfitriones' },
+  { id: 'alianza-7', name: 'Leo Club International', category: 'Liderazgo Juvenil', icon: '⭐', badge: 'Juventud' },
+  { id: 'alianza-8', name: 'Cámara de Comercio Xela', category: 'Desarrollo Regional', icon: '🤝', badge: 'Aliado' }
 ];
 
 export default function Convencion() {
@@ -505,28 +505,50 @@ export default function Convencion() {
             <div className="pointer-events-none absolute inset-y-0 left-0 w-20 sm:w-36 bg-gradient-to-r from-slate-950 to-transparent z-20" />
             <div className="pointer-events-none absolute inset-y-0 right-0 w-20 sm:w-36 bg-gradient-to-l from-slate-950 to-transparent z-20" />
 
-            {/* Scrolling Marquee Container */}
-            <div className="animate-marquee flex items-center space-x-8 sm:space-x-10 py-3">
-              {[...ALIANZAS_CONVENCION, ...ALIANZAS_CONVENCION].map((aliado, index) => (
+            {/* Scrolling Marquee Container with Square Slides and Text Below */}
+            <div className="animate-marquee flex items-start space-x-6 sm:space-x-8 py-3">
+              {[
+                ...((config.alianzas && config.alianzas.length > 0) ? config.alianzas : ALIANZAS_CONVENCION),
+                ...((config.alianzas && config.alianzas.length > 0) ? config.alianzas : ALIANZAS_CONVENCION)
+              ].map((aliado, index) => (
                 <div 
                   key={index}
-                  className="bg-slate-900/90 hover:bg-blue-900/80 border-2 border-white/15 hover:border-yellow-400 rounded-3xl px-7 py-5 flex items-center space-x-5 shadow-2xl backdrop-blur-xl transition-all duration-300 transform hover:-translate-y-1 group shrink-0"
+                  className="flex flex-col items-center group shrink-0 cursor-pointer"
                 >
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-yellow-500/25 to-amber-500/10 border-2 border-yellow-500/40 flex items-center justify-center text-3xl sm:text-4xl shadow-inner shadow-yellow-500/20 group-hover:scale-110 transition-transform">
-                    {aliado.icon}
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-3">
-                      <span className="text-base sm:text-lg font-black text-white group-hover:text-yellow-300 transition-colors">
-                        {aliado.name}
-                      </span>
-                      <span className="text-[10px] font-black uppercase tracking-wider text-yellow-400 bg-yellow-500/20 border border-yellow-500/40 px-3 py-1 rounded-full shadow-sm">
+                  {/* Square Logo Slide Box */}
+                  <div className="w-36 h-36 sm:w-44 sm:h-44 aspect-square rounded-3xl bg-gradient-to-br from-slate-900/95 via-blue-955 to-slate-950 border-2 border-white/15 group-hover:border-yellow-400/80 shadow-2xl backdrop-blur-xl flex items-center justify-center p-4 relative overflow-hidden transition-all duration-300 transform group-hover:-translate-y-1.5 group-hover:shadow-yellow-500/10">
+                    {/* Subtle Corner Glow */}
+                    <div className="absolute -top-10 -right-10 w-24 h-24 bg-yellow-500/10 rounded-full blur-xl pointer-events-none group-hover:bg-yellow-500/25 transition-colors" />
+
+                    {/* Badge Label */}
+                    {aliado.badge && (
+                      <span className="absolute top-2.5 right-2.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-yellow-400 bg-yellow-500/20 border border-yellow-500/40 px-2.5 py-0.5 rounded-full shadow-sm z-10">
                         {aliado.badge}
                       </span>
-                    </div>
-                    <span className="text-xs sm:text-sm text-slate-350 font-medium block">
+                    )}
+
+                    {/* Image or Icon */}
+                    {aliado.logoUrl ? (
+                      <img 
+                        src={aliado.logoUrl} 
+                        alt={aliado.name}
+                        className="max-w-full max-h-full object-contain filter drop-shadow-lg group-hover:scale-110 transition-transform duration-300"
+                      />
+                    ) : (
+                      <span className="text-4xl sm:text-5xl drop-shadow-md group-hover:scale-110 transition-transform duration-300">
+                        {aliado.icon || '🤝'}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Text Below the Square Slide */}
+                  <div className="mt-3 text-center space-y-0.5 max-w-[140px] sm:max-w-[176px]">
+                    <h4 className="text-sm sm:text-base font-extrabold text-white group-hover:text-yellow-300 transition-colors line-clamp-2 leading-tight">
+                      {aliado.name}
+                    </h4>
+                    <p className="text-[11px] sm:text-xs text-slate-350 font-medium line-clamp-1">
                       {aliado.category}
-                    </span>
+                    </p>
                   </div>
                 </div>
               ))}

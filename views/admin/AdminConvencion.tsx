@@ -26,12 +26,13 @@ import {
   ChevronRight,
   Eye,
   Mail,
-  Send
+  Send,
+  Handshake
 } from 'lucide-react';
 import { firebaseService } from '../../services/firebaseService';
 import { telegramService } from '../../services/telegramService';
 import { compressImageFile, validateImageFile } from '../../utils/imageCompressor';
-import { ConvencionConfig, ConvencionRegistro, ConvencionActividad, ConvencionExperiencia } from '../../types';
+import { ConvencionConfig, ConvencionRegistro, ConvencionActividad, ConvencionExperiencia, ConvencionAlianza } from '../../types';
 
 // Map of icons for selection
 const ICON_OPTIONS = [
@@ -44,9 +45,20 @@ const ICON_OPTIONS = [
   { name: 'Users', label: 'Usuarios/Hermandad', Icon: Users }
 ];
 
+const DEFAULT_ALIANZAS: ConvencionAlianza[] = [
+  { id: 'alianza-1', name: 'Lions Clubs International', category: 'Organización Mundial', icon: '🦁', badge: 'Oficial' },
+  { id: 'alianza-2', name: 'Distrito D3 Guatemala', category: 'Gobernación Distrital', icon: '🏛️', badge: 'Anfitrión' },
+  { id: 'alianza-3', name: 'Colina Country Club', category: 'Sede Oficial', icon: '🏰', badge: 'Complejo' },
+  { id: 'alianza-4', name: 'Municipalidad de Quetzaltenango', category: 'Cultura Altense', icon: '🇬🇹', badge: 'Gobierno' },
+  { id: 'alianza-5', name: 'INGUAT', category: 'Turismo Guatemala', icon: '🌄', badge: 'Institucional' },
+  { id: 'alianza-6', name: 'Club de Leones Quetzaltenango', category: 'Comité Organizador', icon: '👑', badge: 'Anfitriones' },
+  { id: 'alianza-7', name: 'Leo Club International', category: 'Liderazgo Juvenil', icon: '⭐', badge: 'Juventud' },
+  { id: 'alianza-8', name: 'Cámara de Comercio Xela', category: 'Desarrollo Regional', icon: '🤝', badge: 'Aliado' }
+];
+
 export function AdminConvencion() {
   const [activeSubTab, setActiveSubTab] = useState<'config' | 'registros'>('config');
-  const [activeConfigTab, setActiveConfigTab] = useState<'general' | 'actividades' | 'experiencias' | 'difusion'>('general');
+  const [activeConfigTab, setActiveConfigTab] = useState<'general' | 'actividades' | 'experiencias' | 'alianzas' | 'difusion'>('general');
   
   // Mass Broadcast State
   const [broadcastSubject, setBroadcastSubject] = useState('Avances y Boletín Oficial - LXIV Convención Lionística');
@@ -64,7 +76,8 @@ export function AdminConvencion() {
     fotoSedeDescripcion: '',
     inscripcionesAbiertas: false,
     actividadesCulturales: [],
-    experienciasUnicas: []
+    experienciasUnicas: [],
+    alianzas: []
   });
   
   const [registros, setRegistros] = useState<ConvencionRegistro[]>([]);
@@ -96,6 +109,19 @@ export function AdminConvencion() {
     desc: '',
     badge: 'Liderazgo'
   });
+
+  // Alianzas / Patrocinadores Modal States
+  const [isAlianzaModalOpen, setIsAlianzaModalOpen] = useState(false);
+  const [editingAlianza, setEditingAlianza] = useState<ConvencionAlianza | null>(null);
+  const [alianzaForm, setAlianzaForm] = useState({
+    name: '',
+    category: '',
+    badge: 'Oficial',
+    icon: '🦁',
+    logoUrl: ''
+  });
+  const [alianzaLogoFile, setAlianzaLogoFile] = useState<File | null>(null);
+  const [alianzaLogoPreview, setAlianzaLogoPreview] = useState<string>('');
 
   useEffect(() => {
     let isMounted = true;
@@ -348,6 +374,115 @@ export function AdminConvencion() {
     }
   };
 
+  // ================= ALIANZAS & PATROCINADORES HANDLERS =================
+  const openAlianzaModal = (aliado?: ConvencionAlianza) => {
+    if (aliado) {
+      setEditingAlianza(aliado);
+      setAlianzaForm({
+        name: aliado.name,
+        category: aliado.category,
+        badge: aliado.badge || 'Oficial',
+        icon: aliado.icon || '🦁',
+        logoUrl: aliado.logoUrl || ''
+      });
+      setAlianzaLogoPreview(aliado.logoUrl || '');
+    } else {
+      setEditingAlianza(null);
+      setAlianzaForm({
+        name: '',
+        category: '',
+        badge: 'Oficial',
+        icon: '🦁',
+        logoUrl: ''
+      });
+      setAlianzaLogoPreview('');
+    }
+    setAlianzaLogoFile(null);
+    setIsAlianzaModalOpen(true);
+  };
+
+  const handleAlianzaLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const validation = validateImageFile(file);
+      if (!validation.valid) {
+        setErrorMsg(validation.error || "Archivo de imagen inválido");
+        return;
+      }
+      setAlianzaLogoFile(file);
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setAlianzaLogoPreview(ev.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveAlianza = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setErrorMsg('');
+    try {
+      let finalLogoUrl = alianzaForm.logoUrl;
+
+      if (alianzaLogoFile) {
+        const compressedBase64 = await compressImageFile(alianzaLogoFile, 600, 600, 0.85);
+        finalLogoUrl = await firebaseService.uploadConvencionImage(compressedBase64);
+      }
+
+      const currentList = (config.alianzas && config.alianzas.length > 0) ? config.alianzas : DEFAULT_ALIANZAS;
+      let updatedList: ConvencionAlianza[] = [];
+
+      if (editingAlianza) {
+        updatedList = currentList.map(item =>
+          item.id === editingAlianza.id
+            ? { ...item, ...alianzaForm, logoUrl: finalLogoUrl }
+            : item
+        );
+      } else {
+        const newAlianza: ConvencionAlianza = {
+          id: `alianza_${Date.now()}`,
+          ...alianzaForm,
+          logoUrl: finalLogoUrl
+        };
+        updatedList = [...currentList, newAlianza];
+      }
+
+      const updatedConfig = { ...config, alianzas: updatedList };
+      setConfig(updatedConfig);
+      setIsAlianzaModalOpen(false);
+
+      await firebaseService.saveConvencionConfig(updatedConfig);
+      setSuccessMsg("¡Diapositiva de logo/alianza guardada exitosamente!");
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (error: any) {
+      console.error("Error al guardar alianza:", error);
+      setErrorMsg(error.message || "No se pudo guardar la alianza.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteAlianza = async (id: string) => {
+    if (!window.confirm("¿Estás seguro de eliminar este logo de las alianzas?")) return;
+
+    const currentList = (config.alianzas && config.alianzas.length > 0) ? config.alianzas : DEFAULT_ALIANZAS;
+    const updatedList = currentList.filter(item => item.id !== id);
+    const updatedConfig = { ...config, alianzas: updatedList };
+    setConfig(updatedConfig);
+
+    setSaving(true);
+    try {
+      await firebaseService.saveConvencionConfig(updatedConfig);
+      setSuccessMsg("Diapositiva de alianza eliminada.");
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (error) {
+      setErrorMsg("Error al sincronizar con Firestore.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Filtered registrations
   const filteredRegistros = registros.filter(r => {
     const term = searchTerm.toLowerCase();
@@ -534,6 +669,14 @@ export function AdminConvencion() {
               >
                 Experiencias Únicas ({config.experienciasUnicas?.length || 0})
                 {activeConfigTab === 'experiencias' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-900 rounded-full" />}
+              </button>
+              <button 
+                onClick={() => setActiveConfigTab('alianzas')}
+                className={`pb-3 relative transition-colors whitespace-nowrap flex items-center space-x-1.5 ${activeConfigTab === 'alianzas' ? 'text-blue-900 font-black' : 'hover:text-slate-800'}`}
+              >
+                <Handshake size={14} className="text-yellow-600" />
+                <span>Alianzas & Logos ({config.alianzas?.length || DEFAULT_ALIANZAS.length})</span>
+                {activeConfigTab === 'alianzas' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-900 rounded-full" />}
               </button>
               <button 
                 onClick={() => setActiveConfigTab('difusion')}
@@ -839,6 +982,97 @@ export function AdminConvencion() {
                     <Compass className="w-10 h-10 text-slate-400 mx-auto" />
                     <p className="mt-3 text-slate-800 font-extrabold text-sm">Sin experiencias configuradas</p>
                     <p className="text-xs text-slate-500 mt-1">Crea experiencias únicas sobre mística o liderazgo leonístico.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Alianzas & Patrocinadores Sub-Tab */}
+            {activeConfigTab === 'alianzas' && (
+              <div className="space-y-6 pt-2">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50 border border-slate-200 p-5 rounded-3xl">
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-wider text-slate-900 flex items-center space-x-2">
+                      <Handshake size={18} className="text-yellow-600" />
+                      <span>Alianzas, Logos & Patrocinadores Oficiales</span>
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Configura las diapositivas cuadradas que se desplazan en el carrusel de la página de inicio de la Convención.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openAlianzaModal()}
+                    className="flex items-center space-x-2 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-blue-955 font-black px-5 py-3 rounded-2xl text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 shrink-0"
+                  >
+                    <Plus size={16} />
+                    <span>Añadir Logo / Alianza</span>
+                  </button>
+                </div>
+
+                {/* Grid of Alianzas Square Slides */}
+                {((config.alianzas && config.alianzas.length > 0) ? config.alianzas : DEFAULT_ALIANZAS).length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                    {((config.alianzas && config.alianzas.length > 0) ? config.alianzas : DEFAULT_ALIANZAS).map((aliado) => (
+                      <div 
+                        key={aliado.id} 
+                        className="bg-white border-2 border-slate-150 rounded-3xl p-4 flex flex-col items-center text-center justify-between hover:border-yellow-500/50 hover:shadow-xl transition-all group relative"
+                      >
+                        {/* Action buttons */}
+                        <div className="absolute top-2 right-2 flex space-x-1 z-10">
+                          <button
+                            type="button"
+                            onClick={() => openAlianzaModal(aliado)}
+                            className="p-1.5 bg-slate-100 hover:bg-blue-900 hover:text-white text-slate-650 rounded-lg transition-colors shadow-sm"
+                            title="Editar Logo"
+                          >
+                            <Edit2 size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAlianza(aliado.id)}
+                            className="p-1.5 bg-slate-100 hover:bg-red-600 hover:text-white text-slate-650 rounded-lg transition-colors shadow-sm"
+                            title="Eliminar Logo"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+
+                        {/* Square Box Display */}
+                        <div className="w-28 h-28 aspect-square rounded-2xl bg-slate-900/90 border border-slate-700 flex items-center justify-center p-3 relative overflow-hidden my-2 shadow-inner">
+                          {aliado.badge && (
+                            <span className="absolute top-1.5 left-1.5 text-[8px] font-black uppercase text-yellow-400 bg-yellow-500/20 border border-yellow-500/40 px-2 py-0.5 rounded-full">
+                              {aliado.badge}
+                            </span>
+                          )}
+                          {aliado.logoUrl ? (
+                            <img 
+                              src={aliado.logoUrl} 
+                              alt={aliado.name}
+                              className="max-w-full max-h-full object-contain filter drop-shadow"
+                            />
+                          ) : (
+                            <span className="text-3xl">{aliado.icon || '🦁'}</span>
+                          )}
+                        </div>
+
+                        {/* Text below slide */}
+                        <div className="mt-2 space-y-0.5 w-full">
+                          <h4 className="font-extrabold text-slate-900 text-xs truncate" title={aliado.name}>
+                            {aliado.name}
+                          </h4>
+                          <p className="text-[10px] text-slate-500 font-semibold truncate" title={aliado.category}>
+                            {aliado.category}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 border-2 border-dashed border-slate-200 bg-slate-50 rounded-3xl">
+                    <Handshake className="w-12 h-12 text-slate-400 mx-auto" />
+                    <p className="mt-3 text-slate-800 font-extrabold text-sm">Sin alianzas registradas</p>
+                    <p className="text-xs text-slate-500 mt-1">Haz clic en "Añadir Logo / Alianza" para crear tu primera diapositiva.</p>
                   </div>
                 )}
               </div>
@@ -1222,6 +1456,164 @@ export function AdminConvencion() {
                   className="bg-blue-900 hover:bg-blue-955 text-white font-extrabold px-6 py-2.5 rounded-2xl text-xs uppercase tracking-wider transition-all shadow-sm"
                 >
                   Guardar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Alianza Modal */}
+      {isAlianzaModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300">
+          <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95">
+            <div className="bg-slate-50 border-b border-slate-100 p-6 flex justify-between items-center">
+              <div>
+                <h3 className="text-base font-black text-blue-900 uppercase tracking-tight flex items-center space-x-2">
+                  <Handshake size={18} className="text-yellow-600" />
+                  <span>{editingAlianza ? 'Editar Diapositiva de Logo / Alianza' : 'Añadir Nueva Diapositiva de Logo'}</span>
+                </h3>
+                <p className="text-xs text-slate-500 font-semibold mt-0.5">Sube el logo de la institución o patrocinador oficial</p>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setIsAlianzaModalOpen(false)}
+                className="p-2 hover:bg-slate-200 text-slate-400 hover:text-slate-700 rounded-full transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAlianza} className="p-6 space-y-5">
+              {/* Nombre */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600" htmlFor="ali_name">Nombre de la Institución / Alianza</label>
+                <input
+                  type="text"
+                  id="ali_name"
+                  required
+                  value={alianzaForm.name}
+                  onChange={(e) => setAlianzaForm(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Ej. Lions Clubs International"
+                  className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl px-4 py-3 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
+                />
+              </div>
+
+              {/* Categoría & Badge */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600" htmlFor="ali_cat">Categoría / Rol</label>
+                  <input
+                    type="text"
+                    id="ali_cat"
+                    required
+                    value={alianzaForm.category}
+                    onChange={(e) => setAlianzaForm(prev => ({ ...prev, category: e.target.value }))}
+                    placeholder="Ej. Organización Mundial"
+                    className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl px-4 py-3 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600" htmlFor="ali_badge">Etiqueta / Distintivo</label>
+                  <input
+                    type="text"
+                    id="ali_badge"
+                    required
+                    value={alianzaForm.badge}
+                    onChange={(e) => setAlianzaForm(prev => ({ ...prev, badge: e.target.value }))}
+                    placeholder="Ej. Oficial, Anfitrión, Oro"
+                    className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl px-4 py-3 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
+                  />
+                </div>
+              </div>
+
+              {/* Upload Logo Image */}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block">Subir Imagen del Logo (Diapositiva Cuadrada)</label>
+                
+                <div className="flex items-center space-x-4 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                  <div className="w-16 h-16 aspect-square rounded-xl bg-slate-900 flex items-center justify-center p-2 overflow-hidden shrink-0 border border-slate-700 shadow-inner">
+                    {alianzaLogoPreview ? (
+                      <img src={alianzaLogoPreview} alt="Preview" className="max-w-full max-h-full object-contain" />
+                    ) : (
+                      <span className="text-2xl">{alianzaForm.icon || '🦁'}</span>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <label 
+                      htmlFor="alianza-logo-file" 
+                      className="inline-flex items-center space-x-2 bg-blue-900 hover:bg-blue-955 text-white font-extrabold px-4 py-2 rounded-xl text-xs uppercase tracking-wider cursor-pointer shadow-sm transition-all"
+                    >
+                      <UploadCloud size={14} />
+                      <span>{alianzaLogoFile ? 'Cambiar Imagen' : 'Subir Archivo de Logo'}</span>
+                      <input 
+                        type="file" 
+                        id="alianza-logo-file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={handleAlianzaLogoChange} 
+                      />
+                    </label>
+                    <p className="text-[10px] text-slate-400">Recomendado: PNG o JPG con fondo transparente o contrastado.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* URL o Emoji Alternativo */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2 space-y-1.5">
+                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600" htmlFor="ali_url">O pega URL de la Imagen</label>
+                  <input
+                    type="url"
+                    id="ali_url"
+                    value={alianzaForm.logoUrl}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setAlianzaForm(prev => ({ ...prev, logoUrl: val }));
+                      if (!alianzaLogoFile) setAlianzaLogoPreview(val);
+                    }}
+                    placeholder="https://..."
+                    className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl px-4 py-2.5 text-slate-800 text-xs focus:outline-none font-semibold"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600" htmlFor="ali_icon">Emoji Icono</label>
+                  <input
+                    type="text"
+                    id="ali_icon"
+                    value={alianzaForm.icon}
+                    onChange={(e) => setAlianzaForm(prev => ({ ...prev, icon: e.target.value }))}
+                    placeholder="🦁"
+                    className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl px-4 py-2.5 text-slate-800 text-xs text-center focus:outline-none font-extrabold"
+                  />
+                </div>
+              </div>
+
+              {/* Submit / Cancel buttons */}
+              <div className="pt-4 border-t border-slate-100 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setIsAlianzaModalOpen(false)}
+                  className="px-5 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 font-extrabold rounded-2xl text-xs uppercase tracking-wider transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-955 hover:to-indigo-955 text-white font-extrabold px-6 py-2.5 rounded-2xl text-xs uppercase tracking-wider transition-all shadow-md flex items-center space-x-2 disabled:opacity-50"
+                >
+                  {saving ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Save size={14} />
+                      <span>Guardar Diapositiva</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>
