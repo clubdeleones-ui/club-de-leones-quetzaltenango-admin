@@ -673,34 +673,6 @@ export default function Convencion() {
                             className="w-full bg-transparent px-4 py-3.5 text-white text-sm focus:outline-none placeholder:text-slate-555"
                           />
                         </div>
-                        <div className="bg-blue-950/80 border border-yellow-500/30 rounded-2xl p-3 space-y-2 text-xs mt-2">
-                          <p className="text-slate-200 text-[11px] leading-snug flex items-start space-x-1.5">
-                            <span className="text-yellow-400 text-sm shrink-0">📲</span>
-                            <span>
-                              Te recomendamos tener instalada la aplicación oficial de <strong>Telegram</strong> en tu teléfono para recibir de forma automática avisos instantáneos, boletines del programa y beneficios exclusivos de tu inscripción.
-                            </span>
-                          </p>
-
-                          <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-white/10">
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-yellow-400">Descargar app:</span>
-                            <a 
-                              href="https://play.google.com/store/apps/details?id=org.telegram.messenger" 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center space-x-1 text-[11px] font-bold bg-white/10 hover:bg-yellow-500 hover:text-blue-955 text-white px-2.5 py-1 rounded-lg transition-all border border-white/10"
-                            >
-                              <span>🤖 Android (Play Store)</span>
-                            </a>
-                            <a 
-                              href="https://apps.apple.com/app/telegram-messenger/id686449807" 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center space-x-1 text-[11px] font-bold bg-white/10 hover:bg-yellow-500 hover:text-blue-955 text-white px-2.5 py-1 rounded-lg transition-all border border-white/10"
-                            >
-                              <span>🍎 iPhone (App Store)</span>
-                            </a>
-                          </div>
-                        </div>
                       </div>
 
                       {/* Cargo — Custom Dropdown */}
@@ -736,6 +708,36 @@ export default function Convencion() {
                               ))}
                             </div>
                           )}
+                        </div>
+                      </div>
+
+                      {/* Tarjeta Informativa de Telegram — Ocupa el ancho de ambas columnas para simetría perfecta */}
+                      <div className="sm:col-span-2 bg-blue-950/80 border border-yellow-500/30 rounded-2xl p-4 space-y-3 text-xs">
+                        <p className="text-slate-200 text-xs leading-relaxed flex items-start space-x-2">
+                          <span className="text-yellow-400 text-base shrink-0">📲</span>
+                          <span>
+                            Te recomendamos tener instalada la aplicación oficial de <strong>Telegram</strong> en tu teléfono para recibir de forma automática avisos instantáneos, boletines del programa y beneficios exclusivos de tu inscripción.
+                          </span>
+                        </p>
+
+                        <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-white/10">
+                          <span className="text-xs font-extrabold uppercase tracking-wider text-yellow-400">Descargar app oficial:</span>
+                          <a 
+                            href="https://play.google.com/store/apps/details?id=org.telegram.messenger" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center space-x-1.5 text-xs font-bold bg-white/10 hover:bg-yellow-500 hover:text-blue-955 text-white px-3 py-1.5 rounded-xl transition-all border border-white/15 shadow-sm"
+                          >
+                            <span>🤖 Android (Play Store)</span>
+                          </a>
+                          <a 
+                            href="https://apps.apple.com/app/telegram-messenger/id686449807" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center space-x-1.5 text-xs font-bold bg-white/10 hover:bg-yellow-500 hover:text-blue-955 text-white px-3 py-1.5 rounded-xl transition-all border border-white/15 shadow-sm"
+                          >
+                            <span>🍎 iPhone (App Store)</span>
+                          </a>
                         </div>
                       </div>
                     </div>
