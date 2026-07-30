@@ -18,7 +18,8 @@ import {
   AlertCircle,
   Check,
   ExternalLink,
-  Building2
+  Building2,
+  Handshake
 } from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
 import { telegramService } from '../services/telegramService';
@@ -141,6 +142,17 @@ const CARGO_OPTIONS = [
   { value: 'Gobernador', label: 'Gobernador / Vicegobernador', icon: '🏛️' },
   { value: 'Leo', label: 'Socio Leo', icon: '🌟' },
   { value: 'Otro', label: 'Otro Cargo', icon: '🔷' },
+];
+
+const ALIANZAS_CONVENCION = [
+  { name: 'Lions Clubs International', category: 'Organización Mundial', icon: '🦁', badge: 'Oficial' },
+  { name: 'Distrito D3 Guatemala', category: 'Gobernación Distrital', icon: '🏛️', badge: 'Anfitrión' },
+  { name: 'Colina Country Club', category: 'Sede Oficial', icon: '🏰', badge: 'Complejo' },
+  { name: 'Municipalidad de Quetzaltenango', category: 'Cultura Altense', icon: '🇬🇹', badge: 'Gobierno' },
+  { name: 'INGUAT', category: 'Turismo Guatemala', icon: '🌄', badge: 'Institucional' },
+  { name: 'Club de Leones Quetzaltenango', category: 'Comité Organizador', icon: '👑', badge: 'Anfitriones' },
+  { name: 'Leo Club International', category: 'Liderazgo Juvenil', icon: '⭐', badge: 'Juventud' },
+  { name: 'Cámara de Comercio Xela', category: 'Desarrollo Regional', icon: '🤝', badge: 'Aliado' }
 ];
 
 export default function Convencion() {
@@ -460,7 +472,54 @@ export default function Convencion() {
         </div>
       </header>
 
-      {/* Sede Section */}
+      {/* Alianzas & Patrocinadores Marquee Section */}
+      <section className="bg-gradient-to-r from-blue-955 via-blue-900 to-indigo-950 border-y border-yellow-500/20 py-8 relative overflow-hidden shadow-2xl">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mb-5 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center space-x-2 text-yellow-400">
+            <Handshake size={20} className="animate-pulse text-yellow-400" />
+            <span className="text-xs font-black uppercase tracking-widest text-yellow-350">
+              Alianzas & Respaldos Oficiales
+            </span>
+          </div>
+          <p className="text-xs text-slate-350 font-semibold text-center sm:text-right">
+            Liderazgo, cultura e instituciones unidas por la LXIV Convención Lionística
+          </p>
+        </div>
+
+        {/* Marquee Track with gradient edge masks */}
+        <div className="relative w-full overflow-hidden">
+          {/* Gradient Masks */}
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-16 sm:w-32 bg-gradient-to-r from-blue-955 to-transparent z-10" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-16 sm:w-32 bg-gradient-to-l from-blue-955 to-transparent z-10" />
+
+          {/* Scrolling Marquee Container */}
+          <div className="animate-marquee flex items-center space-x-6 sm:space-x-8 py-2">
+            {[...ALIANZAS_CONVENCION, ...ALIANZAS_CONVENCION].map((aliado, index) => (
+              <div 
+                key={index}
+                className="bg-blue-900/60 hover:bg-blue-850/90 border border-white/10 hover:border-yellow-500/50 rounded-2xl px-5 py-3.5 flex items-center space-x-4 shadow-lg backdrop-blur-md transition-all duration-300 transform hover:-translate-y-0.5 group shrink-0"
+              >
+                <div className="w-10 h-10 rounded-xl bg-yellow-500/15 border border-yellow-500/30 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+                  {aliado.icon}
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-extrabold text-white group-hover:text-yellow-400 transition-colors">
+                      {aliado.name}
+                    </span>
+                    <span className="text-[9px] font-black uppercase tracking-wider text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-2 py-0.5 rounded-full">
+                      {aliado.badge}
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-400 font-medium block mt-0.5">
+                    {aliado.category}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
       <section className="py-20 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-7 space-y-6">
