@@ -43,7 +43,7 @@ const AVAILABLE_TABS = [
   { id: 'galeria_admin', label: 'Gestión de Galería' },
   { id: 'linea_tiempo_admin', label: 'Línea de Tiempo' },
   { id: 'agenda_contactos', label: 'Agenda de Contactos' },
-  { id: 'asignacion_funciones', label: 'Asignación de Funciones' }
+  { id: 'asignacion_funciones', label: 'Control de Contraseñas y Funciones' }
 ];
 
 export const AsignacionFunciones: React.FC = () => {
@@ -244,7 +244,7 @@ export const AsignacionFunciones: React.FC = () => {
     if (updatedTabs.includes(tabId)) {
       // Don't allow lock out of SuperAdmin from function assignment itself
       if (role.id === 'SUPER_ADMIN' && tabId === 'asignacion_funciones') {
-        showAlert("Acción no permitida", "No puedes quitar el permiso de Asignación de Funciones al Super Administrador.");
+        showAlert("Acción no permitida", "No puedes quitar el permiso de Control de Contraseñas y Funciones al Super Administrador.");
         return;
       }
       updatedTabs = updatedTabs.filter(t => t !== tabId);
@@ -334,7 +334,7 @@ export const AsignacionFunciones: React.FC = () => {
           <span className="bg-yellow-400/20 text-yellow-300 text-xs font-black uppercase px-4 py-1.5 rounded-full border border-yellow-400/30 tracking-widest inline-flex items-center gap-1.5 shadow-sm">
             <ShieldCheck size={14} /> Módulo Principal
           </span>
-          <h2 className="text-3xl sm:text-4xl font-black tracking-tight">Asignación de Funciones</h2>
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tight">Control de Contraseñas y Funciones</h2>
           <p className="text-slate-350 max-w-2xl text-base font-medium">
             Define credenciales personalizadas, administra los puestos del club, edita roles globales y configura con precisión qué módulos de navegación son visibles para cada rol.
           </p>

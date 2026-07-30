@@ -701,15 +701,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                 
                 {/* Caja de Datos Premium */}
                 <div className="w-full bg-slate-50/50 rounded-2xl p-4 border border-slate-100/90 text-left text-sm font-medium text-slate-700 space-y-3 mt-5">
-                  {/* Club */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100/60 gap-1">
-                    <span className="text-slate-450 flex items-center space-x-1.5 flex-shrink-0">
-                      <Building size={16} className="text-slate-400 flex-shrink-0" />
-                      <span>Club</span>
-                    </span>
-                    <span className="font-bold text-slate-800 text-left sm:text-right break-words w-full sm:w-auto">{user.club || 'QUETZALTENANGO'}</span>
-                  </div>
-
                   {/* Correo */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-slate-100/60 gap-1">
                     <span className="text-slate-450 flex items-center space-x-1.5 flex-shrink-0">

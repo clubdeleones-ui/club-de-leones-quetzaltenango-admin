@@ -115,7 +115,7 @@ const CATEGORIAS_MODULOS = [
     category: 'Principal',
     items: [
       { id: 'resumen', label: 'Resumen General', icon: TrendingUp },
-      { id: 'asignacion_funciones', label: 'Asignación Funciones', icon: Settings }
+      { id: 'asignacion_funciones', label: 'Control de Contraseñas y Funciones', icon: Settings }
     ]
   },
   {
@@ -4528,7 +4528,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               {(() => {
                 const currentTab = [
                   { id: 'resumen', label: 'Resumen General', icon: TrendingUp },
-                  { id: 'asignacion_funciones', label: 'Asignación Funciones', icon: Settings },
+                  { id: 'asignacion_funciones', label: 'Control de Contraseñas y Funciones', icon: Settings },
                   { id: 'socios', label: 'Gestión de Socios', icon: Users },
                   { id: 'calendario', label: 'Actividades', icon: Calendar },
                   { id: 'cuotas', label: 'Control de Cuotas', icon: CreditCard },
@@ -4561,7 +4561,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               <span className="font-extrabold text-slate-800 text-xs">
                 {[
                   { id: 'resumen', label: 'Resumen General' },
-                  { id: 'asignacion_funciones', label: 'Asignación Funciones' },
+                  { id: 'asignacion_funciones', label: 'Control de Contraseñas y Funciones' },
                   { id: 'socios', label: 'Gestión de Socios' },
                   { id: 'calendario', label: 'Actividades' },
                   { id: 'cuotas', label: 'Control de Cuotas' },

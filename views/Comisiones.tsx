@@ -742,15 +742,6 @@ export const Comisiones: React.FC = () => {
                 
                 {/* Details list */}
                 <div className="w-full bg-slate-50/70 rounded-2xl p-5 border border-slate-100 text-left text-xs font-bold text-slate-650 space-y-3 mt-6">
-                  {/* Club */}
-                  <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
-                    <span className="text-slate-400 flex items-center space-x-2">
-                      <Briefcase size={15} />
-                      <span>Club</span>
-                    </span>
-                    <span className="font-black text-slate-800">{selectedSocioForModal.club || 'QUETZALTENANGO'}</span>
-                  </div>
-
                   {/* Email */}
                   <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
                     <span className="text-slate-400 flex items-center space-x-2">
