@@ -472,51 +472,65 @@ export default function Convencion() {
         </div>
       </header>
 
-      {/* Alianzas & Patrocinadores Marquee Section */}
-      <section className="bg-gradient-to-r from-blue-955 via-blue-900 to-indigo-950 border-y border-yellow-500/20 py-8 relative overflow-hidden shadow-2xl">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mb-5 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center space-x-2 text-yellow-400">
-            <Handshake size={20} className="animate-pulse text-yellow-400" />
-            <span className="text-xs font-black uppercase tracking-widest text-yellow-350">
-              Alianzas & Respaldos Oficiales
-            </span>
+      {/* Alianzas & Patrocinadores Prominent Marquee Section */}
+      <section className="my-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-gradient-to-r from-slate-950 via-blue-955 to-slate-950 rounded-[2.5rem] p-6 sm:p-10 border-2 border-yellow-500/30 shadow-2xl shadow-blue-950/50 relative overflow-hidden">
+          {/* Subtle Background Glow */}
+          <div className="absolute -top-24 -left-24 w-72 h-72 bg-yellow-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          {/* Section Header */}
+          <div className="mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-white/10 pb-6 relative z-10">
+            <div className="flex items-center space-x-3">
+              <div className="p-3 bg-yellow-500/20 rounded-2xl border border-yellow-500/40 text-yellow-400">
+                <Handshake size={26} className="animate-pulse" />
+              </div>
+              <div>
+                <span className="text-xs font-black uppercase tracking-widest text-yellow-400 block">
+                  Respaldos & Alianzas Institucionales
+                </span>
+                <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                  Aliados Estratégicos de la LXIV Convención
+                </h3>
+              </div>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-350 max-w-md font-medium text-center sm:text-right">
+              Unidos por la fraternidad, la cultura y el liderazgo de servicio en Guatemala.
+            </p>
           </div>
-          <p className="text-xs text-slate-350 font-semibold text-center sm:text-right">
-            Liderazgo, cultura e instituciones unidas por la LXIV Convención Lionística
-          </p>
-        </div>
 
-        {/* Marquee Track with gradient edge masks */}
-        <div className="relative w-full overflow-hidden">
-          {/* Gradient Masks */}
-          <div className="pointer-events-none absolute inset-y-0 left-0 w-16 sm:w-32 bg-gradient-to-r from-blue-955 to-transparent z-10" />
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-16 sm:w-32 bg-gradient-to-l from-blue-955 to-transparent z-10" />
+          {/* Marquee Track with gradient edge masks */}
+          <div className="relative w-full overflow-hidden py-2">
+            {/* Gradient Masks */}
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-20 sm:w-36 bg-gradient-to-r from-slate-950 to-transparent z-20" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-20 sm:w-36 bg-gradient-to-l from-slate-950 to-transparent z-20" />
 
-          {/* Scrolling Marquee Container */}
-          <div className="animate-marquee flex items-center space-x-6 sm:space-x-8 py-2">
-            {[...ALIANZAS_CONVENCION, ...ALIANZAS_CONVENCION].map((aliado, index) => (
-              <div 
-                key={index}
-                className="bg-blue-900/60 hover:bg-blue-850/90 border border-white/10 hover:border-yellow-500/50 rounded-2xl px-5 py-3.5 flex items-center space-x-4 shadow-lg backdrop-blur-md transition-all duration-300 transform hover:-translate-y-0.5 group shrink-0"
-              >
-                <div className="w-10 h-10 rounded-xl bg-yellow-500/15 border border-yellow-500/30 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
-                  {aliado.icon}
-                </div>
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-extrabold text-white group-hover:text-yellow-400 transition-colors">
-                      {aliado.name}
-                    </span>
-                    <span className="text-[9px] font-black uppercase tracking-wider text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-2 py-0.5 rounded-full">
-                      {aliado.badge}
+            {/* Scrolling Marquee Container */}
+            <div className="animate-marquee flex items-center space-x-8 sm:space-x-10 py-3">
+              {[...ALIANZAS_CONVENCION, ...ALIANZAS_CONVENCION].map((aliado, index) => (
+                <div 
+                  key={index}
+                  className="bg-slate-900/90 hover:bg-blue-900/80 border-2 border-white/15 hover:border-yellow-400 rounded-3xl px-7 py-5 flex items-center space-x-5 shadow-2xl backdrop-blur-xl transition-all duration-300 transform hover:-translate-y-1 group shrink-0"
+                >
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-yellow-500/25 to-amber-500/10 border-2 border-yellow-500/40 flex items-center justify-center text-3xl sm:text-4xl shadow-inner shadow-yellow-500/20 group-hover:scale-110 transition-transform">
+                    {aliado.icon}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-3">
+                      <span className="text-base sm:text-lg font-black text-white group-hover:text-yellow-300 transition-colors">
+                        {aliado.name}
+                      </span>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-yellow-400 bg-yellow-500/20 border border-yellow-500/40 px-3 py-1 rounded-full shadow-sm">
+                        {aliado.badge}
+                      </span>
+                    </div>
+                    <span className="text-xs sm:text-sm text-slate-350 font-medium block">
+                      {aliado.category}
                     </span>
                   </div>
-                  <span className="text-[11px] text-slate-400 font-medium block mt-0.5">
-                    {aliado.category}
-                  </span>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>
