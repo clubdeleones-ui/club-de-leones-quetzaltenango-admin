@@ -1,6 +1,7 @@
 import { ConvencionRegistro } from '../types';
 
 export const DEFAULT_GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwN-mwP87KpWN7AFjNL5W6bfi_Cc0h2RtZzufyOo15kHlEW-G_sRB7DSW2P1vJujV3V/exec';
+export const DEFAULT_TELEGRAM_BOT_TOKEN = '8649525379:AAEY1ywJt2rWSA8jQf1akXbD4ndCcqfVIiE';
 
 /**
  * Servicio para envío de notificaciones automáticas mediante Telegram Bot API y Google Apps Script Webhook
@@ -9,8 +10,9 @@ export const telegramService = {
   /**
    * Envía un mensaje en formato HTML a un grupo o chat ID de Telegram usando el bot configurado.
    */
-  sendMessage: async (botToken: string, chatId: string, text: string): Promise<boolean> => {
-    if (!botToken || !chatId) {
+  sendMessage: async (botToken: string | undefined, chatId: string, text: string): Promise<boolean> => {
+    const token = botToken || (import.meta as any).env?.VITE_TELEGRAM_BOT_TOKEN || DEFAULT_TELEGRAM_BOT_TOKEN;
+    if (!token || !chatId) {
       console.warn("Telegram Bot Token o Chat ID no configurados. Omitiendo envío de Telegram.");
       return false;
     }
