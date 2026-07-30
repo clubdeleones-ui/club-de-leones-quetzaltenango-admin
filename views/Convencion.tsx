@@ -673,6 +673,9 @@ export default function Convencion() {
                             className="w-full bg-transparent px-4 py-3.5 text-white text-sm focus:outline-none placeholder:text-slate-555"
                           />
                         </div>
+                        <p className="text-[11px] text-yellow-400/90 font-semibold flex items-start space-x-1 pt-1 leading-snug">
+                          <span>📲 Te recomendamos tener instalada la app de <strong>Telegram</strong> (o Instagram) en tu teléfono para recibir en automático los avances, boletines y beneficios exclusivos de tu inscripción.</span>
+                        </p>
                       </div>
 
                       {/* Cargo — Custom Dropdown */}

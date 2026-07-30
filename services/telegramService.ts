@@ -77,7 +77,11 @@ ${(registro as any).esAcompanante ? `<b>Acompañante de:</b> ${(registro as any)
   /**
    * Envía los datos del registro al Webhook de Google Apps Script para el envío automático del correo de confirmación.
    */
-  sendGoogleScriptWebhook: async (registro: ConvencionRegistro, customScriptUrl?: string): Promise<boolean> => {
+  sendGoogleScriptWebhook: async (
+    registro: ConvencionRegistro, 
+    customScriptUrl?: string,
+    customWelcomeText?: string
+  ): Promise<boolean> => {
     const scriptUrl = customScriptUrl || 
       (import.meta as any).env?.VITE_GOOGLE_SCRIPT_URL || 
       DEFAULT_GOOGLE_SCRIPT_URL;
@@ -86,6 +90,8 @@ ${(registro as any).esAcompanante ? `<b>Acompañante de:</b> ${(registro as any)
       console.warn("No se encontró la URL del Webhook de Google Apps Script.");
       return false;
     }
+
+    const defaultMsg = "¡Bienvenido, Compañero León! Tu pre-inscripción a la Convención ha sido confirmada con éxito. A partir de este momento recibirás información oportuna de primera mano sobre los avances, actividades y beneficios tempranos por tu confirmación.";
 
     try {
       await fetch(scriptUrl, {
@@ -104,7 +110,7 @@ ${(registro as any).esAcompanante ? `<b>Acompañante de:</b> ${(registro as any)
           distrito: registro.distrito,
           fechaRegistro: registro.fechaRegistro,
           asunto: "¡Bienvenido! Pre-Inscripción Confirmada - Convención Lionística Quetzaltenango",
-          mensajeBienvenida: "¡Bienvenido, Compañero León! Tu pre-inscripción a la Convención ha sido confirmada con éxito. A partir de este momento recibirás información oportuna de primera mano sobre los avances, actividades y beneficios tempranos por tu confirmación."
+          mensajeBienvenida: customWelcomeText || defaultMsg
         })
       });
       return true;
@@ -112,5 +118,47 @@ ${(registro as any).esAcompanante ? `<b>Acompañante de:</b> ${(registro as any)
       console.error("Error enviando webhook a Google Apps Script:", error);
       return false;
     }
+  },
+
+  /**
+   * Envía un boletín/comunicado masivo por correo electrónico a la lista de inscritos.
+   */
+  sendBroadcastEmail: async (
+    destinatarios: ConvencionRegistro[], 
+    asunto: string, 
+    mensajeBody: string, 
+    customScriptUrl?: string
+  ): Promise<number> => {
+    const scriptUrl = customScriptUrl || 
+      (import.meta as any).env?.VITE_GOOGLE_SCRIPT_URL || 
+      DEFAULT_GOOGLE_SCRIPT_URL;
+
+    if (!scriptUrl || destinatarios.length === 0) return 0;
+
+    let enviados = 0;
+    for (const reg of destinatarios) {
+      try {
+        await fetch(scriptUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: reg.id,
+            nombre: reg.nombre,
+            email: reg.email,
+            telefono: reg.telefono,
+            club: reg.club,
+            cargo: reg.cargo,
+            asunto: asunto,
+            mensajeBienvenida: mensajeBody,
+            esBoletinMasivo: true
+          })
+        });
+        enviados++;
+      } catch (e) {
+        console.error("Error enviando boletín a " + reg.email, e);
+      }
+    }
+    return enviados;
   }
 };

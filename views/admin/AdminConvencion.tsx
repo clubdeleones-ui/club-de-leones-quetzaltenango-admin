@@ -24,9 +24,12 @@ import {
   Calendar,
   Compass,
   ChevronRight,
-  Eye
+  Eye,
+  Mail,
+  Send
 } from 'lucide-react';
 import { firebaseService } from '../../services/firebaseService';
+import { telegramService } from '../../services/telegramService';
 import { compressImageFile, validateImageFile } from '../../utils/imageCompressor';
 import { ConvencionConfig, ConvencionRegistro, ConvencionActividad, ConvencionExperiencia } from '../../types';
 
@@ -43,8 +46,14 @@ const ICON_OPTIONS = [
 
 export function AdminConvencion() {
   const [activeSubTab, setActiveSubTab] = useState<'config' | 'registros'>('config');
-  const [activeConfigTab, setActiveConfigTab] = useState<'general' | 'actividades' | 'experiencias'>('general');
+  const [activeConfigTab, setActiveConfigTab] = useState<'general' | 'actividades' | 'experiencias' | 'difusion'>('general');
   
+  // Mass Broadcast State
+  const [broadcastSubject, setBroadcastSubject] = useState('Avances y Boletín Oficial - LXIV Convención Lionística');
+  const [broadcastBody, setBroadcastBody] = useState('');
+  const [broadcastTelegramMsg, setBroadcastTelegramMsg] = useState('');
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+
   const [config, setConfig] = useState<ConvencionConfig>({
     titulo: '',
     lema: '',
@@ -375,6 +384,64 @@ export function AdminConvencion() {
     document.body.removeChild(link);
   };
 
+  const handleSendMassEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!broadcastSubject.trim() || !broadcastBody.trim()) {
+      setErrorMsg("Por favor completa el asunto y el mensaje del correo.");
+      return;
+    }
+    if (registros.length === 0) {
+      setErrorMsg("No hay participantes pre-inscritos a quiénes enviar el correo.");
+      return;
+    }
+
+    setIsBroadcasting(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const enviados = await telegramService.sendBroadcastEmail(
+        registros,
+        broadcastSubject,
+        broadcastBody,
+        config.googleScriptUrl
+      );
+      setSuccessMsg(`¡Boletín enviado exitosamente a los ${registros.length} participantes pre-inscritos!`);
+      setBroadcastBody('');
+    } catch (err: any) {
+      setErrorMsg("Ocurrió un error al enviar la difusión masiva.");
+    } finally {
+      setIsBroadcasting(false);
+    }
+  };
+
+  const handleSendTelegramBroadcast = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!broadcastTelegramMsg.trim()) {
+      setErrorMsg("Por favor escribe el mensaje para Telegram.");
+      return;
+    }
+    setIsBroadcasting(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const ok = await telegramService.sendMessage(
+        config.telegramBotToken || '',
+        config.telegramChatId || '',
+        `📢 <b>BOLETÍN OFICIAL DE LA CONVENCIÓN</b>\n\n${broadcastTelegramMsg}`
+      );
+      if (ok) {
+        setSuccessMsg("¡Anuncio enviado exitosamente al canal/grupo de Telegram!");
+        setBroadcastTelegramMsg('');
+      } else {
+        setErrorMsg("No se pudo enviar por Telegram. Verifica las credenciales configuradas.");
+      }
+    } catch (err: any) {
+      setErrorMsg("Error al enviar por Telegram.");
+    } finally {
+      setIsBroadcasting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center p-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
@@ -439,29 +506,37 @@ export function AdminConvencion() {
 
         {/* ================= CONTENIDOS TAB ================= */}
         {activeSubTab === 'config' && (
-          <div className="space-y-6">
+          <>
             {/* Sub navigation for contents */}
-            <div className="flex border-b border-slate-100 pb-3 space-x-6 text-xs font-extrabold uppercase tracking-wider text-slate-500">
+            <div className="flex border-b border-slate-100 pb-3 space-x-6 text-xs font-extrabold uppercase tracking-wider text-slate-500 overflow-x-auto">
               <button 
                 onClick={() => setActiveConfigTab('general')}
-                className={`pb-3 relative transition-colors ${activeConfigTab === 'general' ? 'text-blue-900 font-black' : 'hover:text-slate-800'}`}
+                className={`pb-3 relative transition-colors whitespace-nowrap ${activeConfigTab === 'general' ? 'text-blue-900 font-black' : 'hover:text-slate-800'}`}
               >
                 Configuración General
                 {activeConfigTab === 'general' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-900 rounded-full" />}
               </button>
               <button 
                 onClick={() => setActiveConfigTab('actividades')}
-                className={`pb-3 relative transition-colors ${activeConfigTab === 'actividades' ? 'text-blue-900 font-black' : 'hover:text-slate-800'}`}
+                className={`pb-3 relative transition-colors whitespace-nowrap ${activeConfigTab === 'actividades' ? 'text-blue-900 font-black' : 'hover:text-slate-800'}`}
               >
                 Actividades Culturales ({config.actividadesCulturales?.length || 0})
                 {activeConfigTab === 'actividades' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-900 rounded-full" />}
               </button>
               <button 
                 onClick={() => setActiveConfigTab('experiencias')}
-                className={`pb-3 relative transition-colors ${activeConfigTab === 'experiencias' ? 'text-blue-900 font-black' : 'hover:text-slate-800'}`}
+                className={`pb-3 relative transition-colors whitespace-nowrap ${activeConfigTab === 'experiencias' ? 'text-blue-900 font-black' : 'hover:text-slate-800'}`}
               >
                 Experiencias Únicas ({config.experienciasUnicas?.length || 0})
                 {activeConfigTab === 'experiencias' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-900 rounded-full" />}
+              </button>
+              <button 
+                onClick={() => setActiveConfigTab('difusion')}
+                className={`pb-3 relative transition-colors whitespace-nowrap flex items-center space-x-1.5 ${activeConfigTab === 'difusion' ? 'text-blue-900 font-black' : 'hover:text-slate-800'}`}
+              >
+                <Mail size={14} className="text-yellow-600" />
+                <span>Difusión Masiva ({registros.length} Inscritos)</span>
+                {activeConfigTab === 'difusion' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-900 rounded-full" />}
               </button>
             </div>
 
@@ -487,7 +562,7 @@ export function AdminConvencion() {
 
                   {/* Lema */}
                   <div className="space-y-2">
-                    <label className="text-xs font-extrabold uppercase tracking-wider text-slate-500" htmlFor="lema">Lema / Frase Leonística</label>
+                    <label className="text-xs font-extrabold uppercase tracking-wider text-slate-500" htmlFor="lema">Lema / Frase Lionística</label>
                     <input 
                       type="text" 
                       id="lema"
@@ -502,21 +577,22 @@ export function AdminConvencion() {
 
                   {/* Fecha Evento */}
                   <div className="space-y-2">
-                    <label className="text-xs font-extrabold uppercase tracking-wider text-slate-500" htmlFor="fechaEvento">Fecha de Inicio del Evento</label>
+                    <label className="text-xs font-extrabold uppercase tracking-wider text-slate-500" htmlFor="fechaEvento">Fecha del Evento</label>
                     <input 
-                      type="date" 
+                      type="text" 
                       id="fechaEvento"
                       name="fechaEvento"
                       value={config.fechaEvento}
                       onChange={handleConfigChange}
                       required
+                      placeholder="Ej. 24 al 26 de Mayo, 2026"
                       className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl px-4 py-3 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
                     />
                   </div>
 
                   {/* Hora Evento */}
                   <div className="space-y-2">
-                    <label className="text-xs font-extrabold uppercase tracking-wider text-slate-500" htmlFor="horaEvento">Hora de Inicio</label>
+                    <label className="text-xs font-extrabold uppercase tracking-wider text-slate-500" htmlFor="horaEvento">Lugar / Sede Principal</label>
                     <input 
                       type="text" 
                       id="horaEvento"
@@ -524,29 +600,29 @@ export function AdminConvencion() {
                       value={config.horaEvento}
                       onChange={handleConfigChange}
                       required
-                      placeholder="HH:MM:SS (Ej: 08:00:00)"
+                      placeholder="Ej. Quetzaltenango, Guatemala"
                       className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl px-4 py-3 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
                     />
                   </div>
 
-                  {/* Foto Sede - Cargador */}
-                  <div className="md:col-span-2 space-y-2">
-                    <label className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Fotografía de la Sede</label>
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleImageChange}
-                      accept="image/*"
-                      className="hidden"
-                    />
+                  {/* Fotografía Sede */}
+                  <div className="md:col-span-2 space-y-3 bg-slate-50/70 p-5 rounded-2xl border border-slate-200/80">
+                    <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-700">Fotografía de la Sede</label>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
                       <div className="sm:col-span-6">
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
-                          className="w-full h-36 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 hover:border-blue-900 bg-slate-50/50 hover:bg-slate-50 rounded-2xl transition-all group cursor-pointer"
+                          className="w-full flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-300 hover:border-blue-900 rounded-2xl bg-white transition-all cursor-pointer group"
                         >
+                          <input 
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleImageChange}
+                            accept="image/*"
+                            className="hidden"
+                          />
                           <UploadCloud className="w-10 h-10 text-slate-400 group-hover:text-blue-900 transition-colors" />
                           <span className="mt-2 text-xs font-black text-slate-700 group-hover:text-blue-900 transition-colors uppercase tracking-wider">
                             {imageFile ? 'Cambiar Imagen' : 'Subir Imagen Sede'}
@@ -575,34 +651,6 @@ export function AdminConvencion() {
                     </div>
                   </div>
 
-                  {/* Etiqueta Foto Sede */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-extrabold uppercase tracking-wider text-slate-500" htmlFor="fotoSedeEtiqueta">Etiqueta sobre la foto de la sede</label>
-                    <input 
-                      type="text" 
-                      id="fotoSedeEtiqueta"
-                      name="fotoSedeEtiqueta"
-                      value={config.fotoSedeEtiqueta || ''}
-                      onChange={handleConfigChange}
-                      placeholder="Ej. Sede Oficial"
-                      className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl px-4 py-3 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
-                    />
-                  </div>
-
-                  {/* Descripción Foto Sede */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-extrabold uppercase tracking-wider text-slate-500" htmlFor="fotoSedeDescripcion">Descripción de la foto de la sede</label>
-                    <input 
-                      type="text" 
-                      id="fotoSedeDescripcion"
-                      name="fotoSedeDescripcion"
-                      value={config.fotoSedeDescripcion || ''}
-                      onChange={handleConfigChange}
-                      placeholder="Ej. Teatro Municipal de Quetzaltenango"
-                      className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl px-4 py-3 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
-                    />
-                  </div>
-
                   {/* Checkbox Inscripciones Abiertas */}
                   <div className="md:col-span-2 flex items-center space-x-3 bg-blue-50/50 p-4 border border-blue-100 rounded-2xl">
                     <input
@@ -623,64 +671,23 @@ export function AdminConvencion() {
                     </div>
                   </div>
 
-                  {/* Configuración de Notificaciones Automatizadas (Google Apps Script & Telegram) */}
-                  <div className="md:col-span-2 space-y-4 pt-4 border-t border-slate-200/60">
-                    <h4 className="text-sm font-black text-blue-900 uppercase tracking-wider flex items-center space-x-2">
-                      <span>Notificaciones y Webhooks de Confirmación</span>
-                    </h4>
-
-                    {/* Google Apps Script URL */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-extrabold uppercase tracking-wider text-slate-600" htmlFor="googleScriptUrl">
-                        URL de Webhook Google Apps Script (Correos de Bienvenida)
-                      </label>
-                      <input 
-                        type="url" 
-                        id="googleScriptUrl"
-                        name="googleScriptUrl"
-                        value={config.googleScriptUrl || 'https://script.google.com/macros/s/AKfycbwN-mwP87KpWN7AFjNL5W6bfi_Cc0h2RtZzufyOo15kHlEW-G_sRB7DSW2P1vJujV3V/exec'}
-                        onChange={handleConfigChange}
-                        placeholder="https://script.google.com/macros/s/.../exec"
-                        className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl px-4 py-3 text-slate-800 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
-                      />
-                      <p className="text-[10px] text-slate-400">
-                        Los registros enviarán un HTTP POST a este Webhook para enviar correos automáticos de pre-inscripción.
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* Telegram Bot Token */}
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-extrabold uppercase tracking-wider text-slate-600" htmlFor="telegramBotToken">
-                          Telegram Bot Token (Opcional)
-                        </label>
-                        <input 
-                          type="text" 
-                          id="telegramBotToken"
-                          name="telegramBotToken"
-                          value={config.telegramBotToken || ''}
-                          onChange={handleConfigChange}
-                          placeholder="ej. 7123456789:ABCdef..."
-                          className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl px-4 py-3 text-slate-800 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
-                        />
-                      </div>
-
-                      {/* Telegram Chat ID */}
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-extrabold uppercase tracking-wider text-slate-600" htmlFor="telegramChatId">
-                          Telegram Chat ID / ID de Grupo (Opcional)
-                        </label>
-                        <input 
-                          type="text" 
-                          id="telegramChatId"
-                          name="telegramChatId"
-                          value={config.telegramChatId || ''}
-                          onChange={handleConfigChange}
-                          placeholder="ej. -1001234567890"
-                          className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl px-4 py-3 text-slate-800 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
-                        />
-                      </div>
-                    </div>
+                  {/* Plantilla de Correo de Confirmación */}
+                  <div className="md:col-span-2 space-y-2 pt-2">
+                    <label className="text-xs font-extrabold uppercase tracking-wider text-blue-900 block" htmlFor="mensajeBienvenidaEmail">
+                      Texto del Correo Electrónico de Confirmación
+                    </label>
+                    <textarea
+                      id="mensajeBienvenidaEmail"
+                      name="mensajeBienvenidaEmail"
+                      rows={3}
+                      value={config.mensajeBienvenidaEmail || '¡Bienvenido, Compañero León! Tu pre-inscripción a la Convención ha sido confirmada con éxito. A partir de este momento recibirás información oportuna de primera mano sobre los avances, actividades y beneficios tempranos por tu confirmación.'}
+                      onChange={handleConfigChange}
+                      placeholder="Escribe el cuerpo del correo que se enviará automáticamente..."
+                      className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl p-4 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
+                    />
+                    <p className="text-[10px] text-slate-400">
+                      Este texto será enviado automáticamente desde clubdeleonesquetzaltenango@gmail.com al correo del socio al pre-inscribirse.
+                    </p>
                   </div>
 
                 </div>
@@ -832,7 +839,125 @@ export function AdminConvencion() {
               </div>
             )}
 
-          </div>
+            {/* Difusión Masiva Sub-Tab */}
+            {activeConfigTab === 'difusion' && (
+              <div className="space-y-8 max-w-4xl pt-2">
+                <div className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white p-6 rounded-3xl shadow-lg space-y-2">
+                  <h3 className="text-xl font-black flex items-center space-x-2">
+                    <Mail size={22} className="text-yellow-400" />
+                    <span>Módulo de Comunicación Masiva a Pre-Inscritos</span>
+                  </h3>
+                  <p className="text-xs text-blue-100 leading-relaxed">
+                    Envía boletines informativos, actualizaciones del programa y anuncios por correo electrónico y Telegram a la lista oficial de <strong>{registros.length} participantes pre-inscritos</strong>.
+                  </p>
+                </div>
+
+                {/* Seccion 1: Difusión por Correo */}
+                <form onSubmit={handleSendMassEmail} className="bg-slate-50 border border-slate-200/80 rounded-3xl p-6 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                    <h4 className="text-sm font-black text-blue-900 uppercase tracking-wider flex items-center space-x-2">
+                      <Mail size={16} className="text-blue-900" />
+                      <span>1. Enviar Boletín por Correo Electrónico ({registros.length} Destinatarios)</span>
+                    </h4>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-3 py-1 rounded-full">
+                      Desde clubdeleonesquetzaltenango@gmail.com
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1">Asunto del Correo</label>
+                      <input 
+                        type="text" 
+                        required
+                        value={broadcastSubject}
+                        onChange={e => setBroadcastSubject(e.target.value)}
+                        placeholder="Ej. Boletín #1: Novedades de Hospedaje y Programa Oficial"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-900/10 text-slate-800"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1">Mensaje / Contenido del Comunicado</label>
+                      <textarea
+                        required
+                        rows={5}
+                        value={broadcastBody}
+                        onChange={e => setBroadcastBody(e.target.value)}
+                        placeholder="Escribe aquí el contenido del boletín para los inscritos..."
+                        className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-900/10 text-slate-800"
+                      />
+                    </div>
+
+                    <div className="pt-2">
+                      <button
+                        type="submit"
+                        disabled={isBroadcasting || registros.length === 0}
+                        className="bg-blue-900 hover:bg-blue-850 text-white font-black px-6 py-3 rounded-xl text-xs uppercase tracking-wider shadow transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
+                      >
+                        {isBroadcasting ? (
+                          <>
+                            <Loader2 className="animate-spin" size={16} />
+                            <span>Enviando correos...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Send size={16} />
+                            <span>Enviar Correo Masivo a {registros.length} Inscritos</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+
+                {/* Seccion 2: Difusión por Telegram */}
+                <form onSubmit={handleSendTelegramBroadcast} className="bg-slate-50 border border-slate-200/80 rounded-3xl p-6 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                    <h4 className="text-sm font-black text-blue-900 uppercase tracking-wider flex items-center space-x-2">
+                      <Send size={16} className="text-blue-900" />
+                      <span>2. Publicar Anuncio en Canal / Grupo de Telegram</span>
+                    </h4>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-600 mb-1">Mensaje para Telegram</label>
+                      <textarea
+                        required
+                        rows={4}
+                        value={broadcastTelegramMsg}
+                        onChange={e => setBroadcastTelegramMsg(e.target.value)}
+                        placeholder="Escribe el mensaje o aviso que se publicará en el grupo de Telegram..."
+                        className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-900/10 text-slate-800"
+                      />
+                    </div>
+
+                    <div className="pt-2">
+                      <button
+                        type="submit"
+                        disabled={isBroadcasting}
+                        className="bg-indigo-900 hover:bg-indigo-800 text-white font-black px-6 py-3 rounded-xl text-xs uppercase tracking-wider shadow transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
+                      >
+                        {isBroadcasting ? (
+                          <>
+                            <Loader2 className="animate-spin" size={16} />
+                            <span>Publicando en Telegram...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Send size={16} />
+                            <span>Publicar Anuncio por Telegram</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            )}
+
+          </>
         )}
 
         {/* ================= PRE-REGISTROS TAB ================= */}
