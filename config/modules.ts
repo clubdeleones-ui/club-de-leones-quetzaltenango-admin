@@ -45,12 +45,20 @@ export const ALL_APP_MODULES: AppModule[] = [
     description: 'Seguimiento del nivel de compromiso y puntuación de socios',
     defaultRoles: ['SUPER_ADMIN', 'SECRETARIO', 'PRESIDENTE_AFILIACION'] 
   },
+  // Comité de Gestión
   { 
     id: 'convencion_admin', 
-    label: 'Configuración Convención', 
-    category: 'Presidencia',
-    description: 'Gestión de inscripciones y parámetros de la Convención',
-    defaultRoles: ['SUPER_ADMIN', 'PRESIDENTE_AFILIACION'] 
+    label: 'Formulario y Página de Convención', 
+    category: 'Comité de Gestión',
+    description: 'Administración del formulario de inscripción, apertura/cierre de registros y configuración de la Convención',
+    defaultRoles: ['SUPER_ADMIN', 'SECRETARIO', 'PRESIDENTE_AFILIACION'] 
+  },
+  { 
+    id: 'agenda_contactos', 
+    label: 'Agenda de Contactos', 
+    category: 'Comité de Gestión',
+    description: 'Directorio institucional de aliados y contactos clave',
+    defaultRoles: ['SUPER_ADMIN', 'SECRETARIO', 'PRESIDENTE_AFILIACION'] 
   },
 
   // Secretaría

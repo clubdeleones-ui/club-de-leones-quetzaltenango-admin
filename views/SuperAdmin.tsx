@@ -123,8 +123,7 @@ const CATEGORIAS_MODULOS = [
     items: [
       { id: 'presidencia', label: 'Gestión de Solicitudes', icon: Layers },
       { id: 'agendas_reunion', label: 'Agendas de Reunión', icon: FileText },
-      { id: 'ranking_lionistico', label: 'Ranking Lionístico', icon: Trophy },
-      { id: 'convencion_admin', label: 'Configuración Convención', icon: Award }
+      { id: 'ranking_lionistico', label: 'Ranking Lionístico', icon: Trophy }
     ]
   },
   {
@@ -177,6 +176,7 @@ const CATEGORIAS_MODULOS = [
   {
     category: 'Comité de Gestión',
     items: [
+      { id: 'convencion_admin', label: 'Formulario y Página de Convención', icon: Award },
       { id: 'agenda_contactos', label: 'Agenda de Contactos', icon: BookUser }
     ]
   }
