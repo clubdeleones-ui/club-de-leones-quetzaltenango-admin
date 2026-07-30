@@ -179,6 +179,21 @@ service cloud.firestore {
                    && isValidString(request.resource.data, 'email', false);
     }
 
+    match /nevera_inventario/{document} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /nevera_consumos/{document} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /nevera_cuentas/{document} {
+      allow read: if true;
+      allow write: if true;
+    }
+
     // --- GENERAL COMPATIBILITY CATCH-ALL ---
     // Regla de compatibilidad para otros desarrollos en el proyecto parqueo-cueva (Válido hasta finales de 2027)
     // Se restringe para no interceptar ni relajar las reglas de las colecciones del Club de Leones declaradas arriba.
@@ -189,7 +204,8 @@ service cloud.firestore {
           'solicitudes_voluntarios', 'galeria', 'linea_tiempo', 'comisiones', 
           'minutas', 'agenda', 'agendas', 'tareas_comisiones', 'asistencias', 
           'presupuestos_rubros', 'presupuestos_fondos', 'presupuestos_asignaciones', 
-          'config_roles', 'config_puestos', 'parqueo', 'convencion_config', 'convencion_registros', 'registro_participaciones', 'requerimientos_actividades'
+          'config_roles', 'config_puestos', 'parqueo', 'convencion_config', 'convencion_registros', 'registro_participaciones', 'requerimientos_actividades',
+          'nevera_inventario', 'nevera_consumos', 'nevera_cuentas'
         ]);
     }
   }
