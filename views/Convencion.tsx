@@ -515,14 +515,11 @@ export default function Convencion() {
                   key={index}
                   className="flex flex-col items-center group shrink-0 cursor-pointer"
                 >
-                  {/* Square Logo Slide Box */}
-                  <div className="w-28 h-28 sm:w-44 sm:h-44 aspect-square rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-900/95 via-blue-955 to-slate-950 border-2 border-white/15 group-hover:border-yellow-400/80 shadow-2xl backdrop-blur-xl flex items-center justify-center p-3 sm:p-4 relative overflow-hidden transition-all duration-300 transform group-hover:-translate-y-1.5 group-hover:shadow-yellow-500/10">
-                    {/* Subtle Corner Glow */}
-                    <div className="absolute -top-10 -right-10 w-24 h-24 bg-yellow-500/10 rounded-full blur-xl pointer-events-none group-hover:bg-yellow-500/25 transition-colors" />
-
+                  {/* Square Logo Slide Box — Fondo Blanco para PNGs y Transparencias */}
+                  <div className="w-28 h-28 sm:w-44 sm:h-44 aspect-square rounded-2xl sm:rounded-3xl bg-white border-2 border-slate-200 group-hover:border-yellow-500 shadow-xl flex items-center justify-center p-3 sm:p-5 relative overflow-hidden transition-all duration-300 transform group-hover:-translate-y-1.5 group-hover:shadow-yellow-500/20">
                     {/* Badge Label */}
                     {aliado.badge && (
-                      <span className="absolute top-2 right-2 text-[8px] sm:text-[10px] font-black uppercase tracking-wider text-yellow-400 bg-yellow-500/20 border border-yellow-500/40 px-2 sm:px-2.5 py-0.5 rounded-full shadow-sm z-10">
+                      <span className="absolute top-2 right-2 text-[8px] sm:text-[10px] font-black uppercase tracking-wider text-blue-955 bg-yellow-400 border border-yellow-500/50 px-2 sm:px-2.5 py-0.5 rounded-full shadow-sm z-10">
                         {aliado.badge}
                       </span>
                     )}
@@ -532,10 +529,10 @@ export default function Convencion() {
                       <img 
                         src={aliado.logoUrl} 
                         alt={aliado.name}
-                        className="max-w-full max-h-full object-contain filter drop-shadow-lg group-hover:scale-110 transition-transform duration-300"
+                        className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
-                      <span className="text-3xl sm:text-5xl drop-shadow-md group-hover:scale-110 transition-transform duration-300">
+                      <span className="text-3xl sm:text-5xl group-hover:scale-110 transition-transform duration-300">
                         {aliado.icon || '🤝'}
                       </span>
                     )}

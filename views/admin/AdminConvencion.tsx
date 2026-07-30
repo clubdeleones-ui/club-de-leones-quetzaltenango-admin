@@ -1038,10 +1038,10 @@ export function AdminConvencion() {
                           </button>
                         </div>
 
-                        {/* Square Box Display */}
-                        <div className="w-28 h-28 aspect-square rounded-2xl bg-slate-900/90 border border-slate-700 flex items-center justify-center p-3 relative overflow-hidden my-2 shadow-inner">
+                        {/* Square Box Display — Fondo Blanco */}
+                        <div className="w-28 h-28 aspect-square rounded-2xl bg-white border-2 border-slate-200 flex items-center justify-center p-3 relative overflow-hidden my-2 shadow-sm">
                           {aliado.badge && (
-                            <span className="absolute top-1.5 left-1.5 text-[8px] font-black uppercase text-yellow-400 bg-yellow-500/20 border border-yellow-500/40 px-2 py-0.5 rounded-full">
+                            <span className="absolute top-1.5 left-1.5 text-[8px] font-black uppercase text-blue-955 bg-yellow-400 border border-yellow-500/50 px-2 py-0.5 rounded-full shadow-sm">
                               {aliado.badge}
                             </span>
                           )}
@@ -1049,7 +1049,7 @@ export function AdminConvencion() {
                             <img 
                               src={aliado.logoUrl} 
                               alt={aliado.name}
-                              className="max-w-full max-h-full object-contain filter drop-shadow"
+                              className="max-w-full max-h-full object-contain"
                             />
                           ) : (
                             <span className="text-3xl">{aliado.icon || '🦁'}</span>
@@ -1533,7 +1533,7 @@ export function AdminConvencion() {
                 <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block">Subir Imagen del Logo (Diapositiva Cuadrada)</label>
                 
                 <div className="flex items-center space-x-4 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                  <div className="w-16 h-16 aspect-square rounded-xl bg-slate-900 flex items-center justify-center p-2 overflow-hidden shrink-0 border border-slate-700 shadow-inner">
+                  <div className="w-16 h-16 aspect-square rounded-xl bg-white flex items-center justify-center p-2 overflow-hidden shrink-0 border-2 border-slate-200 shadow-sm">
                     {alianzaLogoPreview ? (
                       <img src={alianzaLogoPreview} alt="Preview" className="max-w-full max-h-full object-contain" />
                     ) : (
