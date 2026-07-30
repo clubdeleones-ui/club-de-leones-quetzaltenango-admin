@@ -623,6 +623,66 @@ export function AdminConvencion() {
                     </div>
                   </div>
 
+                  {/* Configuración de Notificaciones Automatizadas (Google Apps Script & Telegram) */}
+                  <div className="md:col-span-2 space-y-4 pt-4 border-t border-slate-200/60">
+                    <h4 className="text-sm font-black text-blue-900 uppercase tracking-wider flex items-center space-x-2">
+                      <span>Notificaciones y Webhooks de Confirmación</span>
+                    </h4>
+
+                    {/* Google Apps Script URL */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-extrabold uppercase tracking-wider text-slate-600" htmlFor="googleScriptUrl">
+                        URL de Webhook Google Apps Script (Correos de Bienvenida)
+                      </label>
+                      <input 
+                        type="url" 
+                        id="googleScriptUrl"
+                        name="googleScriptUrl"
+                        value={config.googleScriptUrl || 'https://script.google.com/macros/s/AKfycbwN-mwP87KpWN7AFjNL5W6bfi_Cc0h2RtZzufyOo15kHlEW-G_sRB7DSW2P1vJujV3V/exec'}
+                        onChange={handleConfigChange}
+                        placeholder="https://script.google.com/macros/s/.../exec"
+                        className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl px-4 py-3 text-slate-800 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
+                      />
+                      <p className="text-[10px] text-slate-400">
+                        Los registros enviarán un HTTP POST a este Webhook para enviar correos automáticos de pre-inscripción.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Telegram Bot Token */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-extrabold uppercase tracking-wider text-slate-600" htmlFor="telegramBotToken">
+                          Telegram Bot Token (Opcional)
+                        </label>
+                        <input 
+                          type="text" 
+                          id="telegramBotToken"
+                          name="telegramBotToken"
+                          value={config.telegramBotToken || ''}
+                          onChange={handleConfigChange}
+                          placeholder="ej. 7123456789:ABCdef..."
+                          className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl px-4 py-3 text-slate-800 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
+                        />
+                      </div>
+
+                      {/* Telegram Chat ID */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-extrabold uppercase tracking-wider text-slate-600" htmlFor="telegramChatId">
+                          Telegram Chat ID / ID de Grupo (Opcional)
+                        </label>
+                        <input 
+                          type="text" 
+                          id="telegramChatId"
+                          name="telegramChatId"
+                          value={config.telegramChatId || ''}
+                          onChange={handleConfigChange}
+                          placeholder="ej. -1001234567890"
+                          className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl px-4 py-3 text-slate-800 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
 
                 <div className="pt-4 border-t border-slate-100">

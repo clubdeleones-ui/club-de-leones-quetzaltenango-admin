@@ -344,8 +344,17 @@ export default function Convencion() {
       
       await firebaseService.saveConvencionRegistro(nuevoRegistro);
       
-      // Intentar envío de notificación automática por Telegram (si está configurado)
-      telegramService.notifyNuevaInscripcionConvencion(nuevoRegistro).catch(err => {
+      // 1. Enviar webhook de correo automático por Google Apps Script
+      telegramService.sendGoogleScriptWebhook(nuevoRegistro, config?.googleScriptUrl).catch(err => {
+        console.warn("No se pudo enviar webhook de correo:", err);
+      });
+
+      // 2. Enviar notificación por Telegram al comité organizador
+      telegramService.notifyNuevaInscripcionConvencion(
+        nuevoRegistro, 
+        config?.telegramBotToken, 
+        config?.telegramChatId
+      ).catch(err => {
         console.warn("No se pudo enviar notificación de Telegram:", err);
       });
 
@@ -832,9 +841,9 @@ export default function Convencion() {
                   <div className="w-20 h-20 bg-yellow-500 text-blue-955 rounded-full flex items-center justify-center mx-auto shadow-xl shadow-yellow-500/10">
                     <CheckCircle2 size={44} />
                   </div>
-                  <h3 className="text-3xl font-black text-white tracking-tight">¡Pre-registro Exitoso!</h3>
-                  <p className="text-slate-300 text-base max-w-md mx-auto leading-relaxed">
-                    Gracias, León **{form.nombre}**. Hemos guardado tus datos de forma prioritaria en la lista de espera oficial de la convención en Firestore. Te mantendremos informado tan pronto abramos el portal de inscripciones.
+                  <h3 className="text-3xl font-black text-white tracking-tight">¡Pre-inscripción Confirmada!</h3>
+                  <p className="text-slate-200 text-base max-w-lg mx-auto leading-relaxed">
+                    ¡Bienvenido, Compañero León <strong className="text-yellow-400 font-extrabold">{form.nombre}</strong>! Tu pre-inscripción a la Convención ha sido confirmada. Ahora podrás recibir información importante a tiempo de los avances, actividades del programa y beneficios tempranos por tu confirmación.
                   </p>
                   <div className="pt-6">
                     <button 

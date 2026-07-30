@@ -443,6 +443,10 @@ export interface ConvencionConfig {
   inscripcionesAbiertas: boolean;
   actividadesCulturales?: ConvencionActividad[];
   experienciasUnicas?: ConvencionExperiencia[];
+  googleScriptUrl?: string;
+  telegramBotToken?: string;
+  telegramChatId?: string;
+  mensajeBienvenidaEmail?: string;
 }
 
 export interface ConvencionRegistro {
