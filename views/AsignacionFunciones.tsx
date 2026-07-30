@@ -22,29 +22,9 @@ import {
   ArrowDown
 } from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
+import { ALL_APP_MODULES, AppModule } from '../config/modules';
 
-const AVAILABLE_TABS = [
-  { id: 'resumen', label: 'Resumen General' },
-  { id: 'presidencia', label: 'Gestión de Solicitudes (Presidencia)' },
-  { id: 'agendas_reunion', label: 'Agendas de Reunión' },
-  { id: 'ranking_lionistico', label: 'Ranking Lionístico' },
-  { id: 'actas', label: 'Libro de Actas' },
-  { id: 'beneficios', label: 'Beneficios a Socios' },
-  { id: 'calendario', label: 'Actividades (Mercadeo)' },
-  { id: 'comisiones', label: 'Gestión de Comisiones' },
-  { id: 'cuotas', label: 'Control de Cuotas' },
-  { id: 'parqueo', label: 'Gestión de Parqueo' },
-  { id: 'donaciones', label: 'Donaciones Recibidas' },
-  { id: 'presupuestos', label: 'Presupuestos' },
-  { id: 'socios', label: 'Gestión de Socios' },
-  { id: 'afiliacion', label: 'Propuestas de Socios' },
-  { id: 'minutas', label: 'Minutas de Comisiones' },
-  { id: 'inventario', label: 'Inventario' },
-  { id: 'galeria_admin', label: 'Gestión de Galería' },
-  { id: 'linea_tiempo_admin', label: 'Línea de Tiempo' },
-  { id: 'agenda_contactos', label: 'Agenda de Contactos' },
-  { id: 'asignacion_funciones', label: 'Control de Contraseñas y Funciones' }
-];
+const AVAILABLE_TABS = ALL_APP_MODULES;
 
 export const AsignacionFunciones: React.FC = () => {
   const { 
@@ -731,38 +711,71 @@ export const AsignacionFunciones: React.FC = () => {
             <div className="lg:col-span-2 bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-[2rem] p-6 shadow-sm space-y-6">
               {selectedRole ? (
                 <div className="space-y-6">
-                  <div>
-                    <h3 className="text-xl font-extrabold text-blue-900">
-                      Configuración de Módulos Visibles: <span className="text-yellow-600">{selectedRole.label}</span>
-                    </h3>
-                    <p className="text-xs text-slate-400 font-medium mt-1">
-                      Activa o desactiva qué secciones de administración serán visibles para los usuarios asignados a este rol.
-                    </p>
+                  <div className="flex items-center justify-between bg-slate-50 border border-slate-200/80 rounded-2xl p-4">
+                    <div>
+                      <h3 className="text-xl font-extrabold text-blue-900">
+                        Configuración de Módulos Visibles: <span className="text-yellow-600">{selectedRole.label}</span>
+                      </h3>
+                      <p className="text-xs text-slate-500 font-medium mt-1">
+                        Activa o desactiva qué secciones de administración serán visibles para los usuarios asignados a este rol.
+                      </p>
+                    </div>
+                    <div className="flex-shrink-0 bg-blue-900 text-white px-4 py-2 rounded-xl text-xs font-black shadow-sm">
+                      {(selectedRole.allowedTabs || []).length} de {ALL_APP_MODULES.length} Módulos Activos
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {AVAILABLE_TABS.map(tab => {
-                      const hasAccess = selectedRole.allowedTabs?.includes(tab.id);
+                  {/* MÓDULOS AGRUPADOS POR CATEGORÍA */}
+                  <div className="space-y-6">
+                    {Array.from(new Set(ALL_APP_MODULES.map(m => m.category))).map(category => {
+                      const categoryModules = ALL_APP_MODULES.filter(m => m.category === category);
+                      const activeCount = categoryModules.filter(m => selectedRole.allowedTabs?.includes(m.id)).length;
+                      
                       return (
-                        <div
-                          key={tab.id}
-                          onClick={() => handleToggleTabAccess(selectedRole, tab.id)}
-                          className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
-                            hasAccess
-                              ? 'bg-emerald-50/40 border-emerald-200/80 shadow-sm'
-                              : 'bg-slate-50/20 border-slate-100 hover:border-slate-200'
-                          }`}
-                        >
-                          <div className="pr-2">
-                            <span className={`text-sm font-extrabold ${hasAccess ? 'text-emerald-800' : 'text-slate-650'}`}>
-                              {tab.label}
+                        <div key={category} className="space-y-3">
+                          <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+                            <span className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center space-x-2">
+                              <span>{category}</span>
                             </span>
-                            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{tab.id}</div>
+                            <span className="text-[11px] font-bold text-slate-400">
+                              {activeCount} / {categoryModules.length} activos
+                            </span>
                           </div>
 
-                          {/* TOGGLE SWITCH STYLE */}
-                          <div className={`w-10 h-5 rounded-full p-0.5 transition-colors duration-200 ${hasAccess ? 'bg-emerald-500' : 'bg-slate-200'}`}>
-                            <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ${hasAccess ? 'translate-x-5' : 'translate-x-0'}`} />
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {categoryModules.map(tab => {
+                              const hasAccess = selectedRole.allowedTabs?.includes(tab.id);
+                              return (
+                                <div
+                                  key={tab.id}
+                                  onClick={() => handleToggleTabAccess(selectedRole, tab.id)}
+                                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                                    hasAccess
+                                      ? 'bg-emerald-50/50 border-emerald-200 shadow-sm hover:border-emerald-300'
+                                      : 'bg-slate-50/30 border-slate-100 hover:border-slate-200'
+                                  }`}
+                                >
+                                  <div className="pr-3">
+                                    <div className="flex items-center space-x-1.5">
+                                      <span className={`text-sm font-extrabold ${hasAccess ? 'text-emerald-900' : 'text-slate-700'}`}>
+                                        {tab.label}
+                                      </span>
+                                    </div>
+                                    {tab.description && (
+                                      <p className="text-[11px] text-slate-400 font-medium line-clamp-1 mt-0.5">
+                                        {tab.description}
+                                      </p>
+                                    )}
+                                    <div className="text-[9px] text-slate-400 font-mono uppercase tracking-wider mt-1">{tab.id}</div>
+                                  </div>
+
+                                  {/* TOGGLE SWITCH STYLE */}
+                                  <div className={`flex-shrink-0 w-10 h-5 rounded-full p-0.5 transition-colors duration-200 ${hasAccess ? 'bg-emerald-500' : 'bg-slate-200'}`}>
+                                    <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ${hasAccess ? 'translate-x-5' : 'translate-x-0'}`} />
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       );

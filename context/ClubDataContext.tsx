@@ -38,14 +38,39 @@ import {
   MOCK_GALERIA,
   MOCK_REQUERIMIENTOS
 } from '../constants';
-import { firebaseService } from '../services/firebaseService';
+import { ALL_APP_MODULES } from '../config/modules';
 
 export const DEFAULT_ROLES_CONFIG = [
-  { id: 'SUPER_ADMIN', label: 'Super Administrador', allowedTabs: ['resumen', 'socios', 'calendario', 'cuotas', 'nevera_admin', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'inventario', 'galeria_admin', 'linea_tiempo_admin', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico', 'asignacion_funciones', 'convencion_admin'], orden: 0 },
-  { id: 'SECRETARIO', label: 'Secretario', allowedTabs: ['resumen', 'socios', 'calendario', 'actas', 'comisiones', 'minutas', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico'], orden: 1 },
-  { id: 'TESORERO', label: 'Tesorero', allowedTabs: ['resumen', 'socios', 'cuotas', 'nevera_admin', 'donaciones', 'parqueo', 'presupuestos', 'inventario', 'galeria_admin', 'linea_tiempo_admin'], orden: 2 },
-  { id: 'ASESOR_SERVICIOS', label: 'Asesor de Servicios', allowedTabs: ['socios', 'calendario', 'beneficios', 'minutas'], orden: 3 },
-  { id: 'PRESIDENTE_AFILIACION', label: 'Presidente de Afiliación', allowedTabs: ['resumen', 'socios', 'calendario', 'cuotas', 'actas', 'donaciones', 'beneficios', 'parqueo', 'presupuestos', 'comisiones', 'minutas', 'afiliacion', 'agenda_contactos', 'presidencia', 'agendas_reunion', 'ranking_lionistico', 'convencion_admin'], orden: 4 },
+  { 
+    id: 'SUPER_ADMIN', 
+    label: 'Super Administrador', 
+    allowedTabs: ALL_APP_MODULES.map(m => m.id), 
+    orden: 0 
+  },
+  { 
+    id: 'SECRETARIO', 
+    label: 'Secretario', 
+    allowedTabs: ALL_APP_MODULES.filter(m => m.defaultRoles?.includes('SECRETARIO')).map(m => m.id), 
+    orden: 1 
+  },
+  { 
+    id: 'TESORERO', 
+    label: 'Tesorero', 
+    allowedTabs: ALL_APP_MODULES.filter(m => m.defaultRoles?.includes('TESORERO')).map(m => m.id), 
+    orden: 2 
+  },
+  { 
+    id: 'ASESOR_SERVICIOS', 
+    label: 'Asesor de Servicios', 
+    allowedTabs: ALL_APP_MODULES.filter(m => m.defaultRoles?.includes('ASESOR_SERVICIOS')).map(m => m.id), 
+    orden: 3 
+  },
+  { 
+    id: 'PRESIDENTE_AFILIACION', 
+    label: 'Presidente de Afiliación', 
+    allowedTabs: ALL_APP_MODULES.filter(m => m.defaultRoles?.includes('PRESIDENTE_AFILIACION')).map(m => m.id), 
+    orden: 4 
+  },
   { id: 'SOCIO', label: 'Socio Regular', allowedTabs: [], orden: 5 },
   { id: 'DONANTE', label: 'Donante', allowedTabs: [], orden: 6 }
 ];
@@ -479,32 +504,19 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           await setDoc(doc(db, 'config_roles', role.id), { label: role.label, allowedTabs: role.allowedTabs, orden: role.orden });
         });
       } else {
-        // Dynamic migration: Ensure SUPER_ADMIN and PRESIDENTE_AFILIACION have 'convencion_admin'
-        // and also ensure target roles have 'requerimientos_actividades'
+        // Dynamic automatic migration: Ensure any module in ALL_APP_MODULES is granted to defaultRoles (or SUPER_ADMIN) if missing
         list.forEach(async (role: any) => {
           let updatedTabs = [...(role.allowedTabs || [])];
           let changed = false;
 
-          if (role.id === 'SUPER_ADMIN' || role.id === 'PRESIDENTE_AFILIACION') {
-            if (!updatedTabs.includes('convencion_admin')) {
-              updatedTabs.push('convencion_admin');
-              changed = true;
+          ALL_APP_MODULES.forEach(mod => {
+            if (role.id === 'SUPER_ADMIN' || mod.defaultRoles?.includes(role.id)) {
+              if (!updatedTabs.includes(mod.id)) {
+                updatedTabs.push(mod.id);
+                changed = true;
+              }
             }
-          }
-
-          if (role.id === 'SUPER_ADMIN' || role.id === 'TESORERO') {
-            if (!updatedTabs.includes('nevera_admin')) {
-              updatedTabs.push('nevera_admin');
-              changed = true;
-            }
-          }
-
-          if (['SUPER_ADMIN', 'SECRETARIO', 'ASESOR_SERVICIOS', 'PRESIDENTE_AFILIACION'].includes(role.id)) {
-            if (!updatedTabs.includes('requerimientos_actividades')) {
-              updatedTabs.push('requerimientos_actividades');
-              changed = true;
-            }
-          }
+          });
 
           if (changed) {
             await setDoc(doc(db, 'config_roles', role.id), { label: role.label, allowedTabs: updatedTabs, orden: role.orden }, { merge: true });
