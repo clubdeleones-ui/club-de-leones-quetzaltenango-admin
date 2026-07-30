@@ -1310,8 +1310,12 @@ export const firebaseService = {
         return MOCK_NEVERA_CATALOG;
       }
       return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as NeveraProducto));
-    } catch (error) {
-      console.error("Error fetching nevera inventario:", error);
+    } catch (error: any) {
+      if (error?.code === 'permission-denied') {
+        console.warn("Reglas de Firestore no desplegadas para nevera_inventario; usando catálogo por defecto.");
+      } else {
+        console.error("Error fetching nevera inventario:", error);
+      }
       return MOCK_NEVERA_CATALOG;
     }
   },
@@ -1358,8 +1362,12 @@ export const firebaseService = {
       const snapshot = await getDocs(colRef);
       const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as NeveraConsumo));
       return items.sort((a, b) => new Date(b.fechaConsumo).getTime() - new Date(a.fechaConsumo).getTime());
-    } catch (error) {
-      console.error("Error fetching nevera consumos:", error);
+    } catch (error: any) {
+      if (error?.code === 'permission-denied') {
+        console.warn("Reglas de Firestore no desplegadas para nevera_consumos; retornando lista vacía.");
+      } else {
+        console.error("Error fetching nevera consumos:", error);
+      }
       return [];
     }
   },
@@ -1416,8 +1424,12 @@ export const firebaseService = {
       const colRef = collection(db, "nevera_cuentas");
       const snapshot = await getDocs(colRef);
       return snapshot.docs.map(d => ({ socioId: d.id, ...d.data() } as NeveraSaldoSocio));
-    } catch (error) {
-      console.error("Error fetching nevera cuentas:", error);
+    } catch (error: any) {
+      if (error?.code === 'permission-denied') {
+        console.warn("Reglas de Firestore no desplegadas para nevera_cuentas; retornando lista vacía.");
+      } else {
+        console.error("Error fetching nevera cuentas:", error);
+      }
       return [];
     }
   },
