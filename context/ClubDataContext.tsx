@@ -39,6 +39,7 @@ import {
   MOCK_REQUERIMIENTOS
 } from '../constants';
 import { ALL_APP_MODULES } from '../config/modules';
+import { firebaseService } from '../services/firebaseService';
 
 export const DEFAULT_ROLES_CONFIG = [
   { 
