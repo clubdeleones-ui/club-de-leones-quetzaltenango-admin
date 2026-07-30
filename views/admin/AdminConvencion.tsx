@@ -98,10 +98,12 @@ export function AdminConvencion() {
   });
 
   useEffect(() => {
+    let isMounted = true;
     const loadData = async () => {
       setLoading(true);
       try {
         const dbConfig = await firebaseService.getConvencionConfig();
+        if (!isMounted) return;
         setConfig({
           ...dbConfig,
           fotoSedeEtiqueta: dbConfig.fotoSedeEtiqueta || 'Sede Oficial',
@@ -112,15 +114,18 @@ export function AdminConvencion() {
         setImagePreview(dbConfig.fotoSede);
         
         const dbRegistros = await firebaseService.getConvencionRegistros();
+        if (!isMounted) return;
         setRegistros(dbRegistros);
       } catch (error) {
+        if (!isMounted) return;
         console.error("Error al cargar datos de convención:", error);
         setErrorMsg("Hubo un error al conectar con la base de datos.");
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
     loadData();
+    return () => { isMounted = false; };
   }, []);
 
   const handleConfigChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
