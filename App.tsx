@@ -6,7 +6,7 @@ import { AuthState, Socio, UserRole } from './types';
 import { firebaseService } from './services/firebaseService';
 import { ToastProvider } from './context/ToastContext';
 import { ModalProvider } from './context/ModalContext';
-import { ClubDataProvider } from './context/ClubDataContext';
+import { ClubDataProvider, useClubData } from './context/ClubDataContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import { env } from './config/env';
 
