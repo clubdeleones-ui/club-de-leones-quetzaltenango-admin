@@ -1351,8 +1351,12 @@ export const firebaseService = {
           await setDoc(doc(colRef, item.id), item);
         }
       }
-    } catch (error) {
-      console.error("Error syncing initial nevera catalog:", error);
+    } catch (error: any) {
+      if (error?.code === 'permission-denied') {
+        console.warn("Reglas de Firestore no desplegadas para sincronización de nunca catálogo; omitiendo.");
+      } else {
+        console.error("Error syncing initial nevera catalog:", error);
+      }
     }
   },
 
