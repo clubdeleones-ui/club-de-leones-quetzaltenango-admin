@@ -35,6 +35,33 @@ const RequerimientoPublico = lazy(() => import('./views/RequerimientoPublico'));
 const AgendaPublica = lazy(() => import('./views/AgendaPublica').then(m => ({ default: m.AgendaPublica })));
 const NeveraPublica = lazy(() => import('./views/NeveraPublica').then(m => ({ default: m.NeveraPublica })));
 
+// Component to synchronize authenticated user session in real-time with Firestore socios collection
+interface UserSessionSyncProps {
+  auth: AuthState;
+  onUpdateUser: (updatedUser: Socio) => void;
+}
+
+const UserSessionSync: React.FC<UserSessionSyncProps> = ({ auth, onUpdateUser }) => {
+  const { socios } = useClubData();
+
+  useEffect(() => {
+    if (auth.isAuthenticated && auth.user && socios.length > 0) {
+      const currentId = auth.user.id;
+      const currentCorreo = auth.user.correo;
+      const matchingSocio = socios.find(
+        s => s.id === currentId || (currentCorreo && s.correo && s.correo.toLowerCase() === currentCorreo.toLowerCase())
+      );
+      if (matchingSocio) {
+        if (JSON.stringify(matchingSocio) !== JSON.stringify(auth.user)) {
+          onUpdateUser(matchingSocio);
+        }
+      }
+    }
+  }, [socios, auth.isAuthenticated, auth.user, onUpdateUser]);
+
+  return null;
+};
+
 // ProtectedRoute moved outside of App to resolve typing errors and improve performance
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -108,6 +135,7 @@ const App: React.FC = () => {
         <ToastProvider>
           <ErrorBoundary>
             <ClubDataProvider>
+              <UserSessionSync auth={auth} onUpdateUser={handleUpdateUser} />
               <Router>
               <Layout auth={auth} onLogout={handleLogout}>
                 <Suspense fallback={
