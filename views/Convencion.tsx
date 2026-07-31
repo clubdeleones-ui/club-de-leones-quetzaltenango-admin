@@ -193,6 +193,14 @@ export default function Convencion() {
   const zonaRef = useRef<HTMLDivElement>(null);
   const clubRef = useRef<HTMLDivElement>(null);
 
+  const scrollToPreInscripcion = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const element = document.getElementById('pre-inscripcion');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
