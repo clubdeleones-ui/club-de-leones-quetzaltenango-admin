@@ -503,29 +503,25 @@ export default function Convencion() {
         </div>
       </header>
 
-      {/* SECCIÓN 2: Alianzas & Patrocinadores Marquee Block */}
+      {/* SECCIÓN 2: Alianzas & Patrocinadores Marquee Block — FONDO BLANCO */}
       <section className="my-10 sm:my-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-10 border-2 border-yellow-500/30 shadow-2xl relative overflow-hidden">
-          {/* Subtle Background Glow */}
-          <div className="absolute -top-24 -left-24 w-72 h-72 bg-yellow-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-
+        <div className="bg-white text-slate-800 rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-10 border border-slate-200 shadow-2xl relative overflow-hidden">
           {/* Section Header */}
-          <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-white/15 pb-4 sm:pb-6 relative z-10 text-center sm:text-left">
+          <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-slate-200 pb-4 sm:pb-6 relative z-10 text-center sm:text-left">
             <div className="flex items-center space-x-3">
-              <div className="p-2.5 sm:p-3 bg-yellow-500/20 rounded-2xl border border-yellow-500/40 text-yellow-400 shrink-0 shadow-lg shadow-yellow-500/10">
-                <Handshake size={22} className="animate-pulse sm:w-6 sm:h-6" />
+              <div className="p-2.5 sm:p-3 bg-blue-900/10 rounded-2xl border border-blue-900/20 text-blue-900 shrink-0 shadow-sm">
+                <Handshake size={22} className="animate-pulse sm:w-6 sm:h-6 text-blue-900" />
               </div>
               <div>
-                <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-yellow-400 block">
+                <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-blue-900 block">
                   Respaldos & Alianzas Institucionales
                 </span>
-                <h3 className="text-lg sm:text-2xl font-black text-white tracking-tight">
+                <h3 className="text-lg sm:text-2xl font-black text-blue-955 tracking-tight">
                   Aliados Estratégicos de la LXIV Convención
                 </h3>
               </div>
             </div>
-            <p className="text-xs sm:text-sm text-slate-200 max-w-md font-medium">
+            <p className="text-xs sm:text-sm text-slate-600 max-w-md font-medium">
               Unidos por la fraternidad, la cultura y el liderazgo de servicio en Guatemala.
             </p>
           </div>
@@ -533,8 +529,8 @@ export default function Convencion() {
           {/* Marquee Track with gradient edge masks */}
           <div className="relative w-full overflow-hidden py-1 sm:py-2">
             {/* Gradient Masks */}
-            <div className="pointer-events-none absolute inset-y-0 left-0 w-12 sm:w-36 bg-gradient-to-r from-blue-955 to-transparent z-20" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-12 sm:w-36 bg-gradient-to-l from-blue-955 to-transparent z-20" />
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-12 sm:w-36 bg-gradient-to-r from-white to-transparent z-20" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-12 sm:w-36 bg-gradient-to-l from-white to-transparent z-20" />
 
             {/* Scrolling Marquee Container with Square Slides and Text Below */}
             <div className="animate-marquee flex items-start space-x-4 sm:space-x-8 py-2 sm:py-3">
@@ -546,8 +542,8 @@ export default function Convencion() {
                   key={index}
                   className="flex flex-col items-center group shrink-0 cursor-pointer"
                 >
-                  {/* Square Logo Slide Box — Fondo Blanco para PNGs y Transparencias */}
-                  <div className="w-28 h-28 sm:w-44 sm:h-44 aspect-square rounded-2xl sm:rounded-3xl bg-white border-2 border-slate-200 group-hover:border-yellow-500 shadow-xl flex items-center justify-center p-3 sm:p-5 relative overflow-hidden transition-all duration-300 transform group-hover:-translate-y-1.5 group-hover:shadow-yellow-500/30">
+                  {/* Square Logo Slide Box — Fondo Blanco con Sombra Elegante */}
+                  <div className="w-28 h-28 sm:w-44 sm:h-44 aspect-square rounded-2xl sm:rounded-3xl bg-slate-50 border-2 border-slate-200 group-hover:border-blue-900 shadow-md flex items-center justify-center p-3 sm:p-5 relative overflow-hidden transition-all duration-300 transform group-hover:-translate-y-1.5 group-hover:shadow-xl">
                     {/* Badge Label */}
                     {aliado.badge && (
                       <span className="absolute top-2 right-2 text-[8px] sm:text-[10px] font-black uppercase tracking-wider text-blue-955 bg-yellow-400 border border-yellow-500/50 px-2 sm:px-2.5 py-0.5 rounded-full shadow-sm z-10">
@@ -571,10 +567,10 @@ export default function Convencion() {
 
                   {/* Text Below the Square Slide */}
                   <div className="mt-2 sm:mt-3 text-center space-y-0.5 max-w-[110px] sm:max-w-[176px]">
-                    <h4 className="text-xs sm:text-base font-extrabold text-white group-hover:text-yellow-300 transition-colors line-clamp-2 leading-tight">
+                    <h4 className="text-xs sm:text-base font-extrabold text-blue-955 group-hover:text-blue-700 transition-colors line-clamp-2 leading-tight">
                       {aliado.name}
                     </h4>
-                    <p className="text-[10px] sm:text-xs text-slate-300 font-medium line-clamp-1">
+                    <p className="text-[10px] sm:text-xs text-slate-500 font-medium line-clamp-1">
                       {aliado.category}
                     </p>
                   </div>
@@ -638,19 +634,19 @@ export default function Convencion() {
         </div>
       </section>
 
-      {/* SECCIÓN 4: Instalaciones del Evento (Colina Country Club) Block */}
+      {/* SECCIÓN 4: Instalaciones del Evento (Colina Country Club) Block — FONDO BLANCO */}
       <section className="my-10 sm:my-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 border-2 border-yellow-500/30 shadow-2xl space-y-8 sm:space-y-12">
+        <div className="bg-white text-slate-800 rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 border border-slate-200 shadow-2xl space-y-8 sm:space-y-12">
           {/* Header */}
           <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4">
-            <div className="inline-flex items-center space-x-2 bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
-              <Building2 size={14} />
+            <div className="inline-flex items-center space-x-2 bg-blue-900/10 border border-blue-900/20 text-blue-900 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
+              <Building2 size={14} className="text-blue-900" />
               <span>Instalaciones del Evento</span>
             </div>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-blue-955 tracking-tight leading-tight">
               Colina Country Club
             </h2>
-            <p className="text-slate-200 text-sm sm:text-base max-w-2xl mx-auto">
+            <p className="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto">
               Un exclusivo y prestigioso centro de convenciones en Quetzaltenango (Km 223.5 Carretera CITO 180), diseñado con salones monumentales, vistas panorámicas y jardines de primer nivel.
             </p>
           </div>
@@ -658,7 +654,7 @@ export default function Convencion() {
           {/* Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
             {/* Card 1: Salón Doña Beatriz */}
-            <div className="bg-blue-955/80 rounded-3xl overflow-hidden border border-white/15 hover:border-yellow-500/60 shadow-xl transition-all duration-300 flex flex-col justify-between group">
+            <div className="bg-slate-50 rounded-3xl overflow-hidden border border-slate-200 hover:border-blue-900 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between group">
               <div>
                 <div className="relative h-48 sm:h-56 overflow-hidden">
                   <img 
@@ -666,25 +662,25 @@ export default function Convencion() {
                     alt="Salón Doña Beatriz Colina Country Club"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute top-4 left-4 bg-blue-900/90 border border-white/20 backdrop-blur-md text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow">
+                  <div className="absolute top-4 left-4 bg-blue-955/90 border border-white/20 backdrop-blur-md text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow">
                     Salón Principal
                   </div>
                 </div>
                 <div className="p-5 sm:p-6 space-y-2 sm:space-y-3">
-                  <h3 className="text-lg sm:text-xl font-extrabold text-white group-hover:text-yellow-300 transition-colors">Salón Doña Beatriz</h3>
-                  <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                  <h3 className="text-lg sm:text-xl font-extrabold text-blue-955 group-hover:text-blue-700 transition-colors">Salón Doña Beatriz</h3>
+                  <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
                     El salón más grande e imponente de la región. Cuenta con dos balcones, área de bar, gran altura con acústica perfecta y capacidad para plenarias multitudinarias.
                   </p>
                 </div>
               </div>
-              <div className="p-5 sm:p-6 pt-0 border-t border-white/10 flex items-center justify-between text-xs text-slate-300 font-extrabold mt-4">
+              <div className="p-5 sm:p-6 pt-0 border-t border-slate-200 flex items-center justify-between text-xs text-slate-700 font-extrabold mt-4">
                 <span>Capacidad Auditorio</span>
-                <span className="bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 px-3 py-1 rounded-xl">Hasta 1,000 Personas</span>
+                <span className="bg-blue-100 text-blue-900 border border-blue-200 px-3 py-1 rounded-xl">Hasta 1,000 Personas</span>
               </div>
             </div>
 
             {/* Card 2: Jardines y Áreas al Aire Libre */}
-            <div className="bg-blue-955/80 rounded-3xl overflow-hidden border border-white/15 hover:border-yellow-500/60 shadow-xl transition-all duration-300 flex flex-col justify-between group">
+            <div className="bg-slate-50 rounded-3xl overflow-hidden border border-slate-200 hover:border-blue-900 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between group">
               <div>
                 <div className="relative h-48 sm:h-56 overflow-hidden">
                   <img 
@@ -697,20 +693,20 @@ export default function Convencion() {
                   </div>
                 </div>
                 <div className="p-5 sm:p-6 space-y-2 sm:space-y-3">
-                  <h3 className="text-lg sm:text-xl font-extrabold text-white group-hover:text-yellow-300 transition-colors">Jardines & Áreas Exteriores</h3>
-                  <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                  <h3 className="text-lg sm:text-xl font-extrabold text-blue-955 group-hover:text-blue-700 transition-colors">Jardines & Áreas Exteriores</h3>
+                  <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
                     Hermosas áreas verdes y jardines campestres del complejo, diseñados para cócteles de bienvenida, actividades de convivencia y momentos de esparcimiento fraterno.
                   </p>
                 </div>
               </div>
-              <div className="p-5 sm:p-6 pt-0 border-t border-white/10 flex items-center justify-between text-xs text-slate-300 font-extrabold mt-4">
+              <div className="p-5 sm:p-6 pt-0 border-t border-slate-200 flex items-center justify-between text-xs text-slate-700 font-extrabold mt-4">
                 <span>Ambiente</span>
-                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-3 py-1 rounded-xl">Cóctel & Exteriores</span>
+                <span className="bg-emerald-100 text-emerald-900 border border-emerald-200 px-3 py-1 rounded-xl">Cóctel & Exteriores</span>
               </div>
             </div>
 
             {/* Card 3: Capilla & Servicios Gastronómicos */}
-            <div className="bg-blue-955/80 rounded-3xl overflow-hidden border border-white/15 hover:border-yellow-500/60 shadow-xl transition-all duration-300 flex flex-col justify-between group">
+            <div className="bg-slate-50 rounded-3xl overflow-hidden border border-slate-200 hover:border-blue-900 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between group">
               <div>
                 <div className="relative h-48 sm:h-56 overflow-hidden">
                   <img 
@@ -726,21 +722,21 @@ export default function Convencion() {
                   </div>
                 </div>
                 <div className="p-5 sm:p-6 space-y-2 sm:space-y-3">
-                  <h3 className="text-lg sm:text-xl font-extrabold text-white group-hover:text-yellow-300 transition-colors">Capilla Privada & Alta Cocina</h3>
-                  <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                  <h3 className="text-lg sm:text-xl font-extrabold text-blue-955 group-hover:text-blue-700 transition-colors">Capilla Privada & Alta Cocina</h3>
+                  <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
                     Instalaciones integrales con capilla propia para actos de acción de gracias, además de un equipo culinario experto a cargo de los banquetes solemnes.
                   </p>
                 </div>
               </div>
-              <div className="p-5 sm:p-6 pt-0 border-t border-white/10 flex items-center justify-between text-xs text-slate-300 font-extrabold mt-4">
+              <div className="p-5 sm:p-6 pt-0 border-t border-slate-200 flex items-center justify-between text-xs text-slate-700 font-extrabold mt-4">
                 <span>Servicios</span>
-                <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 px-3 py-1 rounded-xl">Banquetes & Capilla</span>
+                <span className="bg-amber-100 text-amber-900 border border-amber-200 px-3 py-1 rounded-xl">Banquetes & Capilla</span>
               </div>
             </div>
           </div>
 
-          {/* Call to Action to Visit Colina Country Club Website */}
-          <div className="bg-blue-955/90 text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-10 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 border border-yellow-500/30 backdrop-blur-2xl text-center sm:text-left">
+          {/* Call to Action to Visit Colina Country Club Website — Banner Destacado en Azul Regio */}
+          <div className="bg-gradient-to-r from-blue-955 via-blue-900 to-indigo-955 text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-10 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 border border-yellow-500/30 backdrop-blur-2xl text-center sm:text-left">
             <div className="space-y-2 max-w-xl">
               <span className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider inline-block">
                 Conoce la Sede Virtualmente
@@ -806,18 +802,18 @@ export default function Convencion() {
         </div>
       </section>
 
-      {/* SECCIÓN 6: Experiencias Únicas Block */}
+      {/* SECCIÓN 6: Experiencias Únicas Block — FONDO BLANCO */}
       <section className="my-10 sm:my-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 border-2 border-yellow-500/30 shadow-2xl relative">
+        <div className="bg-white text-slate-800 rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 border border-slate-200 shadow-2xl relative">
           <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4 mb-10 sm:mb-16">
-            <div className="inline-flex items-center space-x-2 bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
-              <Compass size={14} className="text-yellow-400" />
+            <div className="inline-flex items-center space-x-2 bg-blue-900/10 border border-blue-900/20 text-blue-900 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
+              <Compass size={14} className="text-blue-900" />
               <span>Mística Leonística</span>
             </div>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-blue-955 tracking-tight leading-tight">
               Experiencias Únicas de la Convención
             </h2>
-            <p className="text-slate-200 text-sm sm:text-base max-w-2xl mx-auto">
+            <p className="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto">
               Vive de cerca los pilares fundamentales que nos guían como Club de Leones a nivel mundial y nacional.
             </p>
           </div>
@@ -826,16 +822,16 @@ export default function Convencion() {
             {(config.experienciasUnicas || []).map((exp, index) => (
               <div 
                 key={exp.id || index}
-                className="bg-blue-955/80 border border-white/15 hover:border-yellow-500/60 rounded-3xl p-6 sm:p-8 shadow-xl transition-all duration-300 flex flex-col justify-between group"
+                className="bg-slate-50 border border-slate-200 hover:border-blue-900 rounded-3xl p-6 sm:p-8 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between group"
               >
                 <div className="space-y-3 sm:space-y-4">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-yellow-300 bg-yellow-500/20 border border-yellow-500/40 px-3 py-1 rounded-full inline-block">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-blue-900 bg-blue-100 border border-blue-200 px-3 py-1 rounded-full inline-block">
                     {exp.badge}
                   </span>
-                  <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight pt-1 group-hover:text-yellow-300 transition-colors">{exp.title}</h3>
-                  <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">{exp.desc}</p>
+                  <h3 className="text-lg sm:text-xl font-bold text-blue-955 tracking-tight pt-1 group-hover:text-blue-700 transition-colors">{exp.title}</h3>
+                  <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">{exp.desc}</p>
                 </div>
-                <div className="mt-6 pt-4 border-t border-white/10 flex items-center text-yellow-400 font-extrabold text-xs group-hover:text-yellow-300 transition-colors">
+                <div className="mt-6 pt-4 border-t border-slate-200 flex items-center text-blue-900 font-extrabold text-xs group-hover:text-blue-700 transition-colors">
                   <span>Conocer más detalles</span>
                   <ChevronRight size={14} className="ml-1 transition-transform group-hover:translate-x-1" />
                 </div>
