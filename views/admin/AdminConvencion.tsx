@@ -93,6 +93,11 @@ export function AdminConvencion() {
   const [imagePreview, setImagePreview] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Header Background Image Upload States
+  const [headerBgFile, setHeaderBgFile] = useState<File | null>(null);
+  const [headerBgPreview, setHeaderBgPreview] = useState<string>('');
+  const headerBgFileInputRef = useRef<HTMLInputElement>(null);
+
   // Modals States
   const [isActividadModalOpen, setIsActividadModalOpen] = useState(false);
   const [editingActividad, setEditingActividad] = useState<ConvencionActividad | null>(null);
@@ -136,10 +141,12 @@ export function AdminConvencion() {
           inscripcionesAbiertas: dbConfig.inscripcionesAbiertas !== undefined ? dbConfig.inscripcionesAbiertas : true,
           fotoSedeEtiqueta: dbConfig.fotoSedeEtiqueta || 'Sede Oficial',
           fotoSedeDescripcion: dbConfig.fotoSedeDescripcion || 'Teatro Municipal de Quetzaltenango',
+          headerBgOverlayOpacity: dbConfig.headerBgOverlayOpacity !== undefined ? dbConfig.headerBgOverlayOpacity : 75,
           actividadesCulturales: dbConfig.actividadesCulturales || [],
           experienciasUnicas: dbConfig.experienciasUnicas || []
         });
         setImagePreview(dbConfig.fotoSede);
+        setHeaderBgPreview(dbConfig.headerBgUrl || '');
         
         const dbRegistros = await firebaseService.getConvencionRegistros();
         if (!isMounted) return;
@@ -189,6 +196,32 @@ export function AdminConvencion() {
     }
   };
 
+  const handleHeaderBgChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const validation = validateImageFile(file);
+      if (!validation.valid) {
+        setErrorMsg(validation.error || "Archivo de imagen de encabezado inválido");
+        return;
+      }
+      setHeaderBgFile(file);
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setHeaderBgPreview(ev.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveHeaderBg = () => {
+    setHeaderBgFile(null);
+    setHeaderBgPreview('');
+    setConfig(prev => ({
+      ...prev,
+      headerBgUrl: ''
+    }));
+  };
+
   const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -196,21 +229,31 @@ export function AdminConvencion() {
     setErrorMsg('');
     try {
       let finalUrl = config.fotoSede;
+      let finalHeaderBgUrl = config.headerBgUrl || '';
 
-      // Upload new image if selected
+      // Upload new sede image if selected
       if (imageFile) {
         const compressedBase64 = await compressImageFile(imageFile, 1200, 1200, 0.8);
         finalUrl = await firebaseService.uploadConvencionImage(compressedBase64);
       }
 
+      // Upload new header background image if selected
+      if (headerBgFile) {
+        const compressedHeaderBase64 = await compressImageFile(headerBgFile, 1920, 1080, 0.85);
+        finalHeaderBgUrl = await firebaseService.uploadConvencionImage(compressedHeaderBase64);
+      }
+
       const updatedConfig: ConvencionConfig = {
         ...config,
-        fotoSede: finalUrl
+        fotoSede: finalUrl,
+        headerBgUrl: finalHeaderBgUrl,
+        headerBgOverlayOpacity: config.headerBgOverlayOpacity !== undefined ? Number(config.headerBgOverlayOpacity) : 75
       };
 
       await firebaseService.saveConvencionConfig(updatedConfig);
       setConfig(updatedConfig);
       setImageFile(null);
+      setHeaderBgFile(null);
 
       setSuccessMsg("¡Configuración de la convención guardada exitosamente!");
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -854,6 +897,99 @@ export function AdminConvencion() {
                           </div>
                         )}
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Fotografía de Fondo del Encabezado (Header Background Image & Transparency) */}
+                  <div className="md:col-span-2 space-y-4 bg-gradient-to-br from-slate-900 to-blue-955 p-6 rounded-2xl border-2 border-yellow-500/30 text-white shadow-xl">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                      <div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-yellow-400 block">Encabezado de Convención</span>
+                        <h4 className="text-base font-extrabold text-white">Imagen de Fondo & Transparencia del Header</h4>
+                      </div>
+                      {headerBgPreview && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveHeaderBg}
+                          className="text-xs text-red-400 hover:text-red-300 font-bold underline cursor-pointer"
+                        >
+                          Quitar Imagen
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+                      <div className="sm:col-span-6 space-y-2">
+                        <button
+                          type="button"
+                          onClick={() => headerBgFileInputRef.current?.click()}
+                          className="w-full flex flex-col items-center justify-center p-6 border-2 border-dashed border-white/20 hover:border-yellow-500 rounded-2xl bg-blue-900/50 hover:bg-blue-900/80 transition-all cursor-pointer group"
+                        >
+                          <input 
+                            type="file"
+                            ref={headerBgFileInputRef}
+                            onChange={handleHeaderBgChange}
+                            accept="image/*"
+                            className="hidden"
+                          />
+                          <UploadCloud className="w-10 h-10 text-yellow-400 group-hover:scale-110 transition-transform" />
+                          <span className="mt-2 text-xs font-black text-white group-hover:text-yellow-300 transition-colors uppercase tracking-wider">
+                            {headerBgFile || headerBgPreview ? 'Cambiar Imagen de Fondo' : 'Subir Imagen para Header'}
+                          </span>
+                          <span className="text-[10px] text-slate-350 mt-1">Recomendado: 1920x1080px (JPG/PNG). Máx. 10MB</span>
+                        </button>
+                      </div>
+
+                      <div className="sm:col-span-6 space-y-3">
+                        {headerBgPreview ? (
+                          <div className="relative w-full h-36 rounded-2xl overflow-hidden border border-white/20 shadow-xl group">
+                            {/* Background Image Preview */}
+                            <img src={headerBgPreview} alt="Fondo del Encabezado" className="w-full h-full object-cover" />
+                            {/* Simulated Overlay Preview */}
+                            <div 
+                              className="absolute inset-0 bg-gradient-to-br from-blue-955 via-blue-900 to-indigo-955 flex flex-col items-center justify-center p-3 text-center transition-opacity"
+                              style={{ opacity: (config.headerBgOverlayOpacity !== undefined ? config.headerBgOverlayOpacity : 75) / 100 }}
+                            >
+                              <span className="text-xs font-black text-yellow-300 uppercase tracking-widest">Vista Previa Overlay</span>
+                              <span className="text-[10px] text-white font-serif italic mt-1">"Rugiendo con fuerza..."</span>
+                            </div>
+                            {headerBgFile && (
+                              <div className="absolute top-2 right-2 bg-yellow-500 text-blue-955 text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider shadow z-10">
+                                Por guardar
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="w-full h-36 rounded-2xl bg-blue-955/70 flex flex-col items-center justify-center text-slate-350 border border-white/10 text-center p-4">
+                            <ImageIcon size={28} className="text-yellow-400/60" />
+                            <span className="text-[11px] font-bold mt-1 text-slate-200">Sin imagen personalizada</span>
+                            <span className="text-[9px] text-slate-400">Se usará el degradado Azul Regio por defecto</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Transparencia / Opacidad Slider */}
+                    <div className="pt-2 border-t border-white/10 space-y-2">
+                      <div className="flex justify-between items-center text-xs font-bold">
+                        <label htmlFor="headerBgOverlayOpacity" className="text-slate-200">
+                          Intensidad del Filtro Azul / Cobertura: <span className="text-yellow-400 font-extrabold">{config.headerBgOverlayOpacity !== undefined ? config.headerBgOverlayOpacity : 75}% Opaco</span>
+                        </label>
+                        <span className="text-[10px] text-slate-400">
+                          (Valores bajos = foto más visible | Valores altos = texto más legible)
+                        </span>
+                      </div>
+                      <input 
+                        type="range"
+                        id="headerBgOverlayOpacity"
+                        name="headerBgOverlayOpacity"
+                        min="10"
+                        max="95"
+                        step="5"
+                        value={config.headerBgOverlayOpacity !== undefined ? config.headerBgOverlayOpacity : 75}
+                        onChange={handleConfigChange}
+                        className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-yellow-400"
+                      />
                     </div>
                   </div>
 

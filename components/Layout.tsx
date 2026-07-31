@@ -133,7 +133,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50/50">
       {/* Main Premium Navbar */}
-      <nav className="bg-blue-900/95 backdrop-blur-md text-white shadow-xl sticky top-0 z-50 border-b border-blue-800/40 transition-all duration-300">
+      <nav className="bg-blue-955/95 backdrop-blur-md text-white shadow-2xl sticky top-0 z-50 border-b border-yellow-500/30 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20">
             {/* Logo Section */}

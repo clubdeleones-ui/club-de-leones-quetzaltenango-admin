@@ -424,9 +424,21 @@ export default function Convencion() {
     <div className="min-h-screen bg-slate-100 text-slate-800 font-sans antialiased overflow-x-hidden selection:bg-yellow-500 selection:text-blue-955 pb-16">
       {/* Dynamic Hero Header Section Block - Royal Blue Banner */}
       <header className="relative py-16 sm:py-28 px-4 sm:px-6 lg:px-8 overflow-hidden bg-gradient-to-br from-blue-955 via-blue-900 to-indigo-955 text-white text-center border-b-4 border-yellow-500 shadow-2xl">
+        {/* Custom Header Background Image */}
+        {config.headerBgUrl && (
+          <div 
+            className="absolute inset-0 bg-cover bg-center pointer-events-none transition-all duration-700"
+            style={{ backgroundImage: `url("${config.headerBgUrl}")` }}
+          />
+        )}
+        {/* Overlay Color & Transparency Layer */}
+        <div 
+          className="absolute inset-0 bg-gradient-to-br from-blue-955 via-blue-900 to-indigo-955 pointer-events-none transition-opacity duration-300"
+          style={{ opacity: (config.headerBgOverlayOpacity !== undefined ? config.headerBgOverlayOpacity : 75) / 100 }}
+        />
         {/* Ambient Radial Background Glows */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(253,224,71,0.15),transparent_50%)] pointer-events-none" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(30,58,138,0.3),transparent_50%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(253,224,71,0.15),transparent_50%)] pointer-events-none z-0" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(30,58,138,0.3),transparent_50%)] pointer-events-none z-0" />
         <div className="absolute -right-24 -top-24 w-96 h-96 bg-yellow-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -left-24 -bottom-24 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
         

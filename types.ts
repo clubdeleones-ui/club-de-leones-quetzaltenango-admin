@@ -449,6 +449,8 @@ export interface ConvencionConfig {
   fotoSede: string;
   fotoSedeEtiqueta?: string;
   fotoSedeDescripcion?: string;
+  headerBgUrl?: string;
+  headerBgOverlayOpacity?: number;
   inscripcionesAbiertas: boolean;
   actividadesCulturales?: ConvencionActividad[];
   experienciasUnicas?: ConvencionExperiencia[];
