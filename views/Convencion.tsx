@@ -467,13 +467,14 @@ export default function Convencion() {
 
           {/* Action CTA */}
           <div className="mt-8 sm:mt-12">
-            <a 
-              href="#pre-inscripcion" 
-              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-blue-955 font-black px-8 py-4 rounded-2xl text-base sm:text-lg transition-all shadow-xl shadow-yellow-500/20 active:scale-95 min-h-[48px]"
+            <button 
+              type="button"
+              onClick={scrollToPreInscripcion}
+              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-blue-955 font-black px-8 py-4 rounded-2xl text-base sm:text-lg transition-all shadow-xl shadow-yellow-500/20 active:scale-95 min-h-[48px] cursor-pointer"
             >
               <span>{config.inscripcionesAbiertas ? 'Pre-regístrate Aquí' : 'Ver Inscripciones'}</span>
               <ChevronRight size={20} />
-            </a>
+            </button>
           </div>
         </div>
       </header>
