@@ -493,7 +493,7 @@ export default function Convencion() {
 
       {/* SECCIÓN 2: Alianzas & Patrocinadores Marquee Block */}
       <section className="my-10 sm:my-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-r from-blue-955 via-blue-900 to-blue-955 text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-10 border-2 border-yellow-500/40 shadow-2xl relative overflow-hidden">
+        <div className="bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-10 border-2 border-yellow-500/30 shadow-2xl relative overflow-hidden">
           {/* Subtle Background Glow */}
           <div className="absolute -top-24 -left-24 w-72 h-72 bg-yellow-500/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -575,30 +575,30 @@ export default function Convencion() {
 
       {/* SECCIÓN 3: Ciudad Sede (Quetzaltenango) Block */}
       <section className="my-10 sm:my-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white border border-slate-200 shadow-2xl rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 relative overflow-hidden">
+        <div className="bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 border-2 border-yellow-500/30 shadow-2xl relative overflow-hidden">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             <div className="lg:col-span-6 space-y-4 sm:space-y-6">
-              <div className="inline-flex items-center space-x-2 bg-blue-900/10 border border-blue-900/20 text-blue-900 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
-                <MapPin size={14} className="text-blue-900" />
+              <div className="inline-flex items-center space-x-2 bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
+                <MapPin size={14} className="text-yellow-400" />
                 <span>Ciudad Sede</span>
               </div>
               
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-blue-955 tracking-tight leading-tight">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
                 Quetzaltenango: La Cuna de la Cultura y el Escudo Altense
               </h2>
               
-              <p className="text-slate-650 text-sm sm:text-base leading-relaxed">
+              <p className="text-slate-200 text-sm sm:text-base leading-relaxed">
                 Xelajú nos recibe con sus brazos abiertos, sus impresionantes montañas, historia centenaria y el caluroso espíritu león de la región. Prepárate para vivir jornadas inolvidables de liderazgo y fraternidad.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-2">
-                <div className="bg-blue-50/70 border border-blue-100 p-5 rounded-2xl shadow-sm space-y-1">
-                  <span className="text-xs font-black text-blue-900 uppercase tracking-wider block">Clima Templado</span>
-                  <p className="text-slate-600 text-xs font-medium">Ideal para noches de gala y caminatas culturales por el centro histórico.</p>
+                <div className="bg-blue-955/80 border border-white/15 p-5 rounded-2xl shadow-xl hover:border-yellow-500/50 transition-all space-y-1">
+                  <span className="text-xs font-black text-yellow-400 uppercase tracking-wider block">Clima Templado</span>
+                  <p className="text-slate-300 text-xs font-medium">Ideal para noches de gala y caminatas culturales por el centro histórico.</p>
                 </div>
-                <div className="bg-blue-50/70 border border-blue-100 p-5 rounded-2xl shadow-sm space-y-1">
-                  <span className="text-xs font-black text-blue-900 uppercase tracking-wider block">Gastronomía Única</span>
-                  <p className="text-slate-600 text-xs font-medium">Degusta el famoso Sheca, chocolate artesanal y platillos tradicionales.</p>
+                <div className="bg-blue-955/80 border border-white/15 p-5 rounded-2xl shadow-xl hover:border-yellow-500/50 transition-all space-y-1">
+                  <span className="text-xs font-black text-yellow-400 uppercase tracking-wider block">Gastronomía Única</span>
+                  <p className="text-slate-300 text-xs font-medium">Degusta el famoso Sheca, chocolate artesanal y platillos tradicionales.</p>
                 </div>
               </div>
             </div>
@@ -754,7 +754,7 @@ export default function Convencion() {
 
       {/* SECCIÓN 5: Actividades Culturales y Sociales Block */}
       <section className="my-10 sm:my-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-r from-blue-900 via-indigo-955 to-blue-900 text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 border border-white/10 shadow-2xl relative overflow-hidden">
+        <div className="bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 border-2 border-yellow-500/30 shadow-2xl relative overflow-hidden">
           <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4">
             <div className="inline-flex items-center space-x-2 bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
               <Award size={14} />
@@ -796,16 +796,16 @@ export default function Convencion() {
 
       {/* SECCIÓN 6: Experiencias Únicas Block */}
       <section className="my-10 sm:my-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white border border-slate-200 shadow-2xl rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 relative">
+        <div className="bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 border-2 border-yellow-500/30 shadow-2xl relative">
           <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4 mb-10 sm:mb-16">
-            <div className="inline-flex items-center space-x-2 bg-blue-900/10 border border-blue-900/20 text-blue-900 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
-              <Compass size={14} className="text-blue-900" />
+            <div className="inline-flex items-center space-x-2 bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
+              <Compass size={14} className="text-yellow-400" />
               <span>Mística Leonística</span>
             </div>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-blue-955 tracking-tight leading-tight">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
               Experiencias Únicas de la Convención
             </h2>
-            <p className="text-slate-650 text-sm sm:text-base max-w-2xl mx-auto">
+            <p className="text-slate-200 text-sm sm:text-base max-w-2xl mx-auto">
               Vive de cerca los pilares fundamentales que nos guían como Club de Leones a nivel mundial y nacional.
             </p>
           </div>
@@ -814,16 +814,16 @@ export default function Convencion() {
             {(config.experienciasUnicas || []).map((exp, index) => (
               <div 
                 key={exp.id || index}
-                className="bg-slate-50 border border-slate-200 hover:border-blue-900 rounded-3xl p-6 sm:p-8 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between group"
+                className="bg-blue-955/80 border border-white/15 hover:border-yellow-500/60 rounded-3xl p-6 sm:p-8 shadow-xl transition-all duration-300 flex flex-col justify-between group"
               >
                 <div className="space-y-3 sm:space-y-4">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-blue-955 bg-blue-100 border border-blue-200 px-3 py-1 rounded-full inline-block">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-yellow-300 bg-yellow-500/20 border border-yellow-500/40 px-3 py-1 rounded-full inline-block">
                     {exp.badge}
                   </span>
-                  <h3 className="text-lg sm:text-xl font-bold text-blue-955 tracking-tight pt-1 group-hover:text-blue-800 transition-colors">{exp.title}</h3>
-                  <p className="text-slate-650 text-xs sm:text-sm leading-relaxed">{exp.desc}</p>
+                  <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight pt-1 group-hover:text-yellow-300 transition-colors">{exp.title}</h3>
+                  <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">{exp.desc}</p>
                 </div>
-                <div className="mt-6 pt-4 border-t border-slate-200 flex items-center text-blue-900 font-extrabold text-xs group-hover:text-blue-700 transition-colors">
+                <div className="mt-6 pt-4 border-t border-white/10 flex items-center text-yellow-400 font-extrabold text-xs group-hover:text-yellow-300 transition-colors">
                   <span>Conocer más detalles</span>
                   <ChevronRight size={14} className="ml-1 transition-transform group-hover:translate-x-1" />
                 </div>
@@ -834,8 +834,8 @@ export default function Convencion() {
       </section>
 
       {/* SECCIÓN 7: Formulario de Pre-registro Digital Block */}
-      <section id="pre-inscripcion" className="my-10 sm:my-16 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-10">
-        <div className="bg-gradient-to-br from-blue-955 via-blue-900 to-indigo-955 text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 border-2 border-yellow-500/40 shadow-2xl shadow-blue-950/80 relative overflow-hidden">
+      <section id="pre-inscripcion" className="my-10 sm:my-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-10">
+        <div className="bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 border-2 border-yellow-500/30 shadow-2xl relative overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(253,224,71,0.1),transparent_40%)] pointer-events-none" />
           <div className="relative z-10">
             
