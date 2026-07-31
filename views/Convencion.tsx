@@ -629,12 +629,9 @@ export default function Convencion() {
               <div>
                 <div className="relative h-48 sm:h-56 overflow-hidden">
                   <img 
-                    src="https://colinacountryclub.com/wp-content/uploads/2023/01/salones.jpg" 
+                    src="https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200&q=80" 
                     alt="Salón Doña Beatriz Colina Country Club"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "https://colinacountryclub.com/wp-content/uploads/2023/01/tecnologia.jpg";
-                    }}
                   />
                   <div className="absolute top-4 left-4 bg-blue-900/90 backdrop-blur-md text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow">
                     Salón Principal
@@ -658,12 +655,9 @@ export default function Convencion() {
               <div>
                 <div className="relative h-48 sm:h-56 overflow-hidden">
                   <img 
-                    src="https://colinacountryclub.com/wp-content/uploads/2023/01/jardin.jpg" 
+                    src="https://images.unsplash.com/photo-1588880331179-bc9b93a8cb5e?auto=format&fit=crop&w=1200&q=80" 
                     alt="Jardines Colina Country Club"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "https://colinacountryclub.com/wp-content/uploads/2023/01/jardin-las-capuchinas.jpg";
-                    }}
                   />
                   <div className="absolute top-4 left-4 bg-emerald-800/90 backdrop-blur-md text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow">
                     Naturaleza & Vista
@@ -687,12 +681,9 @@ export default function Convencion() {
               <div>
                 <div className="relative h-48 sm:h-56 overflow-hidden">
                   <img 
-                    src="https://colinacountryclub.com/wp-content/uploads/2023/01/bodas.jpg" 
+                    src="https://images.unsplash.com/photo-1548625361-1858f918e950?auto=format&fit=crop&w=1200&q=80" 
                     alt="Capilla y Banquetes Colina Country Club"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "https://colinacountryclub.com/wp-content/uploads/2023/01/lindos-escenarios.jpg";
-                    }}
                   />
                   <div className="absolute top-4 left-4 bg-amber-800/90 backdrop-blur-md text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow">
                     Capilla & Banquetes
