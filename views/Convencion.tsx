@@ -421,53 +421,56 @@ export default function Convencion() {
   };
 
   return (
-    <div className="bg-slate-50 min-h-screen text-slate-800 -mt-10 -mx-4 sm:-mx-6 lg:-mx-8 overflow-x-hidden">
-      {/* Hero / Header Section */}
-      <header className="relative bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white overflow-hidden py-16 sm:py-32 border-b border-yellow-500/20 px-4">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(253,224,71,0.1),transparent_50%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(99,102,241,0.1),transparent_50%)]" />
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased overflow-x-hidden selection:bg-yellow-500 selection:text-blue-955">
+      {/* Dynamic Hero Header */}
+      <header className="relative py-16 sm:py-28 px-4 sm:px-6 lg:px-8 overflow-hidden bg-gradient-to-b from-blue-955 via-slate-950 to-slate-950 text-center border-b border-yellow-500/20">
+        {/* Ambient Radial Background Glows */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-yellow-500/15 via-blue-900/10 to-transparent pointer-events-none" />
+        <div className="absolute -right-24 -top-24 w-96 h-96 bg-yellow-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -left-24 -bottom-24 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
         
-        <div className="absolute -right-20 -bottom-20 w-72 sm:w-96 h-72 sm:h-96 bg-yellow-500/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -left-20 -top-20 w-72 sm:w-96 h-72 sm:h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="max-w-6xl mx-auto relative z-10 text-center">
-          <div className="inline-flex items-center space-x-2 bg-yellow-500/15 border border-yellow-500/30 text-yellow-400 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-black uppercase tracking-wider mb-4 sm:mb-6 animate-pulse">
-            <Sparkles size={14} className="sm:w-4 sm:h-4" />
-            <span>Convención Nacional</span>
+        <div className="max-w-5xl mx-auto relative z-10 space-y-6 sm:space-y-8">
+          {/* Badge & Dates */}
+          <div className="inline-flex items-center space-x-2 bg-yellow-500/15 border border-yellow-500/35 text-yellow-400 px-4 py-2 rounded-full text-xs sm:text-sm font-black uppercase tracking-wider mb-2 backdrop-blur-md shadow-lg shadow-yellow-500/5 animate-pulse">
+            <Sparkles size={16} className="text-yellow-400" />
+            <span>LXIV Convención Nacional Lions</span>
           </div>
 
-          <h1 className="text-3xl sm:text-6xl font-black tracking-tight leading-tight sm:leading-none bg-gradient-to-r from-white via-slate-100 to-yellow-300 bg-clip-text text-transparent px-2">
-            {config.titulo}
+          {/* Main Title */}
+          <h1 className="text-3xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-tight sm:leading-none bg-gradient-to-r from-white via-slate-100 to-yellow-300 bg-clip-text text-transparent px-2">
+            {config.titulo || 'Distrito D3 Guatemala'}
           </h1>
-          <p className="mt-4 sm:mt-6 text-base sm:text-2xl text-slate-200 font-serif max-w-3xl mx-auto italic leading-relaxed px-2">
-            "{config.lema}"
+
+          {/* Lema Motto */}
+          <p className="text-slate-200 text-base sm:text-2xl max-w-3xl mx-auto italic font-serif leading-relaxed px-2 drop-shadow-sm">
+            "{config.lema || 'Rugiendo con fuerza, sirviendo con amor y uniendo voluntades por nuestra nación'}"
           </p>
 
           {/* Location & Date Badge */}
-          <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 text-xs sm:text-base font-bold text-slate-350">
-            <div className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-white/5 px-4 sm:px-5 py-2.5 rounded-2xl border border-white/10 shadow-sm">
-              <Calendar className="text-yellow-400 shrink-0" size={16} />
-              <span>Inicia el {formatFriendlyDate(config.fechaEvento)}</span>
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 text-xs sm:text-base font-bold text-slate-200">
+            <div className="w-full sm:w-auto flex items-center justify-center space-x-2.5 bg-slate-900/80 border border-white/10 backdrop-blur-md px-5 py-2.5 rounded-2xl shadow-xl hover:border-yellow-500/30 transition-all">
+              <Calendar className="text-yellow-400 shrink-0" size={18} />
+              <span>Del 19 al 22 de Marzo, 2026</span>
             </div>
-            <div className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-white/5 px-4 sm:px-5 py-2.5 rounded-2xl border border-white/10 shadow-sm">
-              <MapPin className="text-yellow-400 shrink-0" size={16} />
+            <div className="w-full sm:w-auto flex items-center justify-center space-x-2.5 bg-slate-900/80 border border-white/10 backdrop-blur-md px-5 py-2.5 rounded-2xl shadow-xl hover:border-yellow-500/30 transition-all">
+              <MapPin className="text-yellow-400 shrink-0" size={18} />
               <span>Quetzaltenango, Guatemala</span>
             </div>
           </div>
 
           {/* Countdown Clock */}
           <div className="mt-10 sm:mt-16">
-            <p className="text-xs sm:text-sm font-black uppercase tracking-widest text-yellow-400 mb-3 sm:mb-4">El gran rugido inicia en:</p>
-            <div className="grid grid-cols-4 gap-2 sm:gap-4 max-w-lg mx-auto">
+            <p className="text-xs sm:text-sm font-black uppercase tracking-widest text-yellow-400 mb-3 sm:mb-5">El gran rugido inicia en:</p>
+            <div className="grid grid-cols-4 gap-2.5 sm:gap-5 max-w-xl mx-auto">
               {[
                 { label: 'Días', value: countdown.days },
                 { label: 'Horas', value: countdown.hours },
                 { label: 'Minutos', value: countdown.minutes },
                 { label: 'Segundos', value: countdown.seconds }
               ].map((item, idx) => (
-                <div key={idx} className="bg-blue-950/75 backdrop-blur-md border border-white/10 rounded-2xl p-2.5 sm:p-5 flex flex-col items-center justify-center shadow-2xl">
-                  <span className="text-xl sm:text-4xl font-extrabold text-white tracking-tight">{String(item.value).padStart(2, '0')}</span>
-                  <span className="text-[9px] sm:text-xs font-black uppercase text-slate-400 mt-0.5 sm:mt-2 tracking-wider">{item.label}</span>
+                <div key={idx} className="bg-slate-900/90 border border-yellow-500/25 rounded-2xl sm:rounded-3xl p-3 sm:p-5 flex flex-col items-center justify-center shadow-2xl backdrop-blur-xl group hover:border-yellow-500/60 transition-all">
+                  <span className="text-2xl sm:text-4xl font-black text-white tracking-tight group-hover:text-yellow-400 transition-colors">{String(item.value).padStart(2, '0')}</span>
+                  <span className="text-[9px] sm:text-xs font-black uppercase text-slate-400 mt-1 sm:mt-2 tracking-widest">{item.label}</span>
                 </div>
               ))}
             </div>
@@ -478,7 +481,7 @@ export default function Convencion() {
             <button 
               type="button"
               onClick={scrollToPreInscripcion}
-              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-blue-955 font-black px-8 py-4 rounded-2xl text-base sm:text-lg transition-all shadow-xl shadow-yellow-500/20 active:scale-95 min-h-[48px] cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-400 hover:from-yellow-400 hover:to-amber-300 text-blue-955 font-black px-8 py-4 rounded-2xl text-base sm:text-lg transition-all duration-300 shadow-2xl shadow-yellow-500/25 hover:shadow-yellow-500/40 transform hover:-translate-y-0.5 active:scale-95 min-h-[52px] cursor-pointer"
             >
               <span>{config.inscripcionesAbiertas ? 'Pre-regístrate Aquí' : 'Ver Inscripciones'}</span>
               <ChevronRight size={20} />
@@ -488,8 +491,8 @@ export default function Convencion() {
       </header>
 
       {/* Alianzas & Patrocinadores Prominent Marquee Section */}
-      <section className="my-8 sm:my-12 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-r from-slate-950 via-blue-955 to-slate-950 rounded-3xl sm:rounded-[2.5rem] p-4 sm:p-10 border-2 border-yellow-500/30 shadow-2xl shadow-blue-950/50 relative overflow-hidden">
+      <section className="my-10 sm:my-16 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="bg-slate-900/90 rounded-3xl sm:rounded-[2.5rem] p-5 sm:p-10 border-2 border-yellow-500/30 shadow-2xl shadow-black/80 backdrop-blur-2xl relative overflow-hidden">
           {/* Subtle Background Glow */}
           <div className="absolute -top-24 -left-24 w-72 h-72 bg-yellow-500/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -497,7 +500,7 @@ export default function Convencion() {
           {/* Section Header */}
           <div className="mb-4 sm:mb-8 flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-white/10 pb-4 sm:pb-6 relative z-10 text-center sm:text-left">
             <div className="flex items-center space-x-3">
-              <div className="p-2.5 sm:p-3 bg-yellow-500/20 rounded-2xl border border-yellow-500/40 text-yellow-400 shrink-0">
+              <div className="p-2.5 sm:p-3 bg-yellow-500/20 rounded-2xl border border-yellow-500/40 text-yellow-400 shrink-0 shadow-lg shadow-yellow-500/10">
                 <Handshake size={22} className="animate-pulse sm:w-6 sm:h-6" />
               </div>
               <div>
@@ -517,8 +520,8 @@ export default function Convencion() {
           {/* Marquee Track with gradient edge masks */}
           <div className="relative w-full overflow-hidden py-1 sm:py-2">
             {/* Gradient Masks */}
-            <div className="pointer-events-none absolute inset-y-0 left-0 w-12 sm:w-36 bg-gradient-to-r from-slate-950 to-transparent z-20" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-12 sm:w-36 bg-gradient-to-l from-slate-950 to-transparent z-20" />
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-12 sm:w-36 bg-gradient-to-r from-slate-900 to-transparent z-20" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-12 sm:w-36 bg-gradient-to-l from-slate-900 to-transparent z-20" />
 
             {/* Scrolling Marquee Container with Square Slides and Text Below */}
             <div className="animate-marquee flex items-start space-x-4 sm:space-x-8 py-2 sm:py-3">
@@ -558,7 +561,7 @@ export default function Convencion() {
                     <h4 className="text-xs sm:text-base font-extrabold text-white group-hover:text-yellow-300 transition-colors line-clamp-2 leading-tight">
                       {aliado.name}
                     </h4>
-                    <p className="text-[10px] sm:text-xs text-slate-350 font-medium line-clamp-1">
+                    <p className="text-[10px] sm:text-xs text-slate-400 font-medium line-clamp-1">
                       {aliado.category}
                     </p>
                   </div>
@@ -570,47 +573,47 @@ export default function Convencion() {
       </section>
 
       {/* Ciudad Sede Section */}
-      <section className="py-12 sm:py-20 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-12 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           <div className="lg:col-span-6 space-y-4 sm:space-y-6">
-            <div className="inline-flex items-center space-x-2 bg-blue-900/10 border border-blue-900/20 text-blue-900 px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
-              <MapPin size={14} />
+            <div className="inline-flex items-center space-x-2 bg-blue-500/10 border border-blue-500/25 text-blue-400 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
+              <MapPin size={14} className="text-yellow-400" />
               <span>Ciudad Sede</span>
             </div>
             
-            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
               Quetzaltenango: La Cuna de la Cultura y el Escudo Altense
             </h2>
             
-            <p className="text-slate-650 text-sm sm:text-base leading-relaxed">
+            <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
               Xelajú nos recibe con sus brazos abiertos, sus impresionantes montañas, historia centenaria y el caluroso espíritu león de la región. Prepárate para vivir jornadas inolvidables de liderazgo y fraternidad.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-2">
-              <div className="bg-white border border-slate-200/80 p-4 sm:p-5 rounded-2xl shadow-sm space-y-1">
-                <span className="text-xs font-extrabold text-blue-900 uppercase tracking-wider block">Clima Templado</span>
-                <p className="text-slate-600 text-xs font-medium">Ideal para noches de gala y caminatas culturales por el centro histórico.</p>
+              <div className="bg-slate-900/80 border border-white/10 p-5 rounded-2xl shadow-xl backdrop-blur-md hover:border-yellow-500/30 transition-all space-y-1">
+                <span className="text-xs font-black text-yellow-400 uppercase tracking-wider block">Clima Templado</span>
+                <p className="text-slate-300 text-xs font-medium">Ideal para noches de gala y caminatas culturales por el centro histórico.</p>
               </div>
-              <div className="bg-white border border-slate-200/80 p-4 sm:p-5 rounded-2xl shadow-sm space-y-1">
-                <span className="text-xs font-extrabold text-blue-900 uppercase tracking-wider block">Gastronomía Única</span>
-                <p className="text-slate-600 text-xs font-medium">Degusta el famoso Sheca, chocolate artesanal y platillos tradicionales.</p>
+              <div className="bg-slate-900/80 border border-white/10 p-5 rounded-2xl shadow-xl backdrop-blur-md hover:border-yellow-500/30 transition-all space-y-1">
+                <span className="text-xs font-black text-yellow-400 uppercase tracking-wider block">Gastronomía Única</span>
+                <p className="text-slate-300 text-xs font-medium">Degusta el famoso Sheca, chocolate artesanal y platillos tradicionales.</p>
               </div>
             </div>
           </div>
 
           <div className="lg:col-span-6">
-            <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white shadow-slate-300/50 group">
+            <div className="relative rounded-3xl overflow-hidden shadow-2xl border-2 border-white/15 shadow-black/80 group">
               <img 
                 src={config.fotoSede || "https://images.unsplash.com/photo-1596436889106-be35e843f974?auto=format&fit=crop&q=80&w=1200"} 
                 alt="Quetzaltenango Sede"
                 className="w-full h-64 sm:h-96 object-cover group-hover:scale-105 transition-transform duration-700"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-6">
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent flex items-end p-6">
                 <div className="text-white space-y-1">
-                  <span className="bg-yellow-500 text-blue-955 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="bg-yellow-500 text-blue-955 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow">
                     {config.fotoSedeEtiqueta || "Sede Oficial"}
                   </span>
-                  <p className="text-sm font-bold text-slate-100">
+                  <p className="text-sm font-bold text-slate-100 pt-1">
                     {config.fotoSedeDescripcion || "Quetzaltenango, Guatemala — Ciudad de la Estrella de Occidente"}
                   </p>
                 </div>
@@ -621,18 +624,18 @@ export default function Convencion() {
       </section>
 
       {/* Instalaciones del Evento Section (Colina Country Club) */}
-      <section className="py-12 sm:py-20 bg-slate-100/70 border-t border-slate-200/80 relative">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 sm:space-y-12">
+      <section className="py-16 sm:py-24 bg-slate-900/50 border-y border-white/10 relative backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 sm:space-y-12">
           {/* Header */}
           <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4">
-            <div className="inline-flex items-center space-x-2 bg-yellow-500/20 border border-yellow-500/40 text-yellow-800 px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
+            <div className="inline-flex items-center space-x-2 bg-yellow-500/15 border border-yellow-500/30 text-yellow-400 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
               <Building2 size={14} />
               <span>Instalaciones del Evento</span>
             </div>
-            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
               Colina Country Club
             </h2>
-            <p className="text-slate-650 text-sm sm:text-base max-w-2xl mx-auto">
+            <p className="text-slate-300 text-sm sm:text-base max-w-2xl mx-auto">
               Un exclusivo y prestigioso centro de convenciones en Quetzaltenango (Km 223.5 Carretera CITO 180), diseñado con salones monumentales, vistas panorámicas y jardines de primer nivel.
             </p>
           </div>
@@ -640,7 +643,7 @@ export default function Convencion() {
           {/* Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
             {/* Card 1: Salón Doña Beatriz */}
-            <div className="bg-white rounded-3xl overflow-hidden border border-slate-200 shadow-xl shadow-slate-200/50 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between group">
+            <div className="bg-slate-900/90 rounded-3xl overflow-hidden border border-white/10 hover:border-yellow-500/40 shadow-2xl backdrop-blur-xl transition-all duration-500 flex flex-col justify-between group">
               <div>
                 <div className="relative h-48 sm:h-56 overflow-hidden">
                   <img 
@@ -648,25 +651,25 @@ export default function Convencion() {
                     alt="Salón Doña Beatriz Colina Country Club"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute top-4 left-4 bg-blue-900/90 backdrop-blur-md text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow">
+                  <div className="absolute top-4 left-4 bg-blue-955/90 border border-white/15 backdrop-blur-md text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow">
                     Salón Principal
                   </div>
                 </div>
                 <div className="p-5 sm:p-6 space-y-2 sm:space-y-3">
-                  <h3 className="text-lg sm:text-xl font-extrabold text-slate-900">Salón Doña Beatriz</h3>
-                  <p className="text-slate-600 text-xs leading-relaxed">
+                  <h3 className="text-lg sm:text-xl font-extrabold text-white group-hover:text-yellow-300 transition-colors">Salón Doña Beatriz</h3>
+                  <p className="text-slate-350 text-xs sm:text-sm leading-relaxed">
                     El salón más grande e imponente de la región. Cuenta con dos balcones, área de bar, gran altura con acústica perfecta y capacidad para plenarias multitudinarias.
                   </p>
                 </div>
               </div>
-              <div className="p-5 sm:p-6 pt-0 border-t border-slate-100 flex items-center justify-between text-xs text-blue-900 font-extrabold mt-3 sm:mt-4">
+              <div className="p-5 sm:p-6 pt-0 border-t border-white/10 flex items-center justify-between text-xs text-slate-300 font-extrabold mt-4">
                 <span>Capacidad Auditorio</span>
-                <span className="bg-yellow-500/15 text-yellow-800 px-2.5 py-1 rounded-lg">Hasta 1,000 Personas</span>
+                <span className="bg-yellow-500/15 text-yellow-400 border border-yellow-500/30 px-3 py-1 rounded-xl">Hasta 1,000 Personas</span>
               </div>
             </div>
 
             {/* Card 2: Jardines y Áreas al Aire Libre */}
-            <div className="bg-white rounded-3xl overflow-hidden border border-slate-200 shadow-xl shadow-slate-200/50 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between group">
+            <div className="bg-slate-900/90 rounded-3xl overflow-hidden border border-white/10 hover:border-yellow-500/40 shadow-2xl backdrop-blur-xl transition-all duration-500 flex flex-col justify-between group">
               <div>
                 <div className="relative h-48 sm:h-56 overflow-hidden">
                   <img 
@@ -674,25 +677,25 @@ export default function Convencion() {
                     alt="Jardines Colina Country Club"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute top-4 left-4 bg-emerald-800/90 backdrop-blur-md text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow">
+                  <div className="absolute top-4 left-4 bg-emerald-955/90 border border-white/15 backdrop-blur-md text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow">
                     Naturaleza & Vista
                   </div>
                 </div>
                 <div className="p-5 sm:p-6 space-y-2 sm:space-y-3">
-                  <h3 className="text-lg sm:text-xl font-extrabold text-slate-900">Jardines & Áreas Exteriores</h3>
-                  <p className="text-slate-600 text-xs leading-relaxed">
+                  <h3 className="text-lg sm:text-xl font-extrabold text-white group-hover:text-yellow-300 transition-colors">Jardines & Áreas Exteriores</h3>
+                  <p className="text-slate-350 text-xs sm:text-sm leading-relaxed">
                     Hermosas áreas verdes y jardines campestres del complejo, diseñados para cócteles de bienvenida, actividades de convivencia y momentos de esparcimiento fraterno.
                   </p>
                 </div>
               </div>
-              <div className="p-5 sm:p-6 pt-0 border-t border-slate-100 flex items-center justify-between text-xs text-blue-900 font-extrabold mt-3 sm:mt-4">
+              <div className="p-5 sm:p-6 pt-0 border-t border-white/10 flex items-center justify-between text-xs text-slate-300 font-extrabold mt-4">
                 <span>Ambiente</span>
-                <span className="bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-lg">Cóctel & Exteriores</span>
+                <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-xl">Cóctel & Exteriores</span>
               </div>
             </div>
 
             {/* Card 3: Capilla & Servicios Gastronómicos */}
-            <div className="bg-white rounded-3xl overflow-hidden border border-slate-200 shadow-xl shadow-slate-200/50 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between group">
+            <div className="bg-slate-900/90 rounded-3xl overflow-hidden border border-white/10 hover:border-yellow-500/40 shadow-2xl backdrop-blur-xl transition-all duration-500 flex flex-col justify-between group">
               <div>
                 <div className="relative h-48 sm:h-56 overflow-hidden">
                   <img 
@@ -703,26 +706,26 @@ export default function Convencion() {
                       (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1200&q=80";
                     }}
                   />
-                  <div className="absolute top-4 left-4 bg-amber-800/90 backdrop-blur-md text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow">
+                  <div className="absolute top-4 left-4 bg-amber-955/90 border border-white/15 backdrop-blur-md text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow">
                     Capilla & Banquetes
                   </div>
                 </div>
                 <div className="p-5 sm:p-6 space-y-2 sm:space-y-3">
-                  <h3 className="text-lg sm:text-xl font-extrabold text-slate-900">Capilla Privada & Alta Cocina</h3>
-                  <p className="text-slate-600 text-xs leading-relaxed">
+                  <h3 className="text-lg sm:text-xl font-extrabold text-white group-hover:text-yellow-300 transition-colors">Capilla Privada & Alta Cocina</h3>
+                  <p className="text-slate-350 text-xs sm:text-sm leading-relaxed">
                     Instalaciones integrales con capilla propia para actos de acción de gracias, además de un equipo culinario experto a cargo de los banquetes solemnes.
                   </p>
                 </div>
               </div>
-              <div className="p-5 sm:p-6 pt-0 border-t border-slate-100 flex items-center justify-between text-xs text-blue-900 font-extrabold mt-3 sm:mt-4">
+              <div className="p-5 sm:p-6 pt-0 border-t border-white/10 flex items-center justify-between text-xs text-slate-300 font-extrabold mt-4">
                 <span>Servicios</span>
-                <span className="bg-amber-50 text-amber-800 px-2.5 py-1 rounded-lg">Banquetes & Capilla</span>
+                <span className="bg-amber-500/15 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-xl">Banquetes & Capilla</span>
               </div>
             </div>
           </div>
 
           {/* Call to Action to Visit Colina Country Club Website */}
-          <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-950 text-white rounded-3xl p-6 sm:p-10 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 border border-yellow-500/20 text-center sm:text-left">
+          <div className="bg-gradient-to-r from-blue-955 via-slate-900 to-blue-955 text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-10 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 border border-yellow-500/30 backdrop-blur-2xl text-center sm:text-left">
             <div className="space-y-2 max-w-xl">
               <span className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider inline-block">
                 Conoce la Sede Virtualmente
@@ -737,7 +740,7 @@ export default function Convencion() {
               href="https://colinacountryclub.com/" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-blue-955 font-black px-6 py-3.5 rounded-2xl text-xs uppercase tracking-wider transition-all shadow-xl shadow-yellow-500/10 active:scale-95 shrink-0 min-h-[48px]"
+              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-blue-955 font-black px-6 py-3.5 rounded-2xl text-xs uppercase tracking-wider transition-all shadow-xl shadow-yellow-500/20 active:scale-95 shrink-0 min-h-[48px]"
             >
               <span>Visitar Sitio Oficial</span>
               <ExternalLink size={16} />
@@ -747,59 +750,56 @@ export default function Convencion() {
       </section>
 
       {/* Actividades Culturales Section */}
-      <section className="bg-slate-900 text-white py-12 sm:py-20 relative overflow-hidden border-y border-yellow-500/10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,rgba(253,224,71,0.03),transparent_40%)]" />
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4">
-            <div className="inline-flex items-center space-x-2 bg-yellow-500/15 border border-yellow-500/30 text-yellow-400 px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
-              <Award size={14} />
-              <span>Agenda de Hermandad</span>
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight bg-gradient-to-r from-white to-yellow-300 bg-clip-text text-transparent">
-              Actividades Culturales y Sociales
-            </h2>
-            <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto">
-              La convención no es solo trabajo de planificación; también es el espacio ideal para disfrutar del arte, la hermandad y compartir tradiciones.
-            </p>
+      <section className="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4">
+          <div className="inline-flex items-center space-x-2 bg-yellow-500/15 border border-yellow-500/30 text-yellow-400 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
+            <Award size={14} />
+            <span>Agenda de Hermandad</span>
           </div>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight text-white">
+            Actividades Culturales y Sociales
+          </h2>
+          <p className="text-slate-300 text-sm sm:text-base max-w-2xl mx-auto">
+            La convención no es solo trabajo de planificación; también es el espacio ideal para disfrutar del arte, la hermandad y compartir tradiciones.
+          </p>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 mt-10 sm:mt-16">
-            {(config.actividadesCulturales || []).map((act, index) => {
-              const IconComponent = getIconComponent(act.iconName);
-              return (
-                <div 
-                  key={act.id || index}
-                  className="bg-slate-800/60 border border-slate-700/60 hover:border-yellow-500/40 rounded-3xl p-6 sm:p-8 transition-all duration-300 flex flex-col justify-between group hover:shadow-2xl hover:shadow-yellow-500/5"
-                >
-                  <div className="space-y-4">
-                    <div className="w-12 h-12 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <IconComponent size={24} />
-                    </div>
-                    <h3 className="text-xl font-bold text-white tracking-tight">{act.title}</h3>
-                    <p className="text-slate-350 text-xs sm:text-sm leading-relaxed">{act.description}</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 mt-10 sm:mt-16">
+          {(config.actividadesCulturales || []).map((act, index) => {
+            const IconComponent = getIconComponent(act.iconName);
+            return (
+              <div 
+                key={act.id || index}
+                className="bg-slate-900/80 border border-white/10 hover:border-yellow-500/40 rounded-3xl p-6 sm:p-8 transition-all duration-500 flex flex-col justify-between group hover:shadow-2xl hover:shadow-yellow-500/10 backdrop-blur-xl"
+              >
+                <div className="space-y-4">
+                  <div className="w-14 h-14 rounded-2xl bg-yellow-500/15 border border-yellow-500/30 text-yellow-400 flex items-center justify-center group-hover:scale-110 group-hover:bg-yellow-500 group-hover:text-blue-955 transition-all duration-300 shadow-md">
+                    <IconComponent size={26} />
                   </div>
-                  <div className="mt-6 pt-4 border-t border-slate-700/50 flex items-center justify-between text-xs text-yellow-400 font-extrabold">
-                    <span>Cronograma</span>
-                    <span>{act.time}</span>
-                  </div>
+                  <h3 className="text-xl font-bold text-white tracking-tight group-hover:text-yellow-300 transition-colors">{act.title}</h3>
+                  <p className="text-slate-350 text-xs sm:text-sm leading-relaxed">{act.description}</p>
                 </div>
-              );
-            })}
-          </div>
+                <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-yellow-400 font-extrabold">
+                  <span>Cronograma</span>
+                  <span className="bg-yellow-500/10 border border-yellow-500/20 px-3 py-1 rounded-lg text-yellow-300">{act.time}</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </section>
 
       {/* Experiencias Únicas Section */}
-      <section className="py-12 sm:py-20 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-white/10">
         <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4 mb-10 sm:mb-16">
-          <div className="inline-flex items-center space-x-2 bg-blue-900/10 border border-blue-900/20 text-blue-900 px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
-            <Compass size={14} />
+          <div className="inline-flex items-center space-x-2 bg-blue-500/10 border border-blue-500/25 text-blue-400 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
+            <Compass size={14} className="text-yellow-400" />
             <span>Mística Leonística</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
             Experiencias Únicas de la Convención
           </h2>
-          <p className="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto">
+          <p className="text-slate-300 text-sm sm:text-base max-w-2xl mx-auto">
             Vive de cerca los pilares fundamentales que nos guían como Club de Leones a nivel mundial y nacional.
           </p>
         </div>
@@ -808,16 +808,16 @@ export default function Convencion() {
           {(config.experienciasUnicas || []).map((exp, index) => (
             <div 
               key={exp.id || index}
-              className="bg-white border border-slate-150 hover:border-slate-250 rounded-3xl sm:rounded-[2rem] p-6 sm:p-8 shadow-xl shadow-slate-100/50 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between"
+              className="bg-slate-900/80 border border-white/10 hover:border-yellow-500/40 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl hover:shadow-yellow-500/10 transition-all duration-500 flex flex-col justify-between group"
             >
               <div className="space-y-3 sm:space-y-4">
-                <span className="text-[10px] font-black uppercase tracking-widest text-blue-900 bg-blue-50 border border-blue-100 px-3 py-1 rounded-full inline-block">
+                <span className="text-[10px] font-black uppercase tracking-widest text-yellow-400 bg-yellow-500/15 border border-yellow-500/30 px-3 py-1 rounded-full inline-block">
                   {exp.badge}
                 </span>
-                <h3 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight pt-1">{exp.title}</h3>
-                <p className="text-slate-650 text-xs sm:text-sm leading-relaxed">{exp.desc}</p>
+                <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight pt-1 group-hover:text-yellow-300 transition-colors">{exp.title}</h3>
+                <p className="text-slate-350 text-xs sm:text-sm leading-relaxed">{exp.desc}</p>
               </div>
-              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center text-blue-900 font-extrabold text-xs group cursor-pointer">
+              <div className="mt-6 pt-4 border-t border-white/10 flex items-center text-yellow-400 font-extrabold text-xs group-hover:text-yellow-300 transition-colors">
                 <span>Conocer más detalles</span>
                 <ChevronRight size={14} className="ml-1 transition-transform group-hover:translate-x-1" />
               </div>
@@ -827,10 +827,10 @@ export default function Convencion() {
       </section>
 
       {/* Pre-registro Form Section */}
-      <section id="pre-inscripcion" className="py-12 sm:py-20 bg-gradient-to-br from-blue-900 to-indigo-955 text-white relative overflow-visible border-t border-yellow-500/20 px-3 sm:px-6 lg:px-8">
+      <section id="pre-inscripcion" className="py-16 sm:py-28 bg-gradient-to-b from-slate-950 via-blue-955 to-slate-950 text-white relative overflow-visible border-t border-yellow-500/20 px-3 sm:px-6 lg:px-8">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(253,224,71,0.05),transparent_40%)] pointer-events-none" />
         <div className="max-w-4xl mx-auto relative z-10">
-          <div className="bg-blue-950/80 backdrop-blur-xl border border-white/15 rounded-3xl sm:rounded-[2.5rem] p-5 sm:p-12 shadow-2xl">
+          <div className="bg-slate-900/90 backdrop-blur-2xl border border-white/15 rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 shadow-2xl shadow-black/90">
             
             {fetching ? (
               <div className="text-center py-12 flex flex-col items-center justify-center">
@@ -841,11 +841,11 @@ export default function Convencion() {
               !isSubmitted ? (
                 <div>
                   <div className="text-center max-w-2xl mx-auto space-y-3 sm:space-y-4 mb-8 sm:mb-10">
-                    <div className="inline-flex items-center space-x-2 bg-yellow-500/15 border border-yellow-500/30 text-yellow-400 px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
+                    <div className="inline-flex items-center space-x-2 bg-yellow-500/15 border border-yellow-500/30 text-yellow-400 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
                       <ShieldCheck size={14} />
                       <span>Inscripciones</span>
                     </div>
-                    <h2 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight bg-gradient-to-r from-white to-yellow-300 bg-clip-text text-transparent">
+                    <h2 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight bg-gradient-to-r from-white via-slate-100 to-yellow-300 bg-clip-text text-transparent">
                       Formulario de Pre-inscripción
                     </h2>
                     <p className="text-slate-300 text-xs sm:text-base">
@@ -866,7 +866,7 @@ export default function Convencion() {
                           onChange={handleChange}
                           required
                           placeholder="Ej. Juan Pérez"
-                          className="w-full bg-blue-900/60 border border-white/20 focus:border-yellow-500 rounded-2xl px-4 py-3.5 text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/20 transition-all placeholder:text-slate-500 min-h-[48px]"
+                          className="w-full bg-slate-950/80 border border-white/20 focus:border-yellow-500 rounded-2xl px-4 py-3.5 text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/20 transition-all placeholder:text-slate-500 min-h-[48px]"
                         />
                       </div>
 
@@ -881,7 +881,7 @@ export default function Convencion() {
                           onChange={handleChange}
                           required
                           placeholder="ejemplo@correo.com"
-                          className="w-full bg-blue-900/60 border border-white/20 focus:border-yellow-500 rounded-2xl px-4 py-3.5 text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/20 transition-all placeholder:text-slate-500 min-h-[48px]"
+                          className="w-full bg-slate-950/80 border border-white/20 focus:border-yellow-500 rounded-2xl px-4 py-3.5 text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/20 transition-all placeholder:text-slate-500 min-h-[48px]"
                         />
                       </div>
                     </div>
@@ -890,7 +890,7 @@ export default function Convencion() {
                       {/* Teléfono / Telegram */}
                       <div className="space-y-1.5 sm:space-y-2">
                         <label className="text-xs font-extrabold uppercase tracking-wider text-slate-350" htmlFor="telefono">Teléfono / Telegram</label>
-                        <div className="flex items-center bg-blue-900/60 border border-white/20 focus-within:border-yellow-500 rounded-2xl focus-within:ring-2 focus-within:ring-yellow-500/20 transition-all overflow-hidden min-h-[48px]">
+                        <div className="flex items-center bg-slate-950/80 border border-white/20 focus-within:border-yellow-500 rounded-2xl focus-within:ring-2 focus-within:ring-yellow-500/20 transition-all overflow-hidden min-h-[48px]">
                           <span className="bg-white/10 px-3.5 sm:px-4 py-3.5 text-white text-sm font-bold border-r border-white/15 select-none shrink-0">
                             +502
                           </span>
@@ -915,7 +915,7 @@ export default function Convencion() {
                           <button
                             type="button"
                             onClick={() => setOpenDropdown(openDropdown === 'cargo' ? null : 'cargo')}
-                            className={`w-full flex items-center justify-between bg-blue-900/60 border ${openDropdown === 'cargo' ? 'border-yellow-500 ring-2 ring-yellow-500/20' : 'border-white/20'} rounded-2xl px-4 py-3.5 text-white text-base sm:text-sm transition-all text-left min-h-[48px]`}
+                            className={`w-full flex items-center justify-between bg-slate-950/80 border ${openDropdown === 'cargo' ? 'border-yellow-500 ring-2 ring-yellow-500/20' : 'border-white/20'} rounded-2xl px-4 py-3.5 text-white text-base sm:text-sm transition-all text-left min-h-[48px]`}
                           >
                             <span className="flex items-center space-x-2 truncate">
                               <span>{CARGO_OPTIONS.find(c => c.value === form.cargo)?.icon}</span>
@@ -924,7 +924,7 @@ export default function Convencion() {
                             <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 shrink-0 ml-2 ${openDropdown === 'cargo' ? 'rotate-180' : ''}`} />
                           </button>
                           {openDropdown === 'cargo' && (
-                            <div className="absolute z-50 mt-2 w-full rounded-2xl border border-white/15 bg-blue-955/95 backdrop-blur-xl shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="absolute z-50 mt-2 w-full rounded-2xl border border-white/15 bg-slate-950/95 backdrop-blur-xl shadow-2xl shadow-black/80 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                               {CARGO_OPTIONS.map((opt) => (
                                 <button
                                   key={opt.value}
@@ -945,22 +945,22 @@ export default function Convencion() {
                       </div>
 
                       {/* Tarjeta Informativa de Telegram — Ocupa el ancho de ambas columnas para simetría perfecta */}
-                      <div className="sm:col-span-2 bg-blue-955/90 border border-yellow-500/30 rounded-2xl p-4 sm:p-5 space-y-3 text-xs">
-                        <p className="text-slate-200 text-xs leading-relaxed flex items-start space-x-2">
+                      <div className="sm:col-span-2 bg-blue-955/95 border border-yellow-500/30 rounded-2xl p-5 space-y-3.5 text-xs shadow-xl">
+                        <p className="text-slate-200 text-xs leading-relaxed flex items-start space-x-2.5">
                           <span className="text-yellow-400 text-base shrink-0">📲</span>
                           <span>
                             Te recomendamos tener instalada la aplicación oficial de <strong>Telegram</strong> en tu teléfono para recibir de forma automática avisos instantáneos, boletines del programa y beneficios exclusivos de tu inscripción.
                           </span>
                         </p>
 
-                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 pt-2 border-t border-white/10">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 pt-3 border-t border-white/10">
                           <span className="text-xs font-extrabold uppercase tracking-wider text-yellow-400 shrink-0 text-center sm:text-left">Descargar app oficial:</span>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full sm:w-auto">
                             <a 
                               href="https://play.google.com/store/apps/details?id=org.telegram.messenger" 
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center space-x-1.5 text-xs font-bold bg-white/10 hover:bg-yellow-500 hover:text-blue-955 text-white px-3.5 py-2 rounded-xl transition-all border border-white/15 shadow-sm min-h-[40px]"
+                              className="inline-flex items-center justify-center space-x-2 text-xs font-extrabold bg-white/10 hover:bg-yellow-500 hover:text-blue-955 text-white px-4 py-2.5 rounded-xl transition-all border border-white/15 shadow-sm min-h-[42px]"
                             >
                               <span>🤖 Android (Play Store)</span>
                             </a>
@@ -968,7 +968,7 @@ export default function Convencion() {
                               href="https://apps.apple.com/app/telegram-messenger/id686449807" 
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center space-x-1.5 text-xs font-bold bg-white/10 hover:bg-yellow-500 hover:text-blue-955 text-white px-3.5 py-2 rounded-xl transition-all border border-white/15 shadow-sm min-h-[40px]"
+                              className="inline-flex items-center justify-center space-x-2 text-xs font-extrabold bg-white/10 hover:bg-yellow-500 hover:text-blue-955 text-white px-4 py-2.5 rounded-xl transition-all border border-white/15 shadow-sm min-h-[42px]"
                             >
                               <span>🍎 iPhone (App Store)</span>
                             </a>
@@ -985,13 +985,13 @@ export default function Convencion() {
                           <button
                             type="button"
                             onClick={() => setOpenDropdown(openDropdown === 'zona' ? null : 'zona')}
-                            className={`w-full flex items-center justify-between bg-blue-900/60 border ${openDropdown === 'zona' ? 'border-yellow-500 ring-2 ring-yellow-500/20' : 'border-white/20'} rounded-2xl px-4 py-3.5 text-white text-base sm:text-sm transition-all text-left min-h-[48px]`}
+                            className={`w-full flex items-center justify-between bg-slate-950/80 border ${openDropdown === 'zona' ? 'border-yellow-500 ring-2 ring-yellow-500/20' : 'border-white/20'} rounded-2xl px-4 py-3.5 text-white text-base sm:text-sm transition-all text-left min-h-[48px]`}
                           >
                             <span className="truncate">{form.distrito}</span>
                             <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 shrink-0 ml-2 ${openDropdown === 'zona' ? 'rotate-180' : ''}`} />
                           </button>
                           {openDropdown === 'zona' && (
-                            <div className="absolute z-50 mt-2 w-full rounded-2xl border border-white/15 bg-blue-955/95 backdrop-blur-xl shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-72 overflow-y-auto">
+                            <div className="absolute z-50 mt-2 w-full rounded-2xl border border-white/15 bg-slate-950/95 backdrop-blur-xl shadow-2xl shadow-black/80 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-72 overflow-y-auto">
                               {REGION_ZONES.map((rg) => (
                                 <div key={rg.region}>
                                   <div className={`px-4 py-2 bg-gradient-to-r ${rg.color} text-white text-[10px] font-black uppercase tracking-widest sticky top-0`}>
@@ -1038,7 +1038,7 @@ export default function Convencion() {
                             onChange={(e) => setCustomClub(e.target.value)}
                             required
                             placeholder="Ej. Club de Leones Internacional"
-                            className="w-full bg-blue-900/60 border border-white/20 focus:border-yellow-500 rounded-2xl px-4 py-3.5 text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/20 transition-all placeholder:text-slate-500 min-h-[48px]"
+                            className="w-full bg-slate-950/80 border border-white/20 focus:border-yellow-500 rounded-2xl px-4 py-3.5 text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/20 transition-all placeholder:text-slate-500 min-h-[48px]"
                           />
                         ) : (
                           <>
@@ -1046,13 +1046,13 @@ export default function Convencion() {
                               <button
                                 type="button"
                                 onClick={() => setOpenDropdown(openDropdown === 'club' ? null : 'club')}
-                                className={`w-full flex items-center justify-between bg-blue-900/60 border ${openDropdown === 'club' ? 'border-yellow-500 ring-2 ring-yellow-500/20' : 'border-white/20'} rounded-2xl px-4 py-3.5 text-white text-base sm:text-sm transition-all text-left min-h-[48px]`}
+                                className={`w-full flex items-center justify-between bg-slate-950/80 border ${openDropdown === 'club' ? 'border-yellow-500 ring-2 ring-yellow-500/20' : 'border-white/20'} rounded-2xl px-4 py-3.5 text-white text-base sm:text-sm transition-all text-left min-h-[48px]`}
                               >
                                 <span className="truncate">{form.club}</span>
                                 <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 shrink-0 ml-2 ${openDropdown === 'club' ? 'rotate-180' : ''}`} />
                               </button>
                               {openDropdown === 'club' && (
-                                <div className="absolute z-50 mt-2 w-full rounded-2xl border border-white/15 bg-blue-955/95 backdrop-blur-xl shadow-2xl shadow-black/60 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-60 overflow-y-auto">
+                                <div className="absolute z-50 mt-2 w-full rounded-2xl border border-white/15 bg-slate-955/95 backdrop-blur-xl shadow-2xl shadow-black/80 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-60 overflow-y-auto">
                                   {(ZONAS_CLUBS[form.distrito] || []).map((c) => (
                                     <button
                                       key={c}
@@ -1075,7 +1075,7 @@ export default function Convencion() {
                                 onChange={(e) => setCustomClub(e.target.value)}
                                 required
                                 placeholder="Escribe el nombre de tu Club"
-                                className="w-full bg-blue-900/60 border border-white/20 focus:border-yellow-500 rounded-2xl px-4 py-3.5 text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/20 transition-all placeholder:text-slate-500 mt-2 min-h-[48px]"
+                                className="w-full bg-slate-950/80 border border-white/20 focus:border-yellow-500 rounded-2xl px-4 py-3.5 text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/20 transition-all placeholder:text-slate-500 mt-2 min-h-[48px]"
                               />
                             )}
                           </>
@@ -1087,7 +1087,7 @@ export default function Convencion() {
                       <button
                         type="submit"
                         disabled={loading}
-                        className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-blue-955 font-black px-6 py-4 rounded-2xl text-base transition-all shadow-xl shadow-yellow-500/10 active:scale-95 disabled:opacity-50 min-h-[52px]"
+                        className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-400 hover:from-yellow-400 hover:to-amber-300 text-blue-955 font-black px-6 py-4 rounded-2xl text-base transition-all duration-300 shadow-xl shadow-yellow-500/20 active:scale-95 disabled:opacity-50 min-h-[52px] cursor-pointer"
                       >
                         {loading ? (
                           <div className="w-5 h-5 border-2 border-blue-955 border-t-transparent rounded-full animate-spin"></div>
@@ -1103,7 +1103,7 @@ export default function Convencion() {
                 </div>
               ) : (
                 <div className="text-center py-12 space-y-6 animate-in fade-in zoom-in duration-300">
-                  <div className="w-20 h-20 bg-yellow-500 text-blue-955 rounded-full flex items-center justify-center mx-auto shadow-xl shadow-yellow-500/10">
+                  <div className="w-20 h-20 bg-yellow-500 text-blue-955 rounded-full flex items-center justify-center mx-auto shadow-xl shadow-yellow-500/20">
                     <CheckCircle2 size={44} />
                   </div>
                   <h3 className="text-3xl font-black text-white tracking-tight">¡Pre-inscripción Confirmada!</h3>
@@ -1113,7 +1113,7 @@ export default function Convencion() {
                   <div className="pt-6">
                     <button 
                       onClick={handleResetForm}
-                      className="text-xs font-extrabold uppercase tracking-wider text-yellow-400 hover:text-yellow-500 border border-yellow-500/25 px-5 py-2.5 rounded-xl bg-yellow-500/5 transition-colors"
+                      className="text-xs font-extrabold uppercase tracking-wider text-yellow-400 hover:text-yellow-300 border border-yellow-500/30 px-5 py-2.5 rounded-xl bg-yellow-500/10 transition-colors cursor-pointer"
                     >
                       Registrar a otro socio
                     </button>
@@ -1130,7 +1130,7 @@ export default function Convencion() {
                   El portal de pre-registro digital para la Convención Nacional se habilitará en los próximos días. ¡Mantente atento al rugido de la hermandad!
                 </p>
                 <div className="pt-4">
-                  <span className="inline-block bg-yellow-500/10 text-yellow-450 border border-yellow-500/20 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider">
+                  <span className="inline-block bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider">
                     Distrito D3 Guatemala
                   </span>
                 </div>
