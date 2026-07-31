@@ -735,14 +735,18 @@ export default function Convencion() {
             </div>
           </div>
 
-          {/* Call to Action to Visit Colina Country Club Website — Banner Destacado en Azul Regio */}
-          <div className="bg-gradient-to-r from-blue-955 via-blue-900 to-indigo-955 text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-10 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 border border-yellow-500/30 backdrop-blur-2xl text-center sm:text-left">
-            <div className="space-y-2 max-w-xl">
-              <span className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider inline-block">
+          {/* Call to Action to Visit Colina Country Club Website — Banner Destacado en Azul Oscuro León */}
+          <div className="bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-10 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 border-2 border-yellow-500/40 relative overflow-hidden text-center sm:text-left group">
+            {/* Ambient Glows */}
+            <div className="absolute -top-12 -left-12 w-48 h-48 bg-yellow-500/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-blue-500/20 rounded-full blur-2xl pointer-events-none" />
+
+            <div className="space-y-2 max-w-xl relative z-10">
+              <span className="bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 text-[10px] font-black px-3.5 py-1 rounded-full uppercase tracking-wider inline-block shadow-sm">
                 Conoce la Sede Virtualmente
               </span>
-              <h3 className="text-xl sm:text-2xl font-black tracking-tight">¿Quieres explorar todas las instalaciones del evento?</h3>
-              <p className="text-slate-300 text-xs sm:text-sm">
+              <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white">¿Quieres explorar todas las instalaciones del evento?</h3>
+              <p className="text-slate-200 text-xs sm:text-sm leading-relaxed">
                 Visita el sitio oficial de Colina Country Club para descubrir más sobre sus galerías de fotos, salones y ubicación en Quetzaltenango.
               </p>
             </div>
@@ -751,7 +755,7 @@ export default function Convencion() {
               href="https://colinacountryclub.com/" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-blue-955 font-black px-6 py-3.5 rounded-2xl text-xs uppercase tracking-wider transition-all shadow-xl shadow-yellow-500/20 active:scale-95 shrink-0 min-h-[48px]"
+              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-400 hover:from-yellow-400 hover:to-amber-300 text-blue-955 font-black px-6 py-3.5 rounded-2xl text-xs uppercase tracking-wider transition-all duration-300 shadow-xl shadow-yellow-500/20 active:scale-95 shrink-0 min-h-[48px] cursor-pointer relative z-10"
             >
               <span>Visitar Sitio Oficial</span>
               <ExternalLink size={16} />
