@@ -112,46 +112,75 @@ export const compressImageFile = (
 };
 
 /**
+ * Safely converts any image URL (remote Firebase Storage URL or Data URL)
+ * into a local Base64 Data URL to bypass cross-origin canvas security restrictions.
+ */
+export const urlToDataUrl = async (url: string): Promise<string> => {
+  if (!url || url.startsWith('data:')) return url;
+  try {
+    const response = await fetch(url, { mode: 'cors' });
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(url);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return url;
+  }
+};
+
+/**
  * Removes black/dark background pixels from a data URL image and returns a transparent PNG data URL.
  */
-export const removeDarkBackgroundFromDataUrl = (
-  dataUrl: string,
+export const removeDarkBackgroundFromDataUrl = async (
+  inputUrl: string,
   threshold = 35
 ): Promise<string> => {
+  if (!inputUrl) return inputUrl;
+
+  // Convert remote URL to Base64 first if needed to prevent CORS tainted canvas error
+  const dataUrl = await urlToDataUrl(inputUrl);
+
   return new Promise((resolve) => {
-    if (!dataUrl) {
-      resolve(dataUrl);
-      return;
-    }
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    if (dataUrl.startsWith('http://') || dataUrl.startsWith('https://')) {
+      img.crossOrigin = 'anonymous';
+    }
+
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        resolve(dataUrl);
-        return;
-      }
-      ctx.clearRect(0, 0, img.width, img.height);
-      ctx.drawImage(img, 0, 0);
-
-      const imgData = ctx.getImageData(0, 0, img.width, img.height);
-      const data = imgData.data;
-
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-        // If pixel is black or near-black
-        if (r <= threshold && g <= threshold && b <= threshold) {
-          data[i + 3] = 0; // Make pixel transparent
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
         }
-      }
+        ctx.clearRect(0, 0, img.width, img.height);
+        ctx.drawImage(img, 0, 0);
 
-      ctx.putImageData(imgData, 0, 0);
-      resolve(canvas.toDataURL('image/png'));
+        const imgData = ctx.getImageData(0, 0, img.width, img.height);
+        const data = imgData.data;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          // If pixel is black or near-black
+          if (r <= threshold && g <= threshold && b <= threshold) {
+            data[i + 3] = 0; // Make pixel transparent
+          }
+        }
+
+        ctx.putImageData(imgData, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      } catch {
+        // Safe fallback if canvas is tainted or blocked by CORS
+        resolve(dataUrl);
+      }
     };
     img.onerror = () => resolve(dataUrl);
     img.src = dataUrl;
