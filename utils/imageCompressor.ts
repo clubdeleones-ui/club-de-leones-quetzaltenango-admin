@@ -6,13 +6,15 @@
  * @param maxWidth The maximum width allowed for the output image. Default is 800.
  * @param maxHeight The maximum height allowed for the output image. Default is 800.
  * @param quality The JPEG compression quality between 0 and 1. Default is 0.7.
+ * @param removeBlackBackground Whether to remove dark/black backgrounds. Default is false.
  * @returns A promise that resolves to the compressed image as a JPEG Data URL (Base64).
  */
 export const compressImageFile = (
   file: File,
   maxWidth = 800,
   maxHeight = 800,
-  quality = 0.7
+  quality = 0.7,
+  removeBlackBackground = false
 ): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -50,12 +52,11 @@ export const compressImageFile = (
                             file.type === 'image/webp' || 
                             file.name?.toLowerCase().endsWith('.png') || 
                             file.name?.toLowerCase().endsWith('.webp') ||
-                            quality === 1.0;
+                            removeBlackBackground;
 
-        if (isPngOrWebp) {
-          // Preserve 100% alpha channel transparency for PNG/WebP logos and icons
-          ctx.clearRect(0, 0, width, height);
-        } else {
+        ctx.clearRect(0, 0, width, height);
+
+        if (!isPngOrWebp && !removeBlackBackground) {
           // Default white background fill for JPEGs so transparent fallback is white, not black
           ctx.fillStyle = '#FFFFFF';
           ctx.fillRect(0, 0, width, height);
@@ -64,9 +65,24 @@ export const compressImageFile = (
         // Draw the image on the canvas with the new dimensions
         ctx.drawImage(img, 0, 0, width, height);
 
+        if (removeBlackBackground) {
+          const imgData = ctx.getImageData(0, 0, width, height);
+          const data = imgData.data;
+          const threshold = 35; // Threshold for dark/black pixels
+          for (let i = 0; i < data.length; i += 4) {
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+            if (r <= threshold && g <= threshold && b <= threshold) {
+              data[i + 3] = 0; // Turn pixel transparent
+            }
+          }
+          ctx.putImageData(imgData, 0, 0);
+        }
+
         // Convert the canvas to data URL preserving PNG transparency when applicable
         try {
-          if (isPngOrWebp) {
+          if (isPngOrWebp || removeBlackBackground) {
             const compressedDataUrl = canvas.toDataURL('image/png');
             resolve(compressedDataUrl);
           } else {
@@ -92,6 +108,53 @@ export const compressImageFile = (
     };
 
     reader.readAsDataURL(file);
+  });
+};
+
+/**
+ * Removes black/dark background pixels from a data URL image and returns a transparent PNG data URL.
+ */
+export const removeDarkBackgroundFromDataUrl = (
+  dataUrl: string,
+  threshold = 35
+): Promise<string> => {
+  return new Promise((resolve) => {
+    if (!dataUrl) {
+      resolve(dataUrl);
+      return;
+    }
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(dataUrl);
+        return;
+      }
+      ctx.clearRect(0, 0, img.width, img.height);
+      ctx.drawImage(img, 0, 0);
+
+      const imgData = ctx.getImageData(0, 0, img.width, img.height);
+      const data = imgData.data;
+
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        // If pixel is black or near-black
+        if (r <= threshold && g <= threshold && b <= threshold) {
+          data[i + 3] = 0; // Make pixel transparent
+        }
+      }
+
+      ctx.putImageData(imgData, 0, 0);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
   });
 };
 

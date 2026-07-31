@@ -27,11 +27,12 @@ import {
   Eye,
   Mail,
   Send,
-  Handshake
+  Handshake,
+  Wand2
 } from 'lucide-react';
 import { firebaseService } from '../../services/firebaseService';
 import { telegramService } from '../../services/telegramService';
-import { compressImageFile, validateImageFile } from '../../utils/imageCompressor';
+import { compressImageFile, validateImageFile, removeDarkBackgroundFromDataUrl } from '../../utils/imageCompressor';
 import { ConvencionConfig, ConvencionRegistro, ConvencionActividad, ConvencionExperiencia, ConvencionAlianza } from '../../types';
 
 // Map of icons for selection
@@ -374,8 +375,52 @@ export function AdminConvencion() {
     }
   };
 
+  const [removeBlackBg, setRemoveBlackBg] = useState(false);
+  const [isCleaningBg, setIsCleaningBg] = useState(false);
+
+  const handleCleanBlackBackground = async () => {
+    if (!alianzaLogoPreview) return;
+    setIsCleaningBg(true);
+    try {
+      const transparentDataUrl = await removeDarkBackgroundFromDataUrl(alianzaLogoPreview, 35);
+      setAlianzaLogoPreview(transparentDataUrl);
+      setAlianzaForm(prev => ({ ...prev, logoUrl: transparentDataUrl }));
+      setSuccessMsg("¡Fondo negro removido exitosamente! La imagen ahora es transparente.");
+      setTimeout(() => setSuccessMsg(''), 3500);
+    } catch {
+      setErrorMsg("No se pudo remover el fondo negro de la imagen.");
+    } finally {
+      setIsCleaningBg(false);
+    }
+  };
+
+  const handleCleanCardBackground = async (aliado: ConvencionAlianza) => {
+    if (!aliado.logoUrl) return;
+    setSaving(true);
+    try {
+      const transparentDataUrl = await removeDarkBackgroundFromDataUrl(aliado.logoUrl, 35);
+      const finalUrl = await firebaseService.uploadConvencionImage(transparentDataUrl);
+
+      const currentList = (config.alianzas && config.alianzas.length > 0) ? config.alianzas : DEFAULT_ALIANZAS;
+      const updatedList = currentList.map(item =>
+        item.id === aliado.id ? { ...item, logoUrl: finalUrl } : item
+      );
+      const updatedConfig = { ...config, alianzas: updatedList };
+      setConfig(updatedConfig);
+      await firebaseService.saveConvencionConfig(updatedConfig);
+
+      setSuccessMsg(`¡Fondo negro removido exitosamente para "${aliado.name}"!`);
+      setTimeout(() => setSuccessMsg(''), 3500);
+    } catch (error) {
+      setErrorMsg("Error al procesar la imagen.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // ================= ALIANZAS & PATROCINADORES HANDLERS =================
   const openAlianzaModal = (aliado?: ConvencionAlianza) => {
+    setRemoveBlackBg(false);
     if (aliado) {
       setEditingAlianza(aliado);
       setAlianzaForm({
@@ -410,11 +455,17 @@ export function AdminConvencion() {
         return;
       }
       setAlianzaLogoFile(file);
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        setAlianzaLogoPreview(ev.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+      
+      try {
+        const compressedBase64 = await compressImageFile(file, 600, 600, 0.85, removeBlackBg);
+        setAlianzaLogoPreview(compressedBase64);
+      } catch {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          setAlianzaLogoPreview(ev.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -426,8 +477,14 @@ export function AdminConvencion() {
       let finalLogoUrl = alianzaForm.logoUrl;
 
       if (alianzaLogoFile) {
-        const compressedBase64 = await compressImageFile(alianzaLogoFile, 600, 600, 0.85);
+        let compressedBase64 = await compressImageFile(alianzaLogoFile, 600, 600, 0.85, removeBlackBg);
+        if (removeBlackBg) {
+          compressedBase64 = await removeDarkBackgroundFromDataUrl(compressedBase64, 35);
+        }
         finalLogoUrl = await firebaseService.uploadConvencionImage(compressedBase64);
+      } else if (removeBlackBg && finalLogoUrl) {
+        let cleanedUrl = await removeDarkBackgroundFromDataUrl(finalLogoUrl, 35);
+        finalLogoUrl = await firebaseService.uploadConvencionImage(cleanedUrl);
       }
 
       const currentList = (config.alianzas && config.alianzas.length > 0) ? config.alianzas : DEFAULT_ALIANZAS;
@@ -1020,6 +1077,16 @@ export function AdminConvencion() {
                       >
                         {/* Action buttons */}
                         <div className="absolute top-2 right-2 flex space-x-1 z-10">
+                          {aliado.logoUrl && (
+                            <button
+                              type="button"
+                              onClick={() => handleCleanCardBackground(aliado)}
+                              className="p-1.5 bg-amber-100 hover:bg-amber-500 hover:text-white text-amber-900 rounded-lg transition-colors shadow-sm"
+                              title="Remover fondo negro/oscuro automáticamente"
+                            >
+                              <Wand2 size={12} />
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => openAlianzaModal(aliado)}
@@ -1291,11 +1358,12 @@ export function AdminConvencion() {
             <div className="bg-slate-50 border-b border-slate-100 p-6 flex justify-between items-center">
               <h3 className="text-lg font-black text-slate-850 uppercase tracking-wider flex items-center space-x-2">
                 <Music size={18} className="text-blue-900" />
-                <span>{editingActividad ? 'Editar Actividad' : 'Nueva Actividad'}</span>
+                <span>{editingActividad ? 'Editar Actividad' : 'Nueva Actividad Cultural'}</span>
               </h3>
               <button 
+                type="button"
                 onClick={() => setIsActividadModalOpen(false)}
-                className="p-1.5 hover:bg-slate-200 text-slate-500 hover:text-slate-800 rounded-lg transition-colors"
+                className="p-2 hover:bg-slate-200 text-slate-400 hover:text-slate-700 rounded-full transition-colors"
               >
                 <X size={16} />
               </button>
@@ -1333,18 +1401,12 @@ export function AdminConvencion() {
                 <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
                   {ICON_OPTIONS.map((opt) => {
                     const OptIcon = opt.Icon;
-                    const isSelected = actividadForm.iconName === opt.name;
                     return (
                       <button
                         key={opt.name}
                         type="button"
                         onClick={() => setActividadForm(prev => ({ ...prev, iconName: opt.name }))}
-                        title={opt.label}
-                        className={`p-3 rounded-2xl flex flex-col items-center justify-center border transition-all ${
-                          isSelected 
-                            ? 'bg-blue-900 text-white border-blue-900 scale-105 shadow-md shadow-blue-900/10' 
-                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
-                        }`}
+                        className={`p-3 rounded-2xl border flex flex-col items-center justify-center space-y-1 transition-all ${actividadForm.iconName === opt.name ? 'border-blue-900 bg-blue-900/10 text-blue-900 font-extrabold' : 'border-slate-200 hover:border-slate-300 text-slate-500'}`}
                       >
                         <OptIcon size={18} />
                       </button>
@@ -1354,14 +1416,14 @@ export function AdminConvencion() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500" htmlFor="act_description">Descripción / Detalles</label>
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500" htmlFor="act_desc">Descripción Informativa</label>
                 <textarea
-                  id="act_description"
+                  id="act_desc"
                   required
                   rows={3}
                   value={actividadForm.description}
                   onChange={(e) => setActividadForm(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Detalles sobre lo que se realizará en la actividad..."
+                  placeholder="Detalles sobre el evento, vestimenta o sorpresas..."
                   className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl px-4 py-3 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold resize-none"
                 />
               </div>
@@ -1393,11 +1455,12 @@ export function AdminConvencion() {
             <div className="bg-slate-50 border-b border-slate-100 p-6 flex justify-between items-center">
               <h3 className="text-lg font-black text-slate-850 uppercase tracking-wider flex items-center space-x-2">
                 <Compass size={18} className="text-blue-900" />
-                <span>{editingExperiencia ? 'Editar Experiencia' : 'Nueva Experiencia'}</span>
+                <span>{editingExperiencia ? 'Editar Experiencia' : 'Nueva Experiencia Única'}</span>
               </h3>
               <button 
+                type="button"
                 onClick={() => setIsExperienciaModalOpen(false)}
-                className="p-1.5 hover:bg-slate-200 text-slate-500 hover:text-slate-800 rounded-lg transition-colors"
+                className="p-2 hover:bg-slate-200 text-slate-400 hover:text-slate-700 rounded-full transition-colors"
               >
                 <X size={16} />
               </button>
@@ -1405,14 +1468,14 @@ export function AdminConvencion() {
 
             <form onSubmit={handleSaveExperiencia} className="p-6 space-y-5">
               <div className="space-y-2">
-                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500" htmlFor="exp_badge">Etiqueta / Badge Superior</label>
+                <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500" htmlFor="exp_badge">Etiqueta / Distintivo (Badge)</label>
                 <input
                   type="text"
                   id="exp_badge"
                   required
                   value={experienciaForm.badge}
                   onChange={(e) => setExperienciaForm(prev => ({ ...prev, badge: e.target.value }))}
-                  placeholder="Ej. Liderazgo, Hermandad, Servicio, Amistad"
+                  placeholder="Ej. Liderazgo, Mística, Cultura"
                   className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl px-4 py-3 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
                 />
               </div>
@@ -1532,31 +1595,47 @@ export function AdminConvencion() {
               <div className="space-y-2 pt-2 border-t border-slate-100">
                 <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600 block">Subir Imagen del Logo (Diapositiva Cuadrada)</label>
                 
-                <div className="flex items-center space-x-4 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                  <div className="w-16 h-16 aspect-square rounded-xl bg-white flex items-center justify-center p-2 overflow-hidden shrink-0 border-2 border-slate-200 shadow-sm">
-                    {alianzaLogoPreview ? (
-                      <img src={alianzaLogoPreview} alt="Preview" className="max-w-full max-h-full object-contain" />
-                    ) : (
-                      <span className="text-2xl">{alianzaForm.icon || '🦁'}</span>
-                    )}
-                  </div>
+                <div className="flex flex-col space-y-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-16 h-16 aspect-square rounded-xl bg-white flex items-center justify-center p-2 overflow-hidden shrink-0 border-2 border-slate-200 shadow-sm relative">
+                      {alianzaLogoPreview ? (
+                        <img src={alianzaLogoPreview} alt="Preview" className="max-w-full max-h-full object-contain" />
+                      ) : (
+                        <span className="text-2xl">{alianzaForm.icon || '🦁'}</span>
+                      )}
+                    </div>
 
-                  <div className="space-y-1">
-                    <label 
-                      htmlFor="alianza-logo-file" 
-                      className="inline-flex items-center space-x-2 bg-blue-900 hover:bg-blue-955 text-white font-extrabold px-4 py-2 rounded-xl text-xs uppercase tracking-wider cursor-pointer shadow-sm transition-all"
-                    >
-                      <UploadCloud size={14} />
-                      <span>{alianzaLogoFile ? 'Cambiar Imagen' : 'Subir Archivo de Logo'}</span>
-                      <input 
-                        type="file" 
-                        id="alianza-logo-file" 
-                        accept="image/*" 
-                        className="hidden" 
-                        onChange={handleAlianzaLogoChange} 
-                      />
-                    </label>
-                    <p className="text-[10px] text-slate-400">Recomendado: PNG o JPG con fondo transparente o contrastado.</p>
+                    <div className="space-y-1.5 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <label 
+                          htmlFor="alianza-logo-file" 
+                          className="inline-flex items-center space-x-2 bg-blue-900 hover:bg-blue-955 text-white font-extrabold px-3.5 py-1.5 rounded-xl text-xs uppercase tracking-wider cursor-pointer shadow-sm transition-all"
+                        >
+                          <UploadCloud size={14} />
+                          <span>{alianzaLogoFile ? 'Cambiar Imagen' : 'Subir Archivo de Logo'}</span>
+                          <input 
+                            type="file" 
+                            id="alianza-logo-file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            onChange={handleAlianzaLogoChange} 
+                          />
+                        </label>
+
+                        {alianzaLogoPreview && (
+                          <button
+                            type="button"
+                            onClick={handleCleanBlackBackground}
+                            disabled={isCleaningBg}
+                            className="inline-flex items-center space-x-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-blue-955 font-black px-3 py-1.5 rounded-xl text-xs uppercase tracking-wider shadow-sm transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+                          >
+                            <Wand2 size={13} className={isCleaningBg ? 'animate-spin' : ''} />
+                            <span>{isCleaningBg ? 'Limpiando...' : 'Remover Fondo Negro'}</span>
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-500 font-medium">PNG transparente o usa el botón de varita mágica para borrar rectángulos negros.</p>
+                    </div>
                   </div>
                 </div>
               </div>
