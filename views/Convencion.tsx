@@ -162,7 +162,7 @@ export default function Convencion() {
     fechaEvento: '2026-03-19',
     horaEvento: '08:00:00',
     fotoSede: 'https://images.unsplash.com/photo-1590001155093-a3c66ab0c3ff?auto=format&fit=crop&w=800&q=80',
-    inscripcionesAbiertas: false
+    inscripcionesAbiertas: true
   });
 
   const [countdown, setCountdown] = useState<CountdownState>({
@@ -213,7 +213,13 @@ export default function Convencion() {
     const loadConfig = async () => {
       try {
         const dbConfig = await firebaseService.getConvencionConfig();
-        setConfig(dbConfig);
+        if (dbConfig) {
+          setConfig(prev => ({
+            ...prev,
+            ...dbConfig,
+            inscripcionesAbiertas: dbConfig.inscripcionesAbiertas !== undefined ? dbConfig.inscripcionesAbiertas : true
+          }));
+        }
       } catch (error) {
         console.error("Error al cargar configuración de convención:", error);
       } finally {

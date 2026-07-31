@@ -75,7 +75,7 @@ export function AdminConvencion() {
     fotoSede: '',
     fotoSedeEtiqueta: '',
     fotoSedeDescripcion: '',
-    inscripcionesAbiertas: false,
+    inscripcionesAbiertas: true,
     actividadesCulturales: [],
     experienciasUnicas: [],
     alianzas: []
@@ -133,6 +133,7 @@ export function AdminConvencion() {
         if (!isMounted) return;
         setConfig({
           ...dbConfig,
+          inscripcionesAbiertas: dbConfig.inscripcionesAbiertas !== undefined ? dbConfig.inscripcionesAbiertas : true,
           fotoSedeEtiqueta: dbConfig.fotoSedeEtiqueta || 'Sede Oficial',
           fotoSedeDescripcion: dbConfig.fotoSedeDescripcion || 'Teatro Municipal de Quetzaltenango',
           actividadesCulturales: dbConfig.actividadesCulturales || [],
