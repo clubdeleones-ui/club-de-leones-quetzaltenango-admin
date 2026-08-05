@@ -650,50 +650,56 @@ export const ParqueoManager: React.FC = () => {
           <button
             type="button"
             onClick={() => handleRecordBano('hombre')}
-            className="py-3.5 px-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 hover:from-blue-500 hover:to-indigo-500 text-white font-black rounded-2xl shadow-md hover:shadow-lg hover:shadow-blue-500/25 transition-all active:scale-95 flex items-center justify-between cursor-pointer border border-blue-400/40 group relative overflow-hidden"
+            className="p-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 hover:from-blue-500 hover:to-indigo-500 text-white font-black rounded-2xl shadow-md hover:shadow-xl hover:shadow-blue-500/25 transition-all active:scale-95 flex items-center justify-between cursor-pointer border border-blue-400/40 group shrink-0"
           >
-            <div className="flex items-center space-x-3">
-              <span className="text-2xl group-hover:scale-125 transition-transform duration-300">👨</span>
+            <div className="flex items-center space-x-3.5">
+              <span className="text-3xl group-hover:scale-110 transition-transform duration-300">👨</span>
               <div className="text-left">
-                <span className="text-xs md:text-sm font-black tracking-tight block">Anotar Hombre</span>
-                <span className="text-[10px] text-blue-200/90 font-medium hidden md:block">Ingreso de sanitario (Q3.00)</span>
+                <span className="text-sm font-black tracking-tight block">Anotar Hombre</span>
+                <span className="inline-block text-[11px] font-extrabold bg-white/20 group-hover:bg-white/30 px-2.5 py-0.5 rounded-full border border-white/20 text-white mt-1 transition-colors">
+                  +Q.3.00
+                </span>
               </div>
             </div>
-            <span className="text-xs font-extrabold bg-white/20 group-hover:bg-white/30 px-2.5 py-1 rounded-xl shadow-inner transition-colors">+Q.3.00</span>
           </button>
 
           {/* Button Mujer */}
           <button
             type="button"
             onClick={() => handleRecordBano('mujer')}
-            className="py-3.5 px-4 bg-gradient-to-br from-rose-600 via-pink-600 to-rose-800 hover:from-rose-500 hover:to-pink-500 text-white font-black rounded-2xl shadow-md hover:shadow-lg hover:shadow-rose-500/25 transition-all active:scale-95 flex items-center justify-between cursor-pointer border border-pink-400/40 group relative overflow-hidden"
+            className="p-4 bg-gradient-to-br from-rose-600 via-pink-600 to-rose-800 hover:from-rose-500 hover:to-pink-500 text-white font-black rounded-2xl shadow-md hover:shadow-xl hover:shadow-rose-500/25 transition-all active:scale-95 flex items-center justify-between cursor-pointer border border-pink-400/40 group shrink-0"
           >
-            <div className="flex items-center space-x-3">
-              <span className="text-2xl group-hover:scale-125 transition-transform duration-300">👩</span>
+            <div className="flex items-center space-x-3.5">
+              <span className="text-3xl group-hover:scale-110 transition-transform duration-300">👩</span>
               <div className="text-left">
-                <span className="text-xs md:text-sm font-black tracking-tight block">Anotar Mujer</span>
-                <span className="text-[10px] text-rose-200/90 font-medium hidden md:block">Ingreso de sanitario (Q3.00)</span>
+                <span className="text-sm font-black tracking-tight block">Anotar Mujer</span>
+                <span className="inline-block text-[11px] font-extrabold bg-white/20 group-hover:bg-white/30 px-2.5 py-0.5 rounded-full border border-white/20 text-white mt-1 transition-colors">
+                  +Q.3.00
+                </span>
               </div>
             </div>
-            <span className="text-xs font-extrabold bg-white/20 group-hover:bg-white/30 px-2.5 py-1 rounded-xl shadow-inner transition-colors">+Q.3.00</span>
           </button>
 
           {/* Hombres Counter Card */}
-          <div className="bg-white/5 hover:bg-white/10 transition-colors border border-white/10 rounded-2xl p-3.5 flex items-center justify-between">
+          <div className="bg-white/5 hover:bg-white/10 transition-colors border border-white/10 rounded-2xl p-4 flex items-center justify-between">
             <div className="text-xs text-left">
               <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">Hombres Hoy</span>
-              <p className="text-base font-black text-blue-300">{banosStats.hombresHoy} personas</p>
+              <p className="text-lg font-black text-blue-300 mt-0.5">{banosStats.hombresHoy} <span className="text-xs font-semibold text-slate-300">personas</span></p>
             </div>
-            <span className="text-xs font-black text-slate-200 bg-blue-500/20 px-2 py-1 rounded-lg border border-blue-400/20">Q.{banosStats.hombresHoy * 3}.00</span>
+            <span className="text-xs font-black text-slate-200 bg-blue-500/20 px-2.5 py-1 rounded-xl border border-blue-400/20 shrink-0">
+              Q.{banosStats.hombresHoy * 3}.00
+            </span>
           </div>
 
           {/* Mujeres Counter Card */}
-          <div className="bg-white/5 hover:bg-white/10 transition-colors border border-white/10 rounded-2xl p-3.5 flex items-center justify-between">
+          <div className="bg-white/5 hover:bg-white/10 transition-colors border border-white/10 rounded-2xl p-4 flex items-center justify-between">
             <div className="text-xs text-left">
               <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">Mujeres Hoy</span>
-              <p className="text-base font-black text-pink-300">{banosStats.mujeresHoy} personas</p>
+              <p className="text-lg font-black text-pink-300 mt-0.5">{banosStats.mujeresHoy} <span className="text-xs font-semibold text-slate-300">personas</span></p>
             </div>
-            <span className="text-xs font-black text-slate-200 bg-pink-500/20 px-2 py-1 rounded-lg border border-pink-400/20">Q.{banosStats.mujeresHoy * 3}.00</span>
+            <span className="text-xs font-black text-slate-200 bg-pink-500/20 px-2.5 py-1 rounded-xl border border-pink-400/20 shrink-0">
+              Q.{banosStats.mujeresHoy * 3}.00
+            </span>
           </div>
         </div>
       </div>
