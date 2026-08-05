@@ -124,6 +124,7 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
     const [reserveHoraFin, setReserveHoraFin] = useState('13:00');
     const [reserveCompromisoLimpieza, setReserveCompromisoLimpieza] = useState<'dejar_limpio' | 'pagar_limpieza'>('dejar_limpio');
     const [isSavingReservation, setIsSavingReservation] = useState(false);
+    const [isDayAvailabilityModalOpen, setIsDayAvailabilityModalOpen] = useState(false);
 
     const getSalonReservationsForDay = (day: number) => {
         const dateFormatted = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -637,7 +638,10 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                 return (
                                     <button
                                         key={`curr-${idx}`}
-                                        onClick={() => setSelectedDate(new Date(year, month, dNum))}
+                                        onClick={() => {
+                                            setSelectedDate(new Date(year, month, dNum));
+                                            setIsDayAvailabilityModalOpen(true);
+                                        }}
                                         className={`border rounded-2xl p-1.5 md:p-2.5 min-h-[85px] md:min-h-[105px] text-left transition-all flex flex-col justify-between hover:border-blue-900/50 hover:shadow-md cursor-pointer w-full ${
                                             isSelected 
                                                 ? 'bg-blue-900/5 border-blue-900 shadow-md shadow-blue-900/5' 
@@ -991,6 +995,153 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Day Availability & Details Modal */}
+            {isDayAvailabilityModalOpen && selectedDate && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-7 space-y-5 shadow-2xl border border-slate-100 relative max-h-[90vh] overflow-y-auto text-left">
+                        <button
+                            type="button"
+                            onClick={() => setIsDayAvailabilityModalOpen(false)}
+                            className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 p-2 rounded-xl"
+                        >
+                            <XIcon size={20} />
+                        </button>
+
+                        {/* Modal Header */}
+                        <div className="space-y-1 pr-6">
+                            <div className="inline-flex items-center space-x-1.5 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full text-blue-900 text-xs font-extrabold">
+                                <CalendarIcon size={13} className="text-blue-700" />
+                                <span>Consulta de Disponibilidad</span>
+                            </div>
+                            <h3 className="text-xl font-black text-slate-900">
+                                {selectedDate.getDate()} de {monthNames[selectedDate.getMonth()]} {selectedDate.getFullYear()}
+                            </h3>
+                            <p className="text-xs text-slate-500 font-semibold">
+                                Estado de ocupación del salón y actividades programadas.
+                            </p>
+                        </div>
+
+                        {/* Salon Status Section */}
+                        {(() => {
+                            const dayReservations = getSalonReservationsForDay(selectedDate.getDate());
+                            const dayActivities = getActivitiesForDay(selectedDate.getDate());
+                            const salonActividad = dayActivities.find(a => isActividadEnSalon(a));
+
+                            return (
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1">
+                                            Estado del Salón del Club
+                                        </h4>
+
+                                        {dayReservations.length > 0 ? (
+                                            <div className="space-y-2">
+                                                {dayReservations.map((res, idx) => (
+                                                    <div 
+                                                        key={idx}
+                                                        className={`p-3.5 rounded-2xl border text-xs space-y-1.5 ${
+                                                            res.estado === 'Aprobada'
+                                                                ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
+                                                                : 'bg-amber-50/80 border-amber-200 text-amber-950'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-center justify-between font-black">
+                                                            <span className="flex items-center gap-1.5 text-xs">
+                                                                {res.estado === 'Aprobada' ? '🟢 Salón Reservado (Confirmado)' : '⏳ Salón Apartado (Pendiente)'}
+                                                            </span>
+                                                            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-white/70">
+                                                                {res.salonEsSocio ? 'Socio' : 'Público'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-[11px] font-semibold text-slate-700">
+                                                            <div><strong>Evento:</strong> {res.nombre || 'Reserva de Instalaciones'}</div>
+                                                            <div><strong>Horario:</strong> {res.salonHoraInicio || '00:00'} - {res.salonHoraFin || '00:00'}</div>
+                                                            <div><strong>Solicitante:</strong> {res.salonNombreSolicitante || res.usuarioCreador || 'Anónimo'}</div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : salonActividad ? (
+                                            <div className="p-3.5 rounded-2xl bg-purple-50 border border-purple-200 text-purple-950 text-xs space-y-1">
+                                                <div className="font-black text-xs flex items-center gap-1.5">
+                                                    <span>🏛️ Ocupado por Actividad Oficial del Club</span>
+                                                </div>
+                                                <div className="text-[11px] font-semibold text-purple-900">
+                                                    <strong>Actividad:</strong> {salonActividad.titulo}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200 text-emerald-900 text-xs space-y-1">
+                                                <div className="font-black text-xs flex items-center gap-1.5 text-emerald-950">
+                                                    <CheckCircle2 size={16} className="text-emerald-600" />
+                                                    <span>Salón Completamente Disponible</span>
+                                                </div>
+                                                <p className="text-[11px] font-semibold text-emerald-800 leading-relaxed">
+                                                    No hay eventos o reservaciones registradas para este día. Puedes apartar la fecha inmediatamente.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Activities List Section */}
+                                    <div className="space-y-2">
+                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1">
+                                            Actividades del Día ({dayActivities.length})
+                                        </h4>
+
+                                        {dayActivities.length === 0 ? (
+                                            <p className="text-xs text-slate-400 italic">No hay actividades registradas en el programa para esta fecha.</p>
+                                        ) : (
+                                            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                                                {dayActivities.map(act => {
+                                                    const enSalon = isActividadEnSalon(act);
+                                                    return (
+                                                        <div key={act.id} className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-1 text-xs">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="font-black text-slate-900">{act.titulo}</span>
+                                                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                                                                    enSalon ? 'bg-purple-100 text-purple-900' : 'bg-blue-100 text-blue-900'
+                                                                }`}>
+                                                                    {enSalon ? '🏛️ En Salón' : '📍 Exterior'}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-[11px] text-slate-600 font-semibold line-clamp-2">{act.descripcion}</p>
+                                                            {act.lugar && <p className="text-[10px] text-slate-500 font-bold">📍 {act.lugar}</p>}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Action Buttons */}
+                                    <div className="pt-3 flex flex-col sm:flex-row gap-2.5 border-t border-slate-100">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setIsDayAvailabilityModalOpen(false);
+                                                handleOpenReserveModal(selectedDate.getDate());
+                                            }}
+                                            className="w-full py-2.5 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-black rounded-2xl shadow-md transition-all text-xs flex items-center justify-center space-x-1.5 cursor-pointer"
+                                        >
+                                            <Building size={14} />
+                                            <span>{isSocio ? 'Apartar Salón para este día' : 'Solicitar Alquiler del Salón'}</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsDayAvailabilityModalOpen(false)}
+                                            className="w-full sm:w-auto py-2.5 px-5 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-2xl text-xs transition-colors cursor-pointer"
+                                        >
+                                            Cerrar
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
             )}
