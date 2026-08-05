@@ -220,6 +220,7 @@ export const ParqueoManager: React.FC = () => {
   const [isExtranjera, setIsExtranjera] = useState(false);
   const [colorSeleccionado, setColorSeleccionado] = useState(PALETA_COLORES[0]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [salidaSearchQuery, setSalidaSearchQuery] = useState('');
   
   // States for ticket and active vehicle interactions
   const [ticketVehiculo, setTicketVehiculo] = useState<VehiculoParqueo | null>(null);
@@ -470,11 +471,28 @@ export const ParqueoManager: React.FC = () => {
   const vehiculosActivos = vehiculos.filter(v => v.estado === 'Activo');
   const vehiculosHistorial = vehiculos.filter(v => v.estado === 'Completado');
 
-  const filteredHistorial = vehiculosHistorial.filter(v => 
-    v.numeroPlaca.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    v.colorLabel.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    v.tipoPlaca.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredActivos = vehiculosActivos.filter(v => {
+    if (!salidaSearchQuery.trim()) return true;
+    const q = salidaSearchQuery.toLowerCase().trim();
+    return (
+      v.numeroPlaca.toLowerCase().includes(q) ||
+      v.colorLabel.toLowerCase().includes(q) ||
+      v.tipoPlaca.toLowerCase().includes(q) ||
+      (v.numeroEspacio && String(v.numeroEspacio).includes(q))
+    );
+  });
+
+  const filteredHistorial = vehiculosHistorial.filter(v => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return (
+      v.numeroPlaca.toLowerCase().includes(q) ||
+      v.colorLabel.toLowerCase().includes(q) ||
+      v.tipoPlaca.toLowerCase().includes(q) ||
+      (v.metodoPago && v.metodoPago.toLowerCase().includes(q)) ||
+      (v.costo && String(v.costo).includes(q))
+    );
+  });
 
   const renderEspaciosModal = () => {
     if (!showEspaciosModal) return null;
@@ -909,7 +927,7 @@ export const ParqueoManager: React.FC = () => {
         {/* Active Vehicles List */}
         {activeTab === 'salida' && (
         <div className="w-full bg-white border border-slate-200/80 rounded-[2.5rem] p-6 sm:p-8 shadow-xl shadow-slate-200/40 flex flex-col animate-in slide-in-from-bottom-8 duration-500">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 border-b border-slate-100 pb-5 mb-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-5 mb-6">
             <div className="flex items-center space-x-4">
               <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
                 <Car size={24} />
@@ -919,10 +937,35 @@ export const ParqueoManager: React.FC = () => {
                 <p className="text-[10px] sm:text-xs text-slate-500 font-medium">Cronómetro en vivo y gestión de salidas</p>
               </div>
             </div>
-            <span className="bg-yellow-100 border border-yellow-200 text-yellow-800 text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest flex items-center space-x-1.5 shadow-sm self-start sm:self-auto">
-              <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
-              <span>En Curso: {vehiculosActivos.length}</span>
-            </span>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+              {/* Buscador de Placa en Dar Salida */}
+              <div className="relative w-full sm:w-64">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                  <Search size={15} />
+                </span>
+                <input
+                  type="text"
+                  value={salidaSearchQuery}
+                  onChange={(e) => setSalidaSearchQuery(e.target.value)}
+                  placeholder="Buscar por placa, color o lugar..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2 text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none transition-all"
+                />
+                {salidaSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSalidaSearchQuery('')}
+                    className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+              <span className="bg-yellow-100 border border-yellow-200 text-yellow-800 text-[10px] font-black px-3 py-2 rounded-xl uppercase tracking-widest flex items-center justify-center space-x-1.5 shadow-sm shrink-0">
+                <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
+                <span>En Cueva: {vehiculosActivos.length}</span>
+              </span>
+            </div>
           </div>
 
           {vehiculosActivos.length === 0 ? (
@@ -932,12 +975,25 @@ export const ParqueoManager: React.FC = () => {
               </div>
               <div>
                 <h4 className="font-extrabold text-slate-800">No hay vehículos estacionados</h4>
-                <p className="text-xs text-slate-450 mt-1">Registra un nuevo vehículo usando el formulario de la izquierda.</p>
+                <p className="text-xs text-slate-450 mt-1">Registra un nuevo vehículo usando el formulario de ingreso.</p>
               </div>
+            </div>
+          ) : filteredActivos.length === 0 ? (
+            <div className="flex-grow flex flex-col items-center justify-center py-12 text-center space-y-2">
+              <Search size={28} className="text-slate-300 mx-auto" />
+              <h4 className="font-bold text-slate-700 text-sm">No se encontró la placa "{salidaSearchQuery}"</h4>
+              <p className="text-xs text-slate-400">Verifica la búsqueda por número de placa, color o espacio asignado.</p>
+              <button
+                type="button"
+                onClick={() => setSalidaSearchQuery('')}
+                className="mt-2 px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+              >
+                Limpiar búsqueda
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-grow content-start">
-              {vehiculosActivos.map((v) => (
+              {filteredActivos.map((v) => (
                 <div 
                   key={v.id} 
                   className="bg-white border border-slate-200/80 rounded-3xl p-5 flex flex-col justify-between hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group"
@@ -1004,7 +1060,7 @@ export const ParqueoManager: React.FC = () => {
                       </div>
                       <button
                         onClick={() => handleProcessExit(v)}
-                        className="w-full sm:w-auto bg-red-100 hover:bg-red-500 hover:text-white text-red-600 px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center space-x-2 active:scale-95 shadow-sm"
+                        className="w-full sm:w-auto bg-red-100 hover:bg-red-500 hover:text-white text-red-600 px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center space-x-2 active:scale-95 shadow-sm cursor-pointer"
                       >
                         <LogOut size={14} />
                         <span>Dar Salida</span>
@@ -1028,7 +1084,7 @@ export const ParqueoManager: React.FC = () => {
             <p className="text-[10px] text-slate-450 font-bold">Listado completo de vehículos que han salido del estacionamiento</p>
           </div>
           
-          {/* Search input */}
+          {/* Search input with clear button */}
           <div className="relative w-full md:w-72">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
               <Search size={16} />
@@ -1037,9 +1093,18 @@ export const ParqueoManager: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar placa, color o tipo..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none transition-all"
+              placeholder="Buscar por placa, color o tipo..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2.5 text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none transition-all"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
         </div>
 
