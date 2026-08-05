@@ -328,29 +328,42 @@ export const ParqueoManager: React.FC = () => {
     return `${pad(diffHrs)}:${pad(diffMins)}:${pad(diffSecs)}`;
   };
 
-  // Pricing Rule: Q5.00 for every 30 minutes (or fraction). 0 to 29 mins = Q5, 30 to 59 mins = Q10...
-  const calcularCosto = (entradaStr: string, salidaStr: string) => {
+  // Pricing Rule: Q5.00 for every 30 minutes (or fraction).
+  // Optional toleranciaMinutos (0, 5, 10): Subtracts tolerance minutes from total duration before calculating.
+  const calcularCosto = (entradaStr: string, salidaStr: string, toleranciaMinutos: number = 0) => {
     const entrada = new Date(entradaStr).getTime();
     const salida = new Date(salidaStr).getTime();
     const diffMs = salida - entrada;
-    const diffMins = Math.max(0, diffMs / 60000);
+    const totalMins = Math.max(0, diffMs / 60000);
+    const minsAjustados = Math.max(0, totalMins - toleranciaMinutos);
 
-    return Math.floor(diffMins / 30) * 5.00 + 5.00;
+    return Math.floor(minsAjustados / 30) * 5.00 + 5.00;
   };
 
   const handleProcessExit = (vehiculo: VehiculoParqueo) => {
     const horaSalida = new Date().toISOString();
-    const costo = calcularCosto(vehiculo.horaEntrada, horaSalida);
+    const costo = calcularCosto(vehiculo.horaEntrada, horaSalida, 0);
     
     const vehiculoSalida = {
       ...vehiculo,
       horaSalida,
       estado: 'Completado' as const,
       costo,
+      toleranciaMinutos: 0,
       metodoPago: 'Efectivo' as const
     };
     
     setShowExitModal(vehiculoSalida);
+  };
+
+  const handleApplyTolerancia = (tol: number) => {
+    if (!showExitModal) return;
+    const nuevoCosto = calcularCosto(showExitModal.horaEntrada, showExitModal.horaSalida || new Date().toISOString(), tol);
+    setShowExitModal({
+      ...showExitModal,
+      toleranciaMinutos: tol,
+      costo: nuevoCosto
+    });
   };
 
   const confirmExit = () => {
@@ -1349,6 +1362,60 @@ export const ParqueoManager: React.FC = () => {
                 </div>
               </div>
 
+              {/* Tolerancia / Redondeo por poco tiempo */}
+              <div className="pt-2 border-t border-slate-200/80 space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    Criterio de Tolerancia / Redondeo
+                  </label>
+                  {(showExitModal.toleranciaMinutos || 0) > 0 && (
+                    <span className="text-[9px] font-extrabold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-200">
+                      -{showExitModal.toleranciaMinutos} min aplicados
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleApplyTolerancia(0)}
+                    className={`py-2 px-1 rounded-xl text-[10px] font-black transition-all border flex flex-col items-center justify-center cursor-pointer ${
+                      (showExitModal.toleranciaMinutos || 0) === 0
+                        ? 'bg-slate-800 border-slate-900 text-white shadow-sm'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span>Sin Tolerancia</span>
+                    <span className="text-[9px] opacity-75 font-normal">Normal</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleApplyTolerancia(5)}
+                    className={`py-2 px-1 rounded-xl text-[10px] font-black transition-all border flex flex-col items-center justify-center cursor-pointer ${
+                      showExitModal.toleranciaMinutos === 5
+                        ? 'bg-amber-500 border-amber-600 text-white shadow-sm'
+                        : 'bg-amber-50 border-amber-200/80 text-amber-900 hover:bg-amber-100'
+                    }`}
+                  >
+                    <span>&lt; 5 Minutos</span>
+                    <span className="text-[9px] font-bold font-mono opacity-90">-5 min desc.</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleApplyTolerancia(10)}
+                    className={`py-2 px-1 rounded-xl text-[10px] font-black transition-all border flex flex-col items-center justify-center cursor-pointer ${
+                      showExitModal.toleranciaMinutos === 10
+                        ? 'bg-indigo-600 border-indigo-700 text-white shadow-sm'
+                        : 'bg-indigo-50 border-indigo-200/80 text-indigo-900 hover:bg-indigo-100'
+                    }`}
+                  >
+                    <span>&lt; 10 Minutos</span>
+                    <span className="text-[9px] font-bold font-mono opacity-90">-10 min desc.</span>
+                  </button>
+                </div>
+              </div>
+
               <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100 flex justify-between items-center mt-2">
                 <span className="text-xs font-black uppercase text-emerald-800">Total a Cobrar</span>
                 <span className="text-lg font-black text-emerald-600">
@@ -1363,7 +1430,7 @@ export const ParqueoManager: React.FC = () => {
                     <button
                       key={metodo}
                       onClick={() => setShowExitModal({ ...showExitModal, metodoPago: metodo as any })}
-                      className={`py-2 rounded-xl text-[10px] font-black transition-all border ${
+                      className={`py-2 rounded-xl text-[10px] font-black transition-all border cursor-pointer ${
                         showExitModal.metodoPago === metodo 
                           ? 'bg-emerald-600 border-emerald-700 text-white shadow-sm' 
                           : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'

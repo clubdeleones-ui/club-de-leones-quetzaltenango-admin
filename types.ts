@@ -262,6 +262,7 @@ export interface VehiculoParqueo {
   costo?: number;
   metodoPago?: 'Efectivo' | 'Tarjeta' | 'Transferencia';
   numeroEspacio?: number;
+  toleranciaMinutos?: number;
 }
 
 export interface RubroPresupuesto {
