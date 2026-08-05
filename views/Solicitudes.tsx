@@ -285,7 +285,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     setIsLoading(loading.solicitudes);
   }, [loading.solicitudes]);
 
-  // Auto-open agenda tab and modal if accessed via public link with tab=agenda
+  // Auto-open agenda or salon tab/modal if accessed via URL parameters
   useEffect(() => {
     try {
       const fullUrl = window.location.href;
@@ -294,9 +294,16 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
         if (fullUrl.includes('proponer=true') || fullUrl.includes('openModal=true') || fullUrl.includes('modal=open')) {
           setIsModalOpen(true);
         }
+      } else if (fullUrl.includes('tab=salon')) {
+        setActiveTab('salon');
+        setIsModalOpen(true);
+        const matchDia = fullUrl.match(/dia=([0-9]{4}-[0-9]{2}-[0-9]{2})/);
+        if (matchDia && matchDia[1]) {
+          setSalonDia(matchDia[1]);
+        }
       }
     } catch (e) {
-      console.error("Error checking URL parameters for agenda tab:", e);
+      console.error("Error checking URL parameters for tab:", e);
     }
   }, []);
 

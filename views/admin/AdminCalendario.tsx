@@ -12,7 +12,8 @@ import { formatDisplayDate } from '../../utils/dateSpanishFormatter';
 export const AdminCalendario: React.FC = () => {
   const { 
     actividades: dbActividades, 
-    voluntarios: dbVoluntarios 
+    voluntarios: dbVoluntarios,
+    solicitudes: dbSolicitudes 
   } = useClubData();
 
   const { showAlert, showConfirm } = useModal();
@@ -46,7 +47,61 @@ export const AdminCalendario: React.FC = () => {
     fetchParticipaciones();
   }, []);
 
-  const [calendarioSubTab, setCalendarioSubTab] = useState<'lista' | 'voluntarios' | 'asistentes'>('lista');
+  const [calendarioSubTab, setCalendarioSubTab] = useState<'lista' | 'voluntarios' | 'asistentes' | 'salon'>('lista');
+
+  // Salon Management State & Helpers
+  const [salonFilterStatus, setSalonFilterStatus] = useState<'Todos' | 'Pendiente' | 'Aprobada' | 'Rechazada'>('Todos');
+  const [salonSearchTerm, setSalonSearchTerm] = useState('');
+
+  const salonSolicitudes = useMemo(() => {
+    return dbSolicitudes.filter(s => s.tipo === 'salon' && !s.archivada);
+  }, [dbSolicitudes]);
+
+  const filteredSalonSolicitudes = useMemo(() => {
+    return salonSolicitudes.filter(sol => {
+      const matchesStatus = salonFilterStatus === 'Todos' || sol.estado === salonFilterStatus;
+      const term = salonSearchTerm.toLowerCase();
+      const matchesSearch = !term || 
+        (sol.nombre || '').toLowerCase().includes(term) ||
+        (sol.salonNombreSolicitante || '').toLowerCase().includes(term) ||
+        (sol.usuarioCreador || '').toLowerCase().includes(term) ||
+        (sol.salonDia || '').includes(term);
+      return matchesStatus && matchesSearch;
+    });
+  }, [salonSolicitudes, salonFilterStatus, salonSearchTerm]);
+
+  const handleUpdateSalonStatus = async (solicitudId: string, nuevoEstado: 'Aprobada' | 'Rechazada') => {
+    const sol = dbSolicitudes.find(s => s.id === solicitudId);
+    if (!sol) return;
+    try {
+      await firebaseService.saveSolicitud({
+        ...sol,
+        estado: nuevoEstado,
+        faseTracking: 'resolucion',
+        fechaResolucion: new Date().toISOString().split('T')[0]
+      });
+      showAlert("Estado Actualizado", `La reservación de salón ha sido ${nuevoEstado === 'Aprobada' ? 'confirmada' : 'rechazada'} exitosamente.`);
+    } catch (e) {
+      console.error("Error al actualizar estado del salón:", e);
+      showAlert("Error", "No se pudo actualizar la reservación.");
+    }
+  };
+
+  const handleDeleteSalonSolicitud = async (solicitudId: string) => {
+    const confirm = await showConfirm(
+      "Eliminar Reservación",
+      "¿Está seguro de eliminar esta reservación de salón? La fecha quedará disponible en el calendario."
+    );
+    if (!confirm) return;
+
+    try {
+      await firebaseService.deleteSolicitud(solicitudId);
+      showAlert("Reservación Eliminada", "La reservación ha sido eliminada.");
+    } catch (e) {
+      console.error("Error al eliminar reservación:", e);
+      showAlert("Error", "No se pudo eliminar la reservación.");
+    }
+  };
 
   const [showAddActividad, setShowAddActividad] = useState(false);
   const [showEditActividad, setShowEditActividad] = useState(false);
@@ -1647,6 +1702,17 @@ export const AdminCalendario: React.FC = () => {
         >
           Asistentes Confirmados ({participaciones.length} + {totalInvitados} invitados)
         </button>
+        <button
+          onClick={() => setCalendarioSubTab('salon')}
+          className={`pb-4 text-sm font-extrabold transition-all relative flex items-center space-x-1.5 ${
+            calendarioSubTab === 'salon'
+              ? 'text-amber-600 border-b-2 border-amber-600'
+              : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <Building size={16} />
+          <span>Gestión de Salón ({salonSolicitudes.length})</span>
+        </button>
       </div>
 
       {calendarioSubTab === 'lista' ? (
@@ -2053,7 +2119,7 @@ export const AdminCalendario: React.FC = () => {
             </div>
           )}
         </div>
-      ) : (
+      ) : calendarioSubTab === 'asistentes' ? (
         /* Asistentes / RSVP Section */
         <div className="space-y-6 animate-in fade-in duration-300">
           {/* Stats Summary Dashboard */}
@@ -2282,6 +2348,160 @@ export const AdminCalendario: React.FC = () => {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Gestión de Salón Moderación de Secretaría */
+        <div className="space-y-6 animate-in fade-in duration-300">
+          {/* Header Bar & Filters */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="relative w-full md:w-1/3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="Buscar por solicitante, evento o fecha..."
+                value={salonSearchTerm}
+                onChange={e => setSalonSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:bg-white transition-all text-sm outline-none font-semibold text-slate-800"
+              />
+            </div>
+            
+            <div className="flex items-center space-x-2 w-full md:w-auto">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Estado:</span>
+              <div className="flex bg-slate-100 p-1 rounded-xl">
+                {(['Todos', 'Pendiente', 'Aprobada', 'Rechazada'] as const).map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setSalonFilterStatus(st)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      salonFilterStatus === st
+                        ? 'bg-blue-900 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {st === 'Pendiente' ? 'Apartados' : st === 'Aprobada' ? 'Confirmados' : st}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Salon Reservations List */}
+          {filteredSalonSolicitudes.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-400 font-bold italic">
+              No hay reservaciones de salón registradas con los filtros seleccionados.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {filteredSalonSolicitudes.map((sol) => {
+                const isSocioReserva = sol.salonEsSocio || sol.usuarioCreador?.includes('@');
+                return (
+                  <div 
+                    key={sol.id} 
+                    className={`bg-white rounded-3xl border border-slate-200 shadow-md hover:shadow-xl transition-all p-6 flex flex-col justify-between space-y-4 relative overflow-hidden ${
+                      sol.estado === 'Aprobada' ? 'border-l-8 border-l-emerald-500' :
+                      sol.estado === 'Rechazada' ? 'border-l-8 border-l-rose-500' :
+                      'border-l-8 border-l-amber-500'
+                    }`}
+                  >
+                    <div className="space-y-3">
+                      {/* Header Badge */}
+                      <div className="flex items-center justify-between">
+                        <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border ${
+                          isSocioReserva 
+                            ? 'bg-purple-50 text-purple-900 border-purple-200' 
+                            : 'bg-blue-50 text-blue-900 border-blue-200'
+                        }`}>
+                          {isSocioReserva ? '👥 Reserva de Socio' : '🌐 Alquiler Público'}
+                        </span>
+                        
+                        <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-md ${
+                          sol.estado === 'Aprobada' ? 'bg-emerald-100 text-emerald-800 font-bold' :
+                          sol.estado === 'Rechazada' ? 'bg-rose-100 text-rose-800 font-bold' :
+                          'bg-amber-100 text-amber-800 font-bold animate-pulse'
+                        }`}>
+                          {sol.estado === 'Aprobada' ? '✅ Confirmado' : sol.estado === 'Rechazada' ? '❌ Rechazado' : '⏳ Apartado (Pendiente)'}
+                        </span>
+                      </div>
+
+                      {/* Title & Solicitante */}
+                      <div>
+                        <h4 className="font-extrabold text-lg text-slate-900 leading-snug">{sol.nombre}</h4>
+                        <p className="text-xs font-semibold text-slate-500 mt-1">
+                          Solicitante: <strong className="text-slate-800">{sol.salonNombreSolicitante || sol.usuarioCreador || 'Socio'}</strong>
+                        </p>
+                      </div>
+
+                      {/* Details Grid */}
+                      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-2 text-xs text-slate-700 font-semibold">
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400 font-bold">Fecha del Evento:</span>
+                          <span className="font-extrabold text-slate-900">{sol.salonDia || 'No especificada'}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400 font-bold">Horario:</span>
+                          <span className="font-extrabold text-slate-900">{sol.salonHoraInicio || '00:00'} - {sol.salonHoraFin || '00:00'}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400 font-bold">Tipo de Alquiler:</span>
+                          <span className="font-extrabold text-indigo-900 uppercase">
+                            {sol.salonTipoAlquiler === 'salon' ? 'Salón' : sol.salonTipoAlquiler === 'parqueo' ? 'Parqueo' : 'Salón y Parqueo'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400 font-bold">Compromiso Limpieza:</span>
+                          <span className="font-bold text-slate-800">
+                            {sol.salonCompromisoLimpieza === 'pagar_limpieza' ? 'Paga Limpieza (Q.300)' : 'Dejar Limpio'}
+                          </span>
+                        </div>
+                        {sol.salonTelefono && (
+                          <div className="flex justify-between items-center pt-1 border-t border-slate-200">
+                            <span className="text-slate-400 font-bold">Contacto:</span>
+                            <a href={`tel:${sol.salonTelefono}`} className="font-extrabold text-blue-900 hover:underline">
+                              {sol.salonTelefono}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                      <span className="text-[10px] text-slate-400 font-bold">Código: {sol.id}</span>
+                      <div className="flex items-center space-x-2">
+                        {sol.estado === 'Pendiente' && (
+                          <>
+                            <button
+                              onClick={() => handleUpdateSalonStatus(sol.id, 'Aprobada')}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-colors flex items-center space-x-1 cursor-pointer"
+                              title="Confirmar Reserva"
+                            >
+                              <Check size={14} />
+                              <span>Confirmar</span>
+                            </button>
+                            <button
+                              onClick={() => handleUpdateSalonStatus(sol.id, 'Rechazada')}
+                              className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-colors flex items-center space-x-1 cursor-pointer"
+                              title="Rechazar Reserva"
+                            >
+                              <X size={14} />
+                              <span>Rechazar</span>
+                            </button>
+                          </>
+                        )}
+                        <button
+                          onClick={() => handleDeleteSalonSolicitud(sol.id)}
+                          className="p-2 text-slate-400 hover:text-red-600 rounded-xl hover:bg-red-50 transition-colors cursor-pointer"
+                          title="Eliminar Reservación"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

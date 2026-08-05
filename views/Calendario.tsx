@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar as CalendarIcon, ExternalLink, Info, Loader2, MapPin, Clock, Heart, Share2, Check, Copy, Search, Filter, UserPlus, X as XIcon, ChevronLeft, ChevronRight, Shirt } from 'lucide-react';
+import { Calendar as CalendarIcon, ExternalLink, Info, Loader2, MapPin, Clock, Heart, Share2, Check, Copy, Search, Filter, UserPlus, X as XIcon, ChevronLeft, ChevronRight, Shirt, Plus, Building, Home, Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { googleService } from '../services/googleService';
 import { firebaseService } from '../services/firebaseService';
 import { useClubData } from '../context/ClubDataContext';
-import { Actividad } from '../types';
+import { useModal } from '../context/ModalContext';
+import { Actividad, Solicitud } from '../types';
 import { InscripcionVoluntarioModal } from '../components/InscripcionVoluntarioModal';
 import { ConfirmarParticipacionModal } from '../components/ConfirmarParticipacionModal';
 
@@ -109,6 +110,83 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
             }
             return false;
         });
+    };
+
+    const { user, solicitudes } = useClubData();
+    const { showAlert } = useModal();
+    const isSocio = Boolean(user && user.rol !== 'DONANTE' && user.rol !== 'GUEST');
+
+    // Socio Salon Reservation Modal States
+    const [isReserveModalOpen, setIsReserveModalOpen] = useState(false);
+    const [reserveDateStr, setReserveDateStr] = useState('');
+    const [reserveNombre, setReserveNombre] = useState('');
+    const [reserveHoraInicio, setReserveHoraInicio] = useState('09:00');
+    const [reserveHoraFin, setReserveHoraFin] = useState('13:00');
+    const [reserveCompromisoLimpieza, setReserveCompromisoLimpieza] = useState<'dejar_limpio' | 'pagar_limpieza'>('dejar_limpio');
+    const [isSavingReservation, setIsSavingReservation] = useState(false);
+
+    const getSalonReservationsForDay = (day: number) => {
+        const dateFormatted = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        return solicitudes.filter(sol => {
+            if (sol.tipo !== 'salon' || sol.archivada) return false;
+            return sol.salonDia === dateFormatted;
+        });
+    };
+
+    const isActividadEnSalon = (act: Actividad) => {
+        if (act.esEnSalon) return true;
+        const lugarLower = (act.lugar || '').toLowerCase();
+        return lugarLower.includes('salón') || lugarLower.includes('salon') || lugarLower.includes('cueva') || lugarLower.includes('sede');
+    };
+
+    const handleOpenReserveModal = (dNum?: number) => {
+        const targetDay = dNum || (selectedDate ? selectedDate.getDate() : new Date().getDate());
+        const formatted = `${year}-${String(month + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
+        setReserveDateStr(formatted);
+        if (!user || user.rol === 'DONANTE' || user.rol === 'GUEST') {
+            navigate(`/solicitudes?tab=salon&dia=${formatted}`);
+            return;
+        }
+        setIsReserveModalOpen(true);
+    };
+
+    const handleSaveSocioReservation = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user || !reserveDateStr || !reserveNombre.trim()) return;
+        setIsSavingReservation(true);
+        const trackingCodeId = `SLN-${Math.floor(100 + Math.random() * 900)}`;
+        const nuevaSolicitud: Solicitud = {
+            id: trackingCodeId,
+            nombre: `Reserva Socio - ${reserveNombre.trim()}`,
+            tipo: 'salon',
+            estado: 'Pendiente',
+            faseTracking: 'recibido',
+            usuarioCreador: `${user.nombre} (${user.correo})`,
+            fechaCreacion: new Date().toISOString().split('T')[0],
+            salonDia: reserveDateStr,
+            salonHoraInicio: reserveHoraInicio,
+            salonHoraFin: reserveHoraFin,
+            salonTipoAlquiler: 'salon',
+            salonCompromisoLimpieza: reserveCompromisoLimpieza,
+            salonCostoTotal: reserveCompromisoLimpieza === 'pagar_limpieza' ? 300 : 0,
+            salonRequisitosAceptados: true,
+            salonEsSocio: true,
+            salonNombreSolicitante: user.nombre,
+            salonEmail: user.correo,
+            salonTelefono: user.telefono || ''
+        };
+
+        try {
+            await firebaseService.saveSolicitud(nuevaSolicitud);
+            setIsReserveModalOpen(false);
+            setReserveNombre('');
+            showAlert("¡Salón Apartado con Éxito!", `La fecha (${reserveDateStr}) ha sido apartada inmediatamente en el calendario. El espacio queda apartado a la espera de la confirmación de Secretaría.`);
+        } catch (err) {
+            console.error("Error al apartar el salón:", err);
+            showAlert("Error", "No se pudo apartar el salón. Por favor intenta de nuevo.");
+        } finally {
+            setIsSavingReservation(false);
+        }
     };
 
     useEffect(() => {
@@ -483,28 +561,49 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                         <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500" />
 
                         {/* Calendar Header */}
-                        <div className="flex items-center justify-between mb-6">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                             <div>
-                                <h3 className="font-extrabold text-2xl text-slate-800">Calendario de Actividades</h3>
-                                <p className="text-xs text-slate-500 mt-1">Explora las actividades programadas día por día</p>
+                                <h3 className="font-extrabold text-2xl text-slate-800">Calendario de Actividades y Salón</h3>
+                                <p className="text-xs text-slate-500 mt-1">
+                                  Visualiza ocupación de salón, actividades externas y fechas apartadas en tiempo real.
+                                </p>
                             </div>
-                            <div className="flex items-center space-x-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-150">
+                            <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
                                 <button
-                                    onClick={handlePrevMonth}
-                                    className="p-2 hover:bg-white hover:text-blue-900 rounded-xl transition-all shadow-sm active:scale-90"
+                                    type="button"
+                                    onClick={() => handleOpenReserveModal()}
+                                    className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-black rounded-2xl shadow-md transition-all active:scale-95 flex items-center space-x-1.5 cursor-pointer"
                                 >
-                                    <ChevronLeft size={16} />
+                                    <Building size={14} />
+                                    <span>Apartar Salón</span>
                                 </button>
-                                <span className="text-sm font-black text-slate-800 px-4 min-w-[120px] text-center select-none uppercase tracking-wide">
-                                    {monthNames[month]} {year}
-                                </span>
-                                <button
-                                    onClick={handleNextMonth}
-                                    className="p-2 hover:bg-white hover:text-blue-900 rounded-xl transition-all shadow-sm active:scale-90"
-                                >
-                                    <ChevronRight size={16} />
-                                </button>
+                                <div className="flex items-center space-x-1.5 bg-slate-50 p-1.5 rounded-2xl border border-slate-150">
+                                    <button
+                                        onClick={handlePrevMonth}
+                                        className="p-2 hover:bg-white hover:text-blue-900 rounded-xl transition-all shadow-sm active:scale-90"
+                                    >
+                                        <ChevronLeft size={16} />
+                                    </button>
+                                    <span className="text-xs sm:text-sm font-black text-slate-800 px-3 min-w-[110px] text-center select-none uppercase tracking-wide">
+                                        {monthNames[month]} {year}
+                                    </span>
+                                    <button
+                                        onClick={handleNextMonth}
+                                        className="p-2 hover:bg-white hover:text-blue-900 rounded-xl transition-all shadow-sm active:scale-90"
+                                    >
+                                        <ChevronRight size={16} />
+                                    </button>
+                                </div>
                             </div>
+                        </div>
+
+                        {/* Visual Legend */}
+                        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-slate-50/70 rounded-2xl border border-slate-150 text-[10px] font-extrabold text-slate-600">
+                            <span className="text-slate-400 uppercase tracking-widest mr-1">Simbología:</span>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-900 text-white">🏛️ En Salón</span>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-900 text-white">📍 Exterior</span>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500 text-white">⏳ Salón Apartado</span>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-600 text-white">✅ Salón Reservado</span>
                         </div>
 
                         {/* Calendar Grid */}
@@ -532,12 +631,14 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                 const isToday = new Date().getDate() === dNum && new Date().getMonth() === month && new Date().getFullYear() === year;
                                 const isSelected = selectedDate && selectedDate.getDate() === dNum && selectedDate.getMonth() === month && selectedDate.getFullYear() === year;
                                 const dayActivities = getActivitiesForDay(dNum);
+                                const dayReservations = getSalonReservationsForDay(dNum);
+                                const hasOccupancy = dayActivities.length > 0 || dayReservations.length > 0;
 
                                 return (
                                     <button
                                         key={`curr-${idx}`}
                                         onClick={() => setSelectedDate(new Date(year, month, dNum))}
-                                        className={`border rounded-2xl p-2 md:p-3 min-h-[70px] md:min-h-[90px] text-left transition-all flex flex-col justify-between hover:border-blue-900/50 hover:shadow-md cursor-pointer w-full ${
+                                        className={`border rounded-2xl p-1.5 md:p-2.5 min-h-[85px] md:min-h-[105px] text-left transition-all flex flex-col justify-between hover:border-blue-900/50 hover:shadow-md cursor-pointer w-full ${
                                             isSelected 
                                                 ? 'bg-blue-900/5 border-blue-900 shadow-md shadow-blue-900/5' 
                                                 : isToday
@@ -556,36 +657,70 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                                 {dNum}
                                             </span>
                                             {isToday && (
-                                                <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full shrink-0" title="Hoy" />
+                                                <span className="w-2 h-2 bg-yellow-500 rounded-full shrink-0" title="Hoy" />
                                             )}
                                         </div>
                                         
-                                        {/* Activity indicators */}
-                                        {dayActivities.length > 0 && (
-                                            <div className="w-full space-y-1 mt-1 md:mt-2">
-                                                {/* Desktop mini labels */}
-                                                <div className="hidden md:block space-y-1">
-                                                    {dayActivities.slice(0, 2).map((act, actIdx) => (
+                                        {/* Activity and Reservation Indicators (Señalamiento Fuerte) */}
+                                        {hasOccupancy ? (
+                                            <div className="w-full space-y-1 mt-1">
+                                                {/* Desktop/Tablet Labels */}
+                                                <div className="hidden sm:block space-y-1">
+                                                    {/* Salon Reservations */}
+                                                    {dayReservations.map((res, rIdx) => (
                                                         <div 
-                                                            key={actIdx} 
-                                                            className="text-[9px] font-black truncate px-1.5 py-0.5 rounded bg-blue-900 text-white leading-none text-left"
-                                                            title={act.titulo}
+                                                            key={`res-${rIdx}`} 
+                                                            className={`text-[8.5px] font-black truncate px-1 py-0.5 rounded border leading-none text-left flex items-center gap-0.5 shadow-2xs ${
+                                                                res.estado === 'Aprobada'
+                                                                    ? 'bg-emerald-600 text-white border-emerald-700'
+                                                                    : 'bg-amber-500 text-white border-amber-600 animate-pulse'
+                                                            }`}
+                                                            title={`Salón ${res.estado}: ${res.salonNombreSolicitante || 'Reserva'} (${res.salonHoraInicio || ''}-${res.salonHoraFin || ''})`}
                                                         >
-                                                            {act.titulo}
+                                                            <span>{res.estado === 'Aprobada' ? '🟢' : '⏳'}</span>
+                                                            <span className="truncate">{res.estado === 'Aprobada' ? 'Salón Reservado' : 'Apartado (Socio)'}</span>
                                                         </div>
                                                     ))}
-                                                    {dayActivities.length > 2 && (
-                                                        <div className="text-[8px] font-black text-slate-400 pl-1">
-                                                            +{dayActivities.length - 2} más
+
+                                                    {/* Activities */}
+                                                    {dayActivities.slice(0, 2).map((act, actIdx) => {
+                                                        const enSalon = isActividadEnSalon(act);
+                                                        return (
+                                                            <div 
+                                                                key={`act-${actIdx}`} 
+                                                                className={`text-[8.5px] font-black truncate px-1 py-0.5 rounded border leading-none text-left flex items-center gap-0.5 shadow-2xs ${
+                                                                    enSalon
+                                                                        ? 'bg-purple-900 text-white border-purple-950'
+                                                                        : 'bg-blue-900 text-white border-blue-950'
+                                                                }`}
+                                                                title={`${act.titulo} (${enSalon ? 'En Salón' : 'Exterior'})`}
+                                                            >
+                                                                <span>{enSalon ? '🏛️' : '📍'}</span>
+                                                                <span className="truncate">{act.titulo}</span>
+                                                            </div>
+                                                        );
+                                                    })}
+
+                                                    {dayActivities.length + dayReservations.length > 3 && (
+                                                        <div className="text-[8px] font-black text-slate-500 pl-0.5">
+                                                            +{dayActivities.length + dayReservations.length - 3} más
                                                         </div>
                                                     )}
                                                 </div>
-                                                {/* Mobile dot indicator */}
-                                                <div className="md:hidden flex justify-center gap-1 flex-wrap">
-                                                    {dayActivities.map((_, actIdx) => (
-                                                        <span key={actIdx} className="w-1.5 h-1.5 bg-blue-900 rounded-full" />
+
+                                                {/* Mobile Indicator Dots with High-Visibility Colors */}
+                                                <div className="sm:hidden flex justify-center gap-1 flex-wrap pt-1">
+                                                    {dayReservations.map((res, rIdx) => (
+                                                        <span key={`res-m-${rIdx}`} className={`w-2.5 h-2.5 rounded-full shadow-2xs ${res.estado === 'Aprobada' ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
+                                                    ))}
+                                                    {dayActivities.map((act, actIdx) => (
+                                                        <span key={`act-m-${actIdx}`} className={`w-2.5 h-2.5 rounded-full shadow-2xs ${isActividadEnSalon(act) ? 'bg-purple-700' : 'bg-blue-700'}`} />
                                                     ))}
                                                 </div>
+                                            </div>
+                                        ) : (
+                                            <div className="hidden sm:block text-[8px] font-bold text-slate-300 group-hover:text-slate-400 transition-colors mt-auto">
+                                                Disponible
                                             </div>
                                         )}
                                     </button>
@@ -741,6 +876,123 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                     actividadId={selectedActForRsvp.id}
                     actividadTitulo={selectedActForRsvp.titulo}
                 />
+            )}
+
+            {/* Socio Salon Reservation Modal */}
+            {isReserveModalOpen && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl max-w-lg w-full p-6 md:p-8 space-y-6 shadow-2xl border border-slate-100 relative">
+                        <button
+                            type="button"
+                            onClick={() => setIsReserveModalOpen(false)}
+                            className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 p-2 rounded-xl"
+                        >
+                            <XIcon size={20} />
+                        </button>
+
+                        <div className="space-y-2 text-left">
+                            <div className="inline-flex items-center space-x-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-amber-900 text-xs font-extrabold">
+                                <Building size={14} className="text-amber-600" />
+                                <span>Apartado Inmediato de Salón</span>
+                            </div>
+                            <h3 className="text-xl font-black text-slate-900">Apartar Salón del Club</h3>
+                            <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                                Como socio activo, la fecha seleccionada quedará **apartada de inmediato** en el calendario bloqueando colisiones. Secretaría confirmará el apartado formalmente.
+                            </p>
+                        </div>
+
+                        <form onSubmit={handleSaveSocioReservation} className="space-y-4 text-left">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                                    Fecha Seleccionada *
+                                </label>
+                                <input
+                                    type="date"
+                                    required
+                                    value={reserveDateStr}
+                                    onChange={(e) => setReserveDateStr(e.target.value)}
+                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none font-bold text-slate-800 bg-slate-50"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                                    Nombre de la Actividad / Evento *
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={reserveNombre}
+                                    onChange={(e) => setReserveNombre(e.target.value)}
+                                    placeholder="Ej. Sesión Ordinaria de Comisión / Evento Familiar Socio"
+                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none font-semibold text-slate-800"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                                        Hora Inicio *
+                                    </label>
+                                    <input
+                                        type="time"
+                                        required
+                                        value={reserveHoraInicio}
+                                        onChange={(e) => setReserveHoraInicio(e.target.value)}
+                                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none font-bold text-slate-800"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                                        Hora Fin *
+                                    </label>
+                                    <input
+                                        type="time"
+                                        required
+                                        value={reserveHoraFin}
+                                        onChange={(e) => setReserveHoraFin(e.target.value)}
+                                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none font-bold text-slate-800"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                                    Compromiso de Limpieza *
+                                </label>
+                                <select
+                                    value={reserveCompromisoLimpieza}
+                                    onChange={(e) => setReserveCompromisoLimpieza(e.target.value as any)}
+                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none font-semibold text-slate-800 bg-white cursor-pointer"
+                                >
+                                    <option value="dejar_limpio">Dejar limpio después del evento (Sin costo)</option>
+                                    <option value="pagar_limpieza">Pagar servicio de limpieza (Q. 300.00)</option>
+                                </select>
+                            </div>
+
+                            <div className="pt-4 flex justify-end space-x-3 border-t border-slate-100">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsReserveModalOpen(false)}
+                                    className="px-5 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 text-xs"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSavingReservation}
+                                    className="px-6 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-black rounded-xl shadow-md text-xs transition-all flex items-center justify-center space-x-2 cursor-pointer"
+                                >
+                                    {isSavingReservation ? (
+                                        <span>Apartando...</span>
+                                    ) : (
+                                        <span>Apartar Salón Ahora</span>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             )}
 
             {/* Zoomed Image Modal */}

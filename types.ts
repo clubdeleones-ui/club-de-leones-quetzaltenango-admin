@@ -98,6 +98,8 @@ export interface Actividad {
   costoSocio?: number;
   costoInvitado?: number;
   vestimenta?: string;
+  esEnSalon?: boolean;
+  tipoLugar?: 'salon' | 'exterior';
 }
 
 export interface RegistroParticipacion {
