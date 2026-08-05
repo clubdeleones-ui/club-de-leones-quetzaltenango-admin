@@ -568,4 +568,13 @@ export interface NeveraSaldoSocio {
   abonos?: NeveraCuentaAbono[];
 }
 
+export interface RegistroBano {
+  id: string;
+  genero: 'hombre' | 'mujer';
+  monto: number; // Q. 3.00
+  fecha: string; // ISO string
+  fechaCorta: string; // YYYY-MM-DD
+  registradoPor?: string;
+}
+
 

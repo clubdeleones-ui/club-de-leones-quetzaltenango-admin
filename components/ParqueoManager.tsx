@@ -16,16 +16,20 @@ import {
   DollarSign, 
   Tag,
   Sparkles,
-  X
+  X,
+  Users,
+  User,
+  FileText,
+  Undo2
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { firebaseService } from '../services/firebaseService';
-import { VehiculoParqueo } from '../types';
+import { VehiculoParqueo, RegistroBano } from '../types';
 import { useModal } from '../context/ModalContext';
 
 
@@ -78,6 +82,74 @@ export const ParqueoManager: React.FC = () => {
 
     return () => unsubscribe();
   }, []);
+
+  // Bathroom Usage State & Listener
+  const [registrosBanos, setRegistrosBanos] = useState<RegistroBano[]>([]);
+  const [isSavingBano, setIsSavingBano] = useState(false);
+  const [showBanosReportModal, setShowBanosReportModal] = useState(false);
+
+  useEffect(() => {
+    const qBanos = query(collection(db, 'banos'), orderBy('fecha', 'desc'));
+    const unsubscribeBanos = onSnapshot(qBanos, (snapshot) => {
+      const list: RegistroBano[] = [];
+      snapshot.forEach(docSnap => {
+        list.push({ id: docSnap.id, ...docSnap.data() } as RegistroBano);
+      });
+      setRegistrosBanos(list);
+    }, (error) => {
+      console.error("Error fetching registros de baños in real-time:", error);
+    });
+
+    return () => unsubscribeBanos();
+  }, []);
+
+  const handleRecordBano = async (genero: 'hombre' | 'mujer') => {
+    setIsSavingBano(true);
+    try {
+      const now = new Date();
+      const docId = `BNO-${Date.now()}`;
+      const newRecord: RegistroBano = {
+        id: docId,
+        genero,
+        monto: 3.0,
+        fecha: now.toISOString(),
+        fechaCorta: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      };
+      await setDoc(doc(db, 'banos', docId), newRecord);
+    } catch (err) {
+      console.error("Error al registrar uso de baño:", err);
+      alert("Error al guardar registro de baño.");
+    } finally {
+      setIsSavingBano(false);
+    }
+  };
+
+  const handleDeleteLastBano = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'banos', id));
+    } catch (err) {
+      console.error("Error al eliminar registro de baño:", err);
+    }
+  };
+
+  const banosStats = React.useMemo(() => {
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    const todayRecords = registrosBanos.filter(b => b.fechaCorta === todayStr || (b.fecha && b.fecha.startsWith(todayStr)));
+    const hombresHoy = todayRecords.filter(b => b.genero === 'hombre').length;
+    const mujeresHoy = todayRecords.filter(b => b.genero === 'mujer').length;
+    const totalUsosHoy = todayRecords.length;
+    const totalMontoHoy = totalUsosHoy * 3;
+
+    return {
+      hombresHoy,
+      mujeresHoy,
+      totalUsosHoy,
+      totalMontoHoy,
+      todayRecords
+    };
+  }, [registrosBanos]);
 
   const [activeTab, setActiveTab] = useState<'ingreso' | 'salida' | 'historial'>('ingreso');
   const [showCierreModal, setShowCierreModal] = useState(false);
@@ -454,9 +526,102 @@ export const ParqueoManager: React.FC = () => {
   };
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-500">
-      
-      {/* Tab Navigation Segmented Control */}
+    <div className="space-y-8 animate-in fade-in duration-500">
+
+      {/* Control de Uso de Sanitarios (Q. 3.00 / entrada) */}
+      <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 rounded-[2rem] p-5 md:p-6 text-white shadow-xl border border-blue-800/40 space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
+          <div className="flex items-center space-x-3">
+            <div className="p-2.5 bg-blue-500/20 text-blue-300 rounded-xl border border-blue-400/30">
+              <Users size={22} />
+            </div>
+            <div>
+              <h3 className="text-base md:text-lg font-black tracking-tight flex items-center gap-2">
+                <span>Control de Uso de Sanitarios</span>
+                <span className="text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-400/30 px-2.5 py-0.5 rounded-md">Q. 3.00 / entrada</span>
+              </h3>
+              <p className="text-xs text-slate-400 font-semibold">Anotación instantánea de ingresos y reporte para el corte del día.</p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
+            <div className="text-right">
+              <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Recaudado Baños Hoy</span>
+              <p className="text-xl md:text-2xl font-black text-amber-400">Q.{banosStats.totalMontoHoy}.00</p>
+            </div>
+            <div className="flex items-center space-x-1.5">
+              <button
+                type="button"
+                onClick={() => setShowBanosReportModal(true)}
+                className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl border border-white/15 transition-all flex items-center space-x-1"
+                title="Ver reporte detallado de baños"
+              >
+                <FileText size={14} />
+                <span className="hidden md:inline">Reporte</span>
+              </button>
+              {banosStats.todayRecords.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteLastBano(banosStats.todayRecords[0].id)}
+                  className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-white/10 rounded-xl transition-all"
+                  title="Anular último ingreso de baño registrado"
+                >
+                  <Undo2 size={16} />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Buttons and Live Summary */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          {/* Button Hombre */}
+          <button
+            type="button"
+            disabled={isSavingBano}
+            onClick={() => handleRecordBano('hombre')}
+            className="py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 text-white font-black rounded-2xl shadow-md transition-all active:scale-95 flex items-center justify-between cursor-pointer border border-blue-400/30"
+          >
+            <div className="flex items-center space-x-2">
+              <span className="text-lg">👨</span>
+              <span className="text-xs">Anotar Hombre</span>
+            </div>
+            <span className="text-xs font-extrabold bg-white/20 px-2.5 py-0.5 rounded-lg">+Q.3.00</span>
+          </button>
+
+          {/* Button Mujer */}
+          <button
+            type="button"
+            disabled={isSavingBano}
+            onClick={() => handleRecordBano('mujer')}
+            className="py-3 px-4 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 disabled:opacity-50 text-white font-black rounded-2xl shadow-md transition-all active:scale-95 flex items-center justify-between cursor-pointer border border-pink-400/30"
+          >
+            <div className="flex items-center space-x-2">
+              <span className="text-lg">👩</span>
+              <span className="text-xs">Anotar Mujer</span>
+            </div>
+            <span className="text-xs font-extrabold bg-white/20 px-2.5 py-0.5 rounded-lg">+Q.3.00</span>
+          </button>
+
+          {/* Hombres Counter Card */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-3 flex items-center justify-between">
+            <div className="text-xs">
+              <span className="text-[10px] text-slate-400 font-bold uppercase">Hombres Hoy</span>
+              <p className="text-sm font-black text-blue-300">{banosStats.hombresHoy} personas</p>
+            </div>
+            <span className="text-xs font-extrabold text-slate-300">Q.{banosStats.hombresHoy * 3}.00</span>
+          </div>
+
+          {/* Mujeres Counter Card */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-3 flex items-center justify-between">
+            <div className="text-xs">
+              <span className="text-[10px] text-slate-400 font-bold uppercase">Mujeres Hoy</span>
+              <p className="text-sm font-black text-pink-300">{banosStats.mujeresHoy} personas</p>
+            </div>
+            <span className="text-xs font-extrabold text-slate-300">Q.{banosStats.mujeresHoy * 3}.00</span>
+          </div>
+        </div>
+      </div>
       <div className="flex flex-col sm:flex-row bg-slate-100/80 backdrop-blur-md p-2 rounded-[1.5rem] w-full max-w-2xl mx-auto shadow-inner border border-slate-200/50 mb-8 gap-2 sm:gap-0">
         <button 
           onClick={() => setActiveTab('ingreso')}
@@ -1138,26 +1303,71 @@ export const ParqueoManager: React.FC = () => {
               {/* Content */}
               <div className="p-8 space-y-8">
                 
-                {/* Hoy Summary */}
+                {/* Gran Total Consolidado */}
+                <div className="bg-gradient-to-r from-emerald-600 to-teal-800 text-white rounded-3xl p-6 shadow-xl shadow-emerald-600/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-emerald-200 tracking-widest">Corte Consolidado de Hoy (Parqueo + Baños)</span>
+                    <h3 className="text-4xl font-black mt-1">Q{(stats.hoy.total + banosStats.totalMontoHoy).toLocaleString('es-GT', {minimumFractionDigits:2})}</h3>
+                    <p className="text-xs text-emerald-100 mt-1 font-semibold">
+                      Parqueo: Q{stats.hoy.total.toLocaleString('es-GT', {minimumFractionDigits:2})} ({stats.hoy.count} tickets) | Baños: Q{banosStats.totalMontoHoy.toLocaleString('es-GT', {minimumFractionDigits:2})} ({banosStats.totalUsosHoy} personas)
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const docPdf = new jsPDF();
+                      docPdf.setFontSize(16);
+                      docPdf.text('CLUB DE LEONES DE QUETZALTENANGO', 105, 15, { align: 'center' });
+                      docPdf.setFontSize(12);
+                      docPdf.text('CORTE DE CAJA - PARQUEO Y BAÑOS', 105, 22, { align: 'center' });
+                      docPdf.setFontSize(10);
+                      docPdf.text(`Fecha: ${new Date().toLocaleDateString('es-GT')}`, 105, 28, { align: 'center' });
+
+                      docPdf.text('----------------------------------------------------------------------------------', 105, 34, { align: 'center' });
+                      docPdf.text(`Parqueo (Tickets cobrados: ${stats.hoy.count}): Q. ${stats.hoy.total.toFixed(2)}`, 15, 44);
+                      docPdf.text(`  - Efectivo: Q. ${stats.hoy.efectivo.toFixed(2)}`, 15, 51);
+                      docPdf.text(`  - Tarjeta: Q. ${stats.hoy.tarjeta.toFixed(2)}`, 15, 57);
+                      docPdf.text(`  - Transferencia: Q. ${stats.hoy.transferencia.toFixed(2)}`, 15, 63);
+
+                      docPdf.text(`Baños (Total accesos: ${banosStats.totalUsosHoy}): Q. ${banosStats.totalMontoHoy.toFixed(2)}`, 15, 73);
+                      docPdf.text(`  - Hombres (${banosStats.hombresHoy} personas x Q3.00): Q. ${(banosStats.hombresHoy * 3).toFixed(2)}`, 15, 80);
+                      docPdf.text(`  - Mujeres (${banosStats.mujeresHoy} personas x Q3.00): Q. ${(banosStats.mujeresHoy * 3).toFixed(2)}`, 15, 86);
+
+                      docPdf.text('----------------------------------------------------------------------------------', 105, 94, { align: 'center' });
+                      docPdf.setFontSize(12);
+                      docPdf.text(`GRAN TOTAL DEL CORTE DEL DÍA: Q. ${(stats.hoy.total + banosStats.totalMontoHoy).toFixed(2)}`, 15, 104);
+
+                      docPdf.autoPrint();
+                      window.open(docPdf.output('bloburl'), '_blank');
+                    }}
+                    className="px-5 py-3 bg-white text-emerald-900 hover:bg-emerald-50 font-black text-xs rounded-2xl shadow-md transition-all flex items-center space-x-2 shrink-0 cursor-pointer active:scale-95"
+                  >
+                    <Printer size={16} />
+                    <span>Imprimir Comprobante de Corte</span>
+                  </button>
+                </div>
+
+                {/* Hoy Summary Breakdown */}
                 <div>
-                  <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Ingresos de Hoy</h3>
+                  <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Desglose de Ingresos de Hoy</h3>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="bg-emerald-600 text-white rounded-3xl p-5 shadow-lg shadow-emerald-600/20">
-                      <p className="text-xs font-bold text-emerald-100 uppercase tracking-wider">Total Hoy</p>
-                      <p className="text-3xl font-black mt-1">Q{stats.hoy.total.toLocaleString('es-GT', {minimumFractionDigits:2})}</p>
-                      <p className="text-xs text-emerald-200 mt-2">{stats.hoy.count} tickets cobrados</p>
+                    <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Recaudado Parqueo</p>
+                      <p className="text-2xl font-black text-slate-800 mt-1">Q{stats.hoy.total.toLocaleString('es-GT', {minimumFractionDigits:2})}</p>
+                      <p className="text-xs text-slate-500 mt-1">{stats.hoy.count} tickets cobrados</p>
+                    </div>
+                    <div className="bg-amber-50 border border-amber-200 rounded-3xl p-5 shadow-sm">
+                      <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">Recaudado Baños</p>
+                      <p className="text-2xl font-black text-amber-950 mt-1">Q{banosStats.totalMontoHoy.toLocaleString('es-GT', {minimumFractionDigits:2})}</p>
+                      <p className="text-xs text-amber-800 mt-1">{banosStats.hombresHoy} 👨 / {banosStats.mujeresHoy} 👩</p>
                     </div>
                     <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Efectivo</p>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Efectivo (Parqueo)</p>
                       <p className="text-2xl font-black text-slate-800 mt-1">Q{stats.hoy.efectivo.toLocaleString('es-GT', {minimumFractionDigits:2})}</p>
                     </div>
                     <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tarjeta</p>
-                      <p className="text-2xl font-black text-slate-800 mt-1">Q{stats.hoy.tarjeta.toLocaleString('es-GT', {minimumFractionDigits:2})}</p>
-                    </div>
-                    <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm">
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Transferencia</p>
-                      <p className="text-2xl font-black text-slate-800 mt-1">Q{stats.hoy.transferencia.toLocaleString('es-GT', {minimumFractionDigits:2})}</p>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tarjeta / Transferencia</p>
+                      <p className="text-2xl font-black text-slate-800 mt-1">Q{(stats.hoy.tarjeta + stats.hoy.transferencia).toLocaleString('es-GT', {minimumFractionDigits:2})}</p>
                     </div>
                   </div>
                 </div>
@@ -1216,6 +1426,124 @@ export const ParqueoManager: React.FC = () => {
           </div>
         );
       })()}
+
+      {/* Reporte de Uso de Baños Modal */}
+      {showBanosReportModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-3xl shadow-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-300">
+            <div className="bg-slate-900 text-white px-6 sm:px-8 py-6 flex justify-between items-center">
+              <div className="flex items-center space-x-3">
+                <div className="p-3 bg-blue-500/20 text-blue-300 rounded-2xl border border-blue-400/30">
+                  <Users size={24} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black tracking-tight">Reporte de Uso de Sanitarios</h2>
+                  <p className="text-xs text-slate-400 font-medium">Control de accesos y recaudación a Q. 3.00 por persona</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowBanosReportModal(false)}
+                className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 sm:p-8 space-y-6 text-left max-h-[75vh] overflow-y-auto">
+              {/* Summary Dashboard */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white p-5 rounded-2xl shadow-md">
+                  <span className="text-[10px] font-black uppercase tracking-wider opacity-90">Total Recaudado (Hoy)</span>
+                  <p className="text-3xl font-black mt-1">Q.{banosStats.totalMontoHoy}.00</p>
+                  <p className="text-xs font-bold opacity-90 mt-1">{banosStats.totalUsosHoy} personas ingresaron</p>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 p-5 rounded-2xl">
+                  <span className="text-[10px] font-black uppercase text-blue-900 tracking-wider">Hombres (Hoy)</span>
+                  <p className="text-2xl font-black text-blue-900 mt-1">{banosStats.hombresHoy} personas</p>
+                  <p className="text-xs font-bold text-blue-700 mt-1">Q.{banosStats.hombresHoy * 3}.00</p>
+                </div>
+
+                <div className="bg-pink-50 border border-pink-200 p-5 rounded-2xl">
+                  <span className="text-[10px] font-black uppercase text-pink-900 tracking-wider">Mujeres (Hoy)</span>
+                  <p className="text-2xl font-black text-pink-900 mt-1">{banosStats.mujeresHoy} personas</p>
+                  <p className="text-xs font-bold text-pink-700 mt-1">Q.{banosStats.mujeresHoy * 3}.00</p>
+                </div>
+              </div>
+
+              {/* Detail List */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1">
+                  Registros del Día de Hoy ({banosStats.todayRecords.length})
+                </h4>
+
+                {banosStats.todayRecords.length === 0 ? (
+                  <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-400 font-bold italic text-sm">
+                    No se han registrado usos de sanitarios el día de hoy.
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto pr-1">
+                    {banosStats.todayRecords.map((reg) => (
+                      <div key={reg.id} className="py-2.5 flex items-center justify-between text-xs">
+                        <div className="flex items-center space-x-3">
+                          <span className="text-base">{reg.genero === 'hombre' ? '👨' : '👩'}</span>
+                          <div>
+                            <span className="font-extrabold text-slate-800 capitalize">Acceso {reg.genero}</span>
+                            <p className="text-[10px] text-slate-400 font-semibold">{new Date(reg.fecha).toLocaleTimeString()}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <span className="font-black text-emerald-700">+Q. 3.00</span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteLastBano(reg.id)}
+                            className="p-1 text-slate-300 hover:text-red-600 rounded transition-colors cursor-pointer"
+                            title="Eliminar registro"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-slate-100 px-6 sm:px-8 py-4 border-t border-slate-200 flex justify-between items-center">
+              <button
+                type="button"
+                onClick={() => {
+                  const docPdf = new jsPDF();
+                  docPdf.setFontSize(16);
+                  docPdf.text('CLUB DE LEONES DE QUETZALTENANGO', 105, 15, { align: 'center' });
+                  docPdf.setFontSize(12);
+                  docPdf.text('REPORTE DE USO DE SANITARIOS', 105, 22, { align: 'center' });
+                  docPdf.setFontSize(10);
+                  docPdf.text(`Fecha: ${new Date().toLocaleDateString('es-GT')}`, 105, 28, { align: 'center' });
+                  docPdf.text('----------------------------------------------------------------------------------', 105, 34, { align: 'center' });
+                  docPdf.text(`Hombres: ${banosStats.hombresHoy} personas (Q. ${(banosStats.hombresHoy * 3).toFixed(2)})`, 15, 45);
+                  docPdf.text(`Mujeres: ${banosStats.mujeresHoy} personas (Q. ${(banosStats.mujeresHoy * 3).toFixed(2)})`, 15, 52);
+                  docPdf.text(`Total Ingresos Baños: Q. ${banosStats.totalMontoHoy.toFixed(2)}`, 15, 62);
+                  docPdf.autoPrint();
+                  window.open(docPdf.output('bloburl'), '_blank');
+                }}
+                className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs rounded-xl flex items-center space-x-1.5 cursor-pointer shadow-md"
+              >
+                <Printer size={14} />
+                <span>Imprimir Reporte Baños</span>
+              </button>
+
+              <button 
+                onClick={() => setShowBanosReportModal(false)}
+                className="px-5 py-2 bg-white border border-slate-300 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {renderEspaciosModal()}
     </div>
