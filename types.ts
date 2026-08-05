@@ -249,6 +249,8 @@ export interface Solicitud {
   salonNombreSolicitante?: string;
 }
 
+export type TipoRentaParqueo = 'horario' | 'noche' | 'dia' | 'semana' | 'quincena' | 'mes';
+
 export interface VehiculoParqueo {
   id: string;
   tipoPlaca: string;
@@ -263,6 +265,9 @@ export interface VehiculoParqueo {
   metodoPago?: 'Efectivo' | 'Tarjeta' | 'Transferencia';
   numeroEspacio?: number;
   toleranciaMinutos?: number;
+  tipoRenta?: TipoRentaParqueo;
+  montoRenta?: number;
+  fechaVencimiento?: string;
 }
 
 export interface RubroPresupuesto {

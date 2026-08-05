@@ -30,7 +30,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, addDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { firebaseService } from '../services/firebaseService';
-import { VehiculoParqueo, RegistroBano } from '../types';
+import { VehiculoParqueo, RegistroBano, TipoRentaParqueo } from '../types';
 import { useModal } from '../context/ModalContext';
 
 
@@ -220,6 +220,64 @@ export const ParqueoManager: React.FC = () => {
   const [placaLetras, setPlacaLetras] = useState('');
   const [isExtranjera, setIsExtranjera] = useState(false);
   const [colorSeleccionado, setColorSeleccionado] = useState(PALETA_COLORES[0]);
+  // States for Long-term & Special Rental Modes
+  const [tipoRenta, setTipoRenta] = useState<TipoRentaParqueo>('horario');
+  const [montoRentaInput, setMontoRentaInput] = useState<number>(25);
+
+  const DEFAULT_PRECIOS_RENTA: Record<TipoRentaParqueo, number> = {
+    horario: 0,
+    noche: 25,
+    dia: 40,
+    semana: 200,
+    quincena: 350,
+    mes: 600
+  };
+
+  const handleSelectTipoRenta = (tipo: TipoRentaParqueo) => {
+    setTipoRenta(tipo);
+    if (tipo !== 'horario') {
+      setMontoRentaInput(DEFAULT_PRECIOS_RENTA[tipo] || 25);
+    }
+  };
+
+  const getFechaVencimientoDate = (tipo: TipoRentaParqueo, baseDate: Date = new Date()): Date | null => {
+    if (tipo === 'horario') return null;
+    const d = new Date(baseDate);
+    if (tipo === 'noche') {
+      d.setDate(d.getDate() + 1);
+      d.setHours(8, 0, 0, 0);
+      return d;
+    }
+    if (tipo === 'dia') {
+      d.setDate(d.getDate() + 1);
+      return d;
+    }
+    if (tipo === 'semana') {
+      d.setDate(d.getDate() + 7);
+      return d;
+    }
+    if (tipo === 'quincena') {
+      d.setDate(d.getDate() + 15);
+      return d;
+    }
+    if (tipo === 'mes') {
+      d.setDate(d.getDate() + 30);
+      return d;
+    }
+    return null;
+  };
+
+  const calcularFechaVencimientoPreview = (tipo: TipoRentaParqueo) => {
+    const targetDate = getFechaVencimientoDate(tipo);
+    if (!targetDate) return '';
+    return targetDate.toLocaleString('es-GT', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [salidaSearchQuery, setSalidaSearchQuery] = useState('');
   
@@ -235,8 +293,6 @@ export const ParqueoManager: React.FC = () => {
   // Real-time elapsed time trigger
   const [timeTrigger, setTimeTrigger] = useState(0);
 
-
-
   // Live timer tick
   useEffect(() => {
     const interval = setInterval(() => {
@@ -244,8 +300,6 @@ export const ParqueoManager: React.FC = () => {
     }, 1000);
     return () => clearInterval(interval);
   }, []);
-
-  // Guatemala license plate validation (3 numbers, 3 letters)
   const validatePlacaGuatemala = (val: string) => {
     const regex = /^\d{3}[A-Z]{3}$/;
     return regex.test(val.toUpperCase().replace(/[\s-]/g, ''));
@@ -287,6 +341,8 @@ export const ParqueoManager: React.FC = () => {
       return;
     }
 
+    const fechaVencDate = getFechaVencimientoDate(tipoRenta);
+
     const nuevoVehiculo: VehiculoParqueo = {
       id: `parq-${Date.now()}`,
       tipoPlaca: isExtranjera ? 'Extranjera' : tipoPlaca,
@@ -295,7 +351,11 @@ export const ParqueoManager: React.FC = () => {
       color: colorSeleccionado.hex,
       colorLabel: colorSeleccionado.name,
       horaEntrada: new Date().toISOString(),
-      estado: 'Activo'
+      estado: 'Activo',
+      numeroEspacio: espacioSeleccionado || undefined,
+      tipoRenta,
+      montoRenta: tipoRenta !== 'horario' ? Number(montoRentaInput) : 0,
+      fechaVencimiento: fechaVencDate ? fechaVencDate.toISOString() : undefined
     };
 
     firebaseService.saveVehiculoParqueo(nuevoVehiculo).catch(e => {
@@ -310,6 +370,9 @@ export const ParqueoManager: React.FC = () => {
     setPlacaLetras('');
     setIsExtranjera(false);
     setColorSeleccionado(PALETA_COLORES[0]);
+    setEspacioSeleccionado(null);
+    setTipoRenta('horario');
+    setMontoRentaInput(25);
   };
 
   // Calculate elapsed time formatted (HH:MM:SS)
@@ -872,7 +935,6 @@ export const ParqueoManager: React.FC = () => {
                       placeholder="ABC"
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-center text-lg tracking-widest font-black text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-blue-900 focus:border-blue-900 transition-all outline-none uppercase"
                     />
-                    <span className="absolute -top-2 left-3 bg-white px-1 text-[9px] font-bold text-slate-400">Letras</span>
                   </div>
                 </div>
               )}
@@ -882,6 +944,73 @@ export const ParqueoManager: React.FC = () => {
                 </p>
               )}
             </div>
+
+            {/* Modalidad de Servicio / Renta */}
+            <div className="space-y-2.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                Modalidad de Servicio / Renta
+              </label>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                {[
+                  { value: 'horario', label: 'Por Hora', sub: 'Q5/30m' },
+                  { value: 'noche', label: 'Noche', sub: 'Q25' },
+                  { value: 'dia', label: 'Por Día', sub: 'Q40' },
+                  { value: 'semana', label: 'Semana', sub: '7 días' },
+                  { value: 'quincena', label: 'Quincena', sub: '15 días' },
+                  { value: 'mes', label: 'Mes', sub: '30 días' },
+                ].map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => handleSelectTipoRenta(item.value as TipoRentaParqueo)}
+                    className={`py-2 px-1 rounded-xl text-center transition-all border cursor-pointer ${
+                      tipoRenta === item.value
+                        ? 'bg-gradient-to-r from-blue-900 to-indigo-900 border-blue-950 text-white shadow-md scale-[1.02]'
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span className="text-xs font-black block">{item.label}</span>
+                    <span className={`text-[9px] font-semibold block ${tipoRenta === item.value ? 'text-blue-200' : 'text-slate-400'}`}>
+                      {item.sub}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Rent Price & Duration Preview if not 'horario' */}
+            {tipoRenta !== 'horario' && (
+              <div className="bg-amber-50/90 border border-amber-200 rounded-2xl p-4 space-y-3 animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 border-b border-amber-200/60 pb-3">
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-amber-900 tracking-wider block">
+                      Precio Acordado de Renta ({tipoRenta.toUpperCase()})
+                    </span>
+                    <p className="text-[11px] text-amber-800 font-medium">
+                      Puedes modificar el monto a cobrar por la renta.
+                    </p>
+                  </div>
+                  <div className="relative w-full sm:w-36">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-xs font-black text-amber-700">Q</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="5"
+                      value={montoRentaInput}
+                      onChange={(e) => setMontoRentaInput(Number(e.target.value))}
+                      className="w-full bg-white border border-amber-300 rounded-xl pl-8 pr-3 py-1.5 text-sm font-black text-amber-950 focus:ring-2 focus:ring-amber-500 outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-amber-900">
+                  <span className="font-bold">Fecha / Hora de Vencimiento:</span>
+                  <span className="font-black bg-amber-200/80 px-2.5 py-1 rounded-lg border border-amber-300 text-amber-950 font-mono">
+                    {calcularFechaVencimientoPreview(tipoRenta)}
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Color Palette Selector */}
             <div className="space-y-2">
@@ -1000,6 +1129,43 @@ export const ParqueoManager: React.FC = () => {
             </div>
           </div>
 
+          {/* Expiration Notification Banner */}
+          {(() => {
+            const vehiculosVencidos = vehiculosActivos.filter(v => {
+              if (v.tipoRenta && v.tipoRenta !== 'horario' && v.fechaVencimiento) {
+                return new Date().getTime() >= new Date(v.fechaVencimiento).getTime();
+              }
+              return false;
+            });
+
+            if (vehiculosVencidos.length === 0) return null;
+
+            return (
+              <div className="mb-6 bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white p-4 rounded-2xl shadow-lg border border-red-500/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 animate-in fade-in zoom-in-95 duration-300">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-white/20 rounded-xl shrink-0">
+                    <AlertTriangle size={22} className="text-amber-300 animate-pulse" />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-sm tracking-tight">
+                      ¡Alerta: {vehiculosVencidos.length} Vehículo(s) con Renta Vencida!
+                    </h4>
+                    <p className="text-xs text-red-100 font-medium mt-0.5">
+                      Placas: {vehiculosVencidos.map(v => `${v.tipoPlaca === 'Extranjera' ? '' : v.tipoPlaca + '-'}${v.numeroPlaca}`).join(', ')}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSalidaSearchQuery(vehiculosVencidos[0].numeroPlaca)}
+                  className="w-full sm:w-auto px-4 py-2 bg-white text-red-700 hover:bg-red-50 text-xs font-black rounded-xl transition-all shadow-md shrink-0 cursor-pointer text-center"
+                >
+                  Localizar Vehículo Vencido
+                </button>
+              </div>
+            );
+          })()}
+
           {vehiculosActivos.length === 0 ? (
             <div className="flex-grow flex flex-col items-center justify-center py-16 text-center space-y-4">
               <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-450 border border-slate-100">
@@ -1025,87 +1191,128 @@ export const ParqueoManager: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-grow content-start">
-              {filteredActivos.map((v) => (
-                <div 
-                  key={v.id} 
-                  className="bg-white border border-slate-200/80 rounded-3xl p-5 flex flex-col justify-between hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group"
-                >
-                  {/* Left accent color bar */}
-                  <div 
-                    className="absolute left-0 top-0 bottom-0 w-3" 
-                    style={{ backgroundColor: v.color }} 
-                  />
+              {filteredActivos.map((v) => {
+                const isVencido = v.tipoRenta && v.tipoRenta !== 'horario' && v.fechaVencimiento 
+                  ? new Date().getTime() >= new Date(v.fechaVencimiento).getTime() 
+                  : false;
 
-                  <div className="pl-4 space-y-4">
-                    {/* Header: Plate and actions */}
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-[10px] font-black uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                            {v.tipoPlaca}
-                          </span>
-                          <span className="text-lg font-black text-slate-800 tracking-tight">
-                            {v.tipoPlaca === 'Extranjera' ? '' : v.tipoPlaca + '-'}{v.numeroPlaca}
-                          </span>
+                return (
+                  <div 
+                    key={v.id} 
+                    className={`bg-white border rounded-3xl p-5 flex flex-col justify-between hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group ${
+                      isVencido ? 'border-red-400 ring-2 ring-red-400/30' : 'border-slate-200/80'
+                    }`}
+                  >
+                    {/* Left accent color bar */}
+                    <div 
+                      className="absolute left-0 top-0 bottom-0 w-3" 
+                      style={{ backgroundColor: v.color }} 
+                    />
+
+                    <div className="pl-4 space-y-4">
+                      {/* Header: Plate and actions */}
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-[10px] font-black uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                              {v.tipoPlaca}
+                            </span>
+                            <span className="text-lg font-black text-slate-800 tracking-tight">
+                              {v.tipoPlaca === 'Extranjera' ? '' : v.tipoPlaca + '-'}{v.numeroPlaca}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2 mt-1.5">
+                            <span className="w-3 h-3 rounded-full border border-slate-300 shadow-sm" style={{ backgroundColor: v.color }}></span>
+                            <p className="text-[11px] text-slate-500 font-bold">
+                              {v.colorLabel}
+                            </p>
+                            {v.numeroEspacio && (
+                              <>
+                                <span className="text-slate-300">•</span>
+                                <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200">
+                                  Espacio #{v.numeroEspacio}
+                                </span>
+                              </>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-2 mt-1.5">
-                          <span className="w-3 h-3 rounded-full border border-slate-300 shadow-sm" style={{ backgroundColor: v.color }}></span>
-                          <p className="text-[11px] text-slate-500 font-bold">
-                            {v.colorLabel}
-                          </p>
-                          {v.numeroEspacio && (
-                            <>
-                              <span className="text-slate-300">•</span>
-                              <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200">
-                                Espacio #{v.numeroEspacio}
-                              </span>
-                            </>
+                        
+                        <div className="flex space-x-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            onClick={() => handlePrintTicket(v)}
+                            title="Reimprimir Ticket"
+                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all cursor-pointer"
+                          >
+                            <Printer size={16} />
+                          </button>
+                          <button 
+                            onClick={() => setTicketVehiculo(v)}
+                            title="Mostrar QR"
+                            className="p-2 text-slate-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-xl transition-all cursor-pointer"
+                          >
+                            <QrCode size={16} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Rental Mode & Expiration details */}
+                      {v.tipoRenta && v.tipoRenta !== 'horario' && (
+                        <div className={`p-3 rounded-2xl border text-xs space-y-1.5 transition-all ${
+                          isVencido 
+                            ? 'bg-red-50 border-red-300 text-red-950 shadow-sm' 
+                            : 'bg-amber-50/80 border-amber-200/90 text-amber-950'
+                        }`}>
+                          <div className="flex justify-between items-center font-black">
+                            <span className="capitalize flex items-center gap-1.5 text-xs">
+                              <Tag size={13} className={isVencido ? 'text-red-600' : 'text-amber-600'} />
+                              Renta Por {v.tipoRenta}
+                            </span>
+                            <span className="text-xs font-black text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-lg border border-emerald-200">
+                              Q.{v.montoRenta || 0}.00
+                            </span>
+                          </div>
+
+                          {v.fechaVencimiento && (
+                            <div className="flex justify-between items-center text-[11px] pt-1 border-t border-amber-200/50">
+                              <span className="font-semibold text-slate-500">Vencimiento:</span>
+                              {isVencido ? (
+                                <span className="font-black text-white bg-red-600 px-2 py-0.5 rounded-md flex items-center gap-1 shadow-xs animate-pulse">
+                                  <AlertTriangle size={11} /> ¡RENTA VENCIDA!
+                                </span>
+                              ) : (
+                                <span className="font-bold text-slate-800 font-mono">
+                                  {new Date(v.fechaVencimiento).toLocaleDateString('es-GT', { day: 'numeric', month: 'short' })} {new Date(v.fechaVencimiento).toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
-                      </div>
-                      
-                      <div className="flex space-x-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                        <button 
-                          onClick={() => handlePrintTicket(v)}
-                          title="Reimprimir Ticket"
-                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-                        >
-                          <Printer size={16} />
-                        </button>
-                        <button 
-                          onClick={() => setTicketVehiculo(v)}
-                          title="Mostrar QR"
-                          className="p-2 text-slate-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-xl transition-all"
-                        >
-                          <QrCode size={16} />
-                        </button>
-                      </div>
-                    </div>
+                      )}
 
-                    {/* Timer and Exit Button */}
-                    <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 group-hover:bg-slate-100/50 transition-colors">
-                      <div className="flex items-center space-x-2.5 w-full sm:w-auto justify-center sm:justify-start">
-                        <Clock size={16} className="text-blue-500 animate-pulse" />
-                        <span className="text-sm font-black text-slate-800 font-mono tracking-wider">
-                          {getTiempoTranscurrido(v.horaEntrada)}
-                        </span>
+                      {/* Timer and Exit Button */}
+                      <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 group-hover:bg-slate-100/50 transition-colors">
+                        <div className="flex items-center space-x-2.5 w-full sm:w-auto justify-center sm:justify-start">
+                          <Clock size={16} className="text-blue-500 animate-pulse" />
+                          <span className="text-sm font-black text-slate-800 font-mono tracking-wider">
+                            {getTiempoTranscurrido(v.horaEntrada)}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => handleProcessExit(v)}
+                          className="w-full sm:w-auto bg-red-100 hover:bg-red-500 hover:text-white text-red-600 px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center space-x-2 active:scale-95 shadow-sm cursor-pointer"
+                        >
+                          <LogOut size={14} />
+                          <span>Dar Salida</span>
+                        </button>
                       </div>
-                      <button
-                        onClick={() => handleProcessExit(v)}
-                        className="w-full sm:w-auto bg-red-100 hover:bg-red-500 hover:text-white text-red-600 px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center space-x-2 active:scale-95 shadow-sm cursor-pointer"
-                      >
-                        <LogOut size={14} />
-                        <span>Dar Salida</span>
-                      </button>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
         )}
-      </div>
 
       {/* History and Logs panel */}
       {activeTab === 'historial' && (
@@ -1223,6 +1430,7 @@ export const ParqueoManager: React.FC = () => {
         )}
       </div>
       )}
+    </div>
 
       {/* Bottom Action Footer: KPIs & Cierre */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 mt-8 border-t border-slate-200/50 animate-in slide-in-from-bottom-8 duration-700">
@@ -1361,6 +1569,23 @@ export const ParqueoManager: React.FC = () => {
                   </span>
                 </div>
               </div>
+
+              {showExitModal.tipoRenta && showExitModal.tipoRenta !== 'horario' && (
+                <div className="bg-amber-50 p-2.5 rounded-xl border border-amber-200 text-xs space-y-1 text-amber-950">
+                  <div className="flex justify-between font-black">
+                    <span>Servicio Contratado:</span>
+                    <span className="capitalize">Renta Por {showExitModal.tipoRenta}</span>
+                  </div>
+                  {showExitModal.fechaVencimiento && (
+                    <div className="flex justify-between text-[11px]">
+                      <span className="font-semibold text-amber-800">Vencía:</span>
+                      <span className="font-bold">
+                        {new Date(showExitModal.fechaVencimiento).toLocaleString('es-GT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Tolerancia / Redondeo por poco tiempo */}
               <div className="pt-2 border-t border-slate-200/80 space-y-1.5">
