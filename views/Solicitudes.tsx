@@ -35,7 +35,8 @@ import {
   Layers,
   Save,
   Upload,
-  Archive
+  Archive,
+  Share2
 } from 'lucide-react';
 import { generateCartaOficialPDF, formatFechaCarta } from '../utils/pdfGenerator';
 import { formatDisplayDate } from '../utils/dateSpanishFormatter';
@@ -283,6 +284,34 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   useEffect(() => {
     setIsLoading(loading.solicitudes);
   }, [loading.solicitudes]);
+
+  // Auto-open agenda tab and modal if accessed via public link with tab=agenda
+  useEffect(() => {
+    try {
+      const fullUrl = window.location.href;
+      if (fullUrl.includes('tab=agenda')) {
+        setActiveTab('agenda');
+        if (fullUrl.includes('proponer=true') || fullUrl.includes('openModal=true') || fullUrl.includes('modal=open')) {
+          setIsModalOpen(true);
+        }
+      }
+    } catch (e) {
+      console.error("Error checking URL parameters for agenda tab:", e);
+    }
+  }, []);
+
+  const handleCopyPublicAgendaLink = () => {
+    const baseUrl = `${window.location.origin}${window.location.pathname}#/solicitudes?tab=agenda&proponer=true`;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(baseUrl).then(() => {
+        alert("¡Enlace público copiado al portapapeles!\n\nPuedes compartir este enlace para que cualquier socio o persona pueda proponer un punto de agenda directamente.");
+      }).catch(() => {
+        prompt("Copia este enlace público para proponer un punto de agenda:", baseUrl);
+      });
+    } else {
+      prompt("Copia este enlace público para proponer un punto de agenda:", baseUrl);
+    }
+  };
 
   // Count calculations
   const counts = useMemo(() => {
@@ -1029,9 +1058,9 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       subtitle: 'Reuniones de Socios',
       description: 'Propuesta de temas, puntos a discutir y solicitudes para el orden del día de las reuniones generales de socios.',
       icon: <Calendar size={20} />,
-      visible: isSocio,
-      allowed: isSocio,
-      audience: 'Socios',
+      visible: true,
+      allowed: true,
+      audience: 'Socios y Público',
       pendingCount: counts.agendaPendientes,
       registeredCount: counts.agenda,
       showAction: true,
@@ -2500,7 +2529,7 @@ Club de Leones de Quetzaltenango`;
                     return (
                       <div className="space-y-8 w-full text-left">
                         {/* Guía de Pasos Unificada */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+                        <div className={`grid grid-cols-1 ${cfg.id === 'agenda' ? 'md:grid-cols-2 max-w-4xl mx-auto' : 'md:grid-cols-3'} gap-6 w-full`}>
                           {/* Paso 1: Entiende el Trámite */}
                           <div className={`bg-white rounded-2xl border ${themeAccent.border} ${themeAccent.borderHover} p-6 shadow-sm transition-all duration-300 space-y-3 flex flex-col justify-between`}>
                             <div className="space-y-3">
@@ -2538,57 +2567,71 @@ Club de Leones de Quetzaltenango`;
                                 }
                               </p>
                             </div>
-                            {cfg.showAction && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActiveTab(cfg.id);
-                                  setIsModalOpen(true);
-                                }}
-                                className={`w-full py-3 font-extrabold rounded-xl flex items-center justify-center space-x-2 text-xs shadow-md transition-all duration-200 active:scale-95 hover:shadow-lg ${
-                                  BUTTON_CLASSES[cfg.colorTheme]
-                                }`}
-                              >
-                                <Plus size={14} />
-                                <span>{cfg.actionText}</span>
-                              </button>
-                            )}
+                            <div className="space-y-2">
+                              {cfg.showAction && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveTab(cfg.id);
+                                    setIsModalOpen(true);
+                                  }}
+                                  className={`w-full py-3 font-extrabold rounded-xl flex items-center justify-center space-x-2 text-xs shadow-md transition-all duration-200 active:scale-95 hover:shadow-lg ${
+                                    BUTTON_CLASSES[cfg.colorTheme]
+                                  }`}
+                                >
+                                  <Plus size={14} />
+                                  <span>{cfg.actionText}</span>
+                                </button>
+                              )}
+                              {cfg.id === 'agenda' && (
+                                <button
+                                  type="button"
+                                  onClick={handleCopyPublicAgendaLink}
+                                  className="w-full py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-extrabold rounded-xl flex items-center justify-center space-x-2 text-xs transition-colors border border-indigo-200 active:scale-95 shadow-sm"
+                                >
+                                  <Share2 size={14} />
+                                  <span>Compartir Enlace Público</span>
+                                </button>
+                              )}
+                            </div>
                           </div>
 
-                          {/* Paso 3: Seguimiento */}
-                          <div className={`bg-white rounded-2xl border ${themeAccent.border} ${themeAccent.borderHover} p-6 shadow-sm transition-all duration-300 space-y-4 flex flex-col justify-between`}>
-                            <div className="space-y-3">
-                              <div className="flex items-center space-x-3">
-                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs ${themeAccent.bg} ${themeAccent.text}`}>
-                                  3
+                          {/* Paso 3: Seguimiento (No se incluye para Puntos de Agenda) */}
+                          {cfg.id !== 'agenda' && (
+                            <div className={`bg-white rounded-2xl border ${themeAccent.border} ${themeAccent.borderHover} p-6 shadow-sm transition-all duration-300 space-y-4 flex flex-col justify-between`}>
+                              <div className="space-y-3">
+                                <div className="flex items-center space-x-3">
+                                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs ${themeAccent.bg} ${themeAccent.text}`}>
+                                    3
+                                  </div>
+                                  <h4 className="font-extrabold text-sm text-slate-800 tracking-tight">Monitorea en Línea</h4>
                                 </div>
-                                <h4 className="font-extrabold text-sm text-slate-800 tracking-tight">Monitorea en Línea</h4>
+                                <p className="text-xs text-slate-600 leading-relaxed font-semibold">
+                                  ¿Ya hiciste tu solicitud? Consulta el avance de tu trámite en tiempo real usando tu código.
+                                </p>
                               </div>
-                              <p className="text-xs text-slate-600 leading-relaxed font-semibold">
-                                ¿Ya hiciste tu solicitud? Consulta el avance de tu trámite en tiempo real usando tu código.
-                              </p>
+                              
+                              {/* Formulario de tracking integrado */}
+                              <form onSubmit={(e) => handleSearchTracking(e, cfg.id as any)} className="flex items-center gap-2 w-full mt-auto">
+                                <input
+                                  type="text"
+                                  value={trackingCode}
+                                  onChange={(e) => setTrackingCode(e.target.value)}
+                                  placeholder="Ej. LQX-358"
+                                  className="w-28 flex-shrink-0 px-3 py-2.5 border border-slate-250 rounded-xl focus:ring-2 focus:ring-slate-400 focus:border-transparent outline-none font-bold text-xs text-slate-800 bg-white placeholder-slate-350 text-center"
+                                  maxLength={8}
+                                />
+                                <button
+                                  type="submit"
+                                  className={`flex-grow py-2.5 font-extrabold rounded-xl text-xs transition-all shadow-md active:scale-95 flex items-center justify-center ${
+                                    BUTTON_CLASSES[cfg.colorTheme]
+                                  }`}
+                                >
+                                  Buscar
+                                </button>
+                              </form>
                             </div>
-                            
-                            {/* Formulario de tracking integrado */}
-                            <form onSubmit={(e) => handleSearchTracking(e, cfg.id as any)} className="flex items-center gap-2 w-full mt-auto">
-                              <input
-                                type="text"
-                                value={trackingCode}
-                                onChange={(e) => setTrackingCode(e.target.value)}
-                                placeholder="Ej. LQX-358"
-                                className="w-28 flex-shrink-0 px-3 py-2.5 border border-slate-250 rounded-xl focus:ring-2 focus:ring-slate-400 focus:border-transparent outline-none font-bold text-xs text-slate-800 bg-white placeholder-slate-350 text-center"
-                                maxLength={8}
-                              />
-                              <button
-                                type="submit"
-                                className={`flex-grow py-2.5 font-extrabold rounded-xl text-xs transition-all shadow-md active:scale-95 flex items-center justify-center ${
-                                  BUTTON_CLASSES[cfg.colorTheme]
-                                }`}
-                              >
-                                Buscar
-                              </button>
-                            </form>
-                          </div>
+                          )}
                         </div>
 
                         {/* Mensaje de error de búsqueda */}
@@ -2956,14 +2999,25 @@ Club de Leones de Quetzaltenango`;
             ) : activeTab === 'agenda' ? (
               <form onSubmit={handleSubmit} className="space-y-5 text-left animate-in fade-in duration-300">
                 {/* Agenda Info Alert */}
-                <div className="bg-yellow-50/60 border border-yellow-200/80 rounded-2xl p-5 flex items-start space-x-3 text-yellow-900 text-xs md:text-sm shadow-sm">
-                  <Calendar className="flex-shrink-0 text-yellow-600 mt-0.5 animate-pulse" size={18} />
-                  <div className="space-y-1">
-                    <p className="font-extrabold text-yellow-950 text-sm">💡 Propuesta de Punto de Agenda</p>
-                    <p className="leading-relaxed font-medium text-slate-750">
-                      Como socio activo, puedes proponer temas, puntos a discutir o solicitudes para que sean incluidos en el orden del día de las reuniones generales.
-                    </p>
+                <div className="bg-yellow-50/60 border border-yellow-200/80 rounded-2xl p-5 flex items-start justify-between text-yellow-900 text-xs md:text-sm shadow-sm gap-3">
+                  <div className="flex items-start space-x-3">
+                    <Calendar className="flex-shrink-0 text-yellow-600 mt-0.5 animate-pulse" size={18} />
+                    <div className="space-y-1">
+                      <p className="font-extrabold text-yellow-950 text-sm">💡 Propuesta de Punto de Agenda</p>
+                      <p className="leading-relaxed font-medium text-slate-750">
+                        Puedes proponer temas, puntos a discutir o solicitudes para ser incluidos en el orden del día de las reuniones generales del club.
+                      </p>
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyPublicAgendaLink}
+                    className="flex-shrink-0 px-3 py-1.5 bg-yellow-200/80 hover:bg-yellow-300 text-yellow-950 text-xs font-bold rounded-xl flex items-center space-x-1.5 transition-colors shadow-xs"
+                    title="Copiar enlace público"
+                  >
+                    <Share2 size={13} />
+                    <span className="hidden sm:inline">Compartir</span>
+                  </button>
                 </div>
 
                 {/* Form Fields */}
@@ -2972,25 +3026,14 @@ Club de Leones de Quetzaltenango`;
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
                       Socio Solicitante *
                     </label>
-                    <select
+                    <input
+                      type="text"
                       required
                       value={agendaSocioNombre}
                       onChange={(e) => setAgendaSocioNombre(e.target.value)}
+                      placeholder="Ingrese el nombre completo del socio solicitante..."
                       className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
-                    >
-                      <option value="" disabled>Seleccione un socio...</option>
-                      {[...socios]
-                        .sort((a, b) => a.nombre.localeCompare(b.nombre))
-                        .map((socio) => (
-                          <option key={socio.id} value={socio.nombre}>
-                            {socio.nombre} {socio.puesto ? `(${socio.puesto})` : ''}
-                          </option>
-                        ))
-                      }
-                      {agendaSocioNombre && !socios.some(s => s.nombre === agendaSocioNombre) && (
-                        <option value={agendaSocioNombre}>{agendaSocioNombre}</option>
-                      )}
-                    </select>
+                    />
                   </div>
 
                   <div>
