@@ -20,7 +20,8 @@ import {
   Users,
   User,
   FileText,
-  Undo2
+  Undo2,
+  AlertTriangle
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
@@ -225,6 +226,7 @@ export const ParqueoManager: React.FC = () => {
   // States for ticket and active vehicle interactions
   const [ticketVehiculo, setTicketVehiculo] = useState<VehiculoParqueo | null>(null);
   const [showExitModal, setShowExitModal] = useState<VehiculoParqueo | null>(null);
+  const [duplicateVehiculoModal, setDuplicateVehiculoModal] = useState<VehiculoParqueo | null>(null);
   
   // State for parking spots
   const [espacioSeleccionado, setEspacioSeleccionado] = useState<number | null>(null);
@@ -266,6 +268,23 @@ export const ParqueoManager: React.FC = () => {
         alert('Error: La placa estándar de Guatemala debe tener 3 números seguidos de 3 letras (Ej: 123ABC).');
         return;
       }
+    }
+
+    // Duplicate plate check: verify if plate is currently parked and active
+    const vehiculosActivos = vehiculos.filter(v => v.estado === 'Activo');
+    const vehiculoExistente = vehiculosActivos.find(v => {
+      const dbPlaca = (v.numeroPlaca || '').toUpperCase().replace(/[\s-]/g, '');
+      const inputPlaca = placaLimpia.toUpperCase().replace(/[\s-]/g, '');
+
+      if (isExtranjera || v.isExtranjera) {
+        return dbPlaca === inputPlaca;
+      }
+      return v.tipoPlaca === tipoPlaca && dbPlaca === inputPlaca;
+    });
+
+    if (vehiculoExistente) {
+      setDuplicateVehiculoModal(vehiculoExistente);
+      return;
     }
 
     const nuevoVehiculo: VehiculoParqueo = {
@@ -1688,6 +1707,97 @@ export const ParqueoManager: React.FC = () => {
                 className="px-4 py-2 bg-white border border-slate-300 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-50 transition-colors cursor-pointer"
               >
                 Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Advertencia: Placa Ya Registrada y Activa */}
+      {duplicateVehiculoModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-amber-200 animate-in zoom-in-95 duration-200 text-left">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-6 py-5 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2.5 bg-white/20 rounded-2xl">
+                  <AlertTriangle size={24} className="text-white" />
+                </div>
+                <div>
+                  <h3 className="font-black text-lg tracking-tight leading-tight">Placa Ya Registrada</h3>
+                  <p className="text-xs text-amber-100 font-medium">Vehículo actualmente dentro del parqueo</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDuplicateVehiculoModal(null)}
+                className="p-1.5 text-white/80 hover:text-white hover:bg-white/20 rounded-full transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-5">
+              <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-4 text-amber-900 space-y-2">
+                <p className="text-xs font-bold leading-relaxed">
+                  La placa <span className="font-black text-amber-950 underline px-1 bg-amber-200/60 rounded">{duplicateVehiculoModal.tipoPlaca === 'Extranjera' ? '' : duplicateVehiculoModal.tipoPlaca + '-'}{duplicateVehiculoModal.numeroPlaca}</span> ya se encuentra ingresada y activa en el parqueo.
+                </p>
+                <p className="text-[11px] text-amber-800 font-medium">
+                  No es posible emitir un nuevo ticket para un vehículo que no ha registrado su salida.
+                </p>
+              </div>
+
+              {/* Vehicle info card */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-200/60 pb-2.5">
+                  <span className="text-[10px] font-black uppercase text-slate-400">Estado</span>
+                  <span className="text-xs font-black text-emerald-600 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    ● En Cueva (Activo)
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500 font-bold">Tiempo Transcurrido:</span>
+                  <span className="font-black font-mono text-slate-900">{getTiempoTranscurrido(duplicateVehiculoModal.horaEntrada)}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500 font-bold">Color del Vehículo:</span>
+                  <div className="flex items-center space-x-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full border border-slate-300 shadow-xs" style={{ backgroundColor: duplicateVehiculoModal.color }}></span>
+                    <span className="font-bold text-slate-800">{duplicateVehiculoModal.colorLabel}</span>
+                  </div>
+                </div>
+                {duplicateVehiculoModal.numeroEspacio && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500 font-bold">Espacio de Parqueo:</span>
+                    <span className="font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      Espacio #{duplicateVehiculoModal.numeroEspacio}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="bg-slate-100 px-6 py-4 border-t border-slate-200 flex flex-col sm:flex-row justify-end items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setDuplicateVehiculoModal(null)}
+                className="w-full sm:w-auto px-4 py-2.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-xl transition-all cursor-pointer"
+              >
+                Entendido
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSalidaSearchQuery(duplicateVehiculoModal.numeroPlaca);
+                  setActiveTab('salida');
+                  setDuplicateVehiculoModal(null);
+                }}
+                className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-800 hover:to-indigo-800 text-white text-xs font-black rounded-xl shadow-md transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
+              >
+                <LogOut size={14} />
+                <span>Ver y Dar Salida</span>
               </button>
             </div>
           </div>
