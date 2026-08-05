@@ -1319,6 +1319,22 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                       {sol.agendaContenido}
                     </p>
                   </div>
+
+                  {/* Documento o Carta Adjunta si existe */}
+                  {sol.documentoUrl && (
+                    <div className="pt-1">
+                      <a
+                        href={sol.documentoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center space-x-1.5 px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-900 rounded-xl text-xs font-black transition-all cursor-pointer shadow-2xs"
+                        title={sol.documentoNombre || 'Ver carta o archivo adjunto'}
+                      >
+                        <FileText size={14} className="text-indigo-600" />
+                        <span>📄 Ver Documento / Carta Adjunta ({sol.documentoNombre || 'PDF/Imagen'})</span>
+                      </a>
+                    </div>
+                  )}
                 </div>
 
                 {/* Footer actions for Admin/Creator */}
@@ -3062,6 +3078,48 @@ Club de Leones de Quetzaltenango`;
                       placeholder="Describe el contenido o propuesta a detallar en la reunión..."
                       className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold resize-none text-slate-800"
                     />
+                  </div>
+
+                  {/* Document / Image / PDF Attachment Field (Optional) */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                      Carta, Foto o Documento Adjunto (Imagen o PDF, Máx. 10MB) - Opcional
+                    </label>
+                    <div className="border-2 border-dashed border-slate-200 hover:border-indigo-300 rounded-2xl p-4 text-center transition-all bg-slate-50/50">
+                      {docFileName ? (
+                        <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl p-3 shadow-xs">
+                          <div className="flex items-center space-x-2.5 min-w-0">
+                            <div className="p-2 bg-indigo-50 text-indigo-900 rounded-lg flex-shrink-0">
+                              <FileText size={18} />
+                            </div>
+                            <div className="min-w-0 text-left">
+                              <p className="text-xs font-bold text-slate-800 truncate">{docFileName}</p>
+                              <p className="text-[10px] text-slate-400 font-semibold">Documento listo para enviar</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => { setDocDataUrl(''); setDocFileName(''); }}
+                            className="p-1 text-slate-400 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
+                            title="Quitar archivo"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="cursor-pointer flex flex-col items-center justify-center space-y-1.5 py-2">
+                          <Upload size={22} className="text-indigo-400" />
+                          <span className="text-xs font-bold text-indigo-900">Adjuntar Carta, Contexto o Foto</span>
+                          <span className="text-[10px] text-slate-400">Archivos PDF, PNG, JPG o WEBP hasta 10MB</span>
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            onChange={handleDocFileChange}
+                            className="hidden"
+                          />
+                        </label>
+                      )}
+                    </div>
                   </div>
                 </div>
 
