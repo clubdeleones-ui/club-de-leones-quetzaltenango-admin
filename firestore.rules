@@ -194,6 +194,11 @@ service cloud.firestore {
       allow write: if true;
     }
 
+    match /banos/{document} {
+      allow read: if true;
+      allow write: if true;
+    }
+
     // --- GENERAL COMPATIBILITY CATCH-ALL ---
     // Regla de compatibilidad para otros desarrollos en el proyecto parqueo-cueva (Válido hasta finales de 2027)
     // Se restringe para no interceptar ni relajar las reglas de las colecciones del Club de Leones declaradas arriba.

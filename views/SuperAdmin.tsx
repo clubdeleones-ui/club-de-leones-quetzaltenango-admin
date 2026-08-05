@@ -83,6 +83,9 @@ import {
   Trophy,
   Crown,
   ShieldCheck,
+  ChevronRight,
+  Grid,
+  Menu,
   Settings,
   Key,
   ClipboardList,
@@ -4584,11 +4587,17 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               </span>
             </div>
             <button
+              type="button"
               onClick={() => setIsMobileMenuOpen(true)}
-              className="flex items-center space-x-1.5 bg-gradient-to-r from-blue-900 to-indigo-955 text-white px-4 py-2.5 rounded-xl text-xs font-black shadow-md hover:shadow-lg active:scale-95 transition-all"
+              className="flex items-center space-x-2 bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 hover:from-blue-900 hover:to-indigo-900 text-white px-3.5 py-2 rounded-2xl text-xs font-black shadow-lg shadow-blue-950/20 border border-blue-800/40 hover:border-amber-400/50 active:scale-95 transition-all group shrink-0"
             >
-              <Layers size={14} />
-              <span>Ver Módulos</span>
+              <div className="p-1 bg-amber-500/20 text-amber-300 rounded-lg group-hover:scale-110 transition-transform">
+                <Grid size={14} className="text-amber-400" />
+              </div>
+              <span className="tracking-tight text-[11px] font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-slate-200">
+                Módulos
+              </span>
+              <ChevronRight size={14} className="text-slate-400 group-hover:translate-x-0.5 transition-transform" />
             </button>
           </div>
 

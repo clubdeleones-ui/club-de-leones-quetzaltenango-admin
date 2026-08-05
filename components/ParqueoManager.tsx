@@ -26,7 +26,7 @@ import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
-import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, addDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { firebaseService } from '../services/firebaseService';
 import { VehiculoParqueo, RegistroBano } from '../types';
@@ -103,24 +103,39 @@ export const ParqueoManager: React.FC = () => {
     return () => unsubscribeBanos();
   }, []);
 
+  // Bathroom Toast notification state
+  const [banoToast, setBanoToast] = useState<string | null>(null);
+
   const handleRecordBano = async (genero: 'hombre' | 'mujer') => {
-    setIsSavingBano(true);
+    const now = new Date();
+    const docId = `BNO-${Date.now()}`;
+    const newRecord: RegistroBano = {
+      id: docId,
+      genero,
+      monto: 3.0,
+      fecha: now.toISOString(),
+      fechaCorta: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    };
+
+    // Optimistic UI state update
+    setRegistrosBanos(prev => [newRecord, ...prev]);
+    setBanoToast(`+Q.3.00 (${genero === 'hombre' ? 'Hombre' : 'Mujer'}) Anotado`);
+    setTimeout(() => setBanoToast(null), 2500);
+
     try {
-      const now = new Date();
-      const docId = `BNO-${Date.now()}`;
-      const newRecord: RegistroBano = {
-        id: docId,
-        genero,
-        monto: 3.0,
-        fecha: now.toISOString(),
-        fechaCorta: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-      };
       await setDoc(doc(db, 'banos', docId), newRecord);
     } catch (err) {
-      console.error("Error al registrar uso de baño:", err);
-      alert("Error al guardar registro de baño.");
-    } finally {
-      setIsSavingBano(false);
+      console.error("Error al registrar uso de baño con setDoc:", err);
+      try {
+        await addDoc(collection(db, 'banos'), {
+          genero,
+          monto: 3.0,
+          fecha: now.toISOString(),
+          fechaCorta: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+        });
+      } catch (err2) {
+        console.error("Error secundario con addDoc:", err2);
+      }
     }
   };
 
@@ -573,52 +588,67 @@ export const ParqueoManager: React.FC = () => {
           </div>
         </div>
 
+        {/* Toast Notification Banner */}
+        {banoToast && (
+          <div className="bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 px-4 py-2 rounded-xl text-xs font-black flex items-center justify-between animate-in fade-in zoom-in-95 duration-200">
+            <span className="flex items-center gap-2">
+              <CheckCircle size={14} className="text-emerald-400" />
+              <span>{banoToast}</span>
+            </span>
+            <span className="text-[10px] text-emerald-200 uppercase font-extrabold bg-emerald-500/30 px-2 py-0.5 rounded-md">Registrado</span>
+          </div>
+        )}
+
         {/* Buttons and Live Summary */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
           {/* Button Hombre */}
           <button
             type="button"
-            disabled={isSavingBano}
             onClick={() => handleRecordBano('hombre')}
-            className="py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 text-white font-black rounded-2xl shadow-md transition-all active:scale-95 flex items-center justify-between cursor-pointer border border-blue-400/30"
+            className="py-3.5 px-4 bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-800 hover:from-blue-500 hover:to-indigo-500 text-white font-black rounded-2xl shadow-md hover:shadow-lg hover:shadow-blue-500/25 transition-all active:scale-95 flex items-center justify-between cursor-pointer border border-blue-400/40 group relative overflow-hidden"
           >
-            <div className="flex items-center space-x-2">
-              <span className="text-lg">👨</span>
-              <span className="text-xs">Anotar Hombre</span>
+            <div className="flex items-center space-x-3">
+              <span className="text-2xl group-hover:scale-125 transition-transform duration-300">👨</span>
+              <div className="text-left">
+                <span className="text-xs md:text-sm font-black tracking-tight block">Anotar Hombre</span>
+                <span className="text-[10px] text-blue-200/90 font-medium hidden md:block">Ingreso de sanitario (Q3.00)</span>
+              </div>
             </div>
-            <span className="text-xs font-extrabold bg-white/20 px-2.5 py-0.5 rounded-lg">+Q.3.00</span>
+            <span className="text-xs font-extrabold bg-white/20 group-hover:bg-white/30 px-2.5 py-1 rounded-xl shadow-inner transition-colors">+Q.3.00</span>
           </button>
 
           {/* Button Mujer */}
           <button
             type="button"
-            disabled={isSavingBano}
             onClick={() => handleRecordBano('mujer')}
-            className="py-3 px-4 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 disabled:opacity-50 text-white font-black rounded-2xl shadow-md transition-all active:scale-95 flex items-center justify-between cursor-pointer border border-pink-400/30"
+            className="py-3.5 px-4 bg-gradient-to-br from-rose-600 via-pink-600 to-rose-800 hover:from-rose-500 hover:to-pink-500 text-white font-black rounded-2xl shadow-md hover:shadow-lg hover:shadow-rose-500/25 transition-all active:scale-95 flex items-center justify-between cursor-pointer border border-pink-400/40 group relative overflow-hidden"
           >
-            <div className="flex items-center space-x-2">
-              <span className="text-lg">👩</span>
-              <span className="text-xs">Anotar Mujer</span>
+            <div className="flex items-center space-x-3">
+              <span className="text-2xl group-hover:scale-125 transition-transform duration-300">👩</span>
+              <div className="text-left">
+                <span className="text-xs md:text-sm font-black tracking-tight block">Anotar Mujer</span>
+                <span className="text-[10px] text-rose-200/90 font-medium hidden md:block">Ingreso de sanitario (Q3.00)</span>
+              </div>
             </div>
-            <span className="text-xs font-extrabold bg-white/20 px-2.5 py-0.5 rounded-lg">+Q.3.00</span>
+            <span className="text-xs font-extrabold bg-white/20 group-hover:bg-white/30 px-2.5 py-1 rounded-xl shadow-inner transition-colors">+Q.3.00</span>
           </button>
 
           {/* Hombres Counter Card */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-3 flex items-center justify-between">
-            <div className="text-xs">
-              <span className="text-[10px] text-slate-400 font-bold uppercase">Hombres Hoy</span>
-              <p className="text-sm font-black text-blue-300">{banosStats.hombresHoy} personas</p>
+          <div className="bg-white/5 hover:bg-white/10 transition-colors border border-white/10 rounded-2xl p-3.5 flex items-center justify-between">
+            <div className="text-xs text-left">
+              <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">Hombres Hoy</span>
+              <p className="text-base font-black text-blue-300">{banosStats.hombresHoy} personas</p>
             </div>
-            <span className="text-xs font-extrabold text-slate-300">Q.{banosStats.hombresHoy * 3}.00</span>
+            <span className="text-xs font-black text-slate-200 bg-blue-500/20 px-2 py-1 rounded-lg border border-blue-400/20">Q.{banosStats.hombresHoy * 3}.00</span>
           </div>
 
           {/* Mujeres Counter Card */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-3 flex items-center justify-between">
-            <div className="text-xs">
-              <span className="text-[10px] text-slate-400 font-bold uppercase">Mujeres Hoy</span>
-              <p className="text-sm font-black text-pink-300">{banosStats.mujeresHoy} personas</p>
+          <div className="bg-white/5 hover:bg-white/10 transition-colors border border-white/10 rounded-2xl p-3.5 flex items-center justify-between">
+            <div className="text-xs text-left">
+              <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider block">Mujeres Hoy</span>
+              <p className="text-base font-black text-pink-300">{banosStats.mujeresHoy} personas</p>
             </div>
-            <span className="text-xs font-extrabold text-slate-300">Q.{banosStats.mujeresHoy * 3}.00</span>
+            <span className="text-xs font-black text-slate-200 bg-pink-500/20 px-2 py-1 rounded-lg border border-pink-400/20">Q.{banosStats.mujeresHoy * 3}.00</span>
           </div>
         </div>
       </div>
