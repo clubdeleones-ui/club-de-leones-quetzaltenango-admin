@@ -89,12 +89,13 @@ export const ParqueoManager: React.FC = () => {
   const [showBanosReportModal, setShowBanosReportModal] = useState(false);
 
   useEffect(() => {
-    const qBanos = query(collection(db, 'banos'), orderBy('fecha', 'desc'));
+    const qBanos = collection(db, 'banos');
     const unsubscribeBanos = onSnapshot(qBanos, (snapshot) => {
       const list: RegistroBano[] = [];
       snapshot.forEach(docSnap => {
         list.push({ id: docSnap.id, ...docSnap.data() } as RegistroBano);
       });
+      list.sort((a, b) => new Date(b.fecha || 0).getTime() - new Date(a.fecha || 0).getTime());
       setRegistrosBanos(list);
     }, (error) => {
       console.error("Error fetching registros de baños in real-time:", error);
@@ -109,12 +110,13 @@ export const ParqueoManager: React.FC = () => {
   const handleRecordBano = async (genero: 'hombre' | 'mujer') => {
     const now = new Date();
     const docId = `BNO-${Date.now()}`;
+    const fechaCortaStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const newRecord: RegistroBano = {
       id: docId,
       genero,
       monto: 3.0,
       fecha: now.toISOString(),
-      fechaCorta: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      fechaCorta: fechaCortaStr
     };
 
     // Optimistic UI state update
@@ -131,7 +133,7 @@ export const ParqueoManager: React.FC = () => {
           genero,
           monto: 3.0,
           fecha: now.toISOString(),
-          fechaCorta: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+          fechaCorta: fechaCortaStr
         });
       } catch (err2) {
         console.error("Error secundario con addDoc:", err2);
@@ -140,6 +142,8 @@ export const ParqueoManager: React.FC = () => {
   };
 
   const handleDeleteLastBano = async (id: string) => {
+    // Optimistic local delete
+    setRegistrosBanos(prev => prev.filter(b => b.id !== id));
     try {
       await deleteDoc(doc(db, 'banos', id));
     } catch (err) {
@@ -149,9 +153,28 @@ export const ParqueoManager: React.FC = () => {
 
   const banosStats = React.useMemo(() => {
     const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const isSameDay = (d1: Date, d2: Date) => 
+      d1.getFullYear() === d2.getFullYear() &&
+      d1.getMonth() === d2.getMonth() &&
+      d1.getDate() === d2.getDate();
 
-    const todayRecords = registrosBanos.filter(b => b.fechaCorta === todayStr || (b.fecha && b.fecha.startsWith(todayStr)));
+    const todayRecords = registrosBanos.filter(b => {
+      if (b.fecha) {
+        const d = new Date(b.fecha);
+        if (!isNaN(d.getTime())) return isSameDay(d, now);
+      }
+      if (b.fechaCorta) {
+        const parts = b.fechaCorta.split('-');
+        if (parts.length === 3) {
+          const yr = parseInt(parts[0], 10);
+          const mo = parseInt(parts[1], 10) - 1;
+          const dy = parseInt(parts[2], 10);
+          return yr === now.getFullYear() && mo === now.getMonth() && dy === now.getDate();
+        }
+      }
+      return false;
+    });
+
     const hombresHoy = todayRecords.filter(b => b.genero === 'hombre').length;
     const mujeresHoy = todayRecords.filter(b => b.genero === 'mujer').length;
     const totalUsosHoy = todayRecords.length;
@@ -1459,78 +1482,80 @@ export const ParqueoManager: React.FC = () => {
 
       {/* Reporte de Uso de Baños Modal */}
       {showBanosReportModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-[2.5rem] w-full max-w-3xl shadow-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-300">
-            <div className="bg-slate-900 text-white px-6 sm:px-8 py-6 flex justify-between items-center">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl sm:rounded-[2.5rem] w-full max-w-2xl shadow-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-300 max-h-[88vh] flex flex-col text-left">
+            {/* Header */}
+            <div className="bg-slate-900 text-white px-5 sm:px-7 py-4 sm:py-5 flex justify-between items-center shrink-0">
               <div className="flex items-center space-x-3">
-                <div className="p-3 bg-blue-500/20 text-blue-300 rounded-2xl border border-blue-400/30">
-                  <Users size={24} />
+                <div className="p-2 sm:p-2.5 bg-blue-500/20 text-blue-300 rounded-xl border border-blue-400/30">
+                  <Users size={20} className="sm:w-6 sm:h-6" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black tracking-tight">Reporte de Uso de Sanitarios</h2>
-                  <p className="text-xs text-slate-400 font-medium">Control de accesos y recaudación a Q. 3.00 por persona</p>
+                  <h2 className="text-base sm:text-lg font-black tracking-tight leading-snug">Reporte de Sanitarios</h2>
+                  <p className="text-[10px] sm:text-xs text-slate-400 font-medium">Control de accesos y recaudación a Q. 3.00</p>
                 </div>
               </div>
               <button 
                 onClick={() => setShowBanosReportModal(false)}
-                className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+                className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-full transition-colors cursor-pointer"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            <div className="p-6 sm:p-8 space-y-6 text-left max-h-[75vh] overflow-y-auto">
-              {/* Summary Dashboard */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white p-5 rounded-2xl shadow-md">
-                  <span className="text-[10px] font-black uppercase tracking-wider opacity-90">Total Recaudado (Hoy)</span>
-                  <p className="text-3xl font-black mt-1">Q.{banosStats.totalMontoHoy}.00</p>
-                  <p className="text-xs font-bold opacity-90 mt-1">{banosStats.totalUsosHoy} personas ingresaron</p>
+            {/* Scrollable Content */}
+            <div className="p-4 sm:p-6 space-y-4 text-left overflow-y-auto flex-1">
+              {/* Summary Dashboard - Compact 3 column grid */}
+              <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+                <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white p-3 sm:p-4 rounded-2xl shadow-sm">
+                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider opacity-90 block">Total Hoy</span>
+                  <p className="text-lg sm:text-2xl font-black mt-0.5">Q.{banosStats.totalMontoHoy}.00</p>
+                  <p className="text-[9px] sm:text-xs font-bold opacity-90">{banosStats.totalUsosHoy} usos</p>
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 p-5 rounded-2xl">
-                  <span className="text-[10px] font-black uppercase text-blue-900 tracking-wider">Hombres (Hoy)</span>
-                  <p className="text-2xl font-black text-blue-900 mt-1">{banosStats.hombresHoy} personas</p>
-                  <p className="text-xs font-bold text-blue-700 mt-1">Q.{banosStats.hombresHoy * 3}.00</p>
+                <div className="bg-blue-50 border border-blue-200 p-3 sm:p-4 rounded-2xl">
+                  <span className="text-[9px] sm:text-[10px] font-black uppercase text-blue-900 tracking-wider block">Hombres</span>
+                  <p className="text-base sm:text-xl font-black text-blue-900 mt-0.5">{banosStats.hombresHoy}</p>
+                  <p className="text-[9px] sm:text-xs font-bold text-blue-700">Q.{banosStats.hombresHoy * 3}.00</p>
                 </div>
 
-                <div className="bg-pink-50 border border-pink-200 p-5 rounded-2xl">
-                  <span className="text-[10px] font-black uppercase text-pink-900 tracking-wider">Mujeres (Hoy)</span>
-                  <p className="text-2xl font-black text-pink-900 mt-1">{banosStats.mujeresHoy} personas</p>
-                  <p className="text-xs font-bold text-pink-700 mt-1">Q.{banosStats.mujeresHoy * 3}.00</p>
+                <div className="bg-pink-50 border border-pink-200 p-3 sm:p-4 rounded-2xl">
+                  <span className="text-[9px] sm:text-[10px] font-black uppercase text-pink-900 tracking-wider block">Mujeres</span>
+                  <p className="text-base sm:text-xl font-black text-pink-900 mt-0.5">{banosStats.mujeresHoy}</p>
+                  <p className="text-[9px] sm:text-xs font-bold text-pink-700">Q.{banosStats.mujeresHoy * 3}.00</p>
                 </div>
               </div>
 
               {/* Detail List */}
-              <div className="space-y-3">
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1">
-                  Registros del Día de Hoy ({banosStats.todayRecords.length})
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1">
+                  Registros de Hoy ({banosStats.todayRecords.length})
                 </h4>
 
                 {banosStats.todayRecords.length === 0 ? (
-                  <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-400 font-bold italic text-sm">
+                  <div className="p-6 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-400 font-bold italic text-xs">
                     No se han registrado usos de sanitarios el día de hoy.
                   </div>
                 ) : (
-                  <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto pr-1">
+                  <div className="divide-y divide-slate-100 max-h-48 sm:max-h-60 overflow-y-auto pr-1">
                     {banosStats.todayRecords.map((reg) => (
-                      <div key={reg.id} className="py-2.5 flex items-center justify-between text-xs">
-                        <div className="flex items-center space-x-3">
-                          <span className="text-base">{reg.genero === 'hombre' ? '👨' : '👩'}</span>
+                      <div key={reg.id} className="py-2 flex items-center justify-between text-xs">
+                        <div className="flex items-center space-x-2.5">
+                          <span className="text-sm">{reg.genero === 'hombre' ? '👨' : '👩'}</span>
                           <div>
-                            <span className="font-extrabold text-slate-800 capitalize">Acceso {reg.genero}</span>
-                            <p className="text-[10px] text-slate-400 font-semibold">{new Date(reg.fecha).toLocaleTimeString()}</p>
+                            <span className="font-extrabold text-slate-800 capitalize text-xs">Acceso {reg.genero}</span>
+                            <p className="text-[9px] text-slate-400 font-semibold">{new Date(reg.fecha).toLocaleTimeString()}</p>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-3">
-                          <span className="font-black text-emerald-700">+Q. 3.00</span>
+                        <div className="flex items-center space-x-2.5">
+                          <span className="font-black text-emerald-700 text-xs">+Q. 3.00</span>
                           <button
                             type="button"
                             onClick={() => handleDeleteLastBano(reg.id)}
                             className="p-1 text-slate-300 hover:text-red-600 rounded transition-colors cursor-pointer"
                             title="Eliminar registro"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={13} />
                           </button>
                         </div>
                       </div>
@@ -1540,7 +1565,8 @@ export const ParqueoManager: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-slate-100 px-6 sm:px-8 py-4 border-t border-slate-200 flex justify-between items-center">
+            {/* Footer - Fixed */}
+            <div className="bg-slate-100 px-5 sm:px-7 py-3.5 border-t border-slate-200 flex justify-between items-center shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -1558,15 +1584,15 @@ export const ParqueoManager: React.FC = () => {
                   docPdf.autoPrint();
                   window.open(docPdf.output('bloburl'), '_blank');
                 }}
-                className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs rounded-xl flex items-center space-x-1.5 cursor-pointer shadow-md"
+                className="px-3.5 py-2 bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs rounded-xl flex items-center space-x-1.5 cursor-pointer shadow-md"
               >
                 <Printer size={14} />
-                <span>Imprimir Reporte Baños</span>
+                <span>Imprimir Reporte</span>
               </button>
 
               <button 
                 onClick={() => setShowBanosReportModal(false)}
-                className="px-5 py-2 bg-white border border-slate-300 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-50 transition-colors cursor-pointer"
+                className="px-4 py-2 bg-white border border-slate-300 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-50 transition-colors cursor-pointer"
               >
                 Cerrar
               </button>
