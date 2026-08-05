@@ -62,50 +62,51 @@ export const ParqueoManager: React.FC = () => {
     showAlert("Notificación", msg);
   };
 
-  // Persistence with Firestore real-time
+  // Persistence with Firestore real-time for Parqueo & Baños
   const [vehiculos, setVehiculos] = useState<VehiculoParqueo[]>([]);
+  const [registrosBanos, setRegistrosBanos] = useState<RegistroBano[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Bathroom Toast notification state & modal state
+  const [banoToast, setBanoToast] = useState<string | null>(null);
+  const [showBanosReportModal, setShowBanosReportModal] = useState(false);
+
   useEffect(() => {
-    const q = query(collection(db, 'parqueo'), orderBy('horaEntrada', 'desc'));
+    const q = collection(db, 'parqueo');
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list: VehiculoParqueo[] = [];
-      snapshot.forEach(doc => {
-        list.push(doc.data() as VehiculoParqueo);
+      const vehList: VehiculoParqueo[] = [];
+      const banoList: RegistroBano[] = [];
+
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.tipoEntrada === 'bano' || (data.numeroPlaca && String(data.numeroPlaca).startsWith('BAÑO-'))) {
+          banoList.push({
+            id: docSnap.id,
+            genero: data.genero || (String(data.numeroPlaca).includes('MUJER') ? 'mujer' : 'hombre'),
+            monto: data.monto || data.costo || 3.0,
+            fecha: data.fecha || data.horaEntrada || new Date().toISOString(),
+            fechaCorta: data.fechaCorta || (data.fecha ? String(data.fecha).split('T')[0] : '')
+          } as RegistroBano);
+        } else {
+          vehList.push(data as VehiculoParqueo);
+        }
       });
-      setVehiculos(list);
+
+      // Sort vehicles by entry time
+      vehList.sort((a, b) => new Date(b.horaEntrada || 0).getTime() - new Date(a.horaEntrada || 0).getTime());
+      // Sort bathroom entries by date
+      banoList.sort((a, b) => new Date(b.fecha || 0).getTime() - new Date(a.fecha || 0).getTime());
+
+      setVehiculos(vehList);
+      setRegistrosBanos(banoList);
       setIsLoading(false);
     }, (error) => {
-      console.error("Error fetching vehiculos in real-time:", error);
+      console.error("Error fetching parqueo in real-time:", error);
       setIsLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
-
-  // Bathroom Usage State & Listener
-  const [registrosBanos, setRegistrosBanos] = useState<RegistroBano[]>([]);
-  const [isSavingBano, setIsSavingBano] = useState(false);
-  const [showBanosReportModal, setShowBanosReportModal] = useState(false);
-
-  useEffect(() => {
-    const qBanos = collection(db, 'banos');
-    const unsubscribeBanos = onSnapshot(qBanos, (snapshot) => {
-      const list: RegistroBano[] = [];
-      snapshot.forEach(docSnap => {
-        list.push({ id: docSnap.id, ...docSnap.data() } as RegistroBano);
-      });
-      list.sort((a, b) => new Date(b.fecha || 0).getTime() - new Date(a.fecha || 0).getTime());
-      setRegistrosBanos(list);
-    }, (error) => {
-      console.error("Error fetching registros de baños in real-time:", error);
-    });
-
-    return () => unsubscribeBanos();
-  }, []);
-
-  // Bathroom Toast notification state
-  const [banoToast, setBanoToast] = useState<string | null>(null);
 
   const handleRecordBano = async (genero: 'hombre' | 'mujer') => {
     const now = new Date();
@@ -125,18 +126,39 @@ export const ParqueoManager: React.FC = () => {
     setTimeout(() => setBanoToast(null), 2500);
 
     try {
-      await setDoc(doc(db, 'banos', docId), newRecord);
+      const banoDocPayload = {
+        numeroPlaca: `BAÑO-${genero.toUpperCase()}`,
+        isExtranjera: false,
+        estado: 'Completado',
+        tipoEntrada: 'bano',
+        genero: genero,
+        monto: 3.0,
+        costo: 3.0,
+        fecha: now.toISOString(),
+        fechaCorta: fechaCortaStr,
+        horaEntrada: now.toISOString(),
+        horaSalida: now.toISOString()
+      };
+
+      await setDoc(doc(db, 'parqueo', docId), banoDocPayload);
     } catch (err) {
-      console.error("Error al registrar uso de baño con setDoc:", err);
+      console.error("Error al registrar uso de baño en Firestore:", err);
       try {
-        await addDoc(collection(db, 'banos'), {
-          genero,
+        await addDoc(collection(db, 'parqueo'), {
+          numeroPlaca: `BAÑO-${genero.toUpperCase()}`,
+          isExtranjera: false,
+          estado: 'Completado',
+          tipoEntrada: 'bano',
+          genero: genero,
           monto: 3.0,
+          costo: 3.0,
           fecha: now.toISOString(),
-          fechaCorta: fechaCortaStr
+          fechaCorta: fechaCortaStr,
+          horaEntrada: now.toISOString(),
+          horaSalida: now.toISOString()
         });
       } catch (err2) {
-        console.error("Error secundario con addDoc:", err2);
+        console.error("Error secundario al guardar uso de baño:", err2);
       }
     }
   };
@@ -145,7 +167,7 @@ export const ParqueoManager: React.FC = () => {
     // Optimistic local delete
     setRegistrosBanos(prev => prev.filter(b => b.id !== id));
     try {
-      await deleteDoc(doc(db, 'banos', id));
+      await deleteDoc(doc(db, 'parqueo', id));
     } catch (err) {
       console.error("Error al eliminar registro de baño:", err);
     }
