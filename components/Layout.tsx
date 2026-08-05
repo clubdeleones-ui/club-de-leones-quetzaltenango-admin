@@ -58,14 +58,13 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
     }
   }, [isOpen]);
 
-  // Initialize Gapi client
+  // Initialize Gapi client only when an active accessToken exists
   useEffect(() => {
+    if (!auth.accessToken) return;
     const initGapi = async () => {
       try {
         await googleService.initClient();
-        if (auth.accessToken) {
-          googleService.setAccessToken(auth.accessToken);
-        }
+        googleService.setAccessToken(auth.accessToken);
       } catch (error) {
         console.error('Failed to init GAPI:', error);
       }
