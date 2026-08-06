@@ -6,7 +6,10 @@ export const env = {
   firebaseMessagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || import.meta.env.FIREBASE_MESSAGING_SENDER_ID,
   firebaseAppId: import.meta.env.VITE_FIREBASE_APP_ID || import.meta.env.FIREBASE_APP_ID,
   geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY,
-  googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '809679443982-1cohbkabbq88i05uk4d620013g5msed6.apps.googleusercontent.com'
+  googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '809679443982-1cohbkabbq88i05uk4d620013g5msed6.apps.googleusercontent.com',
+  recurrenteTestKey: import.meta.env.VITE_RECURRENTE_TEST_KEY || localStorage.getItem('recurrente_test_key') || '',
+  recurrenteLiveKey: import.meta.env.VITE_RECURRENTE_LIVE_KEY || localStorage.getItem('recurrente_live_key') || '',
+  recurrenteTestMode: import.meta.env.VITE_RECURRENTE_TEST_MODE !== 'false'
 };
 
 // Check for critical missing variables in development
@@ -15,3 +18,4 @@ if (import.meta.env.DEV) {
     console.warn('VITE_FIREBASE_API_KEY no está definido. Asegúrate de configurarlo en .env');
   }
 }
+

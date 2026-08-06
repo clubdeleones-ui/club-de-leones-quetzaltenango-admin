@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import { Socio, UserRole } from '../../types';
 import { firebaseService } from '../../services/firebaseService';
+import { recurrenteService } from '../../services/recurrenteService';
 import { useClubData } from '../../context/ClubDataContext';
 import { generateReciboPagoPDF } from '../../utils/pdfGenerator';
 import { useToast } from '../../context/ToastContext';
@@ -13,6 +14,14 @@ export const AdminCuotas: React.FC = () => {
   const { socios: dbSocios } = useClubData();
   const [socios, setSocios] = useState<Socio[]>(dbSocios);
   const { showToast } = useToast();
+  const [isTestMode, setIsTestMode] = useState<boolean>(recurrenteService.getTestMode());
+
+  const handleToggleRecurrenteTestMode = (newMode: boolean) => {
+    recurrenteService.setTestMode(newMode);
+    setIsTestMode(newMode);
+    showToast(`Pasarela Recurrente GT cambiada a modo: ${newMode ? 'PRUEBAS (TEST)' : 'PRODUCCIÓN (LIVE)'}`, 'info');
+  };
+
 
   React.useEffect(() => {
     setSocios(dbSocios);
@@ -740,8 +749,57 @@ export const AdminCuotas: React.FC = () => {
         </div>
       </div>
 
+      {/* Recurrente GT Gateway Status Banner */}
+      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-3xl p-5 border border-blue-950 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center space-x-3.5">
+          <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/15 text-amber-400 flex-shrink-0">
+            <CreditCard size={24} />
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <h3 className="text-sm font-black tracking-tight text-white">Pasarela de Pago Recurrente GT</h3>
+              <span className={`text-[9px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider ${
+                isTestMode ? 'bg-amber-400 text-blue-950' : 'bg-emerald-400 text-slate-950'
+              }`}>
+                {isTestMode ? 'Modo Pruebas (TEST)' : 'Producción (LIVE)'}
+              </span>
+            </div>
+            <p className="text-[11px] text-blue-200 font-medium mt-0.5">
+              Cobro automático en Quetzales (GTQ) con Tarjetas de Crédito / Débito Visa y Mastercard. 
+              {isTestMode ? ' Usando llaves sk_test_...' : ' Usando llaves reales sk_live_...'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-2 w-full md:w-auto justify-end">
+          <button
+            type="button"
+            onClick={() => handleToggleRecurrenteTestMode(true)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all ${
+              isTestMode 
+                ? 'bg-amber-400 text-blue-950 shadow-md' 
+                : 'bg-white/10 hover:bg-white/20 text-white border border-white/15'
+            }`}
+          >
+            Modo TEST
+          </button>
+          <button
+            type="button"
+            onClick={() => handleToggleRecurrenteTestMode(false)}
+            className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all ${
+              !isTestMode 
+                ? 'bg-emerald-400 text-slate-950 shadow-md' 
+                : 'bg-white/10 hover:bg-white/20 text-white border border-white/15'
+            }`}
+          >
+            Modo LIVE
+          </button>
+        </div>
+      </div>
+
       {/* KPI Widgets */}
       {(() => {
+
         const activeMembersList = socios.filter(s => s.rol !== UserRole.DONANTE && s.rol !== UserRole.GUEST);
         const totalRecaudado = activeMembersList.reduce((sum, s) => {
           const pagosSocio = s.historialPagos?.reduce((pSum, p) => pSum + p.monto, 0) || 0;

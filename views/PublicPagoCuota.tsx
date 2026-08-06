@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Search, DollarSign, Calendar, CreditCard, Image, Upload, X, Check, Building, AlertCircle } from 'lucide-react';
+import { Search, DollarSign, Calendar, CreditCard, Image, Upload, X, Check, Building, AlertCircle, Sparkles, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
+import { recurrenteService } from '../services/recurrenteService';
 import { Socio } from '../types';
 import { useToast } from '../context/ToastContext';
 
@@ -14,6 +15,7 @@ export const PublicPagoCuota: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [processingRecurrenteReturn, setProcessingRecurrenteReturn] = useState(false);
 
   // Form State
   const [selectedSocio, setSelectedSocio] = useState<Socio | null>(null);
@@ -28,7 +30,7 @@ export const PublicPagoCuota: React.FC = () => {
     semestre: '1er Semestre (Ene-Jun)',
     trimester: '1er Trimestre (Ene-Mar)',
     monto: 125,
-    metodo: 'Transferencia' as 'Transferencia' | 'Depósito',
+    metodo: 'Tarjeta' as 'Transferencia' | 'Depósito' | 'Tarjeta',
     bancoReferencia: '',
     numeroReferencia: '',
     fechaPago: new Date().toISOString().split('T')[0],
@@ -38,6 +40,7 @@ export const PublicPagoCuota: React.FC = () => {
 
   const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
   const currentYear = new Date().getFullYear();
+
 
   // Load active members from Firestore
   useEffect(() => {
@@ -67,7 +70,81 @@ export const PublicPagoCuota: React.FC = () => {
     fetchSocios();
   }, [searchParams]);
 
+  // Handle return callback from Recurrente payment gateway
+  useEffect(() => {
+    const status = searchParams.get('status');
+    const checkoutId = searchParams.get('checkout_id');
+    const socioId = searchParams.get('socioId');
+    const tipoCuota = searchParams.get('tipoCuota') as any;
+    const periodo = searchParams.get('periodo');
+    const monto = searchParams.get('monto');
+
+    if (status === 'success' && checkoutId && socioId) {
+      processRecurrenteReturn(checkoutId, socioId, tipoCuota || 'ordinaria', periodo || '', Number(monto) || 125);
+    } else if (status === 'cancel') {
+      showToast('Pago en Recurrente cancelado por el usuario.', 'info');
+    }
+  }, [searchParams]);
+
+  const processRecurrenteReturn = async (
+    checkoutId: string,
+    socioId: string,
+    tipoCuota: 'ordinaria' | 'inscripcion' | 'extraordinaria' | 'donacion',
+    periodo: string,
+    monto: number
+  ) => {
+    setProcessingRecurrenteReturn(true);
+    try {
+      // Verify payment status with Recurrente API
+      const checkout = await recurrenteService.getCheckoutStatus(checkoutId);
+      
+      const targetSocio = await firebaseService.getSocioById(socioId);
+      if (!targetSocio) {
+        showToast('Socio no encontrado para procesar el pago.', 'error');
+        return;
+      }
+
+      // Check if already recorded
+      const alreadyRecorded = targetSocio.historialPagos?.some(p => p.numeroReferencia === checkoutId);
+      if (alreadyRecorded) {
+        setSelectedSocio(targetSocio);
+        setSearchQuery(targetSocio.nombre);
+        setSuccess(true);
+        showToast('El pago ya había sido registrado en la plataforma.', 'info');
+        return;
+      }
+
+      const nuevoPago = {
+        id: `pago-rec-${Date.now()}`,
+        fechaPago: new Date().toISOString().split('T')[0],
+        monto: monto,
+        periodo: periodo || 'Aportación',
+        tipoPeriodo: 'Mensual' as const,
+        metodo: 'Tarjeta' as const,
+        bancoReferencia: 'Recurrente GT',
+        numeroReferencia: checkoutId,
+        tipoCuota: tipoCuota,
+        descripcion: `Pago en línea procesado con tarjeta vía Recurrente GT. ID: ${checkoutId}`,
+        comprobanteUrl: `https://app.recurrente.com/checkout-session/${checkoutId}`
+      };
+
+      const updatedHistorial = [nuevoPago, ...(targetSocio.historialPagos || [])];
+      await firebaseService.updateSocio(targetSocio.id, { historialPagos: updatedHistorial });
+
+      setSelectedSocio(targetSocio);
+      setSearchQuery(targetSocio.nombre);
+      setSuccess(true);
+      showToast('¡Pago con tarjeta procesado y registrado con éxito!', 'success');
+    } catch (err: any) {
+      console.error('Error procesando retorno de Recurrente:', err);
+      showToast('Error al verificar el pago con Recurrente: ' + err.message, 'error');
+    } finally {
+      setProcessingRecurrenteReturn(false);
+    }
+  };
+
   // Adjust amount and periods according to selections
+
   useEffect(() => {
     if (formState.tipoCuota === 'inscripcion') {
       setFormState(prev => ({ ...prev, monto: 750 }));
@@ -310,13 +387,15 @@ export const PublicPagoCuota: React.FC = () => {
       showToast('Por favor, selecciona tu nombre de socio.', 'error');
       return;
     }
-    if (!formState.comprobanteBase64) {
+
+    const { tipoCuota, fechaPago, monto, metodo, bancoReferencia, numeroReferencia, descripcion, tipoPeriodo, año, mes, semestre, trimester } = formState;
+
+    if (metodo !== 'Tarjeta' && !formState.comprobanteBase64) {
       showToast('Por favor, sube una foto o captura del comprobante bancario.', 'error');
       return;
     }
 
     // Check for duplicate payments if it's a regular cuota
-    const { tipoCuota, fechaPago, monto, metodo, bancoReferencia, numeroReferencia, descripcion, tipoPeriodo, año, mes, semestre, trimester } = formState;
     if (tipoCuota === 'ordinaria') {
       let monthsToCheck: { month: string; year: number }[] = [];
       if (tipoPeriodo === 'Mensual') {
@@ -351,6 +430,67 @@ export const PublicPagoCuota: React.FC = () => {
         return;
       }
     }
+
+    // ONLINE RECURRENTE PAYMENT FLOW
+    if (metodo === 'Tarjeta') {
+      setSubmitting(true);
+      try {
+        const currentOrigin = window.location.origin + window.location.pathname;
+        const cleanOrigin = currentOrigin.endsWith('/') ? currentOrigin.slice(0, -1) : currentOrigin;
+
+        let periodLabel = `${mes} ${año}`;
+        if (tipoCuota === 'ordinaria' && tipoPeriodo !== 'Mensual') {
+          const startMonth = mes || 'Enero';
+          const startYear = año || 2026;
+          let monthsToAdd = 2;
+          if (tipoPeriodo === 'Semestral') monthsToAdd = 5;
+          else if (tipoPeriodo === 'Anual') monthsToAdd = 11;
+          const end = getEndMonthAndYear(startMonth, startYear, monthsToAdd);
+          periodLabel = `${tipoPeriodo}: ${startMonth} ${startYear} - ${end.month} ${end.year}`;
+        } else if (tipoCuota === 'inscripcion') {
+          periodLabel = 'Cuota de Inscripción';
+        } else if (tipoCuota === 'extraordinaria') {
+          periodLabel = 'Cuota Extraordinaria';
+        } else if (tipoCuota === 'donacion') {
+          periodLabel = 'Donación';
+        }
+
+        const successUrl = `${cleanOrigin}#/pago-cuota?status=success&checkout_id={CHECKOUT_ID}&socioId=${selectedSocio.id}&tipoCuota=${tipoCuota}&periodo=${encodeURIComponent(periodLabel)}&monto=${monto}`;
+        const cancelUrl = `${cleanOrigin}#/pago-cuota?status=cancel`;
+
+        const checkoutResponse = await recurrenteService.createCheckout({
+          items: [
+            {
+              name: `Aportación ${tipoCuota.toUpperCase()} (${periodLabel}) - ${selectedSocio.nombre}`,
+              amount_in_cents: Math.round(Number(monto) * 100),
+              currency: 'GTQ',
+              quantity: 1,
+            }
+          ],
+          userEmail: selectedSocio.correo || undefined,
+          successUrl,
+          cancelUrl,
+          metadata: {
+            socioId: selectedSocio.id,
+            socioNombre: selectedSocio.nombre,
+            tipoCuota,
+            periodo: periodLabel
+          }
+        });
+
+        if (checkoutResponse.checkout_url) {
+          window.location.href = checkoutResponse.checkout_url;
+        } else {
+          throw new Error('No se obtuvo la dirección de pago de Recurrente GT.');
+        }
+      } catch (err: any) {
+        console.error('Error al iniciar checkout Recurrente:', err);
+        showToast(err.message || 'Error al conectar con la pasarela de pago Recurrente GT.', 'error');
+        setSubmitting(false);
+      }
+      return;
+    }
+
 
     setSubmitting(true);
 
@@ -523,26 +663,106 @@ export const PublicPagoCuota: React.FC = () => {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
             
-            {/* Bank account details card */}
-            <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-4 flex items-start space-x-3">
-              <div className="bg-amber-100 p-2 rounded-xl text-amber-700 mt-0.5">
-                <Building size={18} />
-              </div>
-              <div className="text-xs space-y-1">
-                <h4 className="font-extrabold text-amber-900 leading-none">Información de Cuenta Bancaria</h4>
-                <p className="text-slate-655 font-medium leading-relaxed mt-1">Realiza tu depósito o transferencia bancaria a la siguiente cuenta oficial:</p>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-1.5 text-[11px]">
-                  <p className="text-slate-500 font-bold">Banco:</p>
-                  <p className="text-slate-800 font-extrabold">Banrural</p>
-                  <p className="text-slate-500 font-bold">Tipo de Cuenta:</p>
-                  <p className="text-slate-800 font-extrabold">Monetaria</p>
-                  <p className="text-slate-500 font-bold">No. Cuenta:</p>
-                  <p className="text-amber-950 font-black">3827008588</p>
-                  <p className="text-slate-500 font-bold">A Nombre de:</p>
-                  <p className="text-slate-800 font-extrabold">Club de Leones de Quetzaltenango</p>
-                </div>
+            {/* Payment Method Selector */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Método de Pago</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setFormState(prev => ({ ...prev, metodo: 'Tarjeta' }))}
+                  className={`p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all ${
+                    formState.metodo === 'Tarjeta'
+                      ? 'bg-blue-900 text-white border-blue-950 shadow-md shadow-blue-900/20 ring-2 ring-blue-500/20'
+                      : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-2 rounded-xl ${formState.metodo === 'Tarjeta' ? 'bg-white/10 text-white' : 'bg-blue-50 text-blue-900'}`}>
+                      <CreditCard size={20} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-black leading-tight">Tarjeta de Crédito / Débito</p>
+                      <p className={`text-[10px] mt-0.5 ${formState.metodo === 'Tarjeta' ? 'text-blue-200' : 'text-slate-400'}`}>
+                        Vía Recurrente GT (Visa/Mastercard)
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider ${
+                    formState.metodo === 'Tarjeta' ? 'bg-amber-400 text-blue-950' : 'bg-blue-50 text-blue-900'
+                  }`}>
+                    Inmediato
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFormState(prev => ({ ...prev, metodo: 'Transferencia' }))}
+                  className={`p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all ${
+                    formState.metodo !== 'Tarjeta'
+                      ? 'bg-amber-600 text-white border-amber-700 shadow-md shadow-amber-600/20'
+                      : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-2 rounded-xl ${formState.metodo !== 'Tarjeta' ? 'bg-white/10 text-white' : 'bg-amber-50 text-amber-700'}`}>
+                      <Building size={20} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-black leading-tight">Depósito / Transferencia</p>
+                      <p className={`text-[10px] mt-0.5 ${formState.metodo !== 'Tarjeta' ? 'text-amber-100' : 'text-slate-400'}`}>
+                        Cuenta Monetaria Banrural
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider ${
+                    formState.metodo !== 'Tarjeta' ? 'bg-white text-amber-950' : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    Manual
+                  </span>
+                </button>
               </div>
             </div>
+
+            {/* Recurrente GT Payment Banner */}
+            {formState.metodo === 'Tarjeta' && (
+              <div className="bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 text-white rounded-2xl p-4 space-y-3 shadow-lg relative overflow-hidden">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <ShieldCheck className="text-emerald-400" size={18} />
+                    <span className="text-xs font-black tracking-wide text-blue-100">Pasarela Segura Recurrente GT</span>
+                  </div>
+                  <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                    {recurrenteService.getTestMode() ? 'Modo Pruebas (TEST)' : 'Producción (LIVE)'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-blue-100/90 leading-relaxed font-medium">
+                  Al presionar <strong className="text-amber-300">Pagar con Tarjeta</strong> serás redirigido a la pasarela segura en quetzales (GTQ). Acepta todas las tarjetas de crédito o débito Visa y Mastercard. Tu pago quedará aprobado automáticamente.
+                </p>
+              </div>
+            )}
+
+            {/* Bank account details card (Shown only for Transferencia / Depósito) */}
+            {formState.metodo !== 'Tarjeta' && (
+              <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-4 flex items-start space-x-3">
+                <div className="bg-amber-100 p-2 rounded-xl text-amber-700 mt-0.5">
+                  <Building size={18} />
+                </div>
+                <div className="text-xs space-y-1">
+                  <h4 className="font-extrabold text-amber-900 leading-none">Información de Cuenta Bancaria</h4>
+                  <p className="text-slate-655 font-medium leading-relaxed mt-1">Realiza tu depósito o transferencia bancaria a la siguiente cuenta oficial:</p>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-1.5 text-[11px]">
+                    <p className="text-slate-500 font-bold">Banco:</p>
+                    <p className="text-slate-800 font-extrabold">Banrural</p>
+                    <p className="text-slate-500 font-bold">Tipo de Cuenta:</p>
+                    <p className="text-slate-800 font-extrabold">Monetaria</p>
+                    <p className="text-slate-500 font-bold">No. Cuenta:</p>
+                    <p className="text-amber-950 font-black">3827008588</p>
+                    <p className="text-slate-500 font-bold">A Nombre de:</p>
+                    <p className="text-slate-800 font-extrabold">Club de Leones de Quetzaltenango</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Step 1: Socio Identification */}
             <div className="space-y-1.5 relative">
@@ -751,7 +971,7 @@ export const PublicPagoCuota: React.FC = () => {
                 {/* Amount, Date, and Reference */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Monto a Reportar (Q)</label>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Monto a Cancelar (Q)</label>
                     <input
                       type="number"
                       value={formState.monto}
@@ -762,7 +982,7 @@ export const PublicPagoCuota: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Fecha del Depósito / Transf.</label>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Fecha</label>
                     <input
                       type="date"
                       value={formState.fechaPago}
@@ -771,48 +991,52 @@ export const PublicPagoCuota: React.FC = () => {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Banco/Cuenta de origen</label>
-                    <select
-                      value={formState.bancoReferencia}
-                      onChange={e => setFormState(prev => ({ ...prev, bancoReferencia: e.target.value }))}
-                      className="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs font-semibold text-slate-700"
-                    >
-                      <option value="">Selecciona un banco...</option>
-                      <option value="Banco Industrial">Banco Industrial</option>
-                      <option value="Banco de Desarrollo Rural (Banrural)">Banco de Desarrollo Rural (Banrural)</option>
-                      <option value="Banco G&T Continental">Banco G&T Continental</option>
-                      <option value="Banco de América Central (BAC)">Banco de América Central (BAC)</option>
-                      <option value="Banco de los Trabajadores (Bantrab)">Banco de los Trabajadores (Bantrab)</option>
-                      <option value="Banco Agromercantil (BAM)">Banco Agromercantil (BAM)</option>
-                      <option value="Banco Azteca de Guatemala">Banco Azteca de Guatemala</option>
-                      <option value="Banco Cuscatlán Guatemala">Banco Cuscatlán Guatemala</option>
-                      <option value="Banco de Antigua">Banco de Antigua</option>
-                      <option value="El Crédito Hipotecario Nacional (CHN)">El Crédito Hipotecario Nacional (CHN)</option>
-                      <option value="Banco Credicorp">Banco Credicorp</option>
-                      <option value="Banco Ficohsa Guatemala">Banco Ficohsa Guatemala</option>
-                      <option value="Banco Internacional">Banco Internacional</option>
-                      <option value="Banco Promerica">Banco Promerica</option>
-                    </select>
-                  </div>
+                  {formState.metodo !== 'Tarjeta' && (
+                    <>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Banco/Cuenta de origen</label>
+                        <select
+                          value={formState.bancoReferencia}
+                          onChange={e => setFormState(prev => ({ ...prev, bancoReferencia: e.target.value }))}
+                          className="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs font-semibold text-slate-700"
+                        >
+                          <option value="">Selecciona un banco...</option>
+                          <option value="Banco Industrial">Banco Industrial</option>
+                          <option value="Banco de Desarrollo Rural (Banrural)">Banco de Desarrollo Rural (Banrural)</option>
+                          <option value="Banco G&T Continental">Banco G&T Continental</option>
+                          <option value="Banco de América Central (BAC)">Banco de América Central (BAC)</option>
+                          <option value="Banco de los Trabajadores (Bantrab)">Banco de los Trabajadores (Bantrab)</option>
+                          <option value="Banco Agromercantil (BAM)">Banco Agromercantil (BAM)</option>
+                          <option value="Banco Azteca de Guatemala">Banco Azteca de Guatemala</option>
+                          <option value="Banco Cuscatlán Guatemala">Banco Cuscatlán Guatemala</option>
+                          <option value="Banco de Antigua">Banco de Antigua</option>
+                          <option value="El Crédito Hipotecario Nacional (CHN)">El Crédito Hipotecario Nacional (CHN)</option>
+                          <option value="Banco Credicorp">Banco Credicorp</option>
+                          <option value="Banco Ficohsa Guatemala">Banco Ficohsa Guatemala</option>
+                          <option value="Banco Internacional">Banco Internacional</option>
+                          <option value="Banco Promerica">Banco Promerica</option>
+                        </select>
+                      </div>
 
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Autorización/Boleta</label>
-                    <input
-                      type="text"
-                      placeholder="Ej. 123456 / Boleta 789"
-                      value={formState.numeroReferencia}
-                      onChange={e => setFormState(prev => ({ ...prev, numeroReferencia: e.target.value }))}
-                      className="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs font-semibold text-slate-800"
-                    />
-                  </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Autorización/Boleta</label>
+                        <input
+                          type="text"
+                          placeholder="Ej. 123456 / Boleta 789"
+                          value={formState.numeroReferencia}
+                          onChange={e => setFormState(prev => ({ ...prev, numeroReferencia: e.target.value }))}
+                          className="w-full px-2.5 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs font-semibold text-slate-800"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Description */}
                 <div>
                   <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Notas / Descripción adicional</label>
                   <textarea
-                    placeholder="Escribe notas relevantes sobre este depósito aquí..."
+                    placeholder="Escribe notas relevantes sobre este pago aquí..."
                     value={formState.descripcion}
                     onChange={e => setFormState(prev => ({ ...prev, descripcion: e.target.value }))}
                     rows={2}
@@ -820,66 +1044,82 @@ export const PublicPagoCuota: React.FC = () => {
                   />
                 </div>
 
-                {/* File Upload Receipt Capture */}
-                <div className="space-y-1.5 pt-1">
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Subir Foto o Captura del Comprobante</label>
-                  <div className="flex items-center space-x-3">
-                    <div className="relative flex-1 bg-white border border-dashed border-slate-300 hover:border-slate-400 rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all active:scale-[0.99]">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileChange}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                      />
-                      <Upload className="text-slate-400 mb-1" size={20} />
-                      <span className="text-[10px] font-extrabold text-slate-655">Presiona para cargar captura</span>
-                      <span className="text-[8px] text-slate-400 font-semibold mt-0.5">JPG, PNG o GIF</span>
-                    </div>
-
-                    {formState.comprobanteBase64 && (
-                      <div className="relative w-16 h-16 flex-shrink-0 mr-1.5 mt-1.5 mb-1.5">
-                        <div className="w-full h-full border border-slate-200 rounded-2xl overflow-hidden bg-slate-100 shadow-md">
-                          <img
-                            src={formState.comprobanteBase64}
-                            alt="Vista previa del recibo"
-                            className="block w-full h-full object-cover"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setFormState(prev => ({ ...prev, comprobanteBase64: '' }))}
-                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 hover:bg-red-600 text-white flex items-center justify-center rounded-full shadow-md transition-colors border border-white p-0 m-0 cursor-pointer focus:outline-none"
-                          title="Eliminar comprobante"
-                        >
-                          <X size={10} className="stroke-[3.5]" />
-                        </button>
+                {/* File Upload Receipt Capture (Only for Manual Transfer/Deposit) */}
+                {formState.metodo !== 'Tarjeta' && (
+                  <div className="space-y-1.5 pt-1">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Subir Foto o Captura del Comprobante</label>
+                    <div className="flex items-center space-x-3">
+                      <div className="relative flex-1 bg-white border border-dashed border-slate-300 hover:border-slate-400 rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all active:scale-[0.99]">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileChange}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                        />
+                        <Upload className="text-slate-400 mb-1" size={20} />
+                        <span className="text-[10px] font-extrabold text-slate-655">Presiona para cargar captura</span>
+                        <span className="text-[8px] text-slate-400 font-semibold mt-0.5">JPG, PNG o GIF</span>
                       </div>
-                    )}
+
+                      {formState.comprobanteBase64 && (
+                        <div className="relative w-16 h-16 flex-shrink-0 mr-1.5 mt-1.5 mb-1.5">
+                          <div className="w-full h-full border border-slate-200 rounded-2xl overflow-hidden bg-slate-100 shadow-md">
+                            <img
+                              src={formState.comprobanteBase64}
+                              alt="Vista previa del recibo"
+                              className="block w-full h-full object-cover"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setFormState(prev => ({ ...prev, comprobanteBase64: '' }))}
+                            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 hover:bg-red-600 text-white flex items-center justify-center rounded-full shadow-md transition-colors border border-white p-0 m-0 cursor-pointer focus:outline-none"
+                            title="Eliminar comprobante"
+                          >
+                            <X size={10} className="stroke-[3.5]" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Action button */}
                 <div className="pt-2">
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-black rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-green-600/25 text-xs uppercase tracking-wider flex items-center justify-center space-x-2 active:scale-95"
+                    className={`w-full py-3.5 font-black rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed text-xs uppercase tracking-wider flex items-center justify-center space-x-2 active:scale-95 shadow-xl ${
+                      formState.metodo === 'Tarjeta'
+                        ? 'bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-950 hover:to-indigo-950 text-white shadow-blue-900/30'
+                        : 'bg-green-600 hover:bg-green-700 text-white shadow-green-600/25'
+                    }`}
                   >
                     {submitting ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Subiendo Comprobante...</span>
+                        <span>{formState.metodo === 'Tarjeta' ? 'Conectando con Recurrente...' : 'Subiendo Comprobante...'}</span>
                       </>
                     ) : (
                       <>
-                        <Check size={14} className="stroke-[3]" />
-                        <span>Enviar Reporte de Pago</span>
+                        {formState.metodo === 'Tarjeta' ? (
+                          <>
+                            <CreditCard size={16} />
+                            <span>Pagar Q{formState.monto.toLocaleString()} con Tarjeta (Recurrente)</span>
+                          </>
+                        ) : (
+                          <>
+                            <Check size={14} className="stroke-[3]" />
+                            <span>Enviar Reporte de Pago</span>
+                          </>
+                        )}
                       </>
                     )}
                   </button>
                 </div>
               </div>
             )}
+
           </form>
         )}
       </div>
