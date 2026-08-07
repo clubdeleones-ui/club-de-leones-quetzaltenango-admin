@@ -67,11 +67,41 @@ export function getWrittenDateTimeSpanish(date: Date): string {
 
 export function formatDisplayDate(dateStr: string): string {
   if (!dateStr) return '';
-  const [datePart, timePart] = dateStr.split(' ');
-  const parts = datePart.split('-');
-  if (parts.length === 3) {
-    const formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
-    return timePart ? `${formattedDate} ${timePart}` : formattedDate;
+  
+  // Handle YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss or DD/MM/YYYY
+  const cleanStr = dateStr.trim();
+  const dateOnly = cleanStr.includes('T') ? cleanStr.split('T')[0] : cleanStr.split(' ')[0];
+  const parts = dateOnly.split('-');
+  
+  if (parts.length === 3 && parts[0].length === 4) {
+    const yyyy = parts[0];
+    const mm = parts[1].padStart(2, '0');
+    const dd = parts[2].padStart(2, '0');
+    return `${dd}/${mm}/${yyyy}`;
   }
+
+  // If already DD/MM/YYYY
+  if (dateOnly.includes('/')) {
+    const slashParts = dateOnly.split('/');
+    if (slashParts.length === 3) {
+      const dd = slashParts[0].padStart(2, '0');
+      const mm = slashParts[1].padStart(2, '0');
+      const yyyy = slashParts[2];
+      return `${dd}/${mm}/${yyyy}`;
+    }
+  }
+
+  try {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      return `${dd}/${mm}/${yyyy}`;
+    }
+  } catch (e) {
+    // Ignore error
+  }
+  
   return dateStr;
 }

@@ -386,22 +386,32 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
   const handleEditActaClick = (acta: Acta) => {
     const defaultLugar = 'Quetzaltenango, Sede Social denominada "La Cueva", ubicada en la Calle Rodolfo Robles, 24-53 de la zona 1.';
-    const wData = (acta as any).wizardData || {
-      titulo: acta.titulo,
-      categoria: acta.categoria || 'Ordinaria',
-      lugar: defaultLugar,
-      fechaHoraText: getWrittenDateTimeSpanish(new Date(acta.fecha)),
-      invocacionResponsableType: 'socio',
-      invocacionSocioId: socios[0]?.id || '',
-      invocacionInvitadoName: '',
-      saludoResponsableType: 'socio',
-      saludoSocioId: socios[0]?.id || '',
-      saludoInvitadoName: '',
-      solicitudesResoluciones: {},
-      puntosAgenda: [],
-      asistencia: [],
-      numeroActa: acta.numeroActa || '1'
-    };
+    let wData = (acta as any).wizardData;
+
+    if (!wData) {
+      wData = {
+        titulo: acta.titulo,
+        categoria: acta.categoria || 'Ordinaria',
+        lugar: defaultLugar,
+        fechaHoraText: getWrittenDateTimeSpanish(new Date(acta.fecha)),
+        invocacionResponsableType: 'socio',
+        invocacionSocioId: socios[0]?.id || '',
+        invocacionInvitadoName: '',
+        saludoResponsableType: 'socio',
+        saludoSocioId: socios[0]?.id || '',
+        saludoInvitadoName: '',
+        solicitudesResoluciones: {},
+        puntosAgenda: acta.contenido ? [
+          {
+            tema: 'Contenido Registrado del Acta',
+            debate: acta.contenido,
+            acuerdo: ''
+          }
+        ] : [],
+        asistencia: [],
+        numeroActa: acta.numeroActa || '1'
+      };
+    }
 
     if (!wData.asistencia) {
       wData.asistencia = [];
@@ -409,9 +419,22 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     if (!wData.numeroActa) {
       wData.numeroActa = acta.numeroActa || '1';
     }
+    if (!wData.puntosAgenda || wData.puntosAgenda.length === 0) {
+      if (acta.contenido) {
+        wData.puntosAgenda = [
+          {
+            tema: 'Contenido Registrado del Acta',
+            debate: acta.contenido,
+            acuerdo: ''
+          }
+        ];
+      } else {
+        wData.puntosAgenda = [];
+      }
+    }
 
     setActaWizardData(wData);
-    setSelectedAgendaPointTab('new');
+    setSelectedAgendaPointTab(wData.puntosAgenda.length > 0 ? 0 : 'new');
     setEditingActaId(acta.id);
     setActaWizardStep('datos');
     setShowAddActa(true);
@@ -504,6 +527,13 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       ...actaWizardData,
       titulo: finalTitulo
     });
+
+    const finalWizardData = {
+      ...actaWizardData,
+      titulo: finalTitulo,
+      codigoRegistro: code,
+      numeroActa: numActa
+    };
     
     let savedActaItem: Acta;
     let newActas: Acta[] = [];
@@ -516,7 +546,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
             categoria: actaWizardData.categoria,
             contenido: generatedContent,
             codigoRegistro: code,
-            numeroActa: numActa
+            numeroActa: numActa,
+            wizardData: finalWizardData
           } as any;
         }
         return a;
@@ -542,7 +573,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
         categoria: actaWizardData.categoria,
         estado: 'Publicada',
         codigoRegistro: code,
-        numeroActa: numActa
+        numeroActa: numActa,
+        wizardData: finalWizardData
       } as any;
 
       savedActaItem = created;
