@@ -211,7 +211,7 @@ export interface Solicitud {
   tema?: string; // Opcional para sillas de ruedas (Diabetes, Visión, etc.)
   otroTemaDescripcion?: string; // Opcional
   tipo: 'abiertas' | 'internas' | 'sillas' | 'agenda' | 'salon'; // Tipos alineados a minúsculas
-  estado: 'Pendiente' | 'Aprobada' | 'Rechazada';
+  estado: 'Pendiente' | 'Aprobada' | 'Rechazada' | 'Descartada';
   usuarioCreador?: string; // email o id del socio/admin o 'público'
   fechaCreacion: string;
   resolucionRazon?: string;

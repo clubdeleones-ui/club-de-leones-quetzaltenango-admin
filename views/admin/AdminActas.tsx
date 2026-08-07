@@ -82,7 +82,7 @@ export const AdminActas: React.FC<AdminActasProps> = ({ user }) => {
       saludoResponsableType: 'socio' as 'socio' | 'invitado',
       saludoSocioId: '',
       saludoInvitadoName: '',
-      solicitudesResoluciones: {} as Record<string, { decision: 'Aprobada' | 'Rechazada' | 'Pendiente', razon: string }>,
+      solicitudesResoluciones: {} as Record<string, { decision: 'Aprobada' | 'Rechazada' | 'Descartada' | 'Pendiente', razon: string }>,
       puntosAgenda: [] as { tema: string; debate: string; acuerdo: string; socioSolicitante?: string; agendaContenido?: string; }[],
       asistencia: [] as string[],
       numeroActa: ''
@@ -299,12 +299,18 @@ export const AdminActas: React.FC<AdminActasProps> = ({ user }) => {
     }
 
     const pendingSols = solicitudes.filter(s => s.estado === 'Pendiente' && !s.archivada);
+    // Exclude solicitudes marked as 'Descartada' from appearing in the Acta text
+    const evaluatedSols = pendingSols.filter(sol => {
+      const res = data.solicitudesResoluciones[sol.id];
+      return !res || res.decision !== 'Descartada';
+    });
+
     let solicitudesSection = '';
-    if (pendingSols.length === 0) {
+    if (evaluatedSols.length === 0) {
       solicitudesSection = 'No se conocieron solicitudes en esta sesión.\n';
     } else {
       solicitudesSection = 'Se procedió a dar lectura a las solicitudes ingresadas en el sistema, resolviéndose de la siguiente manera:\n\n';
-      pendingSols.forEach((sol, idx) => {
+      evaluatedSols.forEach((sol, idx) => {
         const res = data.solicitudesResoluciones[sol.id] || { decision: 'Pendiente', razon: '' };
         
         let details = `Solicitud de ${sol.nombre} (Tipo: ${sol.tipo.toUpperCase()})`;
@@ -346,7 +352,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     const defaultLugar = 'Quetzaltenango, Sede Social denominada "La Cueva", ubicada en la Calle Rodolfo Robles, 24-53 de la zona 1.';
     const autoDateTime = getWrittenDateTimeSpanish(new Date());
     
-    const initialResoluciones: Record<string, { decision: 'Aprobada' | 'Rechazada' | 'Pendiente', razon: string }> = {};
+    const initialResoluciones: Record<string, { decision: 'Aprobada' | 'Rechazada' | 'Descartada' | 'Pendiente', razon: string }> = {};
     const pendingSols = solicitudes.filter(s => s.estado === 'Pendiente' && !s.archivada);
     pendingSols.forEach(s => {
       initialResoluciones[s.id] = { decision: 'Pendiente', razon: '' };
@@ -487,59 +493,49 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       fechaActa,
       numActa,
       presidentName,
-      finalTitulo
+      secretaryName
     );
 
-    const compiledText = compileActaText({
+    const generatedContent = compileActaText({
       ...actaWizardData,
       titulo: finalTitulo
     });
     
-    let newActas: Acta[];
-
+    let newActas: Acta[] = [];
     if (editingActaId) {
       newActas = actas.map(a => {
         if (a.id === editingActaId) {
-          const updatedItem = {
+          return {
             ...a,
             titulo: finalTitulo,
             categoria: actaWizardData.categoria,
-            contenido: compiledText,
+            contenido: generatedContent,
             codigoRegistro: code,
-            numeroActa: numActa,
-            wizardData: {
-              ...actaWizardData,
-              titulo: finalTitulo,
-              codigoRegistro: code,
-              numeroActa: numActa
-            }
+            numeroActa: numActa
           } as any;
-          firebaseService.saveActa(updatedItem).catch(err => {
-            console.error("Error al actualizar acta en Firestore:", err);
-          });
-          return updatedItem;
         }
         return a;
       });
+
+      const updatedActa = newActas.find(a => a.id === editingActaId);
+      if (updatedActa) {
+        firebaseService.saveActa(updatedActa).catch(err => {
+          console.error("Error al actualizar acta en Firestore:", err);
+        });
+      }
       alert("¡Acta de sesión actualizada con éxito!");
     } else {
       const created: Acta = {
-        id: `acta-${Date.now()}`,
+        id: `acta_${Date.now()}`,
         titulo: finalTitulo,
         fecha: fechaActa,
-        contenido: compiledText,
-        autor: user.nombre,
+        contenido: generatedContent,
+        autor: user?.nombre || 'Administración Club de Leones',
         pdfUrl: '#',
         categoria: actaWizardData.categoria,
         estado: 'Publicada',
         codigoRegistro: code,
-        numeroActa: numActa,
-        wizardData: {
-          ...actaWizardData,
-          titulo: finalTitulo,
-          codigoRegistro: code,
-          numeroActa: numActa
-        }
+        numeroActa: numActa
       } as any;
 
       newActas = [created, ...actas];
@@ -556,11 +552,11 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     
     for (const sol of pendingSols) {
       const res = actaWizardData.solicitudesResoluciones[sol.id];
-      if (res && (res.decision === 'Aprobada' || res.decision === 'Rechazada')) {
+      if (res && (res.decision === 'Aprobada' || res.decision === 'Rechazada' || res.decision === 'Descartada')) {
         const updatedSol: Solicitud = {
           ...sol,
-          estado: res.decision,
-          resolucionRazon: res.razon,
+          estado: res.decision as any,
+          resolucionRazon: res.razon || (res.decision === 'Descartada' ? 'Descartada en sesión' : ''),
           fechaResolucion: new Date().toISOString()
         };
 
@@ -1115,7 +1111,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                             </div>
 
                             {/* Buttons group for decision */}
-                            <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-200 w-full sm:w-auto justify-between sm:justify-start flex-shrink-0">
+                            <div className="flex flex-wrap bg-slate-50 p-1.5 rounded-2xl border border-slate-200 w-full sm:w-auto gap-1 justify-between sm:justify-start flex-shrink-0">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1127,7 +1123,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                     }
                                   }));
                                 }}
-                                className={`flex-1 sm:flex-initial text-center px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all ${
+                                className={`flex-1 sm:flex-initial text-center px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer ${
                                   res.decision === 'Aprobada' 
                                     ? 'bg-green-500 text-white shadow-md shadow-green-500/20' 
                                     : 'text-slate-500 hover:text-green-600 hover:bg-white'
@@ -1146,7 +1142,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                     }
                                   }));
                                 }}
-                                className={`flex-1 sm:flex-initial text-center px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all ${
+                                className={`flex-1 sm:flex-initial text-center px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer ${
                                   res.decision === 'Rechazada' 
                                     ? 'bg-red-500 text-white shadow-md shadow-red-500/20' 
                                     : 'text-slate-500 hover:text-red-600 hover:bg-white'
@@ -1161,11 +1157,30 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                     ...prev,
                                     solicitudesResoluciones: {
                                       ...prev.solicitudesResoluciones,
+                                      [sol.id]: { ...res, decision: 'Descartada' }
+                                    }
+                                  }));
+                                }}
+                                className={`flex-1 sm:flex-initial text-center px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer ${
+                                  res.decision === 'Descartada' 
+                                    ? 'bg-slate-700 text-white shadow-md shadow-slate-700/20' 
+                                    : 'text-slate-500 hover:text-slate-700 hover:bg-white'
+                                }`}
+                              >
+                                Descartar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActaWizardData(prev => ({
+                                    ...prev,
+                                    solicitudesResoluciones: {
+                                      ...prev.solicitudesResoluciones,
                                       [sol.id]: { ...res, decision: 'Pendiente' }
                                     }
                                   }));
                                 }}
-                                className={`flex-1 sm:flex-initial text-center px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all ${
+                                className={`flex-1 sm:flex-initial text-center px-3.5 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer ${
                                   res.decision === 'Pendiente' 
                                     ? 'bg-slate-200 text-slate-700 shadow-md' 
                                     : 'text-slate-500 hover:bg-white'
@@ -1175,6 +1190,13 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                               </button>
                             </div>
                           </div>
+
+                          {/* Notice banner for Descartada */}
+                          {res.decision === 'Descartada' && (
+                            <div className="bg-slate-100 p-3 rounded-2xl border border-slate-200 text-xs font-semibold text-slate-600 flex items-center space-x-2 animate-in fade-in duration-200">
+                              <span>🚫 Esta solicitud ha sido marcada como descartada y <strong>NO se incluirá</strong> en el documento final del acta.</span>
+                            </div>
+                          )}
 
                           {/* Resolution reason */}
                           {res.decision !== 'Pendiente' && (
