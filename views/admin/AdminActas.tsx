@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
-  FileText, Plus, Search, Filter, Trash2, Edit, Download, X, Clock, Users, Mail, Briefcase, CheckCircle, Pencil, Building, BookOpen, ChevronUp, ChevronDown, ArrowUp, ArrowDown, GripVertical, ListOrdered, ArrowUpDown, CheckCircle2
+  FileText, Plus, Search, Filter, Trash2, Edit, Download, X, Clock, Users, Mail, Briefcase, CheckCircle, Pencil, Building, BookOpen, ChevronUp, ChevronDown, ArrowUp, ArrowDown, GripVertical, ListOrdered, ArrowUpDown, CheckCircle2, MessageSquare, Bookmark
 } from 'lucide-react';
+
 
 
 import { Acta, Socio, Solicitud, UserRole } from '../../types';
@@ -1343,49 +1344,67 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                         </div>
                       )}
 
-                      <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tema del Punto</label>
+                      {/* Section 1: Tema del Punto (Amber Theme) */}
+                      <div className="bg-amber-50/40 p-5 rounded-2xl border border-amber-200/80 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-black text-amber-900 uppercase tracking-wider flex items-center">
+                            <Bookmark size={15} className="text-amber-600 mr-2" />
+                            <span>1. Tema del Punto</span>
+                          </label>
+                          <span className="text-[10px] font-extrabold text-amber-800 bg-amber-100/90 px-2.5 py-0.5 rounded-full border border-amber-200">
+                            Título del Asunto
+                          </span>
+                        </div>
                         <input 
                           type="text"
                           value={newAgendaPoint.tema}
                           onChange={e => setNewAgendaPoint(prev => ({ ...prev, tema: e.target.value }))}
                           placeholder="Ej. Aprobación del presupuesto para la jornada oftalmológica"
-                          className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold shadow-sm"
+                          className="w-full px-5 py-3.5 bg-white border border-amber-200 rounded-xl focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all text-sm font-semibold text-slate-800 shadow-sm"
                         />
                       </div>
                       
                       <div className="space-y-6">
-                        <div>
-                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Debate / Discusión (Opcional)</label>
+                        {/* Section 2: Debate / Discusión (Emerald Theme) */}
+                        <div className="bg-emerald-50/40 p-5 rounded-2xl border border-emerald-200/80 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center">
+                              <MessageSquare size={15} className="text-emerald-600 mr-2" />
+                              <span>2. Debate / Discusión (En Vivo)</span>
+                            </label>
+                            <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                              Notas de Discusión
+                            </span>
+                          </div>
                           <textarea 
                             ref={debateRef}
                             rows={4}
                             value={newAgendaPoint.debate}
                             onChange={e => setNewAgendaPoint(prev => ({ ...prev, debate: e.target.value }))}
-                            placeholder="Describa los puntos clave discutidos..."
-                            className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold resize-none text-justify shadow-sm"
+                            placeholder="Describa las opiniones, intervenciones y puntos clave discutidos..."
+                            className="w-full px-5 py-3.5 bg-white border border-emerald-200 rounded-xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm font-semibold text-slate-800 resize-none text-justify shadow-sm"
                           />
                           
                           {/* Etiquetar quorum */}
-                          <div className="mt-3 text-left">
-                            <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Etiquetar participantes presentes (insertar al cursor):</span>
+                          <div className="pt-1 text-left">
+                            <span className="block text-[10px] font-black text-emerald-800/80 uppercase tracking-wider mb-2">Etiquetar participantes presentes (insertar al cursor):</span>
                             {presentSocios.length === 0 ? (
-                              <div className="text-[10px] font-bold text-slate-400 bg-slate-100/50 p-3 rounded-xl border border-dashed border-slate-200 italic">
+                              <div className="text-[10px] font-bold text-emerald-700/80 bg-white p-3 rounded-xl border border-dashed border-emerald-200 italic">
                                 No hay socios marcados en el quórum aún. Registra asistencia en el paso anterior para poder etiquetar.
                               </div>
                             ) : (
-                              <div className="flex flex-wrap gap-2 max-h-[96px] overflow-y-auto p-1.5 bg-slate-50 rounded-2xl border border-slate-200/50 shadow-inner">
+                              <div className="flex flex-wrap gap-2 max-h-[96px] overflow-y-auto p-1.5 bg-white rounded-2xl border border-emerald-200/70 shadow-inner">
                                 {presentSocios.map(member => (
                                   <button
                                     key={member.id}
                                     type="button"
                                     onClick={() => handleInsertMemberMention(member.nombre)}
-                                    className="flex items-center space-x-1.5 px-3 py-1.5 bg-white hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded-xl text-xs font-bold text-slate-650 hover:text-amber-800 transition-all select-none cursor-pointer active:scale-95 shadow-sm"
+                                    className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-50/60 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-950 transition-all select-none cursor-pointer active:scale-95 shadow-sm"
                                   >
                                     <img 
                                       src={member.foto || 'https://picsum.photos/seed/socio/200/200'} 
                                       alt={member.nombre} 
-                                      className="w-5 h-5 rounded-full object-cover border border-slate-100 shadow-sm"
+                                      className="w-5 h-5 rounded-full object-cover border border-emerald-200 shadow-sm"
                                       onError={(e) => {
                                         (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/socio/200/200';
                                       }}
@@ -1399,14 +1418,24 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                             )}
                           </div>
                         </div>
-                        <div>
-                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Acuerdo / Resolución (Opcional)</label>
+
+                        {/* Section 3: Acuerdo / Resolución (Indigo Theme) */}
+                        <div className="bg-indigo-50/40 p-5 rounded-2xl border border-indigo-200/80 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-black text-indigo-900 uppercase tracking-wider flex items-center">
+                              <CheckCircle2 size={15} className="text-indigo-600 mr-2" />
+                              <span>3. Acuerdo / Resolución Final</span>
+                            </label>
+                            <span className="text-[10px] font-extrabold text-indigo-800 bg-indigo-100/90 px-2.5 py-0.5 rounded-full border border-indigo-200">
+                              Decisión Oficial
+                            </span>
+                          </div>
                           <textarea 
                             rows={4}
                             value={newAgendaPoint.acuerdo}
                             onChange={e => setNewAgendaPoint(prev => ({ ...prev, acuerdo: e.target.value }))}
-                            placeholder="Describa el acuerdo final tomado..."
-                            className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold resize-none text-justify shadow-sm"
+                            placeholder="Describa la resolución o acuerdo formal aprobado por la asamblea..."
+                            className="w-full px-5 py-3.5 bg-white border border-indigo-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-semibold text-slate-800 resize-none text-justify shadow-sm"
                           />
                         </div>
                       </div>
@@ -1443,14 +1472,23 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                         </button>
                       </div>
 
-                      <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tema del Punto</label>
+                      {/* Section 1: Tema del Punto (Amber Theme) */}
+                      <div className="bg-amber-50/40 p-5 rounded-2xl border border-amber-200/80 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-black text-amber-900 uppercase tracking-wider flex items-center">
+                            <Bookmark size={15} className="text-amber-600 mr-2" />
+                            <span>1. Tema del Punto</span>
+                          </label>
+                          <span className="text-[10px] font-extrabold text-amber-800 bg-amber-100/90 px-2.5 py-0.5 rounded-full border border-amber-200">
+                            Título del Asunto
+                          </span>
+                        </div>
                         <input 
                           type="text"
                           value={(actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.tema || ''}
                           onChange={e => handleUpdateAgendaPoint(selectedAgendaPointTab as number, 'tema', e.target.value)}
                           placeholder="Ej. Tema del punto..."
-                          className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold shadow-sm"
+                          className="w-full px-5 py-3.5 bg-white border border-amber-200 rounded-xl focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all text-sm font-semibold text-slate-800 shadow-sm"
                         />
                       </div>
 
@@ -1483,37 +1521,46 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                       )}
 
                       <div className="space-y-6">
-                        <div>
-                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Debate / Discusión</label>
+                        {/* Section 2: Debate / Discusión (Emerald Theme) */}
+                        <div className="bg-emerald-50/40 p-5 rounded-2xl border border-emerald-200/80 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center">
+                              <MessageSquare size={15} className="text-emerald-600 mr-2" />
+                              <span>2. Debate / Discusión (En Vivo)</span>
+                            </label>
+                            <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                              Notas de Discusión
+                            </span>
+                          </div>
                           <textarea 
                             ref={debateRef}
                             rows={4}
                             value={(actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.debate || ''}
                             onChange={e => handleUpdateAgendaPoint(selectedAgendaPointTab as number, 'debate', e.target.value)}
                             placeholder="Describa los puntos clave discutidos..."
-                            className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold resize-none text-justify shadow-sm"
+                            className="w-full px-5 py-3.5 bg-white border border-emerald-200 rounded-xl focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm font-semibold text-slate-800 resize-none text-justify shadow-sm"
                           />
                           
                           {/* Etiquetar quorum */}
-                          <div className="mt-3 text-left">
-                            <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">Etiquetar participantes presentes (insertar al cursor):</span>
+                          <div className="pt-1 text-left">
+                            <span className="block text-[10px] font-black text-emerald-800/80 uppercase tracking-wider mb-2">Etiquetar participantes presentes (insertar al cursor):</span>
                             {presentSocios.length === 0 ? (
-                              <div className="text-[10px] font-bold text-slate-400 bg-slate-100/50 p-3 rounded-xl border border-dashed border-slate-200 italic">
+                              <div className="text-[10px] font-bold text-emerald-700/80 bg-white p-3 rounded-xl border border-dashed border-emerald-200 italic">
                                 No hay socios marcados en el quórum aún. Registra asistencia en el paso anterior para poder etiquetar.
                               </div>
                             ) : (
-                              <div className="flex flex-wrap gap-2 max-h-[96px] overflow-y-auto p-1.5 bg-slate-50 rounded-2xl border border-slate-200/50 shadow-inner">
+                              <div className="flex flex-wrap gap-2 max-h-[96px] overflow-y-auto p-1.5 bg-white rounded-2xl border border-emerald-200/70 shadow-inner">
                                 {presentSocios.map(member => (
                                   <button
                                     key={member.id}
                                     type="button"
                                     onClick={() => handleInsertMemberMention(member.nombre)}
-                                    className="flex items-center space-x-1.5 px-3 py-1.5 bg-white hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded-xl text-xs font-bold text-slate-650 hover:text-amber-800 transition-all select-none cursor-pointer active:scale-95 shadow-sm"
+                                    className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-50/60 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-950 transition-all select-none cursor-pointer active:scale-95 shadow-sm"
                                   >
                                     <img 
                                       src={member.foto || 'https://picsum.photos/seed/socio/200/200'} 
                                       alt={member.nombre} 
-                                      className="w-5 h-5 rounded-full object-cover border border-slate-100 shadow-sm"
+                                      className="w-5 h-5 rounded-full object-cover border border-emerald-200 shadow-sm"
                                       onError={(e) => {
                                         (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/socio/200/200';
                                       }}
@@ -1527,14 +1574,24 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                             )}
                           </div>
                         </div>
-                        <div>
-                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Acuerdo / Resolución</label>
+
+                        {/* Section 3: Acuerdo / Resolución (Indigo Theme) */}
+                        <div className="bg-indigo-50/40 p-5 rounded-2xl border border-indigo-200/80 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-black text-indigo-900 uppercase tracking-wider flex items-center">
+                              <CheckCircle2 size={15} className="text-indigo-600 mr-2" />
+                              <span>3. Acuerdo / Resolución Final</span>
+                            </label>
+                            <span className="text-[10px] font-extrabold text-indigo-800 bg-indigo-100/90 px-2.5 py-0.5 rounded-full border border-indigo-200">
+                              Decisión Oficial
+                            </span>
+                          </div>
                           <textarea 
                             rows={4}
                             value={(actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.acuerdo || ''}
                             onChange={e => handleUpdateAgendaPoint(selectedAgendaPointTab as number, 'acuerdo', e.target.value)}
-                            placeholder="Describa el acuerdo final tomado..."
-                            className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold resize-none text-justify shadow-sm"
+                            placeholder="Describa la resolución o acuerdo formal aprobado por la asamblea..."
+                            className="w-full px-5 py-3.5 bg-white border border-indigo-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-semibold text-slate-800 resize-none text-justify shadow-sm"
                           />
                         </div>
                       </div>
