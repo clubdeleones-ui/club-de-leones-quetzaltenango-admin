@@ -8,6 +8,7 @@ import {
 import { Acta, Socio, Solicitud, UserRole } from '../../types';
 import { firebaseService } from '../../services/firebaseService';
 import { useClubData } from '../../context/ClubDataContext';
+import { useToast } from '../../context/ToastContext';
 import { getWrittenDateTimeSpanish, formatDisplayDate } from '../../utils/dateSpanishFormatter';
 import { generateActaPDF, generateActaCode } from '../../utils/pdfGenerator';
 import { FormattedActa } from '../../components/FormattedActa';
@@ -24,6 +25,8 @@ export const AdminActas: React.FC<AdminActasProps> = ({ user }) => {
     agendas 
   } = useClubData();
 
+  const { showToast } = useToast();
+
   const [actas, setActas] = useState<Acta[]>(dbActas);
   useEffect(() => {
     setActas(dbActas);
@@ -38,6 +41,7 @@ export const AdminActas: React.FC<AdminActasProps> = ({ user }) => {
   const [editingActaId, setEditingActaId] = useState<string | null>(null);
   const [deleteActaConfirmId, setDeleteActaConfirmId] = useState<string | null>(null);
   const [deleteActaConfirmText, setDeleteActaConfirmText] = useState('');
+  const [publishedSuccessModal, setPublishedSuccessModal] = useState<{ isOpen: boolean; title: string; code: string; isEdit: boolean; acta: Acta } | null>(null);
   const [showInvocacionModal, setShowInvocacionModal] = useState(false);
   const [showSaludoModal, setShowSaludoModal] = useState(false);
 
@@ -501,6 +505,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       titulo: finalTitulo
     });
     
+    let savedActaItem: Acta;
     let newActas: Acta[] = [];
     if (editingActaId) {
       newActas = actas.map(a => {
@@ -519,11 +524,13 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
       const updatedActa = newActas.find(a => a.id === editingActaId);
       if (updatedActa) {
+        savedActaItem = updatedActa;
         firebaseService.saveActa(updatedActa).catch(err => {
           console.error("Error al actualizar acta en Firestore:", err);
         });
+      } else {
+        savedActaItem = actas[0];
       }
-      alert("¡Acta de sesión actualizada con éxito!");
     } else {
       const created: Acta = {
         id: `acta_${Date.now()}`,
@@ -538,11 +545,11 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
         numeroActa: numActa
       } as any;
 
+      savedActaItem = created;
       newActas = [created, ...actas];
       firebaseService.saveActa(created).catch(err => {
         console.error("Error al guardar nueva acta en Firestore:", err);
       });
-      alert("¡Acta de sesión guardada y solicitudes actualizadas con éxito!");
     }
 
     setActas(newActas);
@@ -568,6 +575,15 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
         }
       }
     }
+
+    showToast(editingActaId ? 'Acta actualizada con éxito' : 'Acta publicada con éxito', 'success');
+    setPublishedSuccessModal({
+      isOpen: true,
+      title: finalTitulo,
+      code: code,
+      isEdit: !!editingActaId,
+      acta: savedActaItem
+    });
 
     setShowAddActa(false);
   };
@@ -1794,7 +1810,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                       onClick={() => {
                         const rawText = compileActaText(actaWizardData);
                         navigator.clipboard.writeText(rawText);
-                        alert('¡Texto del acta copiado al portapapeles!');
+                        showToast('¡Texto del acta copiado al portapapeles!', 'success');
                       }}
                       className="p-2.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-blue-900 rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer"
                       title="Copiar texto plano"
@@ -2197,6 +2213,96 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Modal Integrado de Éxito al Publicar o Actualizar Acta */}
+      {publishedSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-6 text-center animate-in zoom-in-95 duration-200 relative overflow-hidden">
+            {/* Ambient Background Glow */}
+            <div className="absolute -top-10 -right-10 w-36 h-36 bg-emerald-100 rounded-full blur-2xl opacity-60 pointer-events-none" />
+            <div className="absolute -bottom-10 -left-10 w-36 h-36 bg-amber-100 rounded-full blur-2xl opacity-60 pointer-events-none" />
+
+            {/* Header Badge Icon */}
+            <div className="w-16 h-16 rounded-3xl bg-emerald-50 text-emerald-600 border border-emerald-200/60 flex items-center justify-center mx-auto shadow-md shadow-emerald-500/10">
+              <CheckCircle2 size={36} className="text-emerald-500" />
+            </div>
+
+            {/* Content Header */}
+            <div className="space-y-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700 bg-emerald-100/80 px-3 py-1 rounded-full border border-emerald-200">
+                {publishedSuccessModal.isEdit ? '¡Cambios Guardados!' : '¡Publicación Exitosa!'}
+              </span>
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                {publishedSuccessModal.isEdit ? 'Acta de Sesión Actualizada' : 'Acta de Sesión Publicada'}
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-500 font-semibold leading-relaxed">
+                {publishedSuccessModal.isEdit 
+                  ? 'Los datos de la sesión y las resoluciones de solicitudes fueron actualizados en el sistema.'
+                  : 'El acta ha sido firmada digitalmente y registrada exitosamente en el Libro de Actas Oficial.'}
+              </p>
+            </div>
+
+            {/* Detailed Info Card */}
+            <div className="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200/80 space-y-3 text-left">
+              <div>
+                <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Documento:</span>
+                <p className="text-sm font-extrabold text-slate-800 leading-snug">{publishedSuccessModal.title}</p>
+              </div>
+
+              {publishedSuccessModal.code && (
+                <div className="pt-2 border-t border-slate-200/60">
+                  <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Código de Firma Digital:</span>
+                  <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-slate-200 font-mono text-xs font-bold text-slate-800 shadow-2xs">
+                    <span className="truncate mr-2">{publishedSuccessModal.code}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(publishedSuccessModal.code);
+                        showToast('Código copiado al portapapeles', 'success');
+                      }}
+                      className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg text-[10px] font-black transition-all cursor-pointer flex-shrink-0"
+                    >
+                      Copiar
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs font-bold text-emerald-700">
+                <span className="flex items-center space-x-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Estado: Registro Oficial Activo</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  generateActaPDF(publishedSuccessModal.acta, socios);
+                }}
+                className="flex-1 py-3 px-4 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-md shadow-amber-500/20 flex items-center justify-center space-x-2 cursor-pointer active:scale-95"
+              >
+                <Download size={16} />
+                <span>Descargar PDF</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setPublishedSuccessModal(null);
+                  setShowAddActa(false);
+                }}
+                className="flex-1 py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all shadow-md shadow-slate-900/10 flex items-center justify-center space-x-1.5 cursor-pointer active:scale-95"
+              >
+                <span>Aceptar y Volver</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
