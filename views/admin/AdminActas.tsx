@@ -556,7 +556,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
         const updatedSol: Solicitud = {
           ...sol,
           estado: res.decision as any,
-          resolucionRazon: res.razon || (res.decision === 'Descartada' ? 'Descartada en sesión' : ''),
+          archivada: res.decision === 'Descartada' ? true : (sol.archivada || false),
+          resolucionRazon: res.razon || (res.decision === 'Descartada' ? 'Descartada en sesión de acta' : ''),
           fechaResolucion: new Date().toISOString()
         };
 

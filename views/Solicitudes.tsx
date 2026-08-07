@@ -744,6 +744,8 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
           salonTipoAlquiler === 'parqueo' ? 'Parqueo' : 
           'Salón y Parqueo'
         }`,
+        nombreSolicitante: salonNombreSolicitante.trim(),
+        salonNombreSolicitante: salonNombreSolicitante.trim(),
         tipo: 'salon',
         estado: 'Pendiente',
         faseTracking: 'recibido',
@@ -774,6 +776,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       nuevaSolicitud = {
         id: trackingCodeId,
         nombre: `Punto de Agenda - ${agendaNombrePunto.trim()}`,
+        nombreSolicitante: agendaSocioNombre.trim(),
         tipo: 'agenda',
         estado: 'Pendiente',
         faseTracking: 'recibido',
@@ -849,6 +852,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       nuevaSolicitud = {
         id: trackingCodeId,
         nombre: nombre.trim(),
+        nombreSolicitante: responsables[0]?.nombre ? responsables[0].nombre.trim() : (user?.nombre || 'Solicitante'),
         fecha,
         descripcion: descripcion.trim(),
         responsables: responsables.map(r => ({
