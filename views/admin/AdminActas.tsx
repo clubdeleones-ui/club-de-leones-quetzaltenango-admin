@@ -1210,30 +1210,46 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 <div className="bg-slate-50/50 p-4 sm:p-8 rounded-3xl border border-slate-100/60 space-y-6 shadow-sm">
                   
                   {/* Header & Controls Bar */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-4 text-left">
-                    <h3 className="text-xl font-extrabold text-blue-900 tracking-tight flex items-center">
-                      <span className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mr-3">
-                        <Briefcase size={16}/>
-                      </span>
-                      Gestión de Puntos de Agenda
-                    </h3>
+                  <div className="flex flex-col md:flex-row md:items-center justify-between pb-5 border-b border-slate-200 gap-4 text-left">
+                    <div>
+                      <div className="flex items-center space-x-3">
+                        <span className="w-9 h-9 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center shadow-sm">
+                          <Briefcase size={18}/>
+                        </span>
+                        <div>
+                          <h3 className="text-xl font-extrabold text-blue-900 tracking-tight">
+                            Gestión de Puntos de Agenda
+                          </h3>
+                          <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                            {selectedAgendaPointTab === 'new' ? (
+                              <span className="text-amber-700 font-bold">Redactando Nuevo Punto de Agenda</span>
+                            ) : (
+                              <span className="text-blue-900 font-bold">
+                                Editando Punto #{selectedAgendaPointTab as number + 1}: {(actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.tema || 'Sin tema'}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                     
-                    <div className="flex items-center space-x-2.5">
+                    {/* Action Controls */}
+                    <div className="flex flex-wrap items-center gap-2.5 self-start md:self-auto">
                       <button
                         type="button"
                         onClick={() => setShowOrganizePointsModal(true)}
-                        className="px-4 py-2.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded-2xl text-xs font-black flex items-center space-x-2 transition-all shadow-sm active:scale-95"
+                        className="px-4 py-2.5 bg-white hover:bg-amber-50 text-slate-800 border border-slate-300 hover:border-amber-300 rounded-2xl text-xs font-black flex items-center space-x-2 transition-all shadow-sm active:scale-95 cursor-pointer"
                       >
                         <ListOrdered size={16} className="text-amber-600" />
-                        <span>Organizar / Reordenar Puntos ({(actaWizardData.puntosAgenda || []).length})</span>
+                        <span>Organizar y Seleccionar Puntos ({(actaWizardData.puntosAgenda || []).length})</span>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => setSelectedAgendaPointTab('new')}
-                        className={`px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center space-x-1.5 transition-all shadow-md active:scale-95 ${
+                        className={`px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center space-x-1.5 transition-all shadow-md active:scale-95 cursor-pointer ${
                           selectedAgendaPointTab === 'new'
-                            ? 'bg-amber-500 text-white border border-amber-600'
+                            ? 'bg-amber-500 text-white border border-amber-600 shadow-amber-500/20'
                             : 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100'
                         }`}
                       >
@@ -1243,45 +1259,6 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     </div>
                   </div>
 
-                  {/* Horizontal Point Quick Chips Navigation Bar */}
-                  <div className="flex flex-nowrap overflow-x-auto pb-3 -mx-4 px-4 sm:-mx-8 sm:px-8 border-b border-slate-100 scrollbar-none w-[calc(100%+2rem)] sm:w-auto gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedAgendaPointTab('new')}
-                      className={`flex items-center space-x-1.5 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all border shrink-0 ${
-                        selectedAgendaPointTab === 'new'
-                          ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/20'
-                          : 'bg-white border-dashed border-amber-300 text-amber-700 hover:bg-amber-50/50'
-                      }`}
-                    >
-                      <Plus size={14} />
-                      <span>Nuevo Punto</span>
-                    </button>
-
-                    {(actaWizardData.puntosAgenda || []).map((point, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setSelectedAgendaPointTab(idx)}
-                        className={`flex items-center space-x-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all border shrink-0 ${
-                          selectedAgendaPointTab === idx
-                            ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/20'
-                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black transition-colors ${
-                          selectedAgendaPointTab === idx ? 'bg-amber-600 text-white' : 'bg-slate-200 text-slate-700'
-                        }`}>
-                          {idx + 1}
-                        </span>
-                        <div className="flex flex-col items-start text-left">
-                          <span className="max-w-[140px] truncate font-bold text-xs">
-                            {point.tema || `Punto ${idx + 1}`}
-                          </span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
 
                   {/* Main Full-Width Form Contents */}
                   {selectedAgendaPointTab === 'new' ? (
