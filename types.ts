@@ -477,6 +477,11 @@ export interface ConvencionRegistro {
   club: string;
   cargo: string;
   distrito: string;
+  dpi?: string;
+  paquete?: 'base' | 'completo';
+  montoPagar?: number;
+  estadoPago?: 'Pendiente' | 'Pagado' | 'Checkout_Creado';
+  recurrenteCheckoutUrl?: string;
   fechaRegistro: string;
 }
 
