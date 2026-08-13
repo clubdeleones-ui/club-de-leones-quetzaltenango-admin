@@ -206,10 +206,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
     setSocioSaveSuccess(false);
 
     try {
+      let finalFoto = editFoto;
+      if (finalFoto && finalFoto.startsWith('data:image')) {
+        finalFoto = await firebaseService.uploadSocioPhoto(finalFoto, user.id);
+      }
+
       const updated: Socio = {
         ...user,
         telefono: editTelefono,
-        foto: editFoto,
+        foto: finalFoto,
         dpi: editDpi,
         fechaNacimiento: editFechaNacimiento,
         profesion: editProfesion,
@@ -219,7 +224,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
       };
 
       await firebaseService.saveSocio(updated);
-
       onUpdateUser(updated);
       setSocioSaveSuccess(true);
       showToast('¡Perfil actualizado con éxito!', 'success');

@@ -161,11 +161,33 @@ export const firebaseService = {
     }
   },
 
+  // Upload socio photo to Firebase Storage
+  uploadSocioPhoto: async (base64Data: string, socioId: string): Promise<string> => {
+    try {
+      if (!base64Data.startsWith('data:image')) {
+        return base64Data;
+      }
+      const uniqueName = `socio_${socioId}_${Date.now()}`;
+      const storageRef = ref(storage, `socios/${uniqueName}`);
+      await uploadString(storageRef, base64Data, 'data_url');
+      const downloadURL = await getDownloadURL(storageRef);
+      return downloadURL;
+    } catch (error) {
+      console.error("Error al subir foto de socio a Firebase Storage:", error);
+      return base64Data;
+    }
+  },
+
   // Save or update an active member in Firestore
   saveSocio: async (socio: Socio): Promise<void> => {
     try {
+      let finalFoto = socio.foto;
+      if (finalFoto && finalFoto.startsWith('data:image')) {
+        finalFoto = await firebaseService.uploadSocioPhoto(finalFoto, socio.id);
+      }
+      const socioToSave = { ...socio, foto: finalFoto };
       const docRef = doc(db, "socios", socio.id);
-      const cleanData = JSON.parse(JSON.stringify(socio));
+      const cleanData = JSON.parse(JSON.stringify(socioToSave));
       await setDoc(docRef, cleanData);
     } catch (error) {
       console.error("Error saving socio in Firestore:", error);
