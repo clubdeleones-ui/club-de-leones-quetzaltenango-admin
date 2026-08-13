@@ -953,7 +953,7 @@ export default function Convencion() {
 
       {/* SECCIÓN 7: Formulario de Pre-registro Digital Guiado (4 Pasos) */}
       <section id="pre-inscripcion" className="my-10 sm:my-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-10">
-        <div className="bg-gradient-to-br from-blue-955 via-blue-900 to-slate-950 text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 border-2 border-yellow-500/35 shadow-2xl relative overflow-hidden">
+        <div className="bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 border-2 border-yellow-500/30 shadow-2xl relative overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(253,224,71,0.12),transparent_40%)] pointer-events-none" />
           <div className="relative z-10">
             
@@ -971,7 +971,7 @@ export default function Convencion() {
                       <ShieldCheck size={14} />
                       <span>Pre-inscripción Oficial Convención 2026</span>
                     </div>
-                    <h2 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight bg-gradient-to-r from-white via-slate-100 to-yellow-300 bg-clip-text text-transparent">
+                    <h2 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight bg-gradient-to-r from-yellow-300 via-amber-300 to-yellow-400 bg-clip-text text-transparent">
                       Inscripción Guiada en 4 Pasos
                     </h2>
                     <p className="text-slate-200 text-xs sm:text-base">
