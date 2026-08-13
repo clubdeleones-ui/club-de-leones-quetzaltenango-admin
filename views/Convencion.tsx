@@ -953,8 +953,8 @@ export default function Convencion() {
 
       {/* SECCIÓN 7: Formulario de Pre-registro Digital Guiado (4 Pasos) */}
       <section id="pre-inscripcion" className="my-10 sm:my-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-10">
-        <div className="bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 border-2 border-yellow-500/30 shadow-2xl relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(253,224,71,0.12),transparent_40%)] pointer-events-none" />
+        <div className="bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 border-2 border-yellow-500/30 shadow-2xl relative">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(253,224,71,0.12),transparent_40%)] pointer-events-none rounded-3xl sm:rounded-[2.5rem] overflow-hidden" />
           <div className="relative z-10">
             
             {fetching ? (
@@ -1136,7 +1136,7 @@ export default function Convencion() {
                       </div>
 
                       {/* Cargo Leonístico Actual */}
-                      <div className="space-y-1.5 sm:space-y-2 text-left" ref={cargoRef}>
+                      <div className={`space-y-1.5 sm:space-y-2 text-left relative ${openDropdown === 'cargo' ? 'z-50' : 'z-20'}`} ref={cargoRef}>
                         <label className="text-xs font-extrabold uppercase tracking-wider text-slate-300">Cargo Leonístico Actual *</label>
                         <div className="relative">
                           <button
@@ -1151,7 +1151,7 @@ export default function Convencion() {
                             <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 shrink-0 ml-2 ${openDropdown === 'cargo' ? 'rotate-180' : ''}`} />
                           </button>
                           {openDropdown === 'cargo' && (
-                            <div className="absolute z-50 mt-2 w-full rounded-2xl border border-white/15 bg-blue-955/95 backdrop-blur-xl shadow-2xl shadow-black/80 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="absolute z-50 mt-2 w-full rounded-2xl border border-yellow-500/40 bg-blue-955 shadow-2xl shadow-black/95 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                               {CARGO_OPTIONS.map((opt) => (
                                 <button
                                   key={opt.value}
@@ -1198,7 +1198,7 @@ export default function Convencion() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 text-left">
                         {/* Zona / Distrito */}
-                        <div className="space-y-1.5 sm:space-y-2" ref={zonaRef}>
+                        <div className={`space-y-1.5 sm:space-y-2 relative ${openDropdown === 'zona' ? 'z-50' : 'z-20'}`} ref={zonaRef}>
                           <label className="text-xs font-extrabold uppercase tracking-wider text-slate-300">Zona o Distrito a la que pertenece *</label>
                           <div className="relative">
                             <button
@@ -1210,7 +1210,7 @@ export default function Convencion() {
                               <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 shrink-0 ml-2 ${openDropdown === 'zona' ? 'rotate-180' : ''}`} />
                             </button>
                             {openDropdown === 'zona' && (
-                              <div className="absolute z-50 mt-2 w-full rounded-2xl border border-white/15 bg-blue-955/95 backdrop-blur-xl shadow-2xl shadow-black/80 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-72 overflow-y-auto">
+                              <div className="absolute z-50 mt-2 w-full rounded-2xl border border-yellow-500/40 bg-blue-955 shadow-2xl shadow-black/95 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-72 overflow-y-auto">
                                 {REGION_ZONES.map((rg) => (
                                   <div key={rg.region}>
                                     <div className={`px-4 py-2 bg-gradient-to-r ${rg.color} text-white text-[10px] font-black uppercase tracking-widest sticky top-0`}>
@@ -1246,7 +1246,7 @@ export default function Convencion() {
                         </div>
 
                         {/* Club de Leones de Pertenencia */}
-                        <div className="space-y-1.5 sm:space-y-2" ref={clubRef}>
+                        <div className={`space-y-1.5 sm:space-y-2 relative ${openDropdown === 'club' ? 'z-50' : 'z-10'}`} ref={clubRef}>
                           <label className="text-xs font-extrabold uppercase tracking-wider text-slate-300">Club de Leones de Pertenencia *</label>
                           {form.distrito === 'Otro / Internacional' ? (
                             <input 
@@ -1271,7 +1271,7 @@ export default function Convencion() {
                                   <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 shrink-0 ml-2 ${openDropdown === 'club' ? 'rotate-180' : ''}`} />
                                 </button>
                                 {openDropdown === 'club' && (
-                                  <div className="absolute z-50 mt-2 w-full rounded-2xl border border-white/15 bg-blue-955/95 backdrop-blur-xl shadow-2xl shadow-black/80 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-60 overflow-y-auto">
+                                  <div className="absolute z-50 mt-2 w-full rounded-2xl border border-yellow-500/40 bg-blue-955 shadow-2xl shadow-black/95 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-60 overflow-y-auto">
                                     {(ZONAS_CLUBS[form.distrito] || []).map((c) => (
                                       <button
                                         key={c}
