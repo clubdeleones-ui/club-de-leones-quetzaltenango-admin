@@ -129,8 +129,31 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
     setIsOpen(false);
   };
 
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50/50">
+      {/* Offline Status Bar */}
+      {!isOnline && (
+        <div className="bg-amber-500 text-blue-955 text-xs font-black px-4 py-2 text-center flex items-center justify-center space-x-2 shadow-md animate-in slide-in-from-top duration-300">
+          <span className="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
+          <span>📡 Modo Sin Conexión: Estás navegando con datos locales. Los cambios se sincronizarán al recuperar el internet.</span>
+        </div>
+      )}
+
       {/* Main Premium Navbar */}
       <nav className="bg-blue-900/95 backdrop-blur-md text-white shadow-xl sticky top-0 z-50 border-b border-blue-800/40 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
