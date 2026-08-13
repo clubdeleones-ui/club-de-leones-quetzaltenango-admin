@@ -196,7 +196,15 @@ export default function Convencion() {
   const [telefonoDigitos, setTelefonoDigitos] = useState('');
   const [dpiDigitos, setDpiDigitos] = useState('');
   const [customClub, setCustomClub] = useState('');
-  const [paqueteSeleccionado, setPaqueteSeleccionado] = useState<'base' | 'completo' | 'cultural' | 'familiar'>('completo');
+  const [includeHotel, setIncludeHotel] = useState(false);
+  const [includeCultural, setIncludeCultural] = useState(false);
+  const [includeFamiliar, setIncludeFamiliar] = useState(false);
+
+  const baseCost = 650;
+  const hotelCost = includeHotel ? 400 : 0;
+  const culturalCost = includeCultural ? 150 : 0;
+  const familiarCost = includeFamiliar ? 450 : 0;
+  const montoTotal = baseCost + hotelCost + culturalCost + familiarCost;
   const [telegramConfirmed, setTelegramConfirmed] = useState(false);
   const [isRedirectingPayment, setIsRedirectingPayment] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
