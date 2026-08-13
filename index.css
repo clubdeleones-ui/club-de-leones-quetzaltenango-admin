@@ -65,12 +65,25 @@ h1, h2, h3 {
   animation-play-state: paused;
 }
 
-/* Hide scrollbars visually while maintaining full touch/mouse scrollability */
+/* Hide scrollbars visually while maintaining full touch/mouse scrollability globally */
+html, body, * {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+::-webkit-scrollbar {
+  display: none !important;
+  width: 0px !important;
+  height: 0px !important;
+  background: transparent !important;
+}
+
 .no-scrollbar::-webkit-scrollbar {
-  display: none;
+  display: none !important;
 }
 .no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
 }
+
 
