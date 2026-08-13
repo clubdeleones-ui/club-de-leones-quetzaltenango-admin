@@ -209,30 +209,33 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
                    </button>
 
                    {isProgramasOpen && (
-                     <div className="absolute left-0 mt-3 w-80 bg-blue-955/95 backdrop-blur-xl text-white rounded-[1.75rem] shadow-2xl border border-blue-700/50 p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                       <div className="px-3 py-2 mb-1.5 border-b border-white/10">
-                         <span className="text-[10px] font-black uppercase tracking-widest text-yellow-400 block">
+                     <div className="absolute left-0 mt-3 w-84 bg-white text-slate-800 rounded-[1.75rem] shadow-2xl border border-slate-200/90 p-3.5 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                       <div className="px-3 py-2 mb-2 bg-blue-50/70 rounded-2xl border border-blue-100/60 flex items-center justify-between">
+                         <span className="text-[10px] font-black uppercase tracking-widest text-blue-900 block">
                            Iniciativas Comunitarias
+                         </span>
+                         <span className="text-[9px] font-extrabold uppercase bg-yellow-400 text-blue-950 px-2 py-0.5 rounded-full">
+                           Educación
                          </span>
                        </div>
                        <Link
                          to="/programas/futuro"
                          onClick={() => setIsProgramasOpen(false)}
-                         className="flex items-start space-x-3.5 p-3 rounded-2xl hover:bg-white/10 transition-all group border border-transparent hover:border-yellow-500/30"
+                         className="flex items-start space-x-3.5 p-3 rounded-2xl hover:bg-slate-100/80 transition-all group border border-transparent hover:border-yellow-400/40"
                        >
-                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500 text-blue-955 flex items-center justify-center font-black shrink-0 shadow-md group-hover:scale-105 transition-transform">
-                           <Bot size={20} />
+                         <div className="w-11 h-11 rounded-2xl bg-blue-900 text-yellow-400 flex items-center justify-center font-black shrink-0 shadow-md group-hover:scale-105 transition-transform">
+                           <Bot size={22} />
                          </div>
                          <div>
                            <div className="flex items-center space-x-1.5">
-                             <span className="font-extrabold text-sm text-white group-hover:text-yellow-300 transition-colors">
+                             <span className="font-black text-sm text-slate-900 group-hover:text-blue-900 transition-colors">
                                Programa F.U.T.U.R.O.
                              </span>
-                             <span className="bg-yellow-500/20 text-yellow-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-yellow-500/30">
+                             <span className="bg-blue-100 text-blue-850 text-[9px] font-black px-1.5 py-0.5 rounded">
                                IA & Tech
                              </span>
                            </div>
-                           <p className="text-[11px] text-slate-300 font-medium leading-tight mt-1">
+                           <p className="text-xs text-slate-600 font-medium leading-snug mt-1">
                              Laboratorios de computación y formación modular en Inteligencia Artificial.
                            </p>
                          </div>
