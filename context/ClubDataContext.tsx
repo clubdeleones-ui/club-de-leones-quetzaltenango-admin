@@ -126,6 +126,30 @@ function getLocalData<T>(key: string, fallback: T): T {
   }
 }
 
+// Safe local storage writer with quota protection
+function safeSetLocalData(key: string, data: any): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (e: any) {
+    if (e && (e.name === 'QuotaExceededError' || e.code === 22)) {
+      console.warn(`LocalStorage quota exceeded writing ${key}. Clearing temporary caches...`);
+      const nonEssentialKeys = ['club_leones_galeria', 'club_leones_linea_tiempo', 'club_leones_requerimientos'];
+      nonEssentialKeys.forEach(k => {
+        if (k !== key) {
+          try { localStorage.removeItem(k); } catch (_) {}
+        }
+      });
+      try {
+        localStorage.setItem(key, JSON.stringify(data));
+      } catch (retryErr) {
+        console.error(`Failed to write ${key} even after eviction:`, retryErr);
+      }
+    } else {
+      console.error(`Error saving to localStorage for ${key}:`, e);
+    }
+  }
+}
+
 interface ClubDataContextType {
   socios: Socio[];
   propuestas: PropuestaSocio[];
@@ -296,7 +320,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const unsubSocios = onSnapshot(collection(db, 'socios'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Socio);
       setSocios(list);
-      localStorage.setItem(KEYS.SOCIOS, JSON.stringify(list));
+      safeSetLocalData(KEYS.SOCIOS, list);
       setLoading(prev => ({ ...prev, socios: false }));
     }, (err) => {
       console.error("Error subscribing to socios:", err);
@@ -307,7 +331,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const unsubPropuestas = onSnapshot(collection(db, 'propuestas'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as PropuestaSocio);
       setPropuestas(list);
-      localStorage.setItem(KEYS.PROPUESTAS, JSON.stringify(list));
+      safeSetLocalData(KEYS.PROPUESTAS, list);
       setLoading(prev => ({ ...prev, propuestas: false }));
     }, (err) => {
       console.error("Error subscribing to propuestas:", err);
@@ -318,7 +342,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const unsubSolicitudes = onSnapshot(collection(db, 'solicitudes'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Solicitud);
       setSolicitudes(list);
-      localStorage.setItem(KEYS.SOLICITUDES, JSON.stringify(list));
+      safeSetLocalData(KEYS.SOLICITUDES, list);
       setLoading(prev => ({ ...prev, solicitudes: false }));
     }, (err) => {
       console.error("Error subscribing to solicitudes:", err);
@@ -330,7 +354,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Actividad)
         .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
       setActividades(list);
-      localStorage.setItem(KEYS.ACTIVIDADES, JSON.stringify(list));
+      safeSetLocalData(KEYS.ACTIVIDADES, list);
       setLoading(prev => ({ ...prev, actividades: false }));
     }, (err) => {
       console.error("Error subscribing to actividades:", err);
@@ -342,7 +366,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as SolicitudVoluntario)
         .sort((a, b) => new Date(b.fechaRegistro).getTime() - new Date(a.fechaRegistro).getTime());
       setVoluntarios(list);
-      localStorage.setItem(KEYS.VOLUNTARIOS, JSON.stringify(list));
+      safeSetLocalData(KEYS.VOLUNTARIOS, list);
       setLoading(prev => ({ ...prev, voluntarios: false }));
     }, (err) => {
       console.error("Error subscribing to voluntarios:", err);
@@ -354,7 +378,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Acta)
         .sort((a, b) => b.fecha.localeCompare(a.fecha));
       setActas(list);
-      localStorage.setItem(KEYS.ACTAS, JSON.stringify(list));
+      safeSetLocalData(KEYS.ACTAS, list);
       setLoading(prev => ({ ...prev, actas: false }));
     }, (err) => {
       console.error("Error subscribing to actas:", err);
@@ -366,7 +390,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const unsubComisiones = onSnapshot(qComisiones, (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Comision);
       setComisiones(list);
-      localStorage.setItem(KEYS.COMISIONES, JSON.stringify(list));
+      safeSetLocalData(KEYS.COMISIONES, list);
       setLoading(prev => ({ ...prev, comisiones: false }));
     }, (err) => {
       console.error("Error subscribing to comisiones:", err);
@@ -378,7 +402,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const unsubMinutas = onSnapshot(qMinutas, (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as MinutaComision);
       setMinutas(list);
-      localStorage.setItem(KEYS.MINUTAS, JSON.stringify(list));
+      safeSetLocalData(KEYS.MINUTAS, list);
       setLoading(prev => ({ ...prev, minutas: false }));
     }, (err) => {
       console.error("Error subscribing to minutas:", err);
@@ -390,7 +414,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as ContactoAgenda)
         .sort((a, b) => a.nombre.localeCompare(b.nombre));
       setAgenda(list);
-      localStorage.setItem(KEYS.AGENDA, JSON.stringify(list));
+      safeSetLocalData(KEYS.AGENDA, list);
       setLoading(prev => ({ ...prev, agenda: false }));
     }, (err) => {
       console.error("Error subscribing to agenda:", err);
@@ -402,7 +426,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as GaleriaItem)
         .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
       setGaleria(list);
-      localStorage.setItem(KEYS.GALERIA, JSON.stringify(list));
+      safeSetLocalData(KEYS.GALERIA, list);
       setLoading(prev => ({ ...prev, galeria: false }));
     }, (err) => {
       console.error("Error subscribing to galeria:", err);
@@ -413,7 +437,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const unsubHitos = onSnapshot(collection(db, 'linea_tiempo'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as HitoHistorico);
       setHitos(list);
-      localStorage.setItem(KEYS.HITOS, JSON.stringify(list));
+      safeSetLocalData(KEYS.HITOS, list);
       setLoading(prev => ({ ...prev, hitos: false }));
     }, (err) => {
       console.error("Error subscribing to linea_tiempo:", err);
@@ -424,7 +448,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const unsubRubros = onSnapshot(collection(db, 'presupuestos_rubros'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as RubroPresupuesto);
       setRubros(list);
-      localStorage.setItem(KEYS.RUBROS, JSON.stringify(list));
+      safeSetLocalData(KEYS.RUBROS, list);
       setLoading(prev => ({ ...prev, rubros: false }));
     }, (err) => {
       console.error("Error subscribing to presupuestos_rubros:", err);
@@ -435,7 +459,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const unsubFondos = onSnapshot(collection(db, 'presupuestos_fondos'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as FondoPresupuesto);
       setFondos(list);
-      localStorage.setItem(KEYS.FONDOS, JSON.stringify(list));
+      safeSetLocalData(KEYS.FONDOS, list);
       setLoading(prev => ({ ...prev, fondos: false }));
     }, (err) => {
       console.error("Error subscribing to presupuestos_fondos:", err);
@@ -446,7 +470,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const unsubAsignaciones = onSnapshot(collection(db, 'presupuestos_asignaciones'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as AsignacionComision);
       setAsignaciones(list);
-      localStorage.setItem(KEYS.ASIGNACIONES, JSON.stringify(list));
+      safeSetLocalData(KEYS.ASIGNACIONES, list);
       setLoading(prev => ({ ...prev, asignaciones: false }));
     }, (err) => {
       console.error("Error subscribing to presupuestos_asignaciones:", err);
@@ -457,7 +481,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const unsubAgendas = onSnapshot(collection(db, 'agendas'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as ReunionAgenda);
       setAgendas(list);
-      localStorage.setItem(KEYS.REUNION_AGENDAS, JSON.stringify(list));
+      safeSetLocalData(KEYS.REUNION_AGENDAS, list);
       setLoading(prev => ({ ...prev, agendas: false }));
     }, (err) => {
       console.error("Error subscribing to agendas:", err);
@@ -468,7 +492,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const unsubTareasComisiones = onSnapshot(collection(db, 'tareas_comisiones'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as TareaComision);
       setTareasComisiones(list);
-      localStorage.setItem(KEYS.TAREAS_COMISIONES, JSON.stringify(list));
+      safeSetLocalData(KEYS.TAREAS_COMISIONES, list);
       setLoading(prev => ({ ...prev, tareasComisiones: false }));
     }, (err) => {
       console.error("Error subscribing to tareas_comisiones:", err);
@@ -479,7 +503,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const unsubAsistencias = onSnapshot(collection(db, 'asistencias'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Asistencia);
       setAsistencias(list);
-      localStorage.setItem(KEYS.ASISTENCIAS, JSON.stringify(list));
+      safeSetLocalData(KEYS.ASISTENCIAS, list);
       setLoading(prev => ({ ...prev, asistencias: false }));
     }, (err) => {
       console.error("Error subscribing to asistencias:", err);
@@ -491,7 +515,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const unsubRequerimientos = onSnapshot(qRequerimientos, (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as RequerimientoActividad);
       setRequerimientosActividades(list);
-      localStorage.setItem(KEYS.REQUERIMIENTOS, JSON.stringify(list));
+      safeSetLocalData(KEYS.REQUERIMIENTOS, list);
       setLoading(prev => ({ ...prev, requerimientosActividades: false }));
     }, (err) => {
       console.error("Error subscribing to requerimientos_actividades:", err);

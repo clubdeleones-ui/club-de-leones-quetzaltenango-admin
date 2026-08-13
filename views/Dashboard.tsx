@@ -837,16 +837,23 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
                     alt="Vista previa"
                     className="w-28 h-28 rounded-full object-cover border-4 border-slate-100 shadow-md"
                   />
-                  <label className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer text-white text-xs font-bold">
-                    <Upload size={18} className="mr-1" />
-                    <span>Cambiar</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleEditSocioPhotoChange}
-                      className="hidden"
-                    />
-                  </label>
+                  {isSavingSocio ? (
+                    <div className="absolute inset-0 bg-blue-950/80 rounded-full flex flex-col items-center justify-center text-white text-[10px] font-black p-2 text-center">
+                      <div className="w-5 h-5 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin mb-1"></div>
+                      <span>Subiendo...</span>
+                    </div>
+                  ) : (
+                    <label className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer text-white text-xs font-bold">
+                      <Upload size={18} className="mr-1" />
+                      <span>Cambiar</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleEditSocioPhotoChange}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
                 </div>
                 <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider">
                   Foto de Perfil (PNG, JPG)

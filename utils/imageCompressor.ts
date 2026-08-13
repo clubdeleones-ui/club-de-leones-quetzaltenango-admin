@@ -255,8 +255,24 @@ export const validateImageFile = (
   file: File,
   maxSizeBytes = 5 * 1024 * 1024
 ): { valid: boolean; error?: string } => {
-  if (!file.type.startsWith('image/')) {
-    return { valid: false, error: 'El archivo seleccionado no es una imagen válida.' };
+  if (!file) {
+    return { valid: false, error: 'No se seleccionó ningún archivo.' };
+  }
+  const allowedMimeTypes = [
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+    'image/avif',
+    'image/heic',
+    'image/heif'
+  ];
+  const fileExt = file.name ? file.name.split('.').pop()?.toLowerCase() : '';
+  const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'heic', 'heif'];
+
+  if (!file.type.startsWith('image/') || (!allowedMimeTypes.includes(file.type.toLowerCase()) && !allowedExtensions.includes(fileExt || ''))) {
+    return { valid: false, error: 'El archivo seleccionado no es un formato de imagen permitido (JPG, PNG, WEBP).' };
   }
   if (file.size > maxSizeBytes) {
     const sizeMb = (maxSizeBytes / (1024 * 1024)).toFixed(0);
