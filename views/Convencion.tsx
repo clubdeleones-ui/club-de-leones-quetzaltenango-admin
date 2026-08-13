@@ -1151,13 +1151,13 @@ export default function Convencion() {
                             <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 shrink-0 ml-2 ${openDropdown === 'cargo' ? 'rotate-180' : ''}`} />
                           </button>
                           {openDropdown === 'cargo' && (
-                            <div className="absolute z-50 mt-2 w-full rounded-2xl border border-yellow-500/40 bg-blue-955 shadow-2xl shadow-black/95 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="absolute z-[100] mt-2 w-full rounded-2xl border-2 border-yellow-500/60 bg-[#06152d] shadow-[0_20px_50px_rgba(0,0,0,0.9)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                               {CARGO_OPTIONS.map((opt) => (
                                 <button
                                   key={opt.value}
                                   type="button"
                                   onClick={() => handleCargoSelect(opt.value)}
-                                  className={`w-full flex items-center justify-between px-4 py-3 text-sm transition-colors text-left ${form.cargo === opt.value ? 'bg-yellow-500/20 text-yellow-300 font-bold' : 'text-white hover:bg-white/10'}`}
+                                  className={`w-full flex items-center justify-between px-4 py-3 text-sm transition-colors text-left ${form.cargo === opt.value ? 'bg-yellow-500/20 text-yellow-300 font-bold border-l-4 border-yellow-400' : 'text-white font-bold hover:bg-[#102a52]'}`}
                                 >
                                   <span className="flex items-center space-x-3">
                                     <span className="text-base">{opt.icon}</span>
@@ -1172,7 +1172,7 @@ export default function Convencion() {
                       </div>
 
                       {/* Botón Paso 1 */}
-                      <div className="pt-4 flex justify-end">
+                      <div className="pt-4 flex justify-end relative z-10">
                         <button
                           type="button"
                           onClick={() => handleNextStep(2)}
@@ -1210,10 +1210,10 @@ export default function Convencion() {
                               <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 shrink-0 ml-2 ${openDropdown === 'zona' ? 'rotate-180' : ''}`} />
                             </button>
                             {openDropdown === 'zona' && (
-                              <div className="absolute z-50 mt-2 w-full rounded-2xl border border-yellow-500/40 bg-blue-955 shadow-2xl shadow-black/95 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-72 overflow-y-auto">
+                              <div className="absolute z-[100] mt-2 w-full rounded-2xl border-2 border-yellow-500/60 bg-[#06152d] shadow-[0_20px_50px_rgba(0,0,0,0.9)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-72 overflow-y-auto no-scrollbar">
                                 {REGION_ZONES.map((rg) => (
                                   <div key={rg.region}>
-                                    <div className={`px-4 py-2 bg-gradient-to-r ${rg.color} text-white text-[10px] font-black uppercase tracking-widest sticky top-0`}>
+                                    <div className={`px-4 py-2 bg-gradient-to-r ${rg.color} text-white text-[10px] font-black uppercase tracking-widest sticky top-0 z-10`}>
                                       🏛️ {rg.region}
                                     </div>
                                     {rg.zonas.map((z) => (
@@ -1221,7 +1221,7 @@ export default function Convencion() {
                                         key={z}
                                         type="button"
                                         onClick={() => handleZoneSelect(z)}
-                                        className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors text-left ${form.distrito === z ? 'bg-yellow-500/20 text-yellow-300 font-bold' : 'text-white hover:bg-white/10'}`}
+                                        className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors text-left ${form.distrito === z ? 'bg-yellow-500/20 text-yellow-300 font-bold border-l-4 border-yellow-400' : 'text-white font-bold hover:bg-[#102a52]'}`}
                                       >
                                         <span className="font-semibold">{z}</span>
                                         {form.distrito === z && <Check size={14} className="text-yellow-400 shrink-0" />}
@@ -1234,7 +1234,7 @@ export default function Convencion() {
                                   <button
                                     type="button"
                                     onClick={() => handleZoneSelect('Otro / Internacional')}
-                                    className={`w-full flex items-center justify-between px-4 py-3 text-sm transition-colors text-left ${form.distrito === 'Otro / Internacional' ? 'bg-yellow-500/20 text-yellow-300 font-bold' : 'text-white hover:bg-white/10'}`}
+                                    className={`w-full flex items-center justify-between px-4 py-3 text-sm transition-colors text-left ${form.distrito === 'Otro / Internacional' ? 'bg-yellow-500/20 text-yellow-300 font-bold border-l-4 border-yellow-400' : 'text-white font-bold hover:bg-[#102a52]'}`}
                                   >
                                     <span className="font-semibold">🌎 Otro / Internacional</span>
                                     {form.distrito === 'Otro / Internacional' && <Check size={14} className="text-yellow-400 shrink-0" />}
@@ -1271,13 +1271,13 @@ export default function Convencion() {
                                   <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 shrink-0 ml-2 ${openDropdown === 'club' ? 'rotate-180' : ''}`} />
                                 </button>
                                 {openDropdown === 'club' && (
-                                  <div className="absolute z-50 mt-2 w-full rounded-2xl border border-yellow-500/40 bg-blue-955 shadow-2xl shadow-black/95 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-60 overflow-y-auto">
+                                  <div className="absolute z-[100] mt-2 w-full rounded-2xl border-2 border-yellow-500/60 bg-[#06152d] shadow-[0_20px_50px_rgba(0,0,0,0.9)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-60 overflow-y-auto no-scrollbar">
                                     {(ZONAS_CLUBS[form.distrito] || []).map((c) => (
                                       <button
                                         key={c}
                                         type="button"
                                         onClick={() => handleClubSelect(c)}
-                                        className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors text-left ${form.club === c ? 'bg-yellow-500/20 text-yellow-300 font-bold' : 'text-white hover:bg-white/10'} ${c === 'Otro Club' ? 'border-t border-white/10 italic text-slate-300' : ''}`}
+                                        className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors text-left ${form.club === c ? 'bg-yellow-500/20 text-yellow-300 font-bold border-l-4 border-yellow-400' : 'text-white font-bold hover:bg-[#102a52]'} ${c === 'Otro Club' ? 'border-t border-white/10 italic text-slate-300' : ''}`}
                                       >
                                         <span className="font-semibold">{c === 'Otro Club' ? '✏️ Otro Club...' : c}</span>
                                         {form.club === c && <Check size={14} className="text-yellow-400 shrink-0" />}

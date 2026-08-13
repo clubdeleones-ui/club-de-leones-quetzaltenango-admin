@@ -64,3 +64,13 @@ h1, h2, h3 {
 .animate-marquee:hover {
   animation-play-state: paused;
 }
+
+/* Hide scrollbars visually while maintaining full touch/mouse scrollability */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
