@@ -478,7 +478,10 @@ export interface ConvencionRegistro {
   cargo: string;
   distrito: string;
   dpi?: string;
-  paquete?: 'base' | 'completo' | 'cultural' | 'familiar';
+  paquete?: string;
+  includeHotel?: boolean;
+  includeCultural?: boolean;
+  includeFamiliar?: boolean;
   montoPagar?: number;
   estadoPago?: 'Pendiente' | 'Pagado' | 'Checkout_Creado';
   recurrenteCheckoutUrl?: string;

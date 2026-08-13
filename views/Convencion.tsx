@@ -351,38 +351,32 @@ export default function Convencion() {
     setOpenDropdown(null);
   };
 
-  const handleNextStep = (targetStep: 1 | 2 | 3 | 4) => {
-    if (targetStep === 2) {
-      if (!form.nombre.trim()) {
-        alert("Por favor, ingresa tu Nombre Completo.");
-        return;
-      }
-      if (!dpiDigitos.trim()) {
-        alert("Por favor, ingresa tu número de DPI o Documento de Identificación.");
-        return;
-      }
-      if (!form.email.trim() || !form.email.includes('@')) {
-        alert("Por favor, ingresa un Correo Electrónico válido.");
+  const handleNextStep = (step: 1 | 2 | 3 | 4) => {
+    if (step === 2) {
+      if (!form.nombre.trim() || !form.email.trim() || !telefonoDigitos.trim() || !dpiDigitos.trim()) {
+        alert("Por favor completa todos los campos requeridos del Paso 1.");
         return;
       }
       if (telefonoDigitos.length !== 8) {
-        alert("Por favor, ingresa un número de teléfono válido de 8 dígitos.");
+        alert("El número de teléfono debe tener exactamente 8 dígitos.");
+        return;
+      }
+      if (dpiDigitos.length !== 13) {
+        alert("El número de DPI debe tener 13 dígitos numéricos.");
         return;
       }
     }
 
-    if (targetStep === 3) {
-      const finalClub = (form.distrito === 'Otro / Internacional' || form.club === 'Otro Club') 
-        ? customClub.trim() 
-        : form.club;
-
-      if ((form.distrito === 'Otro / Internacional' || form.club === 'Otro Club') && !finalClub) {
-        alert("Por favor, ingresa el nombre de tu Club de Leones.");
-        return;
+    if (step === 3) {
+      if (form.distrito === 'Otro / Internacional' || form.club === 'Otro Club') {
+        if (!customClub.trim()) {
+          alert("Por favor escribe el nombre de tu club.");
+          return;
+        }
       }
     }
 
-    setWizardStep(targetStep);
+    setWizardStep(step);
     const element = document.getElementById('pre-inscripcion');
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
@@ -401,9 +395,11 @@ export default function Convencion() {
     setTelefonoDigitos('');
     setDpiDigitos('');
     setCustomClub('');
-    setWizardStep(1);
-    setPaqueteSeleccionado('base');
+    setIncludeHotel(false);
+    setIncludeCultural(false);
+    setIncludeFamiliar(false);
     setTelegramConfirmed(false);
+    setWizardStep(1);
     setIsSubmitted(false);
   };
 
@@ -423,17 +419,47 @@ export default function Convencion() {
     }
 
     setLoading(true);
-    let montoTotal = 650;
-    let paqueteNombre = 'Inscripción Convención Base';
-    if (paqueteSeleccionado === 'cultural') {
-      montoTotal = 800;
-      paqueteNombre = 'Convención Base + Paquete Inmersivo Cultural';
-    } else if (paqueteSeleccionado === 'familiar') {
-      montoTotal = 1100;
-      paqueteNombre = 'Convención Base + Paquete Familiar Inmersivo Cultural';
-    } else if (paqueteSeleccionado === 'completo') {
-      montoTotal = 1050;
-      paqueteNombre = 'Convención Base + Hotel Incluido + Actividades Culturales';
+    const selectedComplementos: string[] = ['Inscripción Base (Q. 650)'];
+    if (includeHotel) selectedComplementos.push('Hospedaje Hotel Sede (+ Q. 400)');
+    if (includeCultural) selectedComplementos.push('Paquete Inmersivo Cultural (+ Q. 150)');
+    if (includeFamiliar) selectedComplementos.push('Paquete Familiar Inmersivo Cultural (+ Q. 450)');
+
+    const paqueteNombre = selectedComplementos.join(' + ');
+
+    const checkoutItems = [
+      {
+        name: 'Inscripción Convención Base',
+        amount_in_cents: 65000,
+        currency: 'GTQ' as const,
+        quantity: 1
+      }
+    ];
+
+    if (includeHotel) {
+      checkoutItems.push({
+        name: 'Complemento: Hospedaje en Hotel Sede y Tour',
+        amount_in_cents: 40000,
+        currency: 'GTQ' as const,
+        quantity: 1
+      });
+    }
+
+    if (includeCultural) {
+      checkoutItems.push({
+        name: 'Complemento: Paquete Inmersivo Cultural',
+        amount_in_cents: 15000,
+        currency: 'GTQ' as const,
+        quantity: 1
+      });
+    }
+
+    if (includeFamiliar) {
+      checkoutItems.push({
+        name: 'Complemento: Paquete Familiar Inmersivo Cultural',
+        amount_in_cents: 45000,
+        currency: 'GTQ' as const,
+        quantity: 1
+      });
     }
     
     try {
@@ -442,7 +468,10 @@ export default function Convencion() {
         ...form,
         club: finalClub,
         dpi: dpiDigitos.trim(),
-        paquete: paqueteSeleccionado,
+        paquete: paqueteNombre,
+        includeHotel,
+        includeCultural,
+        includeFamiliar,
         montoPagar: montoTotal,
         estadoPago: metodo === 'recurrente' ? 'Checkout_Creado' : 'Pendiente',
         fechaRegistro: new Date().toISOString()
@@ -468,14 +497,7 @@ export default function Convencion() {
         try {
           const currentUrl = window.location.href.split('#')[0];
           const checkoutResponse = await recurrenteService.createCheckout({
-            items: [
-              {
-                name: `Convención Nacional - ${paqueteNombre}`,
-                amount_in_cents: montoTotal * 100,
-                currency: 'GTQ',
-                quantity: 1
-              }
-            ],
+            items: checkoutItems,
             userEmail: form.email.trim(),
             successUrl: `${currentUrl}#pre-inscripcion?pago=exitoso&id=${nuevoRegistro.id}`,
             cancelUrl: `${currentUrl}#pre-inscripcion?pago=cancelado`,
@@ -483,7 +505,7 @@ export default function Convencion() {
               registroId: nuevoRegistro.id,
               nombre: form.nombre,
               club: finalClub,
-              paquete: paqueteSeleccionado
+              paquete: paqueteNombre
             }
           });
 
@@ -1475,168 +1497,129 @@ export default function Convencion() {
                         </div>
                       </div>
 
-                      {/* Selección de Paquete de Convención */}
-                      <div className="space-y-3 text-left">
-                        <label className="text-xs font-extrabold uppercase tracking-wider text-yellow-400">Selecciona tu Paquete de Inscripción:</label>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* Opción 1: Base */}
-                          <div 
-                            onClick={() => setPaqueteSeleccionado('base')}
-                            className={`p-5 rounded-2xl border-2 transition-all cursor-pointer space-y-3 relative overflow-hidden flex flex-col justify-between ${
-                              paqueteSeleccionado === 'base' 
-                                ? 'bg-yellow-500/15 border-yellow-500 shadow-xl shadow-yellow-500/10' 
-                                : 'bg-blue-900/40 border-white/15 hover:border-white/30'
-                            }`}
-                          >
-                            <div className="space-y-3">
-                              <div className="flex justify-between items-start">
-                                <span className="text-xs font-black uppercase tracking-wider text-yellow-300 bg-yellow-500/20 px-3 py-1 rounded-full border border-yellow-500/40">
-                                  Convención Base
-                                </span>
-                                <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                                  paqueteSeleccionado === 'base' ? 'border-yellow-400 bg-yellow-500 text-blue-955' : 'border-white/30'
-                                }`}>
-                                  {paqueteSeleccionado === 'base' && <Check size={12} className="stroke-[3]" />}
-                                </div>
-                              </div>
-                              <div>
-                                <span className="text-3xl font-black text-white">Q. 650.00</span>
-                                <span className="text-xs text-slate-300 block font-semibold mt-0.5">Tarifa Oficial de Inscripción</span>
-                              </div>
-                              <ul className="text-xs text-slate-300 space-y-1.5 font-medium pt-2 border-t border-white/10">
-                                <li className="flex items-center space-x-1.5">
-                                  <Check size={14} className="text-emerald-400 shrink-0" />
-                                  <span>Acceso a todas las Plenarias Oficiales</span>
-                                </li>
-                                <li className="flex items-center space-x-1.5">
-                                  <Check size={14} className="text-emerald-400 shrink-0" />
-                                  <span>Credencial Interactiva de Convencionista</span>
-                                </li>
-                                <li className="flex items-center space-x-1.5">
-                                  <Check size={14} className="text-emerald-400 shrink-0" />
-                                  <span>Carpeta de trabajo y Cenas de Gala</span>
-                                </li>
-                              </ul>
+                      {/* Selección de Paquete de Convención y Complementos */}
+                      <div className="space-y-4 text-left">
+                        {/* 1. Tarifa Base Obligatoria */}
+                        <div className="bg-yellow-500/15 border-2 border-yellow-500 rounded-2xl p-5 shadow-xl space-y-3 relative overflow-hidden">
+                          <span className="absolute -right-10 top-3 bg-yellow-500 text-blue-955 text-[9px] font-black uppercase tracking-widest px-8 py-1 rotate-45 shadow">
+                            Obligatorio
+                          </span>
+                          <div className="flex items-center space-x-3">
+                            <div className="w-6 h-6 rounded-lg bg-yellow-500 text-blue-955 flex items-center justify-center font-black">
+                              <Check size={16} className="stroke-[3]" />
+                            </div>
+                            <div>
+                              <h4 className="text-base font-black text-white">Inscripción Base a la Convención Nacional</h4>
+                              <span className="text-xs text-yellow-300 font-extrabold block">Tarifa Oficial de Convencionista</span>
+                            </div>
+                            <div className="ml-auto text-right">
+                              <span className="text-2xl font-black text-yellow-400">Q. 650.00</span>
                             </div>
                           </div>
+                          <ul className="text-xs text-slate-300 grid grid-cols-1 sm:grid-cols-3 gap-2 font-medium pt-2 border-t border-white/10">
+                            <li className="flex items-center space-x-1.5">
+                              <Check size={14} className="text-emerald-400 shrink-0" />
+                              <span>Plenarias Oficiales</span>
+                            </li>
+                            <li className="flex items-center space-x-1.5">
+                              <Check size={14} className="text-emerald-400 shrink-0" />
+                              <span>Credencial Digital</span>
+                            </li>
+                            <li className="flex items-center space-x-1.5">
+                              <Check size={14} className="text-emerald-400 shrink-0" />
+                              <span>Carpeta & Cenas de Gala</span>
+                            </li>
+                          </ul>
+                        </div>
 
-                          {/* Opción 2: Paquete Inmersivo Cultural */}
-                          <div 
-                            onClick={() => setPaqueteSeleccionado('cultural')}
-                            className={`p-5 rounded-2xl border-2 transition-all cursor-pointer space-y-3 relative overflow-hidden flex flex-col justify-between ${
-                              paqueteSeleccionado === 'cultural' 
-                                ? 'bg-cyan-500/20 border-cyan-400 shadow-xl shadow-cyan-500/10' 
-                                : 'bg-blue-900/40 border-white/15 hover:border-white/30'
-                            }`}
-                          >
-                            <div className="space-y-3">
-                              <div className="flex justify-between items-start">
-                                <span className="text-xs font-black uppercase tracking-wider text-cyan-300 bg-cyan-500/20 px-3 py-1 rounded-full border border-cyan-400/40">
-                                  🎨 Inmersivo Cultural
-                                </span>
-                                <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                                  paqueteSeleccionado === 'cultural' ? 'border-cyan-400 bg-cyan-400 text-blue-955' : 'border-white/30'
-                                }`}>
-                                  {paqueteSeleccionado === 'cultural' && <Check size={12} className="stroke-[3]" />}
+                        {/* 2. Complementos Opcionales Adicionales (Checkboxes) */}
+                        <div className="space-y-3 pt-2">
+                          <label className="text-xs font-extrabold uppercase tracking-wider text-yellow-400 block">
+                            Complementos Opcionales Adicionales (Selecciona los que desees agregar):
+                          </label>
+
+                          <div className="grid grid-cols-1 gap-3.5">
+                            {/* Complemento: Hospedaje en Hotel Sede (+ Q. 400.00) */}
+                            <label className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start space-x-3.5 select-none ${
+                              includeHotel ? 'bg-amber-500/20 border-amber-400 shadow-lg' : 'bg-blue-900/40 border-white/15 hover:border-white/30'
+                            }`}>
+                              <input 
+                                type="checkbox"
+                                checked={includeHotel}
+                                onChange={(e) => setIncludeHotel(e.target.checked)}
+                                className="mt-1 w-5 h-5 text-amber-500 rounded border-white/30 focus:ring-amber-500 cursor-pointer shrink-0"
+                              />
+                              <div className="flex-1 space-y-1">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm font-black text-white flex items-center">
+                                    <Hotel size={16} className="text-amber-400 mr-1.5" />
+                                    Paquete Hospedaje Oficial en Hotel Sede + Recorrido
+                                  </span>
+                                  <span className="text-base font-black text-amber-300">+ Q. 400.00</span>
+                                </div>
+                                <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                                  Incluye hospedaje confortable en el Hotel Sede Oficial de la Convención y recorrido cultural guiado por Xelajú con almuerzo típico.
+                                </p>
+                              </div>
+                            </label>
+
+                            {/* Complemento: Paquete Inmersivo Cultural (+ Q. 150.00) */}
+                            <label className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start space-x-3.5 select-none ${
+                              includeCultural ? 'bg-cyan-500/20 border-cyan-400 shadow-lg' : 'bg-blue-900/40 border-white/15 hover:border-white/30'
+                            }`}>
+                              <input 
+                                type="checkbox"
+                                checked={includeCultural}
+                                onChange={(e) => setIncludeCultural(e.target.checked)}
+                                className="mt-1 w-5 h-5 text-cyan-500 rounded border-white/30 focus:ring-cyan-500 cursor-pointer shrink-0"
+                              />
+                              <div className="flex-1 space-y-1.5">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm font-black text-white">
+                                    🎨 Paquete Inmersivo Cultural Individual
+                                  </span>
+                                  <span className="text-base font-black text-cyan-300">+ Q. 150.00</span>
+                                </div>
+                                <div className="bg-blue-955/60 p-3 rounded-xl border border-cyan-400/30 text-xs text-slate-200 space-y-1">
+                                  <p className="font-extrabold text-cyan-300">✨ Actividades culturales extra (puedes escoger entre):</p>
+                                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] font-medium pt-0.5">
+                                    <li>• 🌙 Tour nocturno con leyenda de Guatemala</li>
+                                    <li>• 🍫 Visita al Museo del Chocolate</li>
+                                    <li>• 📖 Taller familiar de cuentacuentos</li>
+                                    <li>• 🌿 Tour por la naturaleza</li>
+                                  </ul>
                                 </div>
                               </div>
-                              <div>
-                                <span className="text-3xl font-black text-white">Q. 800.00</span>
-                                <span className="text-xs text-cyan-300 block font-bold mt-0.5">Base Q.650 + Experiencia Cultural Q.150</span>
-                              </div>
-                              <div className="space-y-1.5 pt-2 border-t border-white/10 text-xs">
-                                <p className="text-cyan-200 font-bold">✨ Actividades culturales extra (escoge 1):</p>
-                                <ul className="text-[11px] text-slate-200 space-y-1 pl-1 font-medium">
-                                  <li>• 🌙 Tour nocturno acompañado de una leyenda de Guatemala</li>
-                                  <li>• 🍫 Visita al Museo del Chocolate</li>
-                                  <li>• 📖 Taller familiar de cuentacuentos</li>
-                                  <li>• 🌿 Tour por la naturaleza</li>
-                                </ul>
-                              </div>
-                            </div>
-                          </div>
+                            </label>
 
-                          {/* Opción 3: Paquete Completo + Hotel */}
-                          <div 
-                            onClick={() => setPaqueteSeleccionado('completo')}
-                            className={`p-5 rounded-2xl border-2 transition-all cursor-pointer space-y-3 relative overflow-hidden flex flex-col justify-between ${
-                              paqueteSeleccionado === 'completo' 
-                                ? 'bg-amber-500/20 border-amber-400 shadow-xl shadow-amber-500/10' 
-                                : 'bg-blue-900/40 border-white/15 hover:border-white/30'
-                            }`}
-                          >
-                            <span className="absolute -right-12 top-4 bg-gradient-to-r from-amber-500 to-yellow-400 text-blue-955 text-[9px] font-black uppercase tracking-widest px-10 py-1 rotate-45 shadow-md">
-                              Recomendado
-                            </span>
-
-                            <div className="space-y-3">
-                              <div className="flex justify-between items-start">
-                                <span className="text-xs font-black uppercase tracking-wider text-amber-300 bg-amber-500/20 px-3 py-1 rounded-full border border-amber-400/40 flex items-center space-x-1">
-                                  <Hotel size={12} className="mr-1" />
-                                  <span>VIP Hotel + Cultura</span>
-                                </span>
-                                <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                                  paqueteSeleccionado === 'completo' ? 'border-amber-400 bg-amber-500 text-blue-955' : 'border-white/30'
-                                }`}>
-                                  {paqueteSeleccionado === 'completo' && <Check size={12} className="stroke-[3]" />}
+                            {/* Complemento: Paquete Familiar Inmersivo Cultural (+ Q. 450.00) */}
+                            <label className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start space-x-3.5 select-none ${
+                              includeFamiliar ? 'bg-purple-500/20 border-purple-400 shadow-lg' : 'bg-blue-900/40 border-white/15 hover:border-white/30'
+                            }`}>
+                              <input 
+                                type="checkbox"
+                                checked={includeFamiliar}
+                                onChange={(e) => setIncludeFamiliar(e.target.checked)}
+                                className="mt-1 w-5 h-5 text-purple-500 rounded border-white/30 focus:ring-purple-500 cursor-pointer shrink-0"
+                              />
+                              <div className="flex-1 space-y-1.5">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm font-black text-white">
+                                    👨‍👩‍👧‍👦 Paquete Familiar Inmersivo Cultural
+                                  </span>
+                                  <span className="text-base font-black text-purple-300">+ Q. 450.00</span>
+                                </div>
+                                <div className="bg-blue-955/60 p-3 rounded-xl border border-purple-400/30 text-xs text-slate-200 space-y-1">
+                                  <p className="font-extrabold text-purple-300">👨‍👩‍👧‍👦 Pase familiar actividades culturales extra (puedes escoger entre):</p>
+                                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] font-medium pt-0.5">
+                                    <li>• 🌙 Tour nocturno con leyenda de Guatemala</li>
+                                    <li>• 🍫 Visita al Museo del Chocolate</li>
+                                    <li>• 📖 Taller familiar de cuentacuentos</li>
+                                    <li>• 🌿 Tour por la naturaleza</li>
+                                  </ul>
                                 </div>
                               </div>
-                              <div>
-                                <span className="text-3xl font-black text-white">Q. 1,050.00</span>
-                                <span className="text-xs text-amber-300 block font-bold mt-0.5">Base Q.650 + Hotel Sede y Tour Q.400</span>
-                              </div>
-                              <ul className="text-xs text-slate-200 space-y-1.5 font-medium pt-2 border-t border-white/10">
-                                <li className="flex items-center space-x-1.5">
-                                  <Check size={14} className="text-amber-400 shrink-0" />
-                                  <span>Todo lo de la Inscripción Base</span>
-                                </li>
-                                <li className="flex items-center space-x-1.5">
-                                  <Check size={14} className="text-amber-400 shrink-0" />
-                                  <span><strong>Hospedaje Incluido</strong> en Hotel Sede Oficial</span>
-                                </li>
-                                <li className="flex items-center space-x-1.5">
-                                  <Check size={14} className="text-amber-400 shrink-0" />
-                                  <span>Recorrido Cultural Guiado por Xela + Almuerzo Típico</span>
-                                </li>
-                              </ul>
-                            </div>
-                          </div>
-
-                          {/* Opción 4: Paquete Familiar Inmersivo Cultural */}
-                          <div 
-                            onClick={() => setPaqueteSeleccionado('familiar')}
-                            className={`p-5 rounded-2xl border-2 transition-all cursor-pointer space-y-3 relative overflow-hidden flex flex-col justify-between ${
-                              paqueteSeleccionado === 'familiar' 
-                                ? 'bg-purple-500/20 border-purple-400 shadow-xl shadow-purple-500/10' 
-                                : 'bg-blue-900/40 border-white/15 hover:border-white/30'
-                            }`}
-                          >
-                            <div className="space-y-3">
-                              <div className="flex justify-between items-start">
-                                <span className="text-xs font-black uppercase tracking-wider text-purple-300 bg-purple-500/20 px-3 py-1 rounded-full border border-purple-400/40">
-                                  👨‍👩‍👧‍👦 Familiar Inmersivo
-                                </span>
-                                <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                                  paqueteSeleccionado === 'familiar' ? 'border-purple-400 bg-purple-400 text-blue-955' : 'border-white/30'
-                                }`}>
-                                  {paqueteSeleccionado === 'familiar' && <Check size={12} className="stroke-[3]" />}
-                                </div>
-                              </div>
-                              <div>
-                                <span className="text-3xl font-black text-white">Q. 1,100.00</span>
-                                <span className="text-xs text-purple-300 block font-bold mt-0.5">Base Q.650 + Pase Cultural Familiar Q.450</span>
-                              </div>
-                              <div className="space-y-1.5 pt-2 border-t border-white/10 text-xs">
-                                <p className="text-purple-200 font-bold">👨‍👩‍👧‍👦 Actividades culturales extra familiares (escoge 1):</p>
-                                <ul className="text-[11px] text-slate-200 space-y-1 pl-1 font-medium">
-                                  <li>• 🌙 Tour nocturno acompañado de una leyenda de Guatemala</li>
-                                  <li>• 🍫 Visita al Museo del Chocolate</li>
-                                  <li>• 📖 Taller familiar de cuentacuentos</li>
-                                  <li>• 🌿 Tour por la naturaleza</li>
-                                </ul>
-                              </div>
-                            </div>
+                            </label>
                           </div>
                         </div>
                       </div>
@@ -1660,16 +1643,43 @@ export default function Convencion() {
                         </div>
                       </div>
 
-                      {/* Resumen Final de Pago */}
-                      <div className="bg-blue-955/90 p-5 rounded-2xl border border-white/15 text-left space-y-2">
+                      {/* Resumen Final de Pago Desglosado */}
+                      <div className="bg-blue-955/90 p-5 rounded-2xl border border-white/15 text-left space-y-2.5 shadow-xl">
                         <div className="flex justify-between items-center text-xs font-bold text-slate-300 border-b border-white/10 pb-2">
                           <span>Socio Registrar: <strong>{form.nombre}</strong></span>
                           <span>Club: <strong>{form.club === 'Otro Club' ? customClub : form.club}</strong></span>
                         </div>
-                        <div className="flex justify-between items-center pt-1 text-sm font-black">
-                          <span className="text-white">Total a Cancelar:</span>
+
+                        {/* Desglose de Ítems */}
+                        <div className="space-y-1.5 text-xs text-slate-300 py-1">
+                          <div className="flex justify-between items-center font-medium">
+                            <span>• Tarifa Base Convención Nacional:</span>
+                            <span className="font-bold text-white">Q. 650.00</span>
+                          </div>
+                          {includeHotel && (
+                            <div className="flex justify-between items-center font-medium text-amber-300">
+                              <span>• Hospedaje Hotel Sede & Tour:</span>
+                              <span className="font-bold">+ Q. 400.00</span>
+                            </div>
+                          )}
+                          {includeCultural && (
+                            <div className="flex justify-between items-center font-medium text-cyan-300">
+                              <span>• Paquete Inmersivo Cultural:</span>
+                              <span className="font-bold">+ Q. 150.00</span>
+                            </div>
+                          )}
+                          {includeFamiliar && (
+                            <div className="flex justify-between items-center font-medium text-purple-300">
+                              <span>• Paquete Familiar Inmersivo Cultural:</span>
+                              <span className="font-bold">+ Q. 450.00</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex justify-between items-center pt-2 border-t border-white/10 text-sm font-black">
+                          <span className="text-white">TOTAL A CANCELAR:</span>
                           <span className="text-2xl text-yellow-400">
-                            Q. {(paqueteSeleccionado === 'cultural' ? 800 : paqueteSeleccionado === 'familiar' ? 1100 : paqueteSeleccionado === 'completo' ? 1050 : 650).toLocaleString()}.00
+                            Q. {montoTotal.toLocaleString()}.00
                           </span>
                         </div>
                       </div>
@@ -1690,7 +1700,7 @@ export default function Convencion() {
                           ) : (
                             <>
                               <CreditCard size={20} />
-                              <span>💳 Proceder al Pago Seguro (Q. {(paqueteSeleccionado === 'cultural' ? 800 : paqueteSeleccionado === 'familiar' ? 1100 : paqueteSeleccionado === 'completo' ? 1050 : 650).toLocaleString()}.00)</span>
+                              <span>💳 Proceder al Pago Seguro (Q. {montoTotal.toLocaleString()}.00)</span>
                             </>
                           )}
                         </button>
