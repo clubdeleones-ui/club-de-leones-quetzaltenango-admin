@@ -34,6 +34,7 @@ const PublicPagoCuota = lazy(() => import('./views/PublicPagoCuota').then(m => (
 const RequerimientoPublico = lazy(() => import('./views/RequerimientoPublico'));
 const AgendaPublica = lazy(() => import('./views/AgendaPublica').then(m => ({ default: m.AgendaPublica })));
 const NeveraPublica = lazy(() => import('./views/NeveraPublica').then(m => ({ default: m.NeveraPublica })));
+const ProgramaFuturo = lazy(() => import('./views/ProgramaFuturo'));
 
 // Component to synchronize authenticated user session in real-time with Firestore socios collection
 interface UserSessionSyncProps {
@@ -165,6 +166,8 @@ const App: React.FC = () => {
               <Route path="/ficha-evaluacion/:id" element={<FichaEvaluacion />} />
               <Route path="/evaluacion-compartida" element={<EvaluacionCompartida />} />
               <Route path="/confirmar-invitacion/:id" element={<ConfirmarInvitacion />} />
+              <Route path="/programas/futuro" element={<ProgramaFuturo />} />
+              <Route path="/futuro" element={<Navigate to="/programas/futuro" replace />} />
               <Route path="/completar-ficha-socio/:id" element={<CompletarFichaSocio />} />
               <Route path="/pago-cuota" element={<PublicPagoCuota />} />
               <Route path="/convocatoria/:id" element={<RequerimientoPublico />} />

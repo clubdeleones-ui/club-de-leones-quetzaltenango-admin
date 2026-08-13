@@ -20,7 +20,11 @@ import {
   HeartHandshake,
   Facebook,
   Instagram,
-  Award
+  Award,
+  Cpu,
+  Bot,
+  Sparkles,
+  ChevronRight
 } from 'lucide-react';
 import { AuthState, UserRole } from '../types';
 import { googleService } from '../services/googleService';
@@ -34,6 +38,8 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [isProgramasOpen, setIsProgramasOpen] = useState(false);
+  const [isMobileProgramasOpen, setIsMobileProgramasOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<'public' | 'private'>('public');
   const navigate = useNavigate();
   const location = useLocation();
@@ -44,17 +50,20 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
     '/galeria',
     '/historia',
     '/convencion',
+    '/programas/futuro',
     '/socios',
     '/solicitudes',
     '/donar',
     '/proponer-socio'
   ].includes(location.pathname);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const programasRef = useRef<HTMLDivElement>(null);
 
   // Reset mobile menu tab to public when mobile drawer is closed
   useEffect(() => {
     if (!isOpen) {
       setMobileTab('public');
+      setIsMobileProgramasOpen(false);
     }
   }, [isOpen]);
 
@@ -72,11 +81,14 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
     initGapi();
   }, [auth.accessToken]);
 
-  // Click outside to close user dropdown
+  // Click outside to close dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsUserDropdownOpen(false);
+      }
+      if (programasRef.current && !programasRef.current.contains(event.target as Node)) {
+        setIsProgramasOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -171,7 +183,65 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
              {/* Desktop Nav Items */}
              {!isEvaluationView && (
                <div className="hidden md:flex items-center space-x-2">
-                 {navItems.map((item) => {
+                 <Link
+                   to="/"
+                   className={`px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 flex items-center space-x-2 border border-transparent ${
+                     location.pathname === '/' 
+                       ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20 shadow-sm' 
+                       : 'text-slate-200 hover:bg-white/5 hover:text-white'
+                   }`}
+                 >
+                   <span>Inicio</span>
+                 </Link>
+
+                 {/* Programas Dropdown */}
+                 <div className="relative" ref={programasRef}>
+                   <button
+                     onClick={() => setIsProgramasOpen(!isProgramasOpen)}
+                     className={`px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 flex items-center space-x-1.5 border border-transparent cursor-pointer ${
+                       location.pathname.startsWith('/programas') || location.pathname === '/futuro'
+                         ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20 shadow-sm'
+                         : 'text-slate-200 hover:bg-white/5 hover:text-white'
+                     }`}
+                   >
+                     <span>Programas</span>
+                     <ChevronDown size={15} className={`transition-transform duration-300 ${isProgramasOpen ? 'rotate-180 text-yellow-400' : 'text-slate-300'}`} />
+                   </button>
+
+                   {isProgramasOpen && (
+                     <div className="absolute left-0 mt-3 w-80 bg-blue-955/95 backdrop-blur-xl text-white rounded-[1.75rem] shadow-2xl border border-blue-700/50 p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                       <div className="px-3 py-2 mb-1.5 border-b border-white/10">
+                         <span className="text-[10px] font-black uppercase tracking-widest text-yellow-400 block">
+                           Iniciativas Comunitarias
+                         </span>
+                       </div>
+                       <Link
+                         to="/programas/futuro"
+                         onClick={() => setIsProgramasOpen(false)}
+                         className="flex items-start space-x-3.5 p-3 rounded-2xl hover:bg-white/10 transition-all group border border-transparent hover:border-yellow-500/30"
+                       >
+                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500 text-blue-955 flex items-center justify-center font-black shrink-0 shadow-md group-hover:scale-105 transition-transform">
+                           <Bot size={20} />
+                         </div>
+                         <div>
+                           <div className="flex items-center space-x-1.5">
+                             <span className="font-extrabold text-sm text-white group-hover:text-yellow-300 transition-colors">
+                               Programa F.U.T.U.R.O.
+                             </span>
+                             <span className="bg-yellow-500/20 text-yellow-300 text-[9px] font-black px-1.5 py-0.5 rounded border border-yellow-500/30">
+                               IA & Tech
+                             </span>
+                           </div>
+                           <p className="text-[11px] text-slate-300 font-medium leading-tight mt-1">
+                             Laboratorios de computación y formación modular en Inteligencia Artificial.
+                           </p>
+                         </div>
+                       </Link>
+                     </div>
+                   )}
+                 </div>
+
+                 {navItems.filter(i => i.path !== '/').map((item) => {
                    const active = location.pathname === item.path;
                    return (
                      <Link
@@ -325,7 +395,58 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
             {/* Public Links (General Tab) */}
             {mobileTab === 'public' && (
               <div className="space-y-1 animate-in fade-in duration-200">
-                {navItems.map((item) => (
+                <button
+                  onClick={() => handleNav('/')}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-left text-base font-bold transition-all ${
+                    location.pathname === '/' 
+                      ? 'bg-blue-800 text-yellow-400' 
+                      : 'text-slate-200 hover:bg-blue-850'
+                  }`}
+                >
+                  <span>Inicio</span>
+                </button>
+
+                {/* Mobile Programas Accordion */}
+                <div className="bg-blue-950/40 rounded-2xl border border-blue-800/60 overflow-hidden">
+                  <button
+                    onClick={() => setIsMobileProgramasOpen(!isMobileProgramasOpen)}
+                    className="w-full flex items-center justify-between px-4 py-3 text-left text-base font-bold text-slate-100 hover:bg-blue-850 transition-colors"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <Bot size={18} className="text-yellow-400" />
+                      <span>Programas</span>
+                    </div>
+                    <ChevronDown size={16} className={`text-slate-400 transition-transform ${isMobileProgramasOpen ? 'rotate-180 text-yellow-400' : ''}`} />
+                  </button>
+
+                  {isMobileProgramasOpen && (
+                    <div className="px-3 pb-3 pt-1 space-y-1 bg-blue-950/80 border-t border-blue-800/40 animate-in fade-in duration-200">
+                      <button
+                        onClick={() => handleNav('/programas/futuro')}
+                        className={`w-full flex items-start space-x-3 p-2.5 rounded-xl text-left transition-all ${
+                          location.pathname === '/programas/futuro' || location.pathname === '/futuro'
+                            ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
+                            : 'text-slate-200 hover:bg-white/5'
+                        }`}
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-yellow-500 text-blue-955 flex items-center justify-center font-black shrink-0 mt-0.5">
+                          <Bot size={16} />
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-1">
+                            <span className="font-extrabold text-sm text-white">Programa F.U.T.U.R.O.</span>
+                            <span className="bg-yellow-500/20 text-yellow-300 text-[8px] font-black px-1 rounded">IA</span>
+                          </div>
+                          <span className="text-[11px] text-slate-300 block leading-tight">
+                            Laboratorios de computación & IA para escuelas.
+                          </span>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {navItems.filter(i => i.path !== '/').map((item) => (
                   <button
                     key={item.path}
                     onClick={() => handleNav(item.path)}

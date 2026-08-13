@@ -23,7 +23,11 @@ import {
   Award,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Bot,
+  Sparkles,
+  Laptop,
+  BrainCircuit
 } from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
 import { useClubData } from '../context/ClubDataContext';
@@ -339,6 +343,48 @@ const Home: React.FC = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Banner: Programa F.U.T.U.R.O. */}
+      <section className="bg-gradient-to-r from-blue-955 via-slate-900 to-blue-900 rounded-[2.5rem] p-8 md:p-12 border border-yellow-500/30 shadow-2xl relative overflow-hidden text-white">
+        <div className="absolute top-0 right-0 w-[350px] h-[350px] bg-cyan-500/15 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-yellow-500/10 rounded-full blur-[90px] pointer-events-none" />
+
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div className="lg:col-span-8 space-y-4 text-left">
+            <div className="inline-flex items-center space-x-2 bg-yellow-500/15 border border-yellow-500/30 px-3.5 py-1 rounded-full text-xs font-black text-yellow-300 uppercase tracking-wider">
+              <Sparkles size={14} className="text-yellow-400" />
+              <span>Nuevo Programa Insignia</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
+              Programa <span className="bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 bg-clip-text text-transparent">F.U.T.U.R.O.</span>
+            </h2>
+            <p className="text-sm sm:text-base text-cyan-200 font-bold">
+              Fortalecimiento de Unidades Tecnológicas para un Aprendizaje Responsable y con Oportunidades
+            </p>
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
+              Dotamos laboratorios de computación y brindamos capacitación en <strong>pensamiento computacional, robótica e Inteligencia Artificial modular</strong> para niños y adolescentes en escuelas públicas de Quetzaltenango.
+            </p>
+          </div>
+
+          <div className="lg:col-span-4 flex flex-col sm:flex-row lg:flex-col gap-3 justify-center">
+            <button
+              onClick={() => navigate('/programas/futuro')}
+              className="w-full bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-500 hover:from-yellow-400 hover:to-amber-300 text-blue-955 font-black px-6 py-3.5 rounded-2xl text-sm transition-all duration-300 shadow-xl shadow-yellow-500/20 hover:scale-105 active:scale-95 flex items-center justify-center space-x-2 cursor-pointer"
+            >
+              <Bot size={18} />
+              <span>Conocer Programa FUTURO</span>
+              <ArrowRight size={16} />
+            </button>
+            <button
+              onClick={() => navigate('/programas/futuro#postular')}
+              className="w-full bg-white/10 hover:bg-white/20 text-white font-bold px-6 py-3.5 rounded-2xl text-sm transition-all border border-white/15 backdrop-blur-md flex items-center justify-center space-x-2 cursor-pointer"
+            >
+              <Laptop size={18} className="text-cyan-400" />
+              <span>Postular mi Escuela</span>
+            </button>
           </div>
         </div>
       </section>
