@@ -485,9 +485,9 @@ export default function Convencion() {
             window.location.href = checkoutResponse.checkout_url;
             return;
           }
-        } catch (payErr) {
-          console.error("Error al conectar con la pasarela de pagos:", payErr);
-          alert("Tu pre-registro fue guardado con éxito. En breve un comisionado se comunicará contigo para asistirte con el pago.");
+        } catch (payErr: any) {
+          console.error("Error al conectar con la pasarela de pagos Recurrente GT:", payErr);
+          alert(`ℹ️ Tu pre-registro fue guardado con éxito.\n\nNotificación de Recurrente GT:\n${payErr?.message || 'No se pudo generar el enlace directo de pago.'}\n\nUn comisionado revisará tu registro y se pondrá en contacto contigo para completar el pago.`);
         }
       }
 

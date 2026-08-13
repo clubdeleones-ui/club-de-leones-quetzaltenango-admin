@@ -105,8 +105,15 @@ class RecurrenteService {
 
     if (!response.ok) {
       const errorText = await response.text();
+      let errorMessage = `Error (${response.status}): ${errorText}`;
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.message) {
+          errorMessage = errorJson.message;
+        }
+      } catch (e) {}
       console.error('Error creating Recurrente checkout:', errorText);
-      throw new Error(`Error en pasarela de pago Recurrente (${response.status}): ${errorText}`);
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
