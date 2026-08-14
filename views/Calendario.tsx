@@ -41,32 +41,36 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
     // Zoomed image modal state
     const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
-    // Ficha Detallada & Share states
-    const [selectedActividadDetail, setSelectedActividadDetail] = useState<Actividad | null>(null);
+    // Share & Deep Link Highlight states
     const [sharingActividad, setSharingActividad] = useState<Actividad | null>(null);
+    const [highlightedActId, setHighlightedActId] = useState<string | null>(null);
+    const [copiedType, setCopiedType] = useState<'link' | 'message' | null>(null);
 
-    // Deep-linking: auto-open activity detail modal if ?id= or ?actividad= is present in URL
+    // Deep-linking: focus and smoothly scroll to the specific activity card when ?id= or ?actividad= is in URL
     useEffect(() => {
         const actId = searchParams.get('id') || searchParams.get('actividad');
         if (actId && actividades.length > 0) {
-            const found = actividades.find(a => a.id === actId);
-            if (found) {
-                setSelectedActividadDetail(found);
-            }
+            setActiveView('lista');
+            setLimit(prev => Math.max(prev, 50));
+            setHighlightedActId(actId);
+            
+            const timer = setTimeout(() => {
+                const element = document.getElementById(`actividad-card-${actId}`);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 350);
+
+            const removeHighlightTimer = setTimeout(() => {
+                setHighlightedActId(null);
+            }, 6000);
+
+            return () => {
+                clearTimeout(timer);
+                clearTimeout(removeHighlightTimer);
+            };
         }
     }, [searchParams, actividades]);
-
-    const handleOpenActivityDetail = (act: Actividad) => {
-        setSelectedActividadDetail(act);
-        setSearchParams({ id: act.id });
-    };
-
-    const handleCloseActivityDetail = () => {
-        setSelectedActividadDetail(null);
-        searchParams.delete('id');
-        searchParams.delete('actividad');
-        setSearchParams(searchParams);
-    };
 
     // Reset limit when search or filter changes
     useEffect(() => {
@@ -350,28 +354,34 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
 
     const getShareText = (act: Actividad) => {
         const enSalon = isActividadEnSalon(act);
+        const costoSocios = act.costoSocio && act.costoSocio > 0 ? `Q${act.costoSocio.toFixed(2)}` : 'Gratis / Entrada Libre';
+        const costoInvitados = act.costoInvitado && act.costoInvitado > 0 ? `Q${act.costoInvitado.toFixed(2)}` : 'Gratis / Entrada Libre';
+        
         const lines = [
-            `🦁 *CLUB DE LEONES QUETZALTENANGO*`,
-            `━━━━━━━━━━━━━━━━━━━━━`,
+            `🌟 *¡GRAN ACTIVIDAD - CLUB DE LEONES QUETZALTENANGO!* 🦁`,
+            `━━━━━━━━━━━━━━━━━━━━━━━━`,
             `📌 *${act.titulo}*`,
+            ``,
             `📅 *Fecha:* ${act.fecha}`,
-            `📍 *Lugar:* ${act.lugar || (enSalon ? 'Salón de Eventos del Club de Leones' : 'Exterior')}`,
+            `📍 *Lugar:* ${act.lugar || (enSalon ? 'Salón de Eventos del Club de Leones (Quetzaltenango)' : 'Sede Exterior')}`,
         ];
         if (act.vestimenta) {
-            lines.push(`👔 *Vestimenta:* ${act.vestimenta}`);
+            lines.push(`👔 *Vestimenta sugerida:* ${act.vestimenta}`);
         }
-        if (act.costoSocio !== undefined && act.costoSocio > 0) {
-            lines.push(`🎟️ *Aporte Socios:* Q${act.costoSocio.toFixed(2)} | *Invitados:* Q${(act.costoInvitado || 0).toFixed(2)}`);
-        }
+        lines.push(`🎟️ *Aporte:* Socios: ${costoSocios} | Invitados: ${costoInvitados}`);
         lines.push(
-            `━━━━━━━━━━━━━━━━━━━━━`,
-            `👉 *Abre la ficha oficial para ver el afiche y confirmar tu asistencia:*`
+            `━━━━━━━━━━━━━━━━━━━━━━━━`,
+            `📝 *Acerca del evento:*`,
+            `${act.descripcion.slice(0, 220)}${act.descripcion.length > 220 ? '...' : ''}`,
+            `━━━━━━━━━━━━━━━━━━━━━━━━`,
+            `👉 *¡Mira el afiche, mapa y confirma tu participación aquí!*`,
+            `🔗 ${getShareUrl(act)}`
         );
         return lines.join('\n');
     };
 
     const handleShareWhatsApp = (act: Actividad) => {
-        const text = `${getShareText(act)}\n${getShareUrl(act)}`;
+        const text = getShareText(act);
         const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
         window.open(url, '_blank', 'noopener,noreferrer');
     };
@@ -387,11 +397,25 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
         window.open(url, '_blank', 'noopener,noreferrer');
     };
 
+    const handleShareTwitter = (act: Actividad) => {
+        const tweetText = `🦁 ¡Gran Actividad de Servicio Comunitario del Club de Leones Quetzaltenango! "${act.titulo}" 📅 ${act.fecha} 📍 ${act.lugar || 'Xela'} #ClubDeLeones #Quetzaltenango #Xela`;
+        const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(getShareUrl(act))}`;
+        window.open(url, '_blank', 'noopener,noreferrer');
+    };
+
+    const handleCopyFullMessage = (act: Actividad) => {
+        const fullMessage = getShareText(act);
+        navigator.clipboard.writeText(fullMessage).then(() => {
+            setCopiedType('message');
+            setTimeout(() => setCopiedType(null), 2500);
+        });
+    };
+
     const handleCopyLink = (act: Actividad) => {
         const shareUrl = getShareUrl(act);
         navigator.clipboard.writeText(shareUrl).then(() => {
-            setCopiedId(act.id);
-            setTimeout(() => setCopiedId(null), 2500);
+            setCopiedType('link');
+            setTimeout(() => setCopiedType(null), 2500);
         });
     };
 
@@ -580,7 +604,12 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                     return (
                                         <article 
                                             key={act.id} 
-                                            className="bg-white rounded-[2.5rem] border border-slate-200/70 shadow-sm hover:shadow-2xl transition-all duration-300 group flex flex-col h-full relative"
+                                            id={`actividad-card-${act.id}`}
+                                            className={`bg-white rounded-[2.5rem] border shadow-sm hover:shadow-2xl transition-all duration-500 group flex flex-col h-full relative ${
+                                                highlightedActId === act.id
+                                                    ? 'ring-4 ring-blue-500 shadow-2xl scale-[1.01] border-blue-500 bg-blue-50/20'
+                                                    : 'border-slate-200/70'
+                                            }`}
                                         >
                                             {/* Poster / Image Header */}
                                             <div 
@@ -620,15 +649,15 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                                             <span>{act.fecha}</span>
                                                         </div>
                                                         <div className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                                             <MapPin size={14} className="mr-2 text-blue-900 shrink-0" />
-                                                             <span className="truncate">{act.lugar}</span>
-                                                         </div>
-                                                         {act.vestimenta && (
-                                                             <div className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                                                 <Shirt size={14} className="mr-2 text-indigo-600 shrink-0" />
-                                                                 <span>Vestimenta: <span className="text-indigo-900 font-extrabold">{act.vestimenta}</span></span>
-                                                             </div>
-                                                         )}
+                                                            <MapPin size={14} className="mr-2 text-blue-900 shrink-0" />
+                                                            <span className="truncate">{act.lugar}</span>
+                                                        </div>
+                                                        {act.vestimenta && (
+                                                            <div className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                                                <Shirt size={14} className="mr-2 text-indigo-600 shrink-0" />
+                                                                <span>Vestimenta: <span className="text-indigo-900 font-extrabold">{act.vestimenta}</span></span>
+                                                            </div>
+                                                        )}
 
                                                         {/* Cost info */}
                                                         {((act.costoSocio !== undefined && act.costoSocio > 0) || (act.costoInvitado !== undefined && act.costoInvitado > 0)) && (
@@ -656,48 +685,37 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                                     </div>
 
                                                     {/* Title & Description */}
-                                                    <h3 
-                                                        onClick={() => handleOpenActivityDetail(act)}
-                                                        className="font-extrabold text-2xl text-slate-800 leading-tight group-hover:text-blue-900 transition-colors cursor-pointer hover:underline"
-                                                    >
+                                                    <h3 className="font-extrabold text-2xl text-slate-800 leading-tight group-hover:text-blue-900 transition-colors">
                                                         {act.titulo}
                                                     </h3>
-                                                    <p className="text-slate-600 text-sm leading-relaxed text-justify whitespace-pre-line font-medium line-clamp-4">
+                                                    <p className="text-slate-600 text-sm leading-relaxed text-justify whitespace-pre-line font-medium">
                                                         {act.descripcion}
                                                     </p>
                                                 </div>
 
                                                 {/* Action Buttons */}
                                                 <div className="space-y-3 pt-4 border-t border-slate-100">
-                                                    {/* Ficha & Share Quick Bar */}
-                                                    <div className="grid grid-cols-2 gap-2.5">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setSharingActividad(act)}
-                                                            className="py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 font-extrabold text-xs rounded-xl transition-all border border-emerald-200 shadow-2xs flex items-center justify-center space-x-1.5 cursor-pointer active:scale-95"
-                                                        >
-                                                            <MessageCircle size={15} className="text-emerald-600" />
-                                                            <span>Compartir</span>
-                                                        </button>
+                                                    {/* Botón Principal de Compartir en WhatsApp y Redes */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSharingActividad(act)}
+                                                        className="w-full py-3.5 px-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 font-extrabold text-xs sm:text-sm rounded-2xl transition-all shadow-xs active:scale-98 flex items-center justify-center space-x-2 cursor-pointer"
+                                                    >
+                                                        <MessageCircle size={18} className="text-emerald-600" />
+                                                        <span>Compartir Actividad (WhatsApp y Redes)</span>
+                                                    </button>
 
+                                                    {/* RSVP CTA (Confirmar participación) */}
+                                                    {act.conBotonAsistencia === true && (
                                                         <button
-                                                            type="button"
-                                                            onClick={() => handleOpenActivityDetail(act)}
-                                                            className="py-2.5 px-3 bg-slate-100 hover:bg-blue-50 text-slate-800 hover:text-blue-900 font-extrabold text-xs rounded-xl transition-all border border-slate-200 shadow-2xs flex items-center justify-center space-x-1.5 cursor-pointer active:scale-95"
+                                                            onClick={() => {
+                                                                setSelectedActForRsvp(act);
+                                                                setIsRsvpModalOpen(true);
+                                                            }}
+                                                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3.5 px-6 rounded-2xl transition-all shadow-md hover:shadow-xl active:scale-98 flex items-center justify-center space-x-2 text-sm cursor-pointer"
                                                         >
-                                                            <Eye size={15} className="text-blue-900" />
-                                                            <span>Ver Ficha</span>
-                                                        </button>
-                                                    </div>
-
-                                                    {/* Donation CTA */}
-                                                    {act.conBotonDonacion && (
-                                                        <button
-                                                            onClick={() => handleDonateClick(act)}
-                                                            className="w-full bg-gradient-to-r from-rose-500 via-pink-600 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white font-extrabold py-3 px-6 rounded-xl transition-all shadow-md hover:shadow-xl active:scale-98 flex items-center justify-center space-x-2 text-xs cursor-pointer"
-                                                        >
-                                                            <Heart size={15} className="fill-current" />
-                                                            <span>Apoyar con Donación</span>
+                                                            <Check size={16} />
+                                                            <span>Confirmar participación (RSVP)</span>
                                                         </button>
                                                     )}
 
@@ -708,24 +726,21 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                                                 setSelectedActForVol(act);
                                                                 setIsVolModalOpen(true);
                                                             }}
-                                                            className="w-full bg-blue-900 hover:bg-blue-800 text-white font-extrabold py-3 px-6 rounded-xl transition-all shadow-md hover:shadow-xl active:scale-98 flex items-center justify-center space-x-2 text-xs cursor-pointer"
+                                                            className="w-full bg-blue-900 hover:bg-blue-800 text-white font-extrabold py-3.5 px-6 rounded-2xl transition-all shadow-md hover:shadow-xl active:scale-98 flex items-center justify-center space-x-2 text-sm cursor-pointer"
                                                         >
-                                                            <UserPlus size={15} />
+                                                            <UserPlus size={16} />
                                                             <span>Me apunto como voluntario</span>
                                                         </button>
                                                     )}
 
-                                                    {/* RSVP CTA (Confirmar participación) */}
-                                                    {act.conBotonAsistencia === true && (
+                                                    {/* Donation CTA */}
+                                                    {act.conBotonDonacion && (
                                                         <button
-                                                            onClick={() => {
-                                                                setSelectedActForRsvp(act);
-                                                                setIsRsvpModalOpen(true);
-                                                            }}
-                                                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-3 px-6 rounded-xl transition-all shadow-md hover:shadow-xl active:scale-98 flex items-center justify-center space-x-2 text-xs cursor-pointer"
+                                                            onClick={() => handleDonateClick(act)}
+                                                            className="w-full bg-gradient-to-r from-rose-500 via-pink-600 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white font-extrabold py-3.5 px-6 rounded-2xl transition-all shadow-md hover:shadow-xl active:scale-98 flex items-center justify-center space-x-2 text-sm cursor-pointer"
                                                         >
-                                                            <Check size={15} />
-                                                            <span>Confirmar participación</span>
+                                                            <Heart size={16} className="fill-current" />
+                                                            <span>Apoyar con Donación</span>
                                                         </button>
                                                     )}
                                                 </div>
@@ -1308,13 +1323,7 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                                     return (
                                                         <div key={act.id} className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2 text-xs">
                                                             <div className="flex items-center justify-between">
-                                                                <span 
-                                                                    onClick={() => {
-                                                                        setIsDayAvailabilityModalOpen(false);
-                                                                        handleOpenActivityDetail(act);
-                                                                    }}
-                                                                    className="font-black text-slate-900 hover:text-blue-900 cursor-pointer text-sm"
-                                                                >
+                                                                <span className="font-black text-slate-900 text-sm">
                                                                     {act.titulo}
                                                                 </span>
                                                                 <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
@@ -1329,22 +1338,14 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                                             <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-200/50">
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => setSharingActividad(act)}
-                                                                    className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded-lg border border-emerald-200 flex items-center space-x-1 cursor-pointer"
-                                                                >
-                                                                    <MessageCircle size={11} />
-                                                                    <span>Compartir</span>
-                                                                </button>
-                                                                <button
-                                                                    type="button"
                                                                     onClick={() => {
                                                                         setIsDayAvailabilityModalOpen(false);
-                                                                        handleOpenActivityDetail(act);
+                                                                        setSharingActividad(act);
                                                                     }}
-                                                                    className="px-2.5 py-1 bg-blue-900 hover:bg-blue-800 text-white font-bold text-[10px] rounded-lg flex items-center space-x-1 cursor-pointer"
+                                                                    className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold text-xs rounded-xl border border-emerald-200 flex items-center space-x-1.5 cursor-pointer shadow-xs"
                                                                 >
-                                                                    <Eye size={11} />
-                                                                    <span>Ver Ficha</span>
+                                                                    <MessageCircle size={13} className="text-emerald-600" />
+                                                                    <span>Compartir Actividad</span>
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -1665,226 +1666,18 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                 </div>
             )}
             
-            {/* MODAL PREMIUM: FICHA DETALLADA DE LA ACTIVIDAD */}
-            {selectedActividadDetail && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-300">
-                    <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-0 max-w-2xl w-full shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-300 my-6 text-left relative max-h-[92vh] overflow-y-auto flex flex-col">
-                        {/* Header Poster / Afiche Container */}
-                        <div className="relative w-full bg-slate-950 rounded-t-[2rem] sm:rounded-t-[2.5rem] overflow-hidden min-h-[260px] max-h-[440px] flex items-center justify-center">
-                            {/* Ambient Blurred Backdrop */}
-                            <img 
-                                src={selectedActividadDetail.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=1200'} 
-                                alt=""
-                                aria-hidden="true"
-                                className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-40 scale-110"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent" />
-                            
-                            {/* Crisp Uncropped Poster Image */}
-                            <img 
-                                src={selectedActividadDetail.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=1200'} 
-                                alt={selectedActividadDetail.titulo}
-                                onClick={() => setZoomedImage(selectedActividadDetail.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=1200')}
-                                className="relative z-10 max-h-[390px] w-auto max-w-full object-contain cursor-zoom-in drop-shadow-2xl transition-transform duration-300 hover:scale-[1.02] p-2"
-                                title="Clic para ampliar el afiche"
-                            />
-
-                            {/* Top Close Button */}
-                            <div className="absolute top-4 right-4 z-20">
-                                <button
-                                    type="button"
-                                    onClick={handleCloseActivityDetail}
-                                    className="p-2.5 bg-slate-900/80 hover:bg-slate-900 text-white rounded-full backdrop-blur-md shadow-lg transition-all cursor-pointer border border-white/20"
-                                    title="Cerrar Ficha"
-                                >
-                                    <XIcon size={20} />
-                                </button>
-                            </div>
-
-                            {/* Badge Overlay */}
-                            <div className="absolute bottom-4 left-4 right-4 flex flex-wrap items-center gap-2 z-10">
-                                <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm border ${
-                                    selectedActividadDetail.publica 
-                                        ? 'bg-emerald-500 text-white border-emerald-400' 
-                                        : 'bg-blue-900 text-white border-blue-800'
-                                }`}>
-                                    {selectedActividadDetail.publica ? 'Actividad Pública' : 'Solo Socios'}
-                                </span>
-                                <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm border ${
-                                    isActividadEnSalon(selectedActividadDetail)
-                                        ? 'bg-purple-900 text-white border-purple-800'
-                                        : 'bg-blue-900 text-white border-blue-800'
-                                }`}>
-                                    {isActividadEnSalon(selectedActividadDetail) ? '🏛️ Salón de Eventos' : '📍 En Exterior'}
-                                </span>
-                                {isActividadFinalizada(selectedActividadDetail.fecha) && (
-                                    <span className="text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-sm border bg-red-600 text-white border-red-500">
-                                        Finalizada
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Modal Body Content */}
-                        <div className="p-6 sm:p-8 space-y-6 flex-grow">
-                            {/* Title */}
-                            <div>
-                                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight">
-                                    {selectedActividadDetail.titulo}
-                                </h3>
-                                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">
-                                    Ficha Oficial de Actividad • Club de Leones Quetzaltenango
-                                </p>
-                            </div>
-
-                            {/* Metadata Grid */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {/* Fecha y Hora */}
-                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/70 space-y-1">
-                                    <div className="flex items-center space-x-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                        <Clock size={14} className="text-yellow-600" />
-                                        <span>Fecha y Horario</span>
-                                    </div>
-                                    <p className="text-sm font-extrabold text-slate-900">
-                                        {selectedActividadDetail.fecha}
-                                    </p>
-                                    <a
-                                        href={getGoogleCalendarUrl(selectedActividadDetail)}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center space-x-1 text-[11px] font-bold text-blue-900 hover:underline pt-0.5"
-                                    >
-                                        <CalendarCheck size={12} />
-                                        <span>Agregar a Google Calendar</span>
-                                    </a>
-                                </div>
-
-                                {/* Lugar */}
-                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/70 space-y-1">
-                                    <div className="flex items-center space-x-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                        <MapPin size={14} className="text-blue-900" />
-                                        <span>Ubicación</span>
-                                    </div>
-                                    <p className="text-sm font-extrabold text-slate-900 truncate">
-                                        {selectedActividadDetail.lugar || (isActividadEnSalon(selectedActividadDetail) ? 'Salón de Eventos del Club' : 'Por definir')}
-                                    </p>
-                                    {selectedActividadDetail.lugar && (
-                                        <a
-                                            href={getGoogleMapsUrl(selectedActividadDetail.lugar)}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center space-x-1 text-[11px] font-bold text-blue-900 hover:underline pt-0.5"
-                                        >
-                                            <Compass size={12} />
-                                            <span>Ver en Google Maps</span>
-                                        </a>
-                                    )}
-                                </div>
-
-                                {/* Vestimenta */}
-                                {selectedActividadDetail.vestimenta && (
-                                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/70 space-y-1">
-                                        <div className="flex items-center space-x-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                            <Shirt size={14} className="text-indigo-600" />
-                                            <span>Código de Vestimenta</span>
-                                        </div>
-                                        <p className="text-sm font-extrabold text-slate-900 capitalize">
-                                            {selectedActividadDetail.vestimenta}
-                                        </p>
-                                    </div>
-                                )}
-
-                                {/* Cuotas / Precios */}
-                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/70 space-y-1">
-                                    <div className="flex items-center space-x-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                        <DollarSign size={14} className="text-emerald-600" />
-                                        <span>Aporte / Entrada</span>
-                                    </div>
-                                    <div className="text-xs font-bold text-slate-800 space-y-0.5">
-                                        <div>
-                                            Socios: <span className="font-extrabold text-blue-900">{selectedActividadDetail.costoSocio && selectedActividadDetail.costoSocio > 0 ? `Q${selectedActividadDetail.costoSocio.toFixed(2)}` : 'Entrada Libre'}</span>
-                                        </div>
-                                        <div>
-                                            Invitados: <span className="font-extrabold text-amber-900">{selectedActividadDetail.costoInvitado && selectedActividadDetail.costoInvitado > 0 ? `Q${selectedActividadDetail.costoInvitado.toFixed(2)}` : 'Entrada Libre'}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Descripción Completa */}
-                            <div className="space-y-2">
-                                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1">
-                                    Descripción del Evento y Propósito
-                                </h4>
-                                <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-line font-medium text-justify">
-                                    {selectedActividadDetail.descripcion}
-                                </p>
-                            </div>
-
-                            {/* Action Buttons inside Detail Ficha */}
-                            <div className="space-y-3 pt-4 border-t border-slate-100">
-                                {/* Botón Principal: Confirmar Asistencia */}
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        const act = selectedActividadDetail;
-                                        handleCloseActivityDetail();
-                                        setSelectedActForRsvp(act);
-                                        setIsRsvpModalOpen(true);
-                                    }}
-                                    className="w-full py-4 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl shadow-lg hover:shadow-xl transition-all active:scale-98 flex items-center justify-center space-x-2.5 text-sm cursor-pointer"
-                                >
-                                    <Check size={18} />
-                                    <span>Confirmar Mi Asistencia (RSVP)</span>
-                                </button>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    {selectedActividadDetail.conBotonVoluntariado !== false && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const act = selectedActividadDetail;
-                                                handleCloseActivityDetail();
-                                                setSelectedActForVol(act);
-                                                setIsVolModalOpen(true);
-                                            }}
-                                            className="py-3 px-4 bg-blue-900 hover:bg-blue-800 text-white font-extrabold rounded-xl transition-all shadow-md active:scale-98 flex items-center justify-center space-x-2 text-xs cursor-pointer"
-                                        >
-                                            <UserPlus size={16} />
-                                            <span>Me apunto como Voluntario</span>
-                                        </button>
-                                    )}
-
-                                    {selectedActividadDetail.conBotonDonacion && (
-                                        <button
-                                            type="button"
-                                            onClick={() => handleDonateClick(selectedActividadDetail)}
-                                            className={`py-3 px-4 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-extrabold rounded-xl transition-all shadow-md active:scale-98 flex items-center justify-center space-x-2 text-xs cursor-pointer ${
-                                                selectedActividadDetail.conBotonVoluntariado === false ? 'sm:col-span-2' : ''
-                                            }`}
-                                        >
-                                            <Heart size={16} className="fill-current" />
-                                            <span>Apoyar esta Causa con Donación</span>
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {/* MODAL PREMIUM: COMPARTIR EN REDES Y WHATSAPP */}
             {sharingActividad && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-200">
-                    <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200 text-left space-y-5 relative">
-                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                            <div className="space-y-0.5">
-                                <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 bg-emerald-50 border border-emerald-200 rounded-full text-emerald-900 text-[10px] font-black uppercase tracking-wider">
-                                    <Share2 size={12} className="text-emerald-700" />
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/75 backdrop-blur-md animate-in fade-in duration-200">
+                    <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-200 text-left space-y-6 relative">
+                        {/* Modal Header */}
+                        <div className="flex justify-between items-start border-b border-slate-100 pb-3">
+                            <div className="space-y-1">
+                                <div className="inline-flex items-center space-x-1.5 px-3 py-0.5 bg-emerald-50 border border-emerald-200 rounded-full text-emerald-900 text-[11px] font-black uppercase tracking-wider">
+                                    <Share2 size={13} className="text-emerald-700" />
                                     <span>Difusión Oficial</span>
                                 </div>
-                                <h4 className="text-xl font-black text-slate-900">Compartir Ficha</h4>
+                                <h4 className="text-2xl font-black text-slate-900">Compartir Actividad</h4>
                             </div>
                             <button
                                 type="button"
@@ -1895,45 +1688,46 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                             </button>
                         </div>
 
-                        {/* Activity Snippet Card */}
-                        <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center space-x-3.5">
+                        {/* Activity Card Preview */}
+                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center space-x-4">
                             <img
                                 src={sharingActividad.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=400'}
-                                alt="Mini Afiche"
-                                className="w-14 h-14 rounded-xl object-cover border border-slate-200 shrink-0"
+                                alt="Afiche"
+                                className="w-16 h-16 rounded-2xl object-cover border border-slate-200 shadow-sm shrink-0"
                             />
-                            <div className="space-y-0.5 overflow-hidden">
-                                <h5 className="font-extrabold text-sm text-slate-900 truncate">
+                            <div className="space-y-1 overflow-hidden">
+                                <h5 className="font-extrabold text-sm text-slate-900 truncate leading-snug">
                                     {sharingActividad.titulo}
                                 </h5>
-                                <p className="text-[11px] text-slate-500 font-semibold flex items-center gap-1">
-                                    <Clock size={11} className="text-yellow-600 shrink-0" />
+                                <p className="text-xs text-slate-500 font-semibold flex items-center gap-1.5">
+                                    <Clock size={12} className="text-yellow-600 shrink-0" />
                                     <span className="truncate">{sharingActividad.fecha}</span>
                                 </p>
-                                <p className="text-[10px] text-blue-900 font-bold">
-                                    {isActividadEnSalon(sharingActividad) ? '🏛️ Salón de Eventos' : '📍 Exterior'}
+                                <p className="text-[11px] text-blue-900 font-bold flex items-center gap-1">
+                                    <MapPin size={11} className="shrink-0" />
+                                    <span className="truncate">{sharingActividad.lugar || (isActividadEnSalon(sharingActividad) ? 'Salón de Eventos' : 'Exterior')}</span>
                                 </p>
                             </div>
                         </div>
 
                         {/* Social Networks Action Grid */}
-                        <div className="space-y-2.5">
+                        <div className="space-y-3">
                             {/* WhatsApp Button */}
                             <button
                                 type="button"
                                 onClick={() => handleShareWhatsApp(sharingActividad)}
-                                className="w-full py-3 px-4 bg-[#25D366] hover:bg-[#20bd5a] text-white font-black rounded-2xl shadow-md transition-all active:scale-98 flex items-center justify-center space-x-2 text-xs sm:text-sm cursor-pointer"
+                                className="w-full py-4 px-5 bg-[#25D366] hover:bg-[#20bd5a] text-white font-black rounded-2xl shadow-md hover:shadow-lg transition-all active:scale-98 flex items-center justify-center space-x-2.5 text-sm sm:text-base cursor-pointer"
                             >
-                                <MessageCircle size={18} />
+                                <MessageCircle size={20} />
                                 <span>Compartir en WhatsApp</span>
                             </button>
 
-                            {/* Facebook & Telegram Row */}
-                            <div className="grid grid-cols-2 gap-2">
+                            {/* Facebook, Telegram & X Row */}
+                            <div className="grid grid-cols-3 gap-2">
                                 <button
                                     type="button"
                                     onClick={() => handleShareFacebook(sharingActividad)}
-                                    className="py-2.5 px-3 bg-[#1877F2] hover:bg-[#166fe5] text-white font-extrabold rounded-xl shadow-xs transition-all active:scale-98 flex items-center justify-center space-x-1.5 text-xs cursor-pointer"
+                                    className="py-3 px-3 bg-[#1877F2] hover:bg-[#166fe5] text-white font-black rounded-xl shadow-xs transition-all active:scale-98 flex items-center justify-center space-x-1.5 text-xs cursor-pointer"
                                 >
                                     <Globe size={15} />
                                     <span>Facebook</span>
@@ -1942,10 +1736,18 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                 <button
                                     type="button"
                                     onClick={() => handleShareTelegram(sharingActividad)}
-                                    className="py-2.5 px-3 bg-[#229ED9] hover:bg-[#1f8ec3] text-white font-extrabold rounded-xl shadow-xs transition-all active:scale-98 flex items-center justify-center space-x-1.5 text-xs cursor-pointer"
+                                    className="py-3 px-3 bg-[#229ED9] hover:bg-[#1f8ec3] text-white font-black rounded-xl shadow-xs transition-all active:scale-98 flex items-center justify-center space-x-1.5 text-xs cursor-pointer"
                                 >
                                     <Send size={15} />
                                     <span>Telegram</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => handleShareTwitter(sharingActividad)}
+                                    className="py-3 px-3 bg-slate-900 hover:bg-black text-white font-black rounded-xl shadow-xs transition-all active:scale-98 flex items-center justify-center space-x-1.5 text-xs cursor-pointer"
+                                >
+                                    <span>𝕏 Post</span>
                                 </button>
                             </div>
 
@@ -1954,47 +1756,73 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                 <button
                                     type="button"
                                     onClick={() => handleNativeShare(sharingActividad)}
-                                    className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl shadow-xs transition-all active:scale-98 flex items-center justify-center space-x-2 text-xs cursor-pointer"
+                                    className="w-full py-3 px-4 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl shadow-xs transition-all active:scale-98 flex items-center justify-center space-x-2 text-xs cursor-pointer"
                                 >
                                     <Share2 size={15} />
-                                    <span>Compartir mediante aplicaciones del teléfono</span>
+                                    <span>Compartir mediante aplicaciones del celular</span>
                                 </button>
                             )}
                         </div>
 
-                        {/* Copy Link Direct Widget */}
-                        <div className="space-y-1.5 pt-2 border-t border-slate-100">
-                            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400">
-                                Enlace Directo a la Ficha
-                            </label>
-                            <div className="flex items-center space-x-2">
-                                <input
-                                    type="text"
-                                    readOnly
-                                    value={getShareUrl(sharingActividad)}
-                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-700 outline-none select-all"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => handleCopyLink(sharingActividad)}
-                                    className={`px-4 py-2 rounded-xl text-xs font-black flex items-center space-x-1.5 transition-all shrink-0 cursor-pointer shadow-xs ${
-                                        copiedId === sharingActividad.id
-                                            ? 'bg-emerald-600 text-white'
-                                            : 'bg-blue-900 hover:bg-blue-800 text-white'
-                                    }`}
-                                >
-                                    {copiedId === sharingActividad.id ? (
-                                        <>
-                                            <CheckCheck size={14} />
-                                            <span>¡Copiado!</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Copy size={14} />
-                                            <span>Copiar</span>
-                                        </>
-                                    )}
-                                </button>
+                        {/* Copy Tools (Full message & Direct link) */}
+                        <div className="space-y-3 pt-3 border-t border-slate-100">
+                            {/* Copy Full Invitation Text */}
+                            <button
+                                type="button"
+                                onClick={() => handleCopyFullMessage(sharingActividad)}
+                                className={`w-full py-3 px-4 rounded-xl text-xs font-black flex items-center justify-center space-x-2 transition-all cursor-pointer border ${
+                                    copiedType === 'message'
+                                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                                        : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
+                                }`}
+                            >
+                                {copiedType === 'message' ? (
+                                    <>
+                                        <CheckCheck size={16} />
+                                        <span>¡Texto e Invitación Copiados al Portapapeles!</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Copy size={16} />
+                                        <span>Copiar Mensaje Completo de Invitación</span>
+                                    </>
+                                )}
+                            </button>
+
+                            {/* Direct URL Box */}
+                            <div className="space-y-1">
+                                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400">
+                                    Enlace Directo a la Actividad
+                                </label>
+                                <div className="flex items-center space-x-2">
+                                    <input
+                                        type="text"
+                                        readOnly
+                                        value={getShareUrl(sharingActividad)}
+                                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-700 outline-none select-all"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => handleCopyLink(sharingActividad)}
+                                        className={`px-4 py-2 rounded-xl text-xs font-black flex items-center space-x-1.5 transition-all shrink-0 cursor-pointer shadow-xs ${
+                                            copiedType === 'link'
+                                                ? 'bg-emerald-600 text-white'
+                                                : 'bg-blue-900 hover:bg-blue-800 text-white'
+                                        }`}
+                                    >
+                                        {copiedType === 'link' ? (
+                                            <>
+                                                <CheckCheck size={14} />
+                                                <span>¡Copiado!</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Copy size={14} />
+                                                <span>Copiar Link</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
