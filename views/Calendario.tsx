@@ -350,7 +350,24 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
 
     const getShareText = (act: Actividad) => {
         const enSalon = isActividadEnSalon(act);
-        return `🦁 *Club de Leones Quetzaltenango*\n\n📌 *${act.titulo}*\n📅 *Fecha:* ${act.fecha}\n📍 *Lugar:* ${act.lugar || (enSalon ? 'Salón de Eventos del Club de Leones' : 'Exterior')}\n\n👉 *Mira la ficha oficial, ubicación y confirma tu participación aquí:*`;
+        const lines = [
+            `🦁 *CLUB DE LEONES QUETZALTENANGO*`,
+            `━━━━━━━━━━━━━━━━━━━━━`,
+            `📌 *${act.titulo}*`,
+            `📅 *Fecha:* ${act.fecha}`,
+            `📍 *Lugar:* ${act.lugar || (enSalon ? 'Salón de Eventos del Club de Leones' : 'Exterior')}`,
+        ];
+        if (act.vestimenta) {
+            lines.push(`👔 *Vestimenta:* ${act.vestimenta}`);
+        }
+        if (act.costoSocio !== undefined && act.costoSocio > 0) {
+            lines.push(`🎟️ *Aporte Socios:* Q${act.costoSocio.toFixed(2)} | *Invitados:* Q${(act.costoInvitado || 0).toFixed(2)}`);
+        }
+        lines.push(
+            `━━━━━━━━━━━━━━━━━━━━━`,
+            `👉 *Abre la ficha oficial para ver el afiche y confirmar tu asistencia:*`
+        );
+        return lines.join('\n');
     };
 
     const handleShareWhatsApp = (act: Actividad) => {
@@ -1650,34 +1667,37 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
             
             {/* MODAL PREMIUM: FICHA DETALLADA DE LA ACTIVIDAD */}
             {selectedActividadDetail && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-md overflow-y-auto animate-in fade-in duration-300">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-300">
                     <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-0 max-w-2xl w-full shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-300 my-6 text-left relative max-h-[92vh] overflow-y-auto flex flex-col">
-                        {/* Header Poster Image */}
-                        <div className="relative aspect-[16/9] w-full overflow-hidden bg-slate-900 rounded-t-[2rem] sm:rounded-t-[2.5rem]">
+                        {/* Header Poster / Afiche Container */}
+                        <div className="relative w-full bg-slate-950 rounded-t-[2rem] sm:rounded-t-[2.5rem] overflow-hidden min-h-[260px] max-h-[440px] flex items-center justify-center">
+                            {/* Ambient Blurred Backdrop */}
+                            <img 
+                                src={selectedActividadDetail.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=1200'} 
+                                alt=""
+                                aria-hidden="true"
+                                className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-40 scale-110"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent" />
+                            
+                            {/* Crisp Uncropped Poster Image */}
                             <img 
                                 src={selectedActividadDetail.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=1200'} 
                                 alt={selectedActividadDetail.titulo}
-                                className="w-full h-full object-cover"
+                                onClick={() => setZoomedImage(selectedActividadDetail.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=1200')}
+                                className="relative z-10 max-h-[390px] w-auto max-w-full object-contain cursor-zoom-in drop-shadow-2xl transition-transform duration-300 hover:scale-[1.02] p-2"
+                                title="Clic para ampliar el afiche"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
-                            
-                            {/* Close & Share Top Buttons */}
-                            <div className="absolute top-4 right-4 flex items-center space-x-2 z-10">
-                                <button
-                                    type="button"
-                                    onClick={() => setSharingActividad(selectedActividadDetail)}
-                                    className="p-2.5 bg-white/90 hover:bg-white text-slate-800 hover:text-emerald-700 rounded-full backdrop-blur-md shadow-lg transition-all cursor-pointer"
-                                    title="Compartir Ficha"
-                                >
-                                    <Share2 size={18} />
-                                </button>
+
+                            {/* Top Close Button */}
+                            <div className="absolute top-4 right-4 z-20">
                                 <button
                                     type="button"
                                     onClick={handleCloseActivityDetail}
-                                    className="p-2.5 bg-white/90 hover:bg-white text-slate-800 hover:text-red-700 rounded-full backdrop-blur-md shadow-lg transition-all cursor-pointer"
+                                    className="p-2.5 bg-slate-900/80 hover:bg-slate-900 text-white rounded-full backdrop-blur-md shadow-lg transition-all cursor-pointer border border-white/20"
                                     title="Cerrar Ficha"
                                 >
-                                    <XIcon size={18} />
+                                    <XIcon size={20} />
                                 </button>
                             </div>
 
@@ -1803,37 +1823,29 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
 
                             {/* Action Buttons inside Detail Ficha */}
                             <div className="space-y-3 pt-4 border-t border-slate-100">
+                                {/* Botón Principal: Confirmar Asistencia */}
                                 <button
                                     type="button"
-                                    onClick={() => setSharingActividad(selectedActividadDetail)}
-                                    className="w-full py-3.5 px-6 bg-[#25D366] hover:bg-[#20bd5a] text-white font-black rounded-2xl shadow-md transition-all active:scale-98 flex items-center justify-center space-x-2 text-sm cursor-pointer"
+                                    onClick={() => {
+                                        const act = selectedActividadDetail;
+                                        handleCloseActivityDetail();
+                                        setSelectedActForRsvp(act);
+                                        setIsRsvpModalOpen(true);
+                                    }}
+                                    className="w-full py-4 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl shadow-lg hover:shadow-xl transition-all active:scale-98 flex items-center justify-center space-x-2.5 text-sm cursor-pointer"
                                 >
-                                    <MessageCircle size={18} />
-                                    <span>Compartir Ficha en WhatsApp y Redes</span>
+                                    <Check size={18} />
+                                    <span>Confirmar Mi Asistencia (RSVP)</span>
                                 </button>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    {selectedActividadDetail.conBotonAsistencia && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                handleCloseActivityDetail();
-                                                setSelectedActForRsvp(selectedActividadDetail);
-                                                setIsRsvpModalOpen(true);
-                                            }}
-                                            className="py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition-all shadow-md active:scale-98 flex items-center justify-center space-x-2 text-xs cursor-pointer"
-                                        >
-                                            <Check size={16} />
-                                            <span>Confirmar Asistencia</span>
-                                        </button>
-                                    )}
-
                                     {selectedActividadDetail.conBotonVoluntariado !== false && (
                                         <button
                                             type="button"
                                             onClick={() => {
+                                                const act = selectedActividadDetail;
                                                 handleCloseActivityDetail();
-                                                setSelectedActForVol(selectedActividadDetail);
+                                                setSelectedActForVol(act);
                                                 setIsVolModalOpen(true);
                                             }}
                                             className="py-3 px-4 bg-blue-900 hover:bg-blue-800 text-white font-extrabold rounded-xl transition-all shadow-md active:scale-98 flex items-center justify-center space-x-2 text-xs cursor-pointer"
@@ -1847,7 +1859,9 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                         <button
                                             type="button"
                                             onClick={() => handleDonateClick(selectedActividadDetail)}
-                                            className="py-3 px-4 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-extrabold rounded-xl transition-all shadow-md active:scale-98 flex items-center justify-center space-x-2 text-xs cursor-pointer sm:col-span-2"
+                                            className={`py-3 px-4 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-extrabold rounded-xl transition-all shadow-md active:scale-98 flex items-center justify-center space-x-2 text-xs cursor-pointer ${
+                                                selectedActividadDetail.conBotonVoluntariado === false ? 'sm:col-span-2' : ''
+                                            }`}
                                         >
                                             <Heart size={16} className="fill-current" />
                                             <span>Apoyar esta Causa con Donación</span>
