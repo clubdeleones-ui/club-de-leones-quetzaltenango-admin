@@ -198,35 +198,39 @@ const Home: React.FC = () => {
   };
 
   return (
-    <div className="space-y-16">
+    <div className="space-y-10 sm:space-y-16">
       {/* Hero Section */}
-      <section className="relative h-[600px] flex items-center justify-center overflow-hidden rounded-[3rem] shadow-2xl">
+      <section className="relative min-h-[480px] sm:h-[600px] flex items-center justify-center overflow-hidden rounded-2xl sm:rounded-[3rem] shadow-2xl py-12 px-4 sm:px-8">
         <div className="absolute inset-0 bg-blue-900/60 z-10" />
         <img
           src="https://images.unsplash.com/photo-1593113598332-cd288d649433?auto=format&fit=crop&q=80&w=1600"
           className="absolute inset-0 w-full h-full object-cover"
           alt="Hero"
         />
-        <div className="relative z-20 text-center text-white px-6 max-w-4xl">
-          <div className="mb-6 inline-block">
-            <img src="images/logo.png" className="w-20 h-20 mx-auto mb-4 bg-white p-2 rounded-full shadow-lg" alt="Lions Logo" />
-            <span className="bg-yellow-500 text-blue-900 text-xs font-bold px-4 py-1 rounded-full uppercase tracking-widest">Desde 1947 sirviendo</span>
+        <div className="relative z-20 text-center text-white px-2 sm:px-6 max-w-4xl space-y-4 sm:space-y-6">
+          <div className="inline-block">
+            <img src="/images/logo.png" className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 bg-white p-2 rounded-full shadow-lg object-contain" alt="Lions Logo" />
+            <span className="bg-yellow-500 text-blue-900 text-[10px] sm:text-xs font-black px-3.5 py-1 rounded-full uppercase tracking-widest shadow-md">
+              Desde 1947 sirviendo
+            </span>
           </div>
-          <h1 className="text-4xl md:text-6xl mb-4 font-extrabold leading-tight">Nosotros <span className="text-yellow-400">Servimos</span></h1>
-          <p className="text-lg md:text-xl mb-8 font-light max-w-2xl mx-auto leading-relaxed opacity-90">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold leading-tight">
+            Nosotros <span className="text-yellow-400">Servimos</span>
+          </h1>
+          <p className="text-sm sm:text-lg md:text-xl font-light max-w-2xl mx-auto leading-relaxed opacity-90">
             Transformando vidas en Quetzaltenango a través de la solidaridad y el <span className="italic font-normal">compromiso leonístico</span>.
           </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-6">
+          <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-6 pt-2">
             <button
               onClick={() => navigate('/actividades')}
-              className="bg-yellow-500 hover:bg-yellow-400 text-blue-900 px-8 py-3.5 rounded-2xl font-semibold text-base transition-all transform hover:scale-105 shadow-xl shadow-yellow-500/20 flex items-center justify-center space-x-2"
+              className="w-full sm:w-auto bg-yellow-500 hover:bg-yellow-400 text-blue-900 px-6 sm:px-8 py-3.5 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base transition-all transform hover:scale-105 shadow-xl shadow-yellow-500/20 flex items-center justify-center space-x-2 cursor-pointer"
             >
               <span>Ver Actividades</span>
               <ArrowRight size={18} />
             </button>
             <button
-              onClick={() => navigate('/galeria')}
-              className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/30 px-8 py-3.5 rounded-2xl font-semibold text-base transition-all"
+              onClick={() => navigate('/historia')}
+              className="w-full sm:w-auto bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/30 px-6 sm:px-8 py-3.5 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base transition-all cursor-pointer"
             >
               Nuestra Historia
             </button>

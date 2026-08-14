@@ -199,26 +199,26 @@ export const ProgramaFuturo: React.FC = () => {
   };
 
   return (
-    <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10 font-sans">
+    <div className="max-w-[1400px] mx-auto px-1.5 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-6 sm:space-y-10 font-sans">
       {/* 1. CUADRO FLOTANTE HEADER (HERO EN AZULES LEONÍSTICOS) */}
-      <div className="bg-gradient-to-br from-blue-955 via-blue-900 to-indigo-950 rounded-[2.5rem] p-8 sm:p-14 shadow-2xl text-white relative overflow-hidden border border-blue-800/50">
+      <div className="bg-gradient-to-br from-blue-955 via-blue-900 to-indigo-950 rounded-2xl sm:rounded-[2.5rem] p-5 sm:p-10 md:p-14 shadow-2xl text-white relative overflow-hidden border border-blue-800/50">
         {/* Glows */}
         <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-yellow-500/10 rounded-full blur-[100px] pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-cyan-500/15 rounded-full blur-[90px] pointer-events-none" />
 
-        <div className="relative z-10 max-w-4xl mx-auto text-center space-y-6">
-          <div className="inline-flex items-center space-x-2 bg-yellow-500/15 border border-yellow-500/30 px-4 py-1.5 rounded-full shadow-md">
-            <Sparkles size={16} className="text-yellow-400" />
-            <span className="text-xs font-black tracking-widest text-yellow-300 uppercase">
+        <div className="relative z-10 max-w-4xl mx-auto text-center space-y-4 sm:space-y-6">
+          <div className="inline-flex items-center space-x-2 bg-yellow-500/15 border border-yellow-500/30 px-3.5 py-1.5 rounded-full shadow-md">
+            <Sparkles size={15} className="text-yellow-400 shrink-0" />
+            <span className="text-[10px] sm:text-xs font-black tracking-widest text-yellow-300 uppercase">
               Programa Insignia de Innovación & Educación Digital
             </span>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight leading-tight">
               Programa <span className="bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 bg-clip-text text-transparent">F.U.T.U.R.O.</span>
             </h1>
-            <p className="text-base sm:text-xl font-bold text-cyan-300 leading-snug">
+            <p className="text-sm sm:text-xl font-bold text-cyan-300 leading-snug">
               Fortalecimiento de Unidades Tecnológicas para un Aprendizaje Responsable y con Oportunidades
             </p>
             <p className="text-xs sm:text-sm text-slate-200 max-w-2xl mx-auto font-medium leading-relaxed opacity-95">
@@ -226,10 +226,10 @@ export const ProgramaFuturo: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-3.5 pt-2">
+          <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-2.5 sm:gap-3.5 pt-2">
             <a
               href="#postular-seccion"
-              className="inline-flex items-center space-x-2 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-blue-955 font-black px-6 py-3.5 rounded-2xl text-xs sm:text-sm transition-all shadow-lg shadow-yellow-500/20 hover:scale-105 active:scale-95 cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-blue-955 font-black px-5 py-3 sm:px-6 sm:py-3.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm transition-all shadow-lg shadow-yellow-500/20 hover:scale-105 active:scale-95 cursor-pointer"
             >
               <School size={16} />
               <span>Solicitar para mi Escuela</span>
@@ -238,7 +238,7 @@ export const ProgramaFuturo: React.FC = () => {
 
             <a
               href="#modulos-seccion"
-              className="inline-flex items-center space-x-2 bg-white/10 hover:bg-white/20 text-white font-bold px-5 py-3.5 rounded-2xl text-xs sm:text-sm transition-all border border-white/15 backdrop-blur-md cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-white/10 hover:bg-white/20 text-white font-bold px-5 py-3 sm:px-5 sm:py-3.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm transition-all border border-white/15 backdrop-blur-md cursor-pointer"
             >
               <Bot size={16} className="text-cyan-400" />
               <span>Ver Currículo de IA</span>
@@ -247,7 +247,7 @@ export const ProgramaFuturo: React.FC = () => {
             <a
               href="#postular-seccion"
               onClick={() => setFormTipo('donante')}
-              className="inline-flex items-center space-x-2 bg-emerald-600/30 hover:bg-emerald-600/40 text-emerald-300 font-bold px-5 py-3.5 rounded-2xl text-xs sm:text-sm transition-all border border-emerald-500/30 cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-emerald-600/30 hover:bg-emerald-600/40 text-emerald-300 font-bold px-5 py-3 sm:px-5 sm:py-3.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm transition-all border border-emerald-500/30 cursor-pointer"
             >
               <HeartHandshake size={16} />
               <span>Apadrinar Laboratorio</span>
@@ -255,34 +255,34 @@ export const ProgramaFuturo: React.FC = () => {
           </div>
 
           {/* Quick Metrics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-6 border-t border-white/10">
-            <div className="bg-white/5 rounded-2xl p-3 text-center border border-white/5">
-              <span className="block text-2xl font-black text-yellow-400">15+</span>
-              <span className="text-[11px] font-bold text-slate-200">Escuelas Meta</span>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3 pt-4 sm:pt-6 border-t border-white/10">
+            <div className="bg-white/5 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 text-center border border-white/5">
+              <span className="block text-xl sm:text-2xl font-black text-yellow-400">15+</span>
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200">Escuelas Meta</span>
             </div>
-            <div className="bg-white/5 rounded-2xl p-3 text-center border border-white/5">
-              <span className="block text-2xl font-black text-cyan-400">+300</span>
-              <span className="text-[11px] font-bold text-slate-200">Computadoras</span>
+            <div className="bg-white/5 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 text-center border border-white/5">
+              <span className="block text-xl sm:text-2xl font-black text-cyan-400">+300</span>
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200">Computadoras</span>
             </div>
-            <div className="bg-white/5 rounded-2xl p-3 text-center border border-white/5">
-              <span className="block text-2xl font-black text-emerald-400">+2,500</span>
-              <span className="text-[11px] font-bold text-slate-200">Estudiantes</span>
+            <div className="bg-white/5 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 text-center border border-white/5">
+              <span className="block text-xl sm:text-2xl font-black text-emerald-400">+2,500</span>
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200">Estudiantes</span>
             </div>
-            <div className="bg-white/5 rounded-2xl p-3 text-center border border-white/5">
-              <span className="block text-2xl font-black text-purple-300">100%</span>
-              <span className="text-[11px] font-bold text-slate-200">Era de las IA</span>
+            <div className="bg-white/5 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 text-center border border-white/5">
+              <span className="block text-xl sm:text-2xl font-black text-purple-300">100%</span>
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-200">Era de las IA</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* 2. CUADRO FLOTANTE DEL ACRÓNIMO */}
-      <div className="bg-white rounded-[2.5rem] p-8 sm:p-12 shadow-sm border border-slate-200/80 space-y-8">
+      <div className="bg-white rounded-2xl sm:rounded-[2.5rem] p-5 sm:p-10 md:p-12 shadow-sm border border-slate-200/80 space-y-6 sm:space-y-8">
         <div className="text-center space-y-2 max-w-2xl mx-auto">
-          <span className="text-[11px] font-black uppercase tracking-widest text-blue-900 bg-blue-50 px-3.5 py-1 rounded-full border border-blue-200">
+          <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-blue-900 bg-blue-50 px-3.5 py-1 rounded-full border border-blue-200">
             Arquitectura del Concepto
           </span>
-          <h2 className="text-2xl sm:text-3xl font-black text-slate-900">
+          <h2 className="text-xl sm:text-3xl font-black text-slate-900">
             ¿Por qué se llama <span className="text-blue-900">F.U.T.U.R.O.</span>?
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 font-medium">
@@ -290,24 +290,24 @@ export const ProgramaFuturo: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5">
           {acronymLetters.map((item, idx) => (
             <div 
               key={idx}
-              className="bg-slate-50/80 hover:bg-white p-6 rounded-3xl border border-slate-200/70 hover:border-blue-400 hover:shadow-md transition-all duration-300 space-y-3 group"
+              className="bg-slate-50/80 hover:bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200/70 hover:border-blue-400 hover:shadow-md transition-all duration-300 space-y-2.5 sm:space-y-3 group"
             >
-              <div className="flex items-center space-x-3.5">
-                <div className={`w-12 h-12 rounded-2xl ${item.iconBg} font-black text-xl flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform`}>
+              <div className="flex items-center space-x-3 sm:space-x-3.5">
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl ${item.iconBg} font-black text-lg sm:text-xl flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform shrink-0`}>
                   {item.letter}
                 </div>
                 <div>
-                  <h3 className="text-base font-black text-slate-900 group-hover:text-blue-900 transition-colors">{item.word}</h3>
-                  <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md border ${item.badgeBg}`}>
+                  <h3 className="text-sm sm:text-base font-black text-slate-900 group-hover:text-blue-900 transition-colors">{item.word}</h3>
+                  <span className={`text-[9px] sm:text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md border ${item.badgeBg}`}>
                     Pilar #{idx + 1}
                   </span>
                 </div>
               </div>
-              <p className="text-xs text-slate-650 leading-relaxed font-medium pt-1">
+              <p className="text-xs text-slate-650 leading-relaxed font-medium pt-0.5">
                 {item.desc}
               </p>
             </div>
@@ -316,12 +316,12 @@ export const ProgramaFuturo: React.FC = () => {
       </div>
 
       {/* 3. CUADRO FLOTANTE DE EDUCACIÓN MODULAR & IA */}
-      <div id="modulos-seccion" className="bg-white rounded-[2.5rem] p-8 sm:p-12 shadow-sm border border-slate-200/80 space-y-8">
+      <div id="modulos-seccion" className="bg-white rounded-2xl sm:rounded-[2.5rem] p-5 sm:p-10 md:p-12 shadow-sm border border-slate-200/80 space-y-6 sm:space-y-8">
         <div className="text-center space-y-2 max-w-2xl mx-auto">
-          <span className="text-[11px] font-black uppercase tracking-widest text-cyan-800 bg-cyan-50 px-3.5 py-1 rounded-full border border-cyan-200">
+          <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-cyan-800 bg-cyan-50 px-3.5 py-1 rounded-full border border-cyan-200">
             Formación Progresiva
           </span>
-          <h2 className="text-2xl sm:text-3xl font-black text-slate-900">
+          <h2 className="text-xl sm:text-3xl font-black text-slate-900">
             Educación Modular en la <span className="text-cyan-700">Era de la IA</span>
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 font-medium">
@@ -329,8 +329,28 @@ export const ProgramaFuturo: React.FC = () => {
           </p>
         </div>
 
-        {/* Tab Buttons */}
-        <div className="flex flex-wrap justify-center gap-2.5">
+        {/* Mobile Dropdown / Desktop Tabs */}
+        <div className="block sm:hidden">
+          <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1.5">
+            Seleccionar Nivel / Módulo:
+          </label>
+          <div className="relative">
+            <select
+              value={activeTabModule}
+              onChange={(e) => setActiveTabModule(e.target.value as any)}
+              className="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-900 shadow-sm"
+            >
+              {modules.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.title}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Tab Buttons Desktop */}
+        <div className="hidden sm:flex flex-wrap justify-center gap-2.5">
           {modules.map((m) => {
             const isSelected = activeTabModule === m.id;
             const Icon = m.icon;
@@ -429,34 +449,34 @@ export const ProgramaFuturo: React.FC = () => {
       </div>
 
       {/* 4. CUADRO FLOTANTE DE GALERÍA DE EVIDENCIAS */}
-      <div className="bg-white rounded-[2.5rem] p-8 sm:p-12 shadow-sm border border-slate-200/80 space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+      <div className="bg-white rounded-2xl sm:rounded-[2.5rem] p-5 sm:p-10 md:p-12 shadow-sm border border-slate-200/80 space-y-6 sm:space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4">
           <div className="space-y-1">
-            <span className="text-[11px] font-black uppercase tracking-widest text-emerald-800 bg-emerald-50 px-3.5 py-1 rounded-full border border-emerald-200">
+            <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-emerald-800 bg-emerald-50 px-3.5 py-1 rounded-full border border-emerald-200">
               Evidencia en Acción
             </span>
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900">Galería de Transformación Digital</h2>
+            <h2 className="text-xl sm:text-3xl font-black text-slate-900">Galería de Transformación Digital</h2>
             <p className="text-xs text-slate-600 font-medium">Laboratorios activos, entregas y talleres en escuelas de Quetzaltenango.</p>
           </div>
           <Link 
             to="/galeria"
-            className="inline-flex items-center space-x-1.5 text-xs font-black uppercase tracking-wider text-blue-900 hover:text-blue-700 bg-blue-50 border border-blue-200 px-4 py-2 rounded-xl transition-all"
+            className="inline-flex items-center justify-center space-x-1.5 text-xs font-black uppercase tracking-wider text-blue-900 hover:text-blue-700 bg-blue-50 border border-blue-200 px-4 py-2 rounded-xl transition-all self-start sm:self-auto"
           >
             <span>Ver Galería Completa</span>
             <ChevronRight size={14} />
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="rounded-3xl overflow-hidden bg-slate-50 border border-slate-200 shadow-2xs group">
-            <div className="h-48 overflow-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="rounded-2xl sm:rounded-3xl overflow-hidden bg-slate-50 border border-slate-200 shadow-2xs group">
+            <div className="h-44 sm:h-48 overflow-hidden">
               <img 
                 src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=600&q=80" 
                 alt="Laboratorio" 
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
             </div>
-            <div className="p-5 space-y-1.5">
+            <div className="p-4 sm:p-5 space-y-1">
               <span className="text-[10px] font-black uppercase text-cyan-800 bg-cyan-50 px-2 py-0.5 rounded border border-cyan-200">
                 Infraestructura
               </span>
@@ -465,15 +485,15 @@ export const ProgramaFuturo: React.FC = () => {
             </div>
           </div>
 
-          <div className="rounded-3xl overflow-hidden bg-slate-50 border border-slate-200 shadow-2xs group">
-            <div className="h-48 overflow-hidden">
+          <div className="rounded-2xl sm:rounded-3xl overflow-hidden bg-slate-50 border border-slate-200 shadow-2xs group">
+            <div className="h-44 sm:h-48 overflow-hidden">
               <img 
                 src="https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=600&q=80" 
                 alt="Talleres" 
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
             </div>
-            <div className="p-5 space-y-1.5">
+            <div className="p-4 sm:p-5 space-y-1">
               <span className="text-[10px] font-black uppercase text-purple-800 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
                 Formación Modular
               </span>
@@ -482,15 +502,15 @@ export const ProgramaFuturo: React.FC = () => {
             </div>
           </div>
 
-          <div className="rounded-3xl overflow-hidden bg-slate-50 border border-slate-200 shadow-2xs group">
-            <div className="h-48 overflow-hidden">
+          <div className="rounded-2xl sm:rounded-3xl overflow-hidden bg-slate-50 border border-slate-200 shadow-2xs group">
+            <div className="h-44 sm:h-48 overflow-hidden">
               <img 
                 src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=600&q=80" 
                 alt="Inauguración" 
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
             </div>
-            <div className="p-5 space-y-1.5">
+            <div className="p-4 sm:p-5 space-y-1">
               <span className="text-[10px] font-black uppercase text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                 Comunidad
               </span>
@@ -502,19 +522,19 @@ export const ProgramaFuturo: React.FC = () => {
       </div>
 
       {/* 5. CUADRO FLOTANTE DE TESTIMONIOS */}
-      <div className="bg-white rounded-[2.5rem] p-8 sm:p-12 shadow-sm border border-slate-200/80 space-y-8">
+      <div className="bg-white rounded-2xl sm:rounded-[2.5rem] p-5 sm:p-10 md:p-12 shadow-sm border border-slate-200/80 space-y-6 sm:space-y-8">
         <div className="text-center space-y-1 max-w-xl mx-auto">
-          <span className="text-[11px] font-black uppercase tracking-widest text-amber-800 bg-amber-50 px-3.5 py-1 rounded-full border border-amber-200">
+          <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-amber-800 bg-amber-50 px-3.5 py-1 rounded-full border border-amber-200">
             Voces de la Comunidad
           </span>
-          <h2 className="text-2xl sm:text-3xl font-black text-slate-900">Testimonios & Comentarios</h2>
+          <h2 className="text-xl sm:text-3xl font-black text-slate-900">Testimonios & Comentarios</h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           {testimonials.map((t, idx) => (
             <div 
               key={idx}
-              className="bg-slate-50 p-6 rounded-3xl border border-slate-200 flex flex-col justify-between space-y-4"
+              className="bg-slate-50 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200 flex flex-col justify-between space-y-3 sm:space-y-4"
             >
               <p className="text-xs text-slate-700 leading-relaxed font-medium italic">
                 "{t.text}"
@@ -523,11 +543,11 @@ export const ProgramaFuturo: React.FC = () => {
                 <img 
                   src={t.avatar} 
                   alt={t.name} 
-                  className="w-10 h-10 rounded-full object-cover border-2 border-yellow-500/50"
+                  className="w-10 h-10 rounded-full object-cover border-2 border-yellow-500/50 shrink-0"
                 />
                 <div>
                   <h4 className="text-xs font-black text-slate-900 leading-tight">{t.name}</h4>
-                  <span className="text-[10px] text-blue-900 font-bold block">{t.role}</span>
+                  <span className="text-[10px] text-blue-900 font-bold block leading-tight mt-0.5">{t.role}</span>
                 </div>
               </div>
             </div>
@@ -536,7 +556,7 @@ export const ProgramaFuturo: React.FC = () => {
       </div>
 
       {/* 6. CUADRO FLOTANTE DE POSTULACIÓN / APADRINAMIENTO */}
-      <div id="postular-seccion" className="bg-white rounded-[2.5rem] p-8 sm:p-12 shadow-sm border border-slate-200/80 space-y-8">
+      <div id="postular-seccion" className="bg-white rounded-2xl sm:rounded-[2.5rem] p-5 sm:p-10 md:p-12 shadow-sm border border-slate-200/80 space-y-6 sm:space-y-8">
         <div className="text-center space-y-2 max-w-2xl mx-auto">
           <span className="text-[11px] font-black uppercase tracking-widest text-blue-900 bg-blue-50 px-3.5 py-1 rounded-full border border-blue-200">
             Formulario de Contacto

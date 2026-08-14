@@ -887,7 +887,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
             )}
 
             {actaWizardStep === 'asistencia' && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 max-w-5xl mx-auto text-left">
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 w-full text-left">
                 <div className="bg-slate-50/50 rounded-3xl p-4 sm:p-8 border border-slate-100/60 shadow-sm space-y-6">
                   
                   {/* Attendance stats */}
