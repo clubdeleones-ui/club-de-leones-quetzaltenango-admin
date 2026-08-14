@@ -3888,7 +3888,7 @@ Club de Leones de Quetzaltenango`;
                               }`}
                             >
                               <FileText size={14} />
-                              <span>Solicitudes Registradas ({filteredSolicitudes.length})</span>
+                              <span>Solicitudes Registradas ({counts[cfg.id as keyof typeof counts] || 0})</span>
                             </button>
 
                             {cfg.id !== 'agenda' && (
@@ -3944,31 +3944,7 @@ Club de Leones de Quetzaltenango`;
                         {/* Vista 2: Listado de Solicitudes Registradas */}
                         {currentMode === 'list' && (
                           <div className="space-y-6 animate-in fade-in duration-300">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                              <h3 className="font-black text-lg text-slate-900 flex items-center space-x-2">
-                                <span>Solicitudes de {cfg.title}</span>
-                                <span className="text-xs font-extrabold px-2.5 py-0.5 bg-slate-100 text-slate-600 rounded-full">
-                                  {filteredSolicitudes.length}
-                                </span>
-                              </h3>
-
-                              {/* Filtro de Estado */}
-                              <div className="flex items-center space-x-2">
-                                <span className="text-xs font-bold text-slate-400">Filtrar:</span>
-                                <select
-                                  value={filtroEstado}
-                                  onChange={(e) => setFiltroEstado(e.target.value as any)}
-                                  className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-blue-900 cursor-pointer"
-                                >
-                                  <option value="todos">Todos los Estados</option>
-                                  <option value="Pendiente">Pendientes</option>
-                                  <option value="Aprobada">Aprobadas</option>
-                                  <option value="Rechazada">Rechazadas</option>
-                                </select>
-                              </div>
-                            </div>
-
-                            {renderCardsGrid(filteredSolicitudes)}
+                            {renderSolicitudesList(cfg.id as any)}
                           </div>
                         )}
 
