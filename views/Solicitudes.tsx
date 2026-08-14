@@ -1930,7 +1930,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                   required
                   value={salonNombreSolicitante}
                   onChange={(e) => setSalonNombreSolicitante(e.target.value)}
-                  placeholder="Ej. Ing. Carlos Alvarado / Colegio San Marcos"
+                  placeholder="Nombre completo o institución"
                   className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none text-xs sm:text-sm font-semibold text-slate-800 bg-white"
                 />
               </div>
@@ -1946,7 +1946,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                     required
                     value={salonEmail}
                     onChange={(e) => setSalonEmail(e.target.value)}
-                    placeholder="correo@ejemplo.com"
+                    placeholder="correo@dominio.com"
                     className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none text-xs sm:text-sm font-semibold text-slate-800 bg-white"
                   />
                 </div>
@@ -2283,11 +2283,9 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
               <input
                 type="number"
                 required
-                min="1"
-                max="100"
+                placeholder="Cantidad estimada de asistentes"
                 value={salonAsistentes}
                 onChange={(e) => setSalonAsistentes(e.target.value)}
-                placeholder="Ej. 50"
                 className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none text-xs sm:text-sm font-semibold text-slate-800 bg-white"
               />
 
@@ -2304,93 +2302,105 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                   {isCapacityWarning && (
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-xs text-amber-800 font-bold flex items-center space-x-2">
                       <AlertTriangle size={14} className="text-amber-600 flex-shrink-0" />
-                      <span>Aforo extendido (61 a 80 personas): Parte de los asistentes deberán estar de pie.</span>
+                      <span>Aforo extendido (61-80): Se requiere acomodación tipo auditorio o de pie.</span>
                     </div>
                   )}
 
                   {isCapacityError && (
-                    <div className="bg-red-50 border border-red-200 rounded-xl p-2.5 text-xs text-red-800 font-bold flex items-center space-x-2">
-                      <AlertTriangle size={14} className="text-red-600 flex-shrink-0 animate-pulse" />
-                      <span>Sobrepasa el límite: El aforo máximo del salón es de 80 personas.</span>
+                    <div className="bg-rose-50 border border-rose-200 rounded-xl p-2.5 text-xs text-rose-800 font-bold flex items-center space-x-2">
+                      <XOctagon size={14} className="text-rose-600 flex-shrink-0" />
+                      <span>Capacidad máxima superada: El aforo máximo de seguridad del salón es de 80 personas.</span>
                     </div>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Normas y Condiciones Breves */}
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-slate-650 text-xs space-y-1.5 font-medium">
-              <span className="font-black text-slate-800 block text-[11px] uppercase tracking-wider">Normas Importantes:</span>
-              <p>• Se solicita depósito de garantía reembolsable de Q. 500.00 al formalizar contrato.</p>
-              <p>• Prohibido el uso de pirotecnia dentro y fuera de las instalaciones del club.</p>
-              <p>• Los eventos deben concluir puntualmente a la hora indicada para entrega de llaves.</p>
+            {/* Condición y Depósito de Garantía Recordatorio */}
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs text-slate-650 space-y-1.5 font-medium">
+              <p className="font-bold text-slate-800 flex items-center">
+                <ShieldCheck size={14} className="mr-1 text-amber-600" />
+                Normativa de Horarios y Permanencia
+              </p>
+              <p>
+                Los horarios reservados deben incluir el tiempo de montaje y desmontaje. El Club requiere un <strong>depósito de garantía reembolsable de Q. 500.00</strong> contra daños al momento de la firma física.
+              </p>
             </div>
           </div>
         )}
 
         {/* PASO 4: PRECIOS TOTALES, EXONERACIONES Y LIMPIEZA */}
         {salonWizardStep === 4 && (
-          <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 flex items-start space-x-3 text-amber-900">
               <DollarSign className="flex-shrink-0 mt-0.5 text-amber-600" size={18} />
               <div className="space-y-1">
-                <p className="font-extrabold text-xs sm:text-sm text-amber-950">Paso 4: Resumen de Cotización y Servicios</p>
+                <p className="font-extrabold text-xs sm:text-sm text-amber-950">Paso 4: Cotización, Exoneraciones y Limpieza</p>
                 <p className="text-xs text-slate-650 font-medium leading-relaxed">
-                  Revisa el desglose de tu cotización, selecciona tu opción de limpieza y confirma tu reservación.
+                  Revisa el desglose estimado de costos, selecciona el servicio de limpieza y confirma tu reservación.
                 </p>
               </div>
             </div>
 
-            {/* Limpieza Options (Tarjetas Interactivas) */}
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider">
+            {/* Opciones de Limpieza */}
+            <div className="space-y-3">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                 Compromiso de Limpieza Posterior al Evento *
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Opción Limpieza Voluntaria */}
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div
                   onClick={() => setSalonCompromisoLimpieza('dejar_limpio')}
-                  className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
+                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between space-y-2 ${
                     salonCompromisoLimpieza === 'dejar_limpio'
-                      ? 'border-emerald-500 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-500/20'
-                      : 'border-slate-200 bg-white hover:bg-slate-50'
+                      ? 'border-emerald-500 bg-emerald-50/40 shadow-sm ring-2 ring-emerald-500/10'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}
                 >
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="font-black text-xs text-slate-800">🧹 Limpieza Voluntaria</span>
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">Q. 0.00</span>
+                  <div className="flex items-center space-x-2.5">
+                    <div className={`p-2 rounded-xl ${salonCompromisoLimpieza === 'dejar_limpio' ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                      <CheckCircle size={16} />
+                    </div>
+                    <div>
+                      <h5 className="text-xs font-extrabold text-slate-800">Limpieza Voluntaria</h5>
+                      <span className="text-[10px] font-black text-emerald-700 uppercase">Q. 0.00 Adicional</span>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-slate-500 leading-snug">
-                    Me comprometo a dejar las instalaciones completamente limpias y ordenadas al finalizar.
+                  <p className="text-[11px] text-slate-500 font-medium leading-snug">
+                    El solicitante se compromete a entregar las instalaciones totalmente limpias y ordenadas al finalizar.
                   </p>
                 </div>
 
-                {/* Opción Servicio Pagado */}
                 <div
                   onClick={() => setSalonCompromisoLimpieza('pagar_limpieza')}
-                  className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
+                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between space-y-2 ${
                     salonCompromisoLimpieza === 'pagar_limpieza'
-                      ? 'border-amber-500 bg-amber-50/40 shadow-sm ring-1 ring-amber-500/20'
-                      : 'border-slate-200 bg-white hover:bg-slate-50'
+                      ? 'border-amber-500 bg-amber-50/40 shadow-sm ring-2 ring-amber-500/10'
+                      : 'border-slate-200 bg-white hover:border-slate-300'
                   }`}
                 >
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="font-black text-xs text-slate-800">✨ Servicio de Limpieza</span>
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded bg-amber-100 text-amber-800">+ Q. 300.00</span>
+                  <div className="flex items-center space-x-2.5">
+                    <div className={`p-2 rounded-xl ${salonCompromisoLimpieza === 'pagar_limpieza' ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                      <Sparkles size={16} />
+                    </div>
+                    <div>
+                      <h5 className="text-xs font-extrabold text-slate-800">Servicio de Limpieza</h5>
+                      <span className="text-[10px] font-black text-amber-800 uppercase">+ Q. 300.00</span>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-slate-500 leading-snug">
-                    El personal del Club de Leones se encargará de la limpieza general tras concluir la actividad.
+                  <p className="text-[11px] text-slate-500 font-medium leading-snug">
+                    El personal del Club se encargará de la limpieza integral del salón y áreas utilizadas tras tu evento.
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Exoneraciones Switch & Motivo */}
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-3">
+            {/* Exoneración Especial Switch */}
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
               <label className="flex items-center justify-between cursor-pointer select-none">
-                <div>
-                  <span className="text-xs font-black text-slate-800 block">¿Aplica Exoneración Especial?</span>
-                  <span className="text-[11px] text-slate-500 block">Para convenios institucionales, causa benéfica o autorización de Junta Directiva.</span>
+                <div className="space-y-0.5">
+                  <span className="text-xs font-bold text-slate-800 block">¿Aplica Exoneración Especial de Alquiler?</span>
+                  <span className="text-[11px] text-slate-500 block">Para convenios institucionales, eventos de beneficio o autorizaciones de Junta Directiva.</span>
                 </div>
                 <input
                   type="checkbox"
@@ -2409,7 +2419,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                     type="text"
                     value={salonMotivoExoneracion}
                     onChange={(e) => setSalonMotivoExoneracion(e.target.value)}
-                    placeholder="Ej. Convenio Municipal, Alianza Educativa, Evento Benéfico"
+                    placeholder="Motivo o justificación de la exoneración"
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 bg-white focus:ring-2 focus:ring-amber-500 outline-none"
                   />
                 </div>
@@ -2556,7 +2566,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                 </label>
                 <input
                   type="text"
-                  placeholder="Ej. Solicitud de colaboración para jornada oftalmológica"
+                  placeholder="Asunto principal del documento"
                   value={cartaAsunto}
                   onChange={(e) => setCartaAsunto(e.target.value)}
                   className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
@@ -2578,7 +2588,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                   </label>
                   <input
                     type="text"
-                    placeholder="Ej. Lic. Carlos Mérida"
+                    placeholder="Nombre y título"
                     value={cartaDestinatario}
                     onChange={(e) => setCartaDestinatario(e.target.value)}
                     className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
@@ -2591,7 +2601,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                   </label>
                   <input
                     type="text"
-                    placeholder="Ej. Director Ejecutivo"
+                    placeholder="Cargo o puesto"
                     value={cartaCargo}
                     onChange={(e) => setCartaCargo(e.target.value)}
                     className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
@@ -2604,7 +2614,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                   </label>
                   <input
                     type="text"
-                    placeholder="Ej. Municipalidad de Quetzaltenango"
+                    placeholder="Nombre de la institución"
                     value={cartaInstitucion}
                     onChange={(e) => setCartaInstitucion(e.target.value)}
                     className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
@@ -3172,7 +3182,7 @@ Club de Leones de Quetzaltenango`;
               required
               value={nombreSolicitante}
               onChange={(e) => setNombreSolicitante(e.target.value)}
-              placeholder="Ej. Juan Carlos Pérez Pérez"
+              placeholder="Nombre completo"
               className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
             />
           </div>
@@ -3209,7 +3219,7 @@ Club de Leones de Quetzaltenango`;
                 const val = e.target.value.replace(/\D/g, '');
                 if (val.length <= 8) setTelefonoSolicitante(val);
               }}
-              placeholder="5555 5555"
+              placeholder="Teléfono de 8 dígitos"
               className="w-full px-4 py-2.5 outline-none text-sm text-slate-800 font-semibold"
             />
           </div>
@@ -3232,7 +3242,7 @@ Club de Leones de Quetzaltenango`;
               required
               value={nombreBeneficiario}
               onChange={(e) => setNombreBeneficiario(e.target.value)}
-              placeholder="Ej. María Elena Pérez"
+              placeholder="Nombre completo del beneficiario"
               className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
             />
           </div>
@@ -3247,7 +3257,7 @@ Club de Leones de Quetzaltenango`;
               max="120"
               value={edadBeneficiario}
               onChange={(e) => setEdadBeneficiario(e.target.value)}
-              placeholder="Ej. 75"
+              placeholder="Edad en años"
               className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
             />
           </div>
@@ -3261,7 +3271,7 @@ Club de Leones de Quetzaltenango`;
             required
             value={tiempoUso}
             onChange={(e) => setTiempoUso(e.target.value)}
-            placeholder="Ej. 3 meses (recuperación de cirugía), permanente, etc."
+            placeholder="Tiempo aproximado de uso (temporal o permanente)"
             className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
           />
         </div>
@@ -3313,7 +3323,7 @@ Club de Leones de Quetzaltenango`;
             required
             value={agendaSocioNombre}
             onChange={(e) => setAgendaSocioNombre(e.target.value)}
-            placeholder="Ingrese el nombre completo del socio solicitante..."
+            placeholder="Nombre completo del socio solicitante"
             className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
           />
         </div>
@@ -3327,7 +3337,7 @@ Club de Leones de Quetzaltenango`;
             required
             value={agendaNombrePunto}
             onChange={(e) => setAgendaNombrePunto(e.target.value)}
-            placeholder="Ej. Campaña Médica Quetzaltenango / Ajuste de cuota de socios"
+            placeholder="Título del tema o punto a discutir"
             className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
           />
         </div>
@@ -3422,7 +3432,7 @@ Club de Leones de Quetzaltenango`;
             required
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
-            placeholder="Ej. Compra de Glucómetros para Campaña"
+            placeholder="Título de la solicitud"
             className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
           />
         </div>
@@ -3467,7 +3477,7 @@ Club de Leones de Quetzaltenango`;
               required
               value={otroTemaDescripcion}
               onChange={(e) => setOtroTemaDescripcion(e.target.value)}
-              placeholder="Ej. Salud Comunitaria"
+              placeholder="Tema personalizado"
               className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
             />
           </div>
@@ -3643,7 +3653,7 @@ Club de Leones de Quetzaltenango`;
             type="text"
             value={trackingCode}
             onChange={(e) => setTrackingCode(e.target.value)}
-            placeholder="Ej. LQX-358"
+            placeholder="CÓDIGO (EJ. LQX-123)"
             className="flex-1 px-4 py-3 border border-slate-250 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:border-transparent outline-none font-bold text-xs text-slate-800 bg-white placeholder-slate-350 text-center uppercase tracking-widest"
             maxLength={8}
           />
