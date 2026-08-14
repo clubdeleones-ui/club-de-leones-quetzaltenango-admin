@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar as CalendarIcon, ExternalLink, Info, Loader2, MapPin, Clock, Heart, Share2, Check, Copy, Search, Filter, UserPlus, X as XIcon, ChevronLeft, ChevronRight, Shirt, Plus, Building, Home, Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Calendar as CalendarIcon, ExternalLink, Info, Loader2, MapPin, Clock, Heart, Share2, Check, Copy, Search, Filter, UserPlus, X as XIcon, ChevronLeft, ChevronRight, Shirt, Plus, Building, Home, Lock, AlertCircle, CheckCircle2, Upload, CalendarPlus, Sparkles, DollarSign, Users } from 'lucide-react';
 import { googleService } from '../services/googleService';
 import { firebaseService } from '../services/firebaseService';
 import { useClubData } from '../context/ClubDataContext';
@@ -8,6 +8,7 @@ import { useModal } from '../context/ModalContext';
 import { Actividad, Solicitud } from '../types';
 import { InscripcionVoluntarioModal } from '../components/InscripcionVoluntarioModal';
 import { ConfirmarParticipacionModal } from '../components/ConfirmarParticipacionModal';
+import { compressImageFile, validateImageFile } from '../utils/imageCompressor';
 
 interface CalendarioProps {
     accessToken?: string;
@@ -125,6 +126,100 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
     const [reserveCompromisoLimpieza, setReserveCompromisoLimpieza] = useState<'dejar_limpio' | 'pagar_limpieza'>('dejar_limpio');
     const [isSavingReservation, setIsSavingReservation] = useState(false);
     const [isDayAvailabilityModalOpen, setIsDayAvailabilityModalOpen] = useState(false);
+
+    // Socio Activity Scheduling Modal States
+    const [isActividadModalOpen, setIsActividadModalOpen] = useState(false);
+    const [newActividad, setNewActividad] = useState({
+        titulo: '',
+        descripcion: '',
+        fecha: '',
+        lugar: '',
+        esEnSalon: false,
+        publica: true,
+        conBotonDonacion: false,
+        donacionUrl: '',
+        conBotonVoluntariado: true,
+        conBotonAsistencia: true,
+        costoSocio: '',
+        costoInvitado: '',
+        vestimenta: 'Libre / Informal',
+        imagen: ''
+    });
+    const [newActividadImageFile, setNewActividadImageFile] = useState<File | null>(null);
+    const [newActividadImagePreview, setNewActividadImagePreview] = useState<string | null>(null);
+    const [isSavingActividad, setIsSavingActividad] = useState(false);
+
+    const handleOpenActividadModal = (dNum?: number) => {
+        if (!user || user.rol === 'DONANTE' || user.rol === 'GUEST') {
+            showAlert("Acceso Requerido", "Debes iniciar sesión con tu cuenta de socio activo para programar una actividad.");
+            return;
+        }
+        const targetDay = dNum || (selectedDate ? selectedDate.getDate() : new Date().getDate());
+        const formattedDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}T09:00`;
+        setNewActividad({
+            titulo: '',
+            descripcion: '',
+            fecha: formattedDate,
+            lugar: 'Salón de Eventos del Club',
+            esEnSalon: true,
+            publica: true,
+            conBotonDonacion: false,
+            donacionUrl: '',
+            conBotonVoluntariado: true,
+            conBotonAsistencia: true,
+            costoSocio: '',
+            costoInvitado: '',
+            vestimenta: 'Libre / Informal',
+            imagen: ''
+        });
+        setNewActividadImageFile(null);
+        setNewActividadImagePreview(null);
+        setIsActividadModalOpen(true);
+    };
+
+    const handleSaveActividad = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newActividad.titulo.trim() || !newActividad.fecha || !newActividad.lugar.trim()) {
+            showAlert("Campos Requeridos", "Por favor completa el título, la fecha y el lugar de la actividad.");
+            return;
+        }
+        setIsSavingActividad(true);
+        try {
+            let finalImageUrl = newActividad.imagen;
+            if (newActividadImageFile) {
+                const compressedBase64 = await compressImageFile(newActividadImageFile, 1200, 1200, 0.8);
+                finalImageUrl = await firebaseService.uploadGaleriaImage(compressedBase64, 'actividad');
+            }
+
+            const created: Actividad = {
+                id: `ev-${Date.now()}`,
+                titulo: newActividad.titulo.trim(),
+                descripcion: newActividad.descripcion.trim(),
+                fecha: newActividad.fecha.replace('T', ' '),
+                lugar: newActividad.lugar.trim(),
+                imagen: finalImageUrl || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800',
+                publica: newActividad.publica,
+                conBotonDonacion: newActividad.conBotonDonacion,
+                donacionUrl: newActividad.conBotonDonacion ? (newActividad.donacionUrl || '#/donar') : '',
+                conBotonVoluntariado: newActividad.conBotonVoluntariado,
+                conBotonAsistencia: newActividad.conBotonAsistencia,
+                costoSocio: newActividad.costoSocio ? parseFloat(newActividad.costoSocio) : 0,
+                costoInvitado: newActividad.costoInvitado ? parseFloat(newActividad.costoInvitado) : 0,
+                vestimenta: newActividad.vestimenta || 'Libre / Informal',
+                esEnSalon: newActividad.esEnSalon,
+                tipoLugar: newActividad.esEnSalon ? 'salon' : 'exterior'
+            };
+
+            await firebaseService.saveActividad(created);
+            setIsActividadModalOpen(false);
+            showAlert("¡Actividad Programada con Éxito!", `La actividad "${created.titulo}" ha sido programada e incorporada inmediatamente al calendario oficial con su distintivo de color.`);
+        } catch (err: any) {
+            console.error("Error saving activity:", err);
+            showAlert("Error al Programar", "Ocurrió un problema al guardar la actividad. Por favor intenta de nuevo.");
+        } finally {
+            setIsSavingActividad(false);
+        }
+    };
 
     const getSalonReservationsForDay = (day: number) => {
         const dateFormatted = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -569,7 +664,15 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                   Visualiza ocupación de salón, actividades externas y fechas apartadas en tiempo real.
                                 </p>
                             </div>
-                            <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
+                            <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() => handleOpenActividadModal()}
+                                    className="px-4 py-2.5 bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-950 hover:from-blue-800 hover:to-indigo-800 text-white text-xs font-black rounded-2xl shadow-md transition-all active:scale-95 flex items-center space-x-1.5 cursor-pointer"
+                                >
+                                    <Plus size={15} />
+                                    <span>Programar Actividad</span>
+                                </button>
                                 <button
                                     type="button"
                                     onClick={() => handleOpenReserveModal()}
@@ -1124,17 +1227,28 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                             type="button"
                                             onClick={() => {
                                                 setIsDayAvailabilityModalOpen(false);
+                                                handleOpenActividadModal(selectedDate.getDate());
+                                            }}
+                                            className="w-full py-2.5 px-4 bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-950 hover:from-blue-800 hover:to-indigo-800 text-white font-black rounded-2xl shadow-md transition-all text-xs flex items-center justify-center space-x-1.5 cursor-pointer"
+                                        >
+                                            <Plus size={14} />
+                                            <span>Programar Actividad</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setIsDayAvailabilityModalOpen(false);
                                                 handleOpenReserveModal(selectedDate.getDate());
                                             }}
                                             className="w-full py-2.5 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-black rounded-2xl shadow-md transition-all text-xs flex items-center justify-center space-x-1.5 cursor-pointer"
                                         >
                                             <Building size={14} />
-                                            <span>{isSocio ? 'Apartar Salón para este día' : 'Solicitar Alquiler del Salón'}</span>
+                                            <span>{isSocio ? 'Apartar Salón' : 'Solicitar Alquiler'}</span>
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => setIsDayAvailabilityModalOpen(false)}
-                                            className="w-full sm:w-auto py-2.5 px-5 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-2xl text-xs transition-colors cursor-pointer"
+                                            className="w-full sm:w-auto py-2.5 px-4 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-2xl text-xs transition-colors cursor-pointer"
                                         >
                                             Cerrar
                                         </button>
@@ -1143,6 +1257,278 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                             );
                         })()}
                     </div>
+                </div>
+            )}
+
+            {/* PROGRAMAR ACTIVIDAD FORM MODAL */}
+            {isActividadModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-md overflow-y-auto animate-in fade-in duration-300">
+                    <form onSubmit={handleSaveActividad} className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8 max-w-lg w-full space-y-5 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-300 my-6 text-left relative max-h-[92vh] overflow-y-auto">
+                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                            <div className="space-y-0.5">
+                                <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 bg-blue-50 border border-blue-200 rounded-full text-blue-900 text-[10px] font-black uppercase tracking-wider">
+                                    <CalendarPlus size={12} className="text-blue-700" />
+                                    <span>Programación de Actividad</span>
+                                </div>
+                                <h4 className="text-xl sm:text-2xl font-black text-blue-900">Programar Nueva Actividad</h4>
+                            </div>
+                            <button 
+                                type="button" 
+                                onClick={() => setIsActividadModalOpen(false)} 
+                                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                            >
+                                <XIcon size={20} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4 pr-1">
+                            {/* Título */}
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                                    Título de la Actividad *
+                                </label>
+                                <input 
+                                    type="text" 
+                                    required 
+                                    value={newActividad.titulo} 
+                                    onChange={e => setNewActividad({...newActividad, titulo: e.target.value})}
+                                    placeholder="Ej. Jornada Médica Visual / Sesión de Juramentación"
+                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-xs sm:text-sm font-semibold text-slate-800"
+                                />
+                            </div>
+
+                            {/* Descripción */}
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                                    Descripción Detallada *
+                                </label>
+                                <textarea 
+                                    rows={3} 
+                                    required
+                                    value={newActividad.descripcion} 
+                                    onChange={e => setNewActividad({...newActividad, descripcion: e.target.value})}
+                                    placeholder="Describe el propósito del evento, quiénes participan y objetivo del servicio..."
+                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all resize-none text-xs sm:text-sm leading-relaxed font-normal text-slate-700"
+                                />
+                            </div>
+
+                            {/* Fecha y Hora */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                                        Fecha y Hora *
+                                    </label>
+                                    <input 
+                                        type="datetime-local" 
+                                        required 
+                                        value={newActividad.fecha} 
+                                        onChange={e => setNewActividad({...newActividad, fecha: e.target.value})}
+                                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs sm:text-sm font-bold text-slate-800"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                                        Vestimenta Sugerida
+                                    </label>
+                                    <select
+                                        value={newActividad.vestimenta}
+                                        onChange={e => setNewActividad({...newActividad, vestimenta: e.target.value})}
+                                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs sm:text-sm font-semibold text-slate-800 bg-white cursor-pointer"
+                                    >
+                                        <option value="Libre / Informal">Libre / Informal</option>
+                                        <option value="Chaleco Leonístico">Chaleco Leonístico</option>
+                                        <option value="Formal / Etiqueta">Formal / Etiqueta</option>
+                                        <option value="Sport Elegante">Sport Elegante</option>
+                                        <option value="Uniforme de Servicio">Uniforme de Servicio</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Ubicación y Tipo de Lugar */}
+                            <div className="space-y-2">
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider">
+                                    Lugar / Ubicación *
+                                </label>
+                                <div className="grid grid-cols-2 gap-2 mb-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setNewActividad({
+                                            ...newActividad, 
+                                            esEnSalon: true, 
+                                            lugar: 'Salón de Eventos del Club'
+                                        })}
+                                        className={`py-2 px-3 rounded-xl text-xs font-bold border flex items-center justify-center space-x-1.5 transition-all ${
+                                            newActividad.esEnSalon
+                                                ? 'bg-purple-900 text-white border-purple-950 shadow-xs'
+                                                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-purple-50'
+                                        }`}
+                                    >
+                                        <span>🏛️ En Salón</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setNewActividad({
+                                            ...newActividad, 
+                                            esEnSalon: false, 
+                                            lugar: newActividad.lugar === 'Salón de Eventos del Club' ? '' : newActividad.lugar
+                                        })}
+                                        className={`py-2 px-3 rounded-xl text-xs font-bold border flex items-center justify-center space-x-1.5 transition-all ${
+                                            !newActividad.esEnSalon
+                                                ? 'bg-blue-900 text-white border-blue-950 shadow-xs'
+                                                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-blue-50'
+                                        }`}
+                                    >
+                                        <span>📍 En Exterior / Otro</span>
+                                    </button>
+                                </div>
+                                <input 
+                                    type="text" 
+                                    required 
+                                    value={newActividad.lugar} 
+                                    onChange={e => setNewActividad({...newActividad, lugar: e.target.value})}
+                                    placeholder="Ej. Salón de Eventos del Club / Parque Central Xela"
+                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-xs sm:text-sm font-semibold text-slate-800"
+                                />
+                            </div>
+
+                            {/* Afiche / Imagen */}
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                                    Imagen / Afiche de la Actividad
+                                </label>
+                                <div className="space-y-2">
+                                    <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100/60 transition-all overflow-hidden relative group">
+                                        {newActividadImagePreview ? (
+                                            <>
+                                                <img src={newActividadImagePreview} alt="Preview" className="w-full h-full object-cover" />
+                                                <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold">
+                                                    Cambiar Imagen
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center p-3 text-center">
+                                                <Upload className="w-6 h-6 text-slate-400 mb-1 group-hover:text-blue-900 transition-colors" />
+                                                <p className="text-xs font-bold text-slate-600">Subir Afiche o Foto</p>
+                                                <p className="text-[10px] text-slate-400">PNG, JPG o WEBP (Optimización automática)</p>
+                                            </div>
+                                        )}
+                                        <input 
+                                            type="file" 
+                                            accept="image/*" 
+                                            className="hidden" 
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) {
+                                                    const validation = validateImageFile(file);
+                                                    if (!validation.valid) {
+                                                        showAlert("Imagen Inválida", validation.error || "Formato no admitido.");
+                                                        return;
+                                                    }
+                                                    setNewActividadImageFile(file);
+                                                    try {
+                                                        const compressed = await compressImageFile(file, 800, 800, 0.7);
+                                                        setNewActividadImagePreview(compressed);
+                                                    } catch (err) {
+                                                        console.error("Error preview image:", err);
+                                                        const reader = new FileReader();
+                                                        reader.onloadend = () => {
+                                                            setNewActividadImagePreview(reader.result as string);
+                                                        };
+                                                        reader.readAsDataURL(file);
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                    </label>
+
+                                    <input 
+                                        type="text" 
+                                        value={newActividad.imagen} 
+                                        onChange={e => {
+                                            setNewActividad({...newActividad, imagen: e.target.value});
+                                            setNewActividadImageFile(null);
+                                            setNewActividadImagePreview(null);
+                                        }}
+                                        placeholder="O ingresa enlace de imagen (Opcional)"
+                                        className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-mono outline-none text-slate-700"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Opciones de Participación */}
+                            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2.5">
+                                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Opciones y Difusión</span>
+                                
+                                <label className="flex items-center space-x-2.5 cursor-pointer text-xs font-bold text-slate-700 select-none">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={newActividad.publica} 
+                                        onChange={e => setNewActividad({...newActividad, publica: e.target.checked})}
+                                        className="w-4 h-4 rounded text-blue-900 border-slate-300 focus:ring-blue-900 cursor-pointer"
+                                    />
+                                    <span>Actividad visible públicamente en el portal web</span>
+                                </label>
+
+                                <label className="flex items-center space-x-2.5 cursor-pointer text-xs font-bold text-slate-700 select-none">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={newActividad.conBotonAsistencia} 
+                                        onChange={e => setNewActividad({...newActividad, conBotonAsistencia: e.target.checked})}
+                                        className="w-4 h-4 rounded text-blue-900 border-slate-300 focus:ring-blue-900 cursor-pointer"
+                                    />
+                                    <span>Habilitar botón de Confirmación de Asistencia (RSVP)</span>
+                                </label>
+
+                                <label className="flex items-center space-x-2.5 cursor-pointer text-xs font-bold text-slate-700 select-none">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={newActividad.conBotonVoluntariado} 
+                                        onChange={e => setNewActividad({...newActividad, conBotonVoluntariado: e.target.checked})}
+                                        className="w-4 h-4 rounded text-blue-900 border-slate-300 focus:ring-blue-900 cursor-pointer"
+                                    />
+                                    <span>Habilitar botón de Convocatoria de Voluntarios</span>
+                                </label>
+
+                                <label className="flex items-center space-x-2.5 cursor-pointer text-xs font-bold text-slate-700 select-none">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={newActividad.conBotonDonacion} 
+                                        onChange={e => setNewActividad({...newActividad, conBotonDonacion: e.target.checked})}
+                                        className="w-4 h-4 rounded text-blue-900 border-slate-300 focus:ring-blue-900 cursor-pointer"
+                                    />
+                                    <span>Habilitar Botón de Donaciones</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="pt-3 flex justify-end space-x-3 border-t border-slate-100">
+                            <button
+                                type="button"
+                                onClick={() => setIsActividadModalOpen(false)}
+                                className="px-4 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 text-xs cursor-pointer"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={isSavingActividad}
+                                className="px-6 py-2.5 bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-950 hover:from-blue-800 hover:to-indigo-800 disabled:opacity-50 text-white font-black rounded-xl shadow-md text-xs transition-all flex items-center justify-center space-x-2 cursor-pointer"
+                            >
+                                {isSavingActividad ? (
+                                    <>
+                                        <Loader2 size={14} className="animate-spin" />
+                                        <span>Guardando Actividad...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Check size={14} />
+                                        <span>Guardar y Programar</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </form>
                 </div>
             )}
 
