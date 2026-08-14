@@ -4404,7 +4404,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 animate-in fade-in duration-700">
+    <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-8 animate-in fade-in duration-700">
       <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <span className="bg-yellow-500 text-blue-900 text-xs font-black px-4 py-1.5 rounded-full uppercase tracking-widest animate-pulse">

@@ -168,7 +168,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
 
       {/* Main Premium Navbar */}
       <nav className="bg-blue-900/95 backdrop-blur-md text-white shadow-xl sticky top-0 z-50 border-b border-blue-800/40 transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             {/* Logo Section */}
             <div className="flex items-center space-x-3.5 cursor-pointer group shrink-0" onClick={() => navigate('/')}>
@@ -553,7 +553,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
       </nav>
 
       {/* Main Content Area */}
-      <main className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
+      <main className="flex-grow max-w-[1400px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         {children}
       </main>
 
@@ -561,7 +561,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
       {isPublicRoute && (
         <section className="bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-950 py-10 text-white border-t border-blue-800/40 relative overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(253,224,71,0.05),transparent_40%)]" />
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 flex flex-col items-center">
+          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 flex flex-col items-center">
             <h2 className="text-xl sm:text-2xl font-black tracking-tight text-center bg-gradient-to-r from-white via-slate-100 to-yellow-300 bg-clip-text text-transparent mb-6 uppercase tracking-wider">
               Síguenos en nuestras redes
             </h2>
@@ -608,10 +608,10 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
 
       {/* Footer Section */}
       <footer className="bg-slate-900 text-slate-400 py-16 border-t border-slate-800">
-        <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 ${isEvaluationView ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-12`}>
+        <div className={`max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 ${isEvaluationView ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-12`}>
           <div className="space-y-4">
             <h3 className="text-white text-xl font-bold tracking-tight flex items-center space-x-2">
-              <span className="bg-white p-1 rounded-xl block"><img src="images/logo.png" alt="Logo" className="w-8 h-8 object-contain" /></span>
+              <span className="bg-white p-1 rounded-xl block"><img src="/images/logo.png" alt="Logo" className="w-8 h-8 object-contain" /></span>
               <span>Club de Leones Xela</span>
             </h3>
             <p className="text-sm leading-relaxed">
@@ -645,7 +645,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
             </p>
           </div>
         </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-8 border-t border-slate-800 text-center text-xs">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-8 border-t border-slate-800 text-center text-xs">
           &copy; {new Date().getFullYear()} Club de Leones Quetzaltenango. Diseñado para servicio y liderazgo. Todos los derechos reservados.
         </div>
       </footer>

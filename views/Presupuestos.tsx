@@ -123,7 +123,7 @@ export const Presupuestos: React.FC = () => {
     fondos.filter(f => f.tipo === tipo).reduce((acc, curr) => acc + curr.monto, 0);
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-500 max-w-7xl mx-auto">
+    <div className="space-y-10 animate-in fade-in duration-500 max-w-[1400px] mx-auto">
       {/* Header and KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-[2rem] p-6 text-white shadow-lg shadow-emerald-500/30">

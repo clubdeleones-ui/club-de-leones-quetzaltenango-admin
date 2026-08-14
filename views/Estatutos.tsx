@@ -175,7 +175,7 @@ const Estatutos: React.FC<EstatutosProps> = ({ accessToken }) => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 text-left">
+    <div className="max-w-[1400px] mx-auto px-4 md:px-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 text-left">
       {/* Search Header Banner */}
       <section className="sticky top-20 z-40 bg-white/80 backdrop-blur-xl p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] border border-slate-200/60 shadow-md mb-8">
         <div className="max-w-3xl mx-auto space-y-4">

@@ -648,7 +648,7 @@ export default function Convencion() {
       </header>
 
       {/* SECCIÓN 2: Alianzas & Patrocinadores Marquee Block — FONDO BLANCO */}
-      <section className="my-10 sm:my-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="my-10 sm:my-16 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white text-slate-800 rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-10 border border-slate-200 shadow-2xl relative overflow-hidden">
           {/* Section Header */}
           <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-slate-200 pb-4 sm:pb-6 relative z-10 text-center sm:text-left">
@@ -726,7 +726,7 @@ export default function Convencion() {
       </section>
 
       {/* SECCIÓN 3: Ciudad Sede (Quetzaltenango) Block */}
-      <section className="my-10 sm:my-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="my-10 sm:my-16 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 border-2 border-yellow-500/30 shadow-2xl relative overflow-hidden">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             <div className="lg:col-span-6 space-y-4 sm:space-y-6">
@@ -779,7 +779,7 @@ export default function Convencion() {
       </section>
 
       {/* SECCIÓN 4: Instalaciones del Evento (Colina Country Club) Block — FONDO BLANCO */}
-      <section className="my-10 sm:my-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="my-10 sm:my-16 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white text-slate-800 rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 border border-slate-200 shadow-2xl space-y-8 sm:space-y-12">
           {/* Header */}
           <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4">
@@ -909,7 +909,7 @@ export default function Convencion() {
       </section>
 
       {/* SECCIÓN 5: Actividades Culturales y Sociales Block */}
-      <section className="my-10 sm:my-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="my-10 sm:my-16 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 border-2 border-yellow-500/30 shadow-2xl relative overflow-hidden">
           <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4">
             <div className="inline-flex items-center space-x-2 bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
@@ -951,7 +951,7 @@ export default function Convencion() {
       </section>
 
       {/* SECCIÓN 6: Experiencias Únicas Block — FONDO BLANCO */}
-      <section className="my-10 sm:my-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="my-10 sm:my-16 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white text-slate-800 rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 border border-slate-200 shadow-2xl relative">
           <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4 mb-10 sm:mb-16">
             <div className="inline-flex items-center space-x-2 bg-blue-900/10 border border-blue-900/20 text-blue-900 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
@@ -990,7 +990,7 @@ export default function Convencion() {
       </section>
 
       {/* SECCIÓN 7: Formulario de Pre-registro Digital Guiado (4 Pasos) */}
-      <section id="pre-inscripcion" className="my-10 sm:my-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-10">
+      <section id="pre-inscripcion" className="my-10 sm:my-16 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-10">
         <div className="bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 border-2 border-yellow-500/30 shadow-2xl relative">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(253,224,71,0.12),transparent_40%)] pointer-events-none rounded-3xl sm:rounded-[2.5rem] overflow-hidden" />
           <div className="relative z-10">

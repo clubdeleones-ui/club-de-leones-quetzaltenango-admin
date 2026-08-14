@@ -208,7 +208,7 @@ export const EvaluacionCompartida: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100/60 pb-12">
       {/* Header Branding */}
       <div className="bg-white border-b border-slate-200/80 sticky top-0 z-40 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-3.5 flex items-center justify-between">
+        <div className="max-w-[1400px] mx-auto px-4 py-3.5 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <span className="text-2xl">🦁</span>
             <div>
@@ -224,7 +224,7 @@ export const EvaluacionCompartida: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      <div className="max-w-[1400px] mx-auto px-4 py-6 space-y-6">
         {/* President of Commission Header Banner */}
         {(currentProposal.presidenteComision || 'Rolando José Daniel Mérida del Valle') && (
           <div className="bg-blue-900 text-white rounded-2xl p-4 shadow-md flex items-center justify-between border border-blue-955/20">

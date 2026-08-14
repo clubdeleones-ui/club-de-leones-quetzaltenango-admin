@@ -199,7 +199,7 @@ export const ProgramaFuturo: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10 font-sans">
+    <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10 font-sans">
       {/* 1. CUADRO FLOTANTE HEADER (HERO EN AZULES LEONÍSTICOS) */}
       <div className="bg-gradient-to-br from-blue-955 via-blue-900 to-indigo-950 rounded-[2.5rem] p-8 sm:p-14 shadow-2xl text-white relative overflow-hidden border border-blue-800/50">
         {/* Glows */}

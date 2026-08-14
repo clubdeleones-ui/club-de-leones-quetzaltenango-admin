@@ -654,7 +654,7 @@ const Home: React.FC = () => {
       {/* Wallpaper/Seasonal Message Modal */}
       {showFondoModal && activeFondo && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="relative max-w-7xl w-full bg-transparent rounded-3xl overflow-hidden flex flex-col justify-center items-center max-h-[98vh] p-2">
+          <div className="relative max-w-[1400px] w-full bg-transparent rounded-3xl overflow-hidden flex flex-col justify-center items-center max-h-[98vh] p-2">
             {/* Close Button */}
             <button
               onClick={() => setShowFondoModal(false)}

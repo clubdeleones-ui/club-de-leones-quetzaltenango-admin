@@ -54,7 +54,7 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
   }, [sortedSocios, currentPage]);
 
   return (
-    <div className="space-y-10 max-w-7xl mx-auto px-4 md:px-8 py-8 animate-in fade-in duration-700">
+    <div className="space-y-10 max-w-[1400px] mx-auto px-4 md:px-8 py-8 animate-in fade-in duration-700">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-extrabold text-blue-900 tracking-tight">Directorio de Socios</h1>

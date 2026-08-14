@@ -174,7 +174,7 @@ export const Comisiones: React.FC = () => {
   }, [actas, selectedComision]);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 max-w-7xl mx-auto">
+    <div className="space-y-8 animate-in fade-in duration-500 max-w-[1400px] mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
           <h2 className="text-3xl font-black text-blue-900">Gestión de Comisiones</h2>
