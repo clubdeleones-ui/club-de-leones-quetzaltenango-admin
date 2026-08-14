@@ -168,125 +168,126 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
 
       {/* Main Premium Navbar */}
       <nav className="bg-blue-900/95 backdrop-blur-md text-white shadow-xl sticky top-0 z-50 border-b border-blue-800/40 transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-20">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-20">
             {/* Logo Section */}
-            <div className="flex items-center space-x-4 cursor-pointer group" onClick={() => navigate('/')}>
-              <div className="bg-white p-1 rounded-2xl overflow-hidden transition-all duration-300 group-hover:scale-105 group-hover:rotate-3 shadow-lg">
-                <img src="images/logo.png" alt="Logo" className="w-11 h-11 object-contain" />
+            <div className="flex items-center space-x-3.5 cursor-pointer group shrink-0" onClick={() => navigate('/')}>
+              <div className="bg-white p-1 rounded-2xl overflow-hidden transition-all duration-300 group-hover:scale-105 group-hover:rotate-3 shadow-lg shrink-0">
+                <img src="/images/logo.png" alt="Logo" className="w-10 h-10 sm:w-11 sm:h-11 object-contain" />
               </div>
               <div className="flex flex-col">
-                <span className="font-extrabold text-lg tracking-tight leading-none">Club de Leones</span>
-                <span className="text-[11px] font-black text-yellow-400 uppercase tracking-widest mt-1">Quetzaltenango</span>
+                <span className="font-extrabold text-base sm:text-lg tracking-tight leading-none">Club de Leones</span>
+                <span className="text-[10px] sm:text-[11px] font-black text-yellow-400 uppercase tracking-widest mt-1">Quetzaltenango</span>
               </div>
             </div>
-             {/* Desktop Nav Items */}
-             {!isEvaluationView && (
-               <div className="hidden md:flex items-center space-x-2">
-                 <Link
-                   to="/"
-                   className={`px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 flex items-center space-x-2 border border-transparent ${
-                     location.pathname === '/' 
-                       ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20 shadow-sm' 
-                       : 'text-slate-200 hover:bg-white/5 hover:text-white'
-                   }`}
-                 >
-                   <span>Inicio</span>
-                 </Link>
 
-                 {/* Programas Dropdown */}
-                 <div className="relative" ref={programasRef}>
-                   <button
-                     onClick={() => setIsProgramasOpen(!isProgramasOpen)}
-                     className={`px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 flex items-center space-x-1.5 border border-transparent cursor-pointer ${
-                       location.pathname.startsWith('/programas') || location.pathname === '/futuro'
-                         ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20 shadow-sm'
-                         : 'text-slate-200 hover:bg-white/5 hover:text-white'
-                     }`}
-                   >
-                     <span>Programas</span>
-                     <ChevronDown size={15} className={`transition-transform duration-300 ${isProgramasOpen ? 'rotate-180 text-yellow-400' : 'text-slate-300'}`} />
-                   </button>
+            {/* Desktop Nav Items */}
+            {!isEvaluationView && (
+              <div className="hidden lg:flex items-center space-x-1 xl:space-x-2">
+                <Link
+                  to="/"
+                  className={`px-3 py-2 rounded-xl text-xs xl:text-sm font-bold transition-all duration-300 flex items-center space-x-1.5 border border-transparent ${
+                    location.pathname === '/' 
+                      ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20 shadow-sm' 
+                      : 'text-slate-200 hover:bg-white/5 hover:text-white'
+                  }`}
+                >
+                  <span>Inicio</span>
+                </Link>
 
-                   {isProgramasOpen && (
-                     <div className="absolute left-0 mt-3 w-84 bg-white text-slate-800 rounded-[1.75rem] shadow-2xl border border-slate-200/90 p-3.5 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                       <div className="px-3 py-2 mb-2 bg-blue-50/70 rounded-2xl border border-blue-100/60 flex items-center justify-between">
-                         <span className="text-[10px] font-black uppercase tracking-widest text-blue-900 block">
-                           Iniciativas Comunitarias
-                         </span>
-                         <span className="text-[9px] font-extrabold uppercase bg-yellow-400 text-blue-950 px-2 py-0.5 rounded-full">
-                           Educación
-                         </span>
-                       </div>
-                       <Link
-                         to="/programas/futuro"
-                         onClick={() => setIsProgramasOpen(false)}
-                         className="flex items-start space-x-3.5 p-3 rounded-2xl hover:bg-slate-100/80 transition-all group border border-transparent hover:border-yellow-400/40"
-                       >
-                         <div className="w-11 h-11 rounded-2xl bg-blue-900 text-yellow-400 flex items-center justify-center font-black shrink-0 shadow-md group-hover:scale-105 transition-transform">
-                           <Bot size={22} />
-                         </div>
-                         <div>
-                           <div className="flex items-center space-x-1.5">
-                             <span className="font-black text-sm text-slate-900 group-hover:text-blue-900 transition-colors">
-                               Programa F.U.T.U.R.O.
-                             </span>
-                             <span className="bg-blue-100 text-blue-850 text-[9px] font-black px-1.5 py-0.5 rounded">
-                               IA & Tech
-                             </span>
-                           </div>
-                           <p className="text-xs text-slate-600 font-medium leading-snug mt-1">
-                             Laboratorios de computación y formación modular en Inteligencia Artificial.
-                           </p>
-                         </div>
-                       </Link>
-                     </div>
-                   )}
-                 </div>
+                {/* Programas Dropdown */}
+                <div className="relative" ref={programasRef}>
+                  <button
+                    onClick={() => setIsProgramasOpen(!isProgramasOpen)}
+                    className={`px-3 py-2 rounded-xl text-xs xl:text-sm font-bold transition-all duration-300 flex items-center space-x-1 border border-transparent cursor-pointer ${
+                      location.pathname.startsWith('/programas') || location.pathname === '/futuro'
+                        ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20 shadow-sm'
+                        : 'text-slate-200 hover:bg-white/5 hover:text-white'
+                    }`}
+                  >
+                    <span>Programas</span>
+                    <ChevronDown size={14} className={`transition-transform duration-300 ${isProgramasOpen ? 'rotate-180 text-yellow-400' : 'text-slate-300'}`} />
+                  </button>
 
-                 {navItems.filter(i => i.path !== '/').map((item) => {
-                   const active = location.pathname === item.path;
-                   return (
-                     <Link
-                       key={item.path}
-                       to={item.path}
-                       className={`px-4 py-2 rounded-xl text-sm font-bold transition-all duration-300 flex items-center space-x-2 border border-transparent ${
-                         active 
-                           ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20 shadow-sm' 
-                           : 'text-slate-200 hover:bg-white/5 hover:text-white'
-                       }`}
-                     >
-                       <span>{item.label}</span>
-                     </Link>
-                   );
-                 })}
+                  {isProgramasOpen && (
+                    <div className="absolute left-0 mt-3 w-84 bg-white text-slate-800 rounded-[1.75rem] shadow-2xl border border-slate-200/90 p-3.5 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="px-3 py-2 mb-2 bg-blue-50/70 rounded-2xl border border-blue-100/60 flex items-center justify-between">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-blue-900 block">
+                          Iniciativas Comunitarias
+                        </span>
+                        <span className="text-[9px] font-extrabold uppercase bg-yellow-400 text-blue-950 px-2 py-0.5 rounded-full">
+                          Educación
+                        </span>
+                      </div>
+                      <Link
+                        to="/programas/futuro"
+                        onClick={() => setIsProgramasOpen(false)}
+                        className="flex items-start space-x-3.5 p-3 rounded-2xl hover:bg-slate-100/80 transition-all group border border-transparent hover:border-yellow-400/40"
+                      >
+                        <div className="w-11 h-11 rounded-2xl bg-blue-900 text-yellow-400 flex items-center justify-center font-black shrink-0 shadow-md group-hover:scale-105 transition-transform">
+                          <Bot size={22} />
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-1.5">
+                            <span className="font-black text-sm text-slate-900 group-hover:text-blue-900 transition-colors">
+                              Programa F.U.T.U.R.O.
+                            </span>
+                            <span className="bg-blue-100 text-blue-850 text-[9px] font-black px-1.5 py-0.5 rounded">
+                              IA & Tech
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600 font-medium leading-snug mt-1">
+                            Laboratorios de computación y formación modular en Inteligencia Artificial.
+                          </p>
+                        </div>
+                      </Link>
+                    </div>
+                  )}
+                </div>
 
-                 <Link
-                   to="/donar"
-                   className="ml-3 px-4 py-2.5 rounded-xl text-sm font-black transition-all duration-305 flex items-center space-x-2 bg-gradient-to-r from-yellow-500 to-amber-500 text-blue-955 hover:from-yellow-400 hover:to-amber-400 shadow-lg shadow-yellow-500/10 hover:scale-105 active:scale-95"
-                 >
-                   <Gift size={16} />
-                   <span>Donar</span>
-                 </Link>
+                {navItems.filter(i => i.path !== '/').map((item) => {
+                  const active = location.pathname === item.path;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={`px-3 py-2 rounded-xl text-xs xl:text-sm font-bold transition-all duration-300 flex items-center space-x-1.5 border border-transparent ${
+                        active 
+                          ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20 shadow-sm' 
+                          : 'text-slate-200 hover:bg-white/5 hover:text-white'
+                      }`}
+                    >
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
 
-                 {/* Authentication Actions / Dropdown */}
-                 {auth.isAuthenticated ? (
-                   <>
-                     <div className="h-8 w-px bg-blue-850/60 mx-4" />
-                     
-                     {/* User Dropdown */}
-                     <div className="relative" ref={dropdownRef}>
-                       <button
-                         onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
-                         className="flex items-center space-x-2 focus:outline-none hover:bg-blue-800/50 p-1.5 rounded-2xl transition-all duration-300 border border-transparent hover:border-blue-750"
-                       >
-                         <img
-                           src={auth.user?.foto || 'https://picsum.photos/seed/' + auth.user?.id + '/100/100'}
-                           alt={auth.user?.nombre}
-                           className="w-10 h-10 rounded-xl object-cover border border-slate-300/30"
-                         />
-                         <ChevronDown size={16} className={`text-slate-300 transition-transform duration-300 ${isUserDropdownOpen ? 'rotate-180' : ''}`} />
-                       </button>
+                <Link
+                  to="/donar"
+                  className="ml-2 px-3.5 py-2 rounded-xl text-xs xl:text-sm font-black transition-all duration-305 flex items-center space-x-1.5 bg-gradient-to-r from-yellow-500 to-amber-500 text-blue-955 hover:from-yellow-400 hover:to-amber-400 shadow-lg shadow-yellow-500/10 hover:scale-105 active:scale-95 shrink-0"
+                >
+                  <Gift size={15} />
+                  <span>Donar</span>
+                </Link>
+
+                {/* Authentication Actions / Dropdown */}
+                {auth.isAuthenticated ? (
+                  <>
+                    <div className="h-7 w-px bg-blue-800/80 mx-2 shrink-0" />
+                    
+                    {/* User Dropdown */}
+                    <div className="relative shrink-0" ref={dropdownRef}>
+                      <button
+                        onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+                        className="flex items-center space-x-1.5 focus:outline-none hover:bg-blue-800/50 p-1 rounded-2xl transition-all duration-300 border border-transparent hover:border-blue-750"
+                      >
+                        <img
+                          src={auth.user?.foto || 'https://picsum.photos/seed/' + auth.user?.id + '/100/100'}
+                          alt={auth.user?.nombre}
+                          className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-slate-300/30"
+                        />
+                        <ChevronDown size={14} className={`text-slate-300 transition-transform duration-300 ${isUserDropdownOpen ? 'rotate-180' : ''}`} />
+                      </button>
 
                        {/* Dropdown Menu Floating Card */}
                        {isUserDropdownOpen && (
