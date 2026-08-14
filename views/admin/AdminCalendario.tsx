@@ -2446,7 +2446,7 @@ export const AdminCalendario: React.FC = () => {
                         <div className="flex justify-between items-center">
                           <span className="text-slate-400 font-bold">Tipo de Alquiler:</span>
                           <span className="font-extrabold text-indigo-900 uppercase">
-                            {sol.salonTipoAlquiler === 'salon' ? 'Salón' : sol.salonTipoAlquiler === 'parqueo' ? 'Parqueo' : 'Salón y Parqueo'}
+                            {sol.salonTipoAlquiler === 'salon' ? 'Salón' : sol.salonTipoAlquiler === 'parqueo' ? 'Parqueo Completo' : sol.salonTipoAlquiler === 'parqueo_plazas' ? `Parqueo (${sol.salonPlazasParqueo || 1} Plazas)` : 'Salón y Parqueo'}
                           </span>
                         </div>
                         <div className="flex justify-between items-center">

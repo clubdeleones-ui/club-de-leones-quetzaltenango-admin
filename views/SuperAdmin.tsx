@@ -3912,7 +3912,12 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                           </h3>
                           <div className="flex items-center text-xs font-semibold text-slate-400">
                             <Clock size={12} className="mr-1 text-slate-400 flex-shrink-0" />
-                            <span>{sol.salonHoraInicio} - {sol.salonHoraFin} | Tipo: <strong className="text-slate-600 font-extrabold uppercase">{sol.salonTipoAlquiler}</strong></span>
+                            <span>{sol.salonHoraInicio} - {sol.salonHoraFin} | Tipo: <strong className="text-slate-600 font-extrabold uppercase">{sol.salonTipoAlquiler === 'parqueo_plazas' ? `Plazas (${sol.salonPlazasParqueo || 1})` : sol.salonTipoAlquiler}</strong></span>
+                            {sol.salonExoneracion && (
+                              <span className="ml-2 px-2 py-0.5 rounded bg-purple-100 text-purple-800 text-[10px] font-black uppercase">
+                                Exonerado
+                              </span>
+                            )}
                           </div>
                         </div>
 

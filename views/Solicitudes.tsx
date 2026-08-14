@@ -36,7 +36,15 @@ import {
   Save,
   Upload,
   Archive,
-  Share2
+  Share2,
+  Car,
+  Sparkles,
+  ChevronRight,
+  ChevronLeft,
+  Info,
+  ShieldCheck,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import { generateCartaOficialPDF, formatFechaCarta } from '../utils/pdfGenerator';
 import { formatDisplayDate } from '../utils/dateSpanishFormatter';
@@ -337,20 +345,22 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     };
   }, [solicitudes]);
 
-  // Form State para Alquiler de Salón y Parqueo
+  // Form State para Alquiler de Salón y Parqueo (Wizard)
+  const [salonWizardStep, setSalonWizardStep] = useState<1 | 2 | 3 | 4>(1);
   const [salonNombreSolicitante, setSalonNombreSolicitante] = useState('');
   const [salonTelefonoDigitos, setSalonTelefonoDigitos] = useState('');
   const [salonEmail, setSalonEmail] = useState('');
   const [salonDia, setSalonDia] = useState('');
   const [salonHoraInicio, setSalonHoraInicio] = useState('');
   const [salonHoraFin, setSalonHoraFin] = useState('');
-  const [salonTipoAlquiler, setSalonTipoAlquiler] = useState<'salon' | 'parqueo' | 'ambos'>('salon');
+  const [salonTipoAlquiler, setSalonTipoAlquiler] = useState<'salon' | 'parqueo' | 'parqueo_plazas' | 'ambos'>('salon');
+  const [salonPlazasParqueo, setSalonPlazasParqueo] = useState<number>(10);
   const [salonDuracion, setSalonDuracion] = useState<'4_horas' | '8_horas'>('4_horas');
   const [salonAsistentes, setSalonAsistentes] = useState('');
   const [salonCompromisoLimpieza, setSalonCompromisoLimpieza] = useState<'dejar_limpio' | 'pagar_limpieza'>('dejar_limpio');
+  const [salonExoneracion, setSalonExoneracion] = useState(false);
+  const [salonMotivoExoneracion, setSalonMotivoExoneracion] = useState('');
   const [salonRequisitosAceptados, setSalonRequisitosAceptados] = useState(false);
-
-
 
   // Auto-fill salon form details if user is logged in
   useEffect(() => {
@@ -377,6 +387,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       setSaveError(null);
       setDocDataUrl('');
       setDocFileName('');
+      setSalonWizardStep(1);
     }
   }, [isModalOpen]);
 
@@ -651,18 +662,24 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   }, [user]);
 
   const salonCostoTotal = useMemo(() => {
+    const cleaning = salonCompromisoLimpieza === 'pagar_limpieza' ? 300 : 0;
+    if (salonExoneracion) {
+      return cleaning;
+    }
     let base = 0;
     const salonPrecioBase = salonDuracion === '4_horas' ? 850 : 1500;
     if (salonTipoAlquiler === 'salon') {
       base = isSocio ? 0 : salonPrecioBase;
     } else if (salonTipoAlquiler === 'parqueo') {
       base = isSocio ? 1500 : 3500;
+    } else if (salonTipoAlquiler === 'parqueo_plazas') {
+      const tarifaPlaza = isSocio ? 15 : 20;
+      base = (salonPlazasParqueo || 1) * tarifaPlaza;
     } else if (salonTipoAlquiler === 'ambos') {
       base = isSocio ? 1500 : (3500 + salonPrecioBase);
     }
-    const cleaning = salonCompromisoLimpieza === 'pagar_limpieza' ? 300 : 0;
     return base + cleaning;
-  }, [salonTipoAlquiler, salonDuracion, salonCompromisoLimpieza, isSocio]);
+  }, [salonTipoAlquiler, salonDuracion, salonPlazasParqueo, salonCompromisoLimpieza, salonExoneracion, isSocio]);
 
   // Fetch Solicitudes is handled by global ClubDataContext
   const fetchSolicitudes = async () => {};
@@ -737,13 +754,14 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
         return;
       }
 
+      let solNombre = 'Alquiler - Salón de Eventos';
+      if (salonTipoAlquiler === 'parqueo') solNombre = 'Alquiler - Parqueo Completo';
+      else if (salonTipoAlquiler === 'parqueo_plazas') solNombre = `Alquiler - Parqueo (${salonPlazasParqueo || 1} Plazas)`;
+      else if (salonTipoAlquiler === 'ambos') solNombre = 'Alquiler - Salón y Parqueo Completo';
+
       nuevaSolicitud = {
         id: trackingCodeId,
-        nombre: `Alquiler - ${
-          salonTipoAlquiler === 'salon' ? 'Salón' : 
-          salonTipoAlquiler === 'parqueo' ? 'Parqueo' : 
-          'Salón y Parqueo'
-        }`,
+        nombre: solNombre,
         nombreSolicitante: salonNombreSolicitante.trim(),
         salonNombreSolicitante: salonNombreSolicitante.trim(),
         tipo: 'salon',
@@ -755,8 +773,12 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
         salonHoraInicio,
         salonHoraFin,
         salonTipoAlquiler,
+        salonPlazasParqueo: salonTipoAlquiler === 'parqueo_plazas' ? salonPlazasParqueo : undefined,
+        salonDuracion: (salonTipoAlquiler === 'salon' || salonTipoAlquiler === 'ambos') ? salonDuracion : undefined,
         salonAsistentes: asistentesNum,
         salonCompromisoLimpieza,
+        salonExoneracion,
+        salonMotivoExoneracion: salonExoneracion ? salonMotivoExoneracion.trim() : undefined,
         salonCostoTotal,
         salonRequisitosAceptados,
         salonEsSocio: isSocio,
@@ -1398,24 +1420,32 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                   {/* Tags and Status */}
                   <div className="flex justify-between items-start gap-2">
                     <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border bg-amber-50 text-amber-700 border-amber-200 flex items-center space-x-1">
-                      <Building size={12} className="mr-0.5" />
+                      {sol.salonTipoAlquiler === 'parqueo' ? <Car size={12} className="mr-0.5" /> : <Building size={12} className="mr-0.5" />}
                       <span>
-                        {sol.salonTipoAlquiler === 'salon' ? 'Solo Salón' : 
-                         sol.salonTipoAlquiler === 'parqueo' ? 'Solo Parqueo' : 
-                         'Salón y Parqueo'}
+                        {sol.salonTipoAlquiler === 'salon' ? `Salón (${sol.salonDuracion === '8_horas' ? '8h' : '4h'})` : 
+                         sol.salonTipoAlquiler === 'parqueo' ? 'Parqueo Completo' : 
+                         sol.salonTipoAlquiler === 'parqueo_plazas' ? `Parqueo (${sol.salonPlazasParqueo || 1} Plazas)` : 
+                         `Salón (${sol.salonDuracion === '8_horas' ? '8h' : '4h'}) + Parqueo`}
                       </span>
                     </span>
                     
-                    <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center space-x-1 ${
-                      sol.estado === 'Aprobada' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                      sol.estado === 'Rechazada' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
-                      'bg-yellow-50 text-yellow-700 border border-yellow-100'
-                    }`}>
-                      {sol.estado === 'Aprobada' && <CheckCircle size={10} className="mr-1" />}
-                      {sol.estado === 'Rechazada' && <XOctagon size={10} className="mr-1" />}
-                      {sol.estado === 'Pendiente' && <Clock size={10} className="mr-1" />}
-                      <span>{sol.estado}</span>
-                    </span>
+                    <div className="flex items-center space-x-1.5">
+                      {sol.salonExoneracion && (
+                        <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200">
+                          Exonerado
+                        </span>
+                      )}
+                      <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md flex items-center space-x-1 ${
+                        sol.estado === 'Aprobada' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                        sol.estado === 'Rechazada' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+                        'bg-yellow-50 text-yellow-700 border border-yellow-100'
+                      }`}>
+                        {sol.estado === 'Aprobada' && <CheckCircle size={10} className="mr-1" />}
+                        {sol.estado === 'Rechazada' && <XOctagon size={10} className="mr-1" />}
+                        {sol.estado === 'Pendiente' && <Clock size={10} className="mr-1" />}
+                        <span>{sol.estado}</span>
+                      </span>
+                    </div>
                   </div>
 
                   {/* Info details */}
@@ -1450,6 +1480,12 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                         <span className="font-semibold text-slate-700">{sol.salonEmail}</span>
                       </div>
                     )}
+                    {sol.salonTipoAlquiler === 'parqueo_plazas' && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-400 font-bold">Plazas reservadas:</span>
+                        <span className="font-extrabold text-blue-900">{sol.salonPlazasParqueo || 1} Plazas</span>
+                      </div>
+                    )}
                     <div className="flex justify-between pt-1.5 border-t border-slate-200/50">
                       <span className="text-slate-400 font-bold">Asistentes:</span>
                       <span className="font-extrabold text-slate-800">{sol.salonAsistentes} personas</span>
@@ -1457,9 +1493,15 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                     <div className="flex justify-between">
                       <span className="text-slate-400 font-bold">Limpieza:</span>
                       <span className="font-bold text-slate-700">
-                        {sol.salonCompromisoLimpieza === 'dejar_limpio' ? 'Dejará limpio' : 'Pago de servicio'}
+                        {sol.salonCompromisoLimpieza === 'dejar_limpio' ? 'Dejará limpio' : 'Pago de servicio (+Q300)'}
                       </span>
                     </div>
+                    {sol.salonExoneracion && sol.salonMotivoExoneracion && (
+                      <div className="flex justify-between text-purple-700 font-bold text-[11px] bg-purple-50 p-1.5 rounded-lg border border-purple-100">
+                        <span>Motivo Exon.:</span>
+                        <span className="truncate max-w-[140px]" title={sol.salonMotivoExoneracion}>{sol.salonMotivoExoneracion}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <span className="text-slate-400 font-bold">Tarifa:</span>
                       <span className={`font-bold px-1.5 py-0.5 rounded text-[10px] ${
@@ -1651,282 +1693,765 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   };
 
   const renderSalonForm = () => {
-    const isCapacityWarning = parseInt(salonAsistentes) > 60 && parseInt(salonAsistentes) <= 80;
-    const isCapacityError = parseInt(salonAsistentes) > 80;
+    const isCapacityWarning = parseInt(salonAsistentes || '0') > 60 && parseInt(salonAsistentes || '0') <= 80;
+    const isCapacityError = parseInt(salonAsistentes || '0') > 80;
     const salonBasePrice = salonDuracion === '4_horas' ? 850 : 1500;
 
+    // Step 1 Validation
+    const validateStep1 = () => {
+      if (!salonNombreSolicitante.trim()) {
+        setSaveError("Ingresa el nombre completo del solicitante.");
+        return false;
+      }
+      if (!salonEmail.trim() || !salonEmail.includes('@')) {
+        setSaveError("Ingresa un correo electrónico válido.");
+        return false;
+      }
+      if (salonTelefonoDigitos.trim().length !== 8) {
+        setSaveError("El número de teléfono debe tener 8 dígitos.");
+        return false;
+      }
+      setSaveError(null);
+      return true;
+    };
+
+    // Step 2 Validation
+    const validateStep2 = () => {
+      if (salonTipoAlquiler === 'parqueo_plazas' && (!salonPlazasParqueo || salonPlazasParqueo < 1)) {
+        setSaveError("Selecciona al menos 1 plaza de parqueo.");
+        return false;
+      }
+      setSaveError(null);
+      return true;
+    };
+
+    // Step 3 Validation
+    const validateStep3 = () => {
+      if (!salonDia) {
+        setSaveError("Selecciona la fecha del evento.");
+        return false;
+      }
+      if (!salonHoraInicio || !salonHoraFin) {
+        setSaveError("Selecciona el horario de inicio y fin.");
+        return false;
+      }
+      const numAsistentes = parseInt(salonAsistentes || '0');
+      if (isNaN(numAsistentes) || numAsistentes <= 0) {
+        setSaveError("Ingresa un número estimado de asistentes válido.");
+        return false;
+      }
+      if (numAsistentes > 80) {
+        setSaveError("La capacidad máxima del salón es de 80 personas.");
+        return false;
+      }
+      setSaveError(null);
+      return true;
+    };
+
+    const handleNext = () => {
+      if (salonWizardStep === 1 && validateStep1()) setSalonWizardStep(2);
+      else if (salonWizardStep === 2 && validateStep2()) setSalonWizardStep(3);
+      else if (salonWizardStep === 3 && validateStep3()) setSalonWizardStep(4);
+    };
+
+    const handleBack = () => {
+      setSaveError(null);
+      if (salonWizardStep > 1) {
+        setSalonWizardStep((prev) => (prev - 1) as any);
+      }
+    };
+
+    const steps = [
+      { num: 1, title: 'Solicitante', icon: <User size={14} /> },
+      { num: 2, title: 'Instalación', icon: <Building size={14} /> },
+      { num: 3, title: 'Horarios', icon: <Clock size={14} /> },
+      { num: 4, title: 'Cotización', icon: <DollarSign size={14} /> }
+    ];
+
     return (
-      <form onSubmit={handleSubmit} className="space-y-4 text-left animate-in fade-in duration-300">
-        {/* Info y Tarifas Banner (Compacto) */}
-        <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-4 space-y-2 text-slate-800 text-xs shadow-2xs">
-          <div className="flex items-start space-x-2.5 text-amber-900">
-            <Building className="flex-shrink-0 mt-0.5 text-amber-700" size={16} />
-            <div className="space-y-1 w-full">
-              <p className="font-extrabold text-amber-955 text-xs">🏛️ Información y Tarifas Oficiales del Salón</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] font-semibold text-slate-700">
-                <div>• <strong>Salón 4 Horas:</strong> Q. 850.00 (Público) | Q. 0 (Socios)</div>
-                <div>• <strong>Salón 8 Horas:</strong> Q. 1,500.00 (Público) | Q. 0 (Socios)</div>
-                <div>• <strong>Parqueo Completo:</strong> Q. 3,500.00 (Público) | Q. 1,500 (Socios)</div>
-                <div>• <strong>Capacidad Máxima:</strong> 60 sentados / 80 de pie</div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-blue-50/80 border border-blue-200 rounded-xl px-3 py-1.5 flex items-center justify-between text-blue-900 text-[11px]">
-            <span className="font-bold">Tarifa detectada para ti:</span>
-            <span className={`font-black px-2 py-0.5 rounded uppercase tracking-wider text-[10px] ${
-              isSocio ? 'bg-blue-900 text-white' : 'bg-slate-200 text-slate-700'
-            }`}>
-              {isSocio ? 'Socio Activo (Descuento Aplicado)' : 'No Socio / Público General'}
-            </span>
+      <form onSubmit={handleSubmit} className="space-y-6 text-left animate-in fade-in duration-300">
+        {/* STEPPER PROGRESS BAR */}
+        <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 sm:p-4">
+          <div className="flex items-center justify-between relative">
+            {/* Connecting line */}
+            <div className="absolute top-1/2 left-6 right-6 -translate-y-1/2 h-0.5 bg-slate-200 -z-0" />
+            <div 
+              className="absolute top-1/2 left-6 -translate-y-1/2 h-0.5 bg-amber-500 transition-all duration-500 -z-0"
+              style={{ width: `${((salonWizardStep - 1) / (steps.length - 1)) * 100}%` }}
+            />
+
+            {steps.map((s) => {
+              const isDone = salonWizardStep > s.num;
+              const isCurrent = salonWizardStep === s.num;
+              return (
+                <div key={s.num} className="relative z-10 flex flex-col items-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (s.num < salonWizardStep) {
+                        setSalonWizardStep(s.num as any);
+                        setSaveError(null);
+                      }
+                    }}
+                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl font-black text-xs flex items-center justify-center transition-all duration-300 shadow-sm ${
+                      isDone
+                        ? 'bg-amber-500 text-white hover:bg-amber-600 cursor-pointer'
+                        : isCurrent
+                        ? 'bg-amber-600 text-white ring-4 ring-amber-500/20 scale-110'
+                        : 'bg-white border border-slate-200 text-slate-400 cursor-not-allowed'
+                    }`}
+                  >
+                    {isDone ? <Check size={14} /> : s.num}
+                  </button>
+                  <span className={`text-[10px] sm:text-[11px] font-bold mt-1.5 hidden xs:block ${
+                    isCurrent ? 'text-amber-900 font-black' : isDone ? 'text-slate-700' : 'text-slate-400'
+                  }`}>
+                    {s.title}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Sección: Información de Contacto */}
-        <div className="space-y-3">
-          <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1 flex items-center">
-            <User size={13} className="mr-1.5 text-slate-450" />
-            Información de Contacto
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                Solicitante *
-              </label>
-              <input
-                type="text"
-                required
-                value={salonNombreSolicitante}
-                onChange={(e) => setSalonNombreSolicitante(e.target.value)}
-                placeholder="Ej. Juan Pérez"
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs font-semibold text-slate-800 bg-white"
-              />
+        {/* PASO 1: DATOS DEL SOLICITANTE */}
+        {salonWizardStep === 1 && (
+          <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 flex items-start space-x-3 text-amber-900">
+              <Sparkles className="flex-shrink-0 mt-0.5 text-amber-600" size={18} />
+              <div className="space-y-1">
+                <p className="font-extrabold text-xs sm:text-sm text-amber-950">Paso 1: Información del Solicitante</p>
+                <p className="text-xs text-slate-650 font-medium leading-relaxed">
+                  Ingresa tus datos de contacto para formalizar tu solicitud de alquiler. Nos comunicaremos contigo para confirmar disponibilidad.
+                </p>
+              </div>
             </div>
-            <div>
-              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                Correo *
-              </label>
-              <input
-                type="email"
-                required
-                value={salonEmail}
-                onChange={(e) => setSalonEmail(e.target.value)}
-                placeholder="correo@ejemplo.com"
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs font-semibold text-slate-800 bg-white"
-              />
+
+            {/* Socio Badge Indicator */}
+            <div className={`p-3.5 rounded-xl border flex items-center justify-between text-xs font-semibold ${
+              isSocio 
+                ? 'bg-blue-50 border-blue-200 text-blue-950' 
+                : 'bg-slate-50 border-slate-200 text-slate-700'
+            }`}>
+              <div className="flex items-center space-x-2">
+                <ShieldCheck size={16} className={isSocio ? 'text-blue-600' : 'text-slate-400'} />
+                <span>Tipo de Solicitante:</span>
+              </div>
+              <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                isSocio ? 'bg-blue-900 text-white' : 'bg-slate-200 text-slate-700'
+              }`}>
+                {isSocio ? '⭐ Socio Activo (Tarifas con Descuento)' : '👤 Público General / Institución'}
+              </span>
             </div>
-            <div>
-              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                Teléfono *
-              </label>
-              <div className="flex rounded-xl border border-slate-200 focus-within:ring-2 focus-within:ring-blue-900 overflow-hidden bg-white">
-                <span className="bg-slate-100 text-slate-500 px-2.5 py-2 flex items-center justify-center border-r border-slate-200 text-xs font-extrabold select-none">
-                  +502
-                </span>
+
+            {/* Inputs */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center">
+                  <User size={13} className="mr-1 text-slate-400" />
+                  Nombre Completo del Solicitante o Institución *
+                </label>
                 <input
-                  type="tel"
+                  type="text"
                   required
-                  value={salonTelefonoDigitos}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, '');
-                    if (val.length <= 8) setSalonTelefonoDigitos(val);
-                  }}
-                  placeholder="5555 5555"
-                  className="w-full px-3 py-2 outline-none text-xs text-slate-800 font-semibold"
+                  value={salonNombreSolicitante}
+                  onChange={(e) => setSalonNombreSolicitante(e.target.value)}
+                  placeholder="Ej. Ing. Carlos Alvarado / Colegio San Marcos"
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none text-xs sm:text-sm font-semibold text-slate-800 bg-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center">
+                    <Mail size={13} className="mr-1 text-slate-400" />
+                    Correo Electrónico *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={salonEmail}
+                    onChange={(e) => setSalonEmail(e.target.value)}
+                    placeholder="correo@ejemplo.com"
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none text-xs sm:text-sm font-semibold text-slate-800 bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center">
+                    <Phone size={13} className="mr-1 text-slate-400" />
+                    Número de Teléfono *
+                  </label>
+                  <div className="flex rounded-xl border border-slate-200 focus-within:ring-2 focus-within:ring-amber-500 overflow-hidden bg-white">
+                    <span className="bg-slate-100 text-slate-600 px-3.5 py-2.5 flex items-center justify-center border-r border-slate-200 text-xs font-extrabold select-none">
+                      +502
+                    </span>
+                    <input
+                      type="tel"
+                      required
+                      value={salonTelefonoDigitos}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        if (val.length <= 8) setSalonTelefonoDigitos(val);
+                      }}
+                      placeholder="5555 5555"
+                      className="w-full px-3.5 py-2.5 outline-none text-xs sm:text-sm text-slate-800 font-semibold"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* PASO 2: INSTALACIÓN A SOLICITAR */}
+        {salonWizardStep === 2 && (
+          <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 flex items-start space-x-3 text-amber-900">
+              <Building className="flex-shrink-0 mt-0.5 text-amber-600" size={18} />
+              <div className="space-y-1">
+                <p className="font-extrabold text-xs sm:text-sm text-amber-950">Paso 2: Selecciona la Instalación Requerida</p>
+                <p className="text-xs text-slate-650 font-medium leading-relaxed">
+                  Elige la opción que mejor se adapte a tu evento, conferencia o actividad.
+                </p>
+              </div>
+            </div>
+
+            {/* 4 Interactive Option Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              {/* Option 1: Salón de Eventos */}
+              <div 
+                onClick={() => setSalonTipoAlquiler('salon')}
+                className={`p-4 rounded-2xl border-2 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-3 ${
+                  salonTipoAlquiler === 'salon'
+                    ? 'border-amber-500 bg-amber-50/40 shadow-md ring-2 ring-amber-500/10'
+                    : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
+                }`}
+              >
+                <div className="space-y-2">
+                  <div className="flex justify-between items-start">
+                    <div className={`p-2.5 rounded-xl ${salonTipoAlquiler === 'salon' ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                      <Building size={20} />
+                    </div>
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-amber-100 text-amber-800">
+                      Capacidad 80
+                    </span>
+                  </div>
+                  <h4 className="font-extrabold text-slate-800 text-sm">Salón de Eventos y Capacitaciones</h4>
+                  <p className="text-[11px] text-slate-500 leading-snug">
+                    Ideal para conferencias, talleres, capacitaciones y celebraciones. Incluye mesas, sillas y sanitarios.
+                  </p>
+                </div>
+
+                {/* Duration toggle inside option 1 if selected */}
+                {salonTipoAlquiler === 'salon' && (
+                  <div className="pt-2 border-t border-amber-200/60 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-[10px] font-bold uppercase text-amber-800 tracking-wider block">Duración:</span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setSalonDuracion('4_horas')}
+                        className={`py-1.5 px-2 rounded-lg text-xs font-black transition-all ${
+                          salonDuracion === '4_horas'
+                            ? 'bg-amber-500 text-white shadow-sm'
+                            : 'bg-white text-slate-600 border border-slate-200 hover:bg-amber-50'
+                        }`}
+                      >
+                        4 Horas ({isSocio ? 'Q0' : 'Q850'})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSalonDuracion('8_horas')}
+                        className={`py-1.5 px-2 rounded-lg text-xs font-black transition-all ${
+                          salonDuracion === '8_horas'
+                            ? 'bg-amber-500 text-white shadow-sm'
+                            : 'bg-white text-slate-600 border border-slate-200 hover:bg-amber-50'
+                        }`}
+                      >
+                        8 Horas ({isSocio ? 'Q0' : 'Q1,500'})
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Option 2: Parqueo Completo */}
+              <div 
+                onClick={() => setSalonTipoAlquiler('parqueo')}
+                className={`p-4 rounded-2xl border-2 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-3 ${
+                  salonTipoAlquiler === 'parqueo'
+                    ? 'border-amber-500 bg-amber-50/40 shadow-md ring-2 ring-amber-500/10'
+                    : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
+                }`}
+              >
+                <div className="space-y-2">
+                  <div className="flex justify-between items-start">
+                    <div className={`p-2.5 rounded-xl ${salonTipoAlquiler === 'parqueo' ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                      <Car size={20} />
+                    </div>
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-blue-100 text-blue-800">
+                      Exclusivo
+                    </span>
+                  </div>
+                  <h4 className="font-extrabold text-slate-800 text-sm">Parqueo Completo</h4>
+                  <p className="text-[11px] text-slate-500 leading-snug">
+                    Uso total del parqueo privado del club para caravanas, exposiciones o resguardo masivo.
+                  </p>
+                </div>
+                <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-xs font-bold text-slate-700">
+                  <span>Tarifa completa:</span>
+                  <span className="font-black text-amber-900">{isSocio ? 'Q. 1,500.00' : 'Q. 3,500.00'}</span>
+                </div>
+              </div>
+
+              {/* Option 3: Parqueo por Plazas */}
+              <div 
+                onClick={() => setSalonTipoAlquiler('parqueo_plazas')}
+                className={`p-4 rounded-2xl border-2 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-3 ${
+                  salonTipoAlquiler === 'parqueo_plazas'
+                    ? 'border-amber-500 bg-amber-50/40 shadow-md ring-2 ring-amber-500/10'
+                    : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
+                }`}
+              >
+                <div className="space-y-2">
+                  <div className="flex justify-between items-start">
+                    <div className={`p-2.5 rounded-xl ${salonTipoAlquiler === 'parqueo_plazas' ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                      <Car size={20} />
+                    </div>
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                      Por Espacio
+                    </span>
+                  </div>
+                  <h4 className="font-extrabold text-slate-800 text-sm">Parqueo por Plazas</h4>
+                  <p className="text-[11px] text-slate-500 leading-snug">
+                    Reserva únicamente la cantidad de plazas que necesitas para tus invitados o vehículos.
+                  </p>
+                </div>
+
+                {/* Plazas Selector if selected */}
+                {salonTipoAlquiler === 'parqueo_plazas' && (
+                  <div className="pt-2 border-t border-amber-200/60 space-y-2" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex justify-between items-center text-xs font-bold text-slate-700">
+                      <span>Plazas a reservar:</span>
+                      <span className="text-amber-900 font-black text-sm">{salonPlazasParqueo} Plazas</span>
+                    </div>
+
+                    {/* Quick Selection Buttons */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {[5, 10, 15, 20, 25].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setSalonPlazasParqueo(n)}
+                          className={`px-2 py-1 rounded-md text-[10px] font-black transition-all ${
+                            salonPlazasParqueo === n
+                              ? 'bg-amber-500 text-white'
+                              : 'bg-white text-slate-600 border border-slate-200 hover:bg-amber-50'
+                          }`}
+                        >
+                          {n} pl.
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Increment / Decrement & input */}
+                    <div className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => setSalonPlazasParqueo(Math.max(1, (salonPlazasParqueo || 1) - 1))}
+                        className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 font-black text-base flex items-center justify-center hover:bg-slate-100"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        min="1"
+                        max="40"
+                        value={salonPlazasParqueo}
+                        onChange={(e) => setSalonPlazasParqueo(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-16 text-center py-1 border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setSalonPlazasParqueo(Math.min(40, (salonPlazasParqueo || 1) + 1))}
+                        className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 font-black text-base flex items-center justify-center hover:bg-slate-100"
+                      >
+                        +
+                      </button>
+                      <span className="text-[10px] text-slate-400 font-semibold">× Q{isSocio ? '15' : '20'}/plaza</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Option 4: Combo Salón y Parqueo */}
+              <div 
+                onClick={() => setSalonTipoAlquiler('ambos')}
+                className={`p-4 rounded-2xl border-2 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-3 ${
+                  salonTipoAlquiler === 'ambos'
+                    ? 'border-amber-500 bg-amber-50/40 shadow-md ring-2 ring-amber-500/10'
+                    : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
+                }`}
+              >
+                <div className="space-y-2">
+                  <div className="flex justify-between items-start">
+                    <div className={`p-2.5 rounded-xl ${salonTipoAlquiler === 'ambos' ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                      <Layers size={20} />
+                    </div>
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-purple-100 text-purple-800">
+                      Combo Total
+                    </span>
+                  </div>
+                  <h4 className="font-extrabold text-slate-800 text-sm">Salón y Parqueo Completo</h4>
+                  <p className="text-[11px] text-slate-500 leading-snug">
+                    Paquete completo con acceso exclusivo al salón y a todas las instalaciones de estacionamiento.
+                  </p>
+                </div>
+
+                {/* Duration toggle inside combo if selected */}
+                {salonTipoAlquiler === 'ambos' && (
+                  <div className="pt-2 border-t border-amber-200/60 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-[10px] font-bold uppercase text-amber-800 tracking-wider block">Duración Salón:</span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setSalonDuracion('4_horas')}
+                        className={`py-1.5 px-2 rounded-lg text-xs font-black transition-all ${
+                          salonDuracion === '4_horas'
+                            ? 'bg-amber-500 text-white shadow-sm'
+                            : 'bg-white text-slate-600 border border-slate-200 hover:bg-amber-50'
+                        }`}
+                      >
+                        4 Horas
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSalonDuracion('8_horas')}
+                        className={`py-1.5 px-2 rounded-lg text-xs font-black transition-all ${
+                          salonDuracion === '8_horas'
+                            ? 'bg-amber-500 text-white shadow-sm'
+                            : 'bg-white text-slate-600 border border-slate-200 hover:bg-amber-50'
+                        }`}
+                      >
+                        8 Horas
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* PASO 3: HORARIOS, FECHA Y ASISTENTES */}
+        {salonWizardStep === 3 && (
+          <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 flex items-start space-x-3 text-amber-900">
+              <Clock className="flex-shrink-0 mt-0.5 text-amber-600" size={18} />
+              <div className="space-y-1">
+                <p className="font-extrabold text-xs sm:text-sm text-amber-950">Paso 3: Horarios, Fecha y Asistentes</p>
+                <p className="text-xs text-slate-650 font-medium leading-relaxed">
+                  Establece la fecha del evento, el rango de horas requerido y la cantidad de asistentes estimada.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center">
+                  <Calendar size={13} className="mr-1 text-slate-400" />
+                  Día del Evento *
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={salonDia}
+                  onChange={(e) => setSalonDia(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none text-xs sm:text-sm font-semibold text-slate-800 bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center">
+                  <Clock size={13} className="mr-1 text-slate-400" />
+                  Hora de Inicio *
+                </label>
+                <input
+                  type="time"
+                  required
+                  value={salonHoraInicio}
+                  onChange={(e) => setSalonHoraInicio(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none text-xs sm:text-sm font-semibold text-slate-800 bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center">
+                  <Clock size={13} className="mr-1 text-slate-400" />
+                  Hora de Finalización *
+                </label>
+                <input
+                  type="time"
+                  required
+                  value={salonHoraFin}
+                  onChange={(e) => setSalonHoraFin(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none text-xs sm:text-sm font-semibold text-slate-800 bg-white"
                 />
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Sección: Detalles del Alquiler */}
-        <div className="space-y-3 pt-1">
-          <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1 flex items-center">
-            <Calendar size={13} className="mr-1.5 text-slate-450" />
-            Detalles del Alquiler
-          </h3>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                Instalación a Alquilar *
-              </label>
-              <select
-                value={salonTipoAlquiler}
-                onChange={(e) => setSalonTipoAlquiler(e.target.value as any)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs font-semibold bg-white cursor-pointer"
-              >
-                <option value="salon">Solo Salón de Eventos</option>
-                <option value="parqueo">Solo Parqueo Completo</option>
-                <option value="ambos">Ambos (Salón y Parqueo)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                Duración del Salón *
-              </label>
-              <select
-                value={salonDuracion}
-                onChange={(e) => setSalonDuracion(e.target.value as any)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs font-semibold bg-white cursor-pointer"
-              >
-                <option value="4_horas">4 Horas (Q. 850.00)</option>
-                <option value="8_horas">8 Horas / Jornada (Q. 1,500.00)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                Día del Evento *
-              </label>
-              <input
-                type="date"
-                required
-                value={salonDia}
-                onChange={(e) => setSalonDia(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs font-semibold text-slate-800 bg-white"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                Hora Inicio *
-              </label>
-              <input
-                type="time"
-                required
-                value={salonHoraInicio}
-                onChange={(e) => setSalonHoraInicio(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs font-semibold text-slate-800 bg-white"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-                Hora Fin *
-              </label>
-              <input
-                type="time"
-                required
-                value={salonHoraFin}
-                onChange={(e) => setSalonHoraFin(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs font-semibold text-slate-800 bg-white"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+            {/* Asistentes Estimados con Visualizador */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center">
+                <Users size={13} className="mr-1 text-slate-400" />
                 Asistentes Estimados *
               </label>
               <input
                 type="number"
                 required
                 min="1"
+                max="100"
                 value={salonAsistentes}
                 onChange={(e) => setSalonAsistentes(e.target.value)}
                 placeholder="Ej. 50"
-                className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs font-semibold text-slate-800 bg-white"
+                className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none text-xs sm:text-sm font-semibold text-slate-800 bg-white"
               />
+
+              {/* Live Capacity Feedback */}
+              {salonAsistentes && parseInt(salonAsistentes) > 0 && (
+                <div>
+                  {parseInt(salonAsistentes) <= 60 && (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 text-xs text-emerald-800 font-bold flex items-center space-x-2">
+                      <CheckCircle size={14} className="text-emerald-600 flex-shrink-0" />
+                      <span>Capacidad óptima: Todos los asistentes sentados con mobiliario (máx. 60).</span>
+                    </div>
+                  )}
+
+                  {isCapacityWarning && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-xs text-amber-800 font-bold flex items-center space-x-2">
+                      <AlertTriangle size={14} className="text-amber-600 flex-shrink-0" />
+                      <span>Aforo extendido (61 a 80 personas): Parte de los asistentes deberán estar de pie.</span>
+                    </div>
+                  )}
+
+                  {isCapacityError && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-2.5 text-xs text-red-800 font-bold flex items-center space-x-2">
+                      <AlertTriangle size={14} className="text-red-600 flex-shrink-0 animate-pulse" />
+                      <span>Sobrepasa el límite: El aforo máximo del salón es de 80 personas.</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Normas y Condiciones Breves */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-slate-650 text-xs space-y-1.5 font-medium">
+              <span className="font-black text-slate-800 block text-[11px] uppercase tracking-wider">Normas Importantes:</span>
+              <p>• Se solicita depósito de garantía reembolsable de Q. 500.00 al formalizar contrato.</p>
+              <p>• Prohibido el uso de pirotecnia dentro y fuera de las instalaciones del club.</p>
+              <p>• Los eventos deben concluir puntualmente a la hora indicada para entrega de llaves.</p>
             </div>
           </div>
+        )}
 
-          {/* Warnings de Capacidad */}
-          {isCapacityWarning && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 flex items-start space-x-2 text-[11px] text-amber-800 font-bold leading-relaxed">
-              <AlertTriangle size={14} className="flex-shrink-0 mt-0.5 text-amber-700" />
-              <span>Capacidad superior a 60 personas. Los asistentes deberán estar de pie (máx. 60 sentados).</span>
+        {/* PASO 4: PRECIOS TOTALES, EXONERACIONES Y LIMPIEZA */}
+        {salonWizardStep === 4 && (
+          <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 flex items-start space-x-3 text-amber-900">
+              <DollarSign className="flex-shrink-0 mt-0.5 text-amber-600" size={18} />
+              <div className="space-y-1">
+                <p className="font-extrabold text-xs sm:text-sm text-amber-950">Paso 4: Resumen de Cotización y Servicios</p>
+                <p className="text-xs text-slate-650 font-medium leading-relaxed">
+                  Revisa el desglose de tu cotización, selecciona tu opción de limpieza y confirma tu reservación.
+                </p>
+              </div>
             </div>
-          )}
 
-          {isCapacityError && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-2.5 flex items-start space-x-2 text-[11px] text-red-800 font-bold leading-relaxed">
-              <AlertTriangle size={14} className="flex-shrink-0 mt-0.5 text-red-600 animate-pulse" />
-              <span>Error: Supera el límite de 80 personas de pie. Reduzca la cantidad de asistentes.</span>
+            {/* Limpieza Options (Tarjetas Interactivas) */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider">
+                Compromiso de Limpieza Posterior al Evento *
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Opción Limpieza Voluntaria */}
+                <div
+                  onClick={() => setSalonCompromisoLimpieza('dejar_limpio')}
+                  className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
+                    salonCompromisoLimpieza === 'dejar_limpio'
+                      ? 'border-emerald-500 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-500/20'
+                      : 'border-slate-200 bg-white hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-black text-xs text-slate-800">🧹 Limpieza Voluntaria</span>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">Q. 0.00</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-snug">
+                    Me comprometo a dejar las instalaciones completamente limpias y ordenadas al finalizar.
+                  </p>
+                </div>
+
+                {/* Opción Servicio Pagado */}
+                <div
+                  onClick={() => setSalonCompromisoLimpieza('pagar_limpieza')}
+                  className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
+                    salonCompromisoLimpieza === 'pagar_limpieza'
+                      ? 'border-amber-500 bg-amber-50/40 shadow-sm ring-1 ring-amber-500/20'
+                      : 'border-slate-200 bg-white hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-black text-xs text-slate-800">✨ Servicio de Limpieza</span>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded bg-amber-100 text-amber-800">+ Q. 300.00</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-snug">
+                    El personal del Club de Leones se encargará de la limpieza general tras concluir la actividad.
+                  </p>
+                </div>
+              </div>
             </div>
-          )}
+
+            {/* Exoneraciones Switch & Motivo */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-3">
+              <label className="flex items-center justify-between cursor-pointer select-none">
+                <div>
+                  <span className="text-xs font-black text-slate-800 block">¿Aplica Exoneración Especial?</span>
+                  <span className="text-[11px] text-slate-500 block">Para convenios institucionales, causa benéfica o autorización de Junta Directiva.</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={salonExoneracion}
+                  onChange={(e) => setSalonExoneracion(e.target.checked)}
+                  className="w-5 h-5 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer"
+                />
+              </label>
+
+              {salonExoneracion && (
+                <div className="pt-2 border-t border-slate-200 space-y-1.5 animate-in fade-in">
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                    Motivo o Referencia de Exoneración *
+                  </label>
+                  <input
+                    type="text"
+                    value={salonMotivoExoneracion}
+                    onChange={(e) => setSalonMotivoExoneracion(e.target.value)}
+                    placeholder="Ej. Convenio Municipal, Alianza Educativa, Evento Benéfico"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 bg-white focus:ring-2 focus:ring-amber-500 outline-none"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Desglose de Cotización Final */}
+            <div className="bg-gradient-to-br from-slate-900 to-blue-950 text-white p-5 rounded-2xl shadow-xl space-y-3">
+              <div className="text-[10px] font-black uppercase tracking-widest text-amber-400 border-b border-white/10 pb-2">
+                Resumen de Cotización Oficial
+              </div>
+              
+              <div className="space-y-1.5 text-xs text-white/80">
+                <div className="flex justify-between">
+                  <span>Instalación ({
+                    salonTipoAlquiler === 'salon' ? `Salón ${salonDuracion === '8_horas' ? '8 Horas' : '4 Horas'}` :
+                    salonTipoAlquiler === 'parqueo' ? 'Parqueo Completo' :
+                    salonTipoAlquiler === 'parqueo_plazas' ? `${salonPlazasParqueo || 1} Plazas de Parqueo` :
+                    `Salón (${salonDuracion === '8_horas' ? '8h' : '4h'}) + Parqueo`
+                  }):</span>
+                  <span className="font-bold text-white">
+                    {salonExoneracion ? 'Exonerado (Q0.00)' : `Q.${
+                      salonTipoAlquiler === 'salon' ? (isSocio ? 0 : salonBasePrice) :
+                      salonTipoAlquiler === 'parqueo' ? (isSocio ? 1500 : 3500) :
+                      salonTipoAlquiler === 'parqueo_plazas' ? ((salonPlazasParqueo || 1) * (isSocio ? 15 : 20)) :
+                      (isSocio ? 1500 : (3500 + salonBasePrice))
+                    }.00`}
+                  </span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span>Servicio de Limpieza:</span>
+                  <span className="font-bold text-white">Q.{salonCompromisoLimpieza === 'pagar_limpieza' ? 300 : 0}.00</span>
+                </div>
+
+                <div className="flex justify-between text-[11px] text-white/60">
+                  <span>Depósito de Garantía (Reembolsable):</span>
+                  <span>Q. 500.00</span>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-white/10 flex justify-between items-baseline">
+                <span className="font-extrabold text-sm text-amber-300">Total Estimado:</span>
+                <span className="font-black text-2xl text-amber-400 tracking-tight">Q.{salonCostoTotal}.00</span>
+              </div>
+            </div>
+
+            {/* Checkbox Requisitos */}
+            <label className="flex items-start space-x-2.5 cursor-pointer pt-1 select-none">
+              <input
+                type="checkbox"
+                required
+                checked={salonRequisitosAceptados}
+                onChange={(e) => setSalonRequisitosAceptados(e.target.checked)}
+                className="mt-0.5 w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer"
+              />
+              <span className="text-xs text-slate-700 font-semibold leading-tight">
+                He leído y acepto el reglamento de uso de las instalaciones, políticas de horario y depósito de garantía del Club de Leones de Quetzaltenango.
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* NAVIGATION BUTTONS */}
+        <div className="flex justify-between items-center pt-4 border-t border-slate-200">
+          <div>
+            {salonWizardStep > 1 ? (
+              <button
+                type="button"
+                onClick={handleBack}
+                className="px-4 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-colors text-xs flex items-center space-x-1.5 cursor-pointer"
+              >
+                <ChevronLeft size={16} />
+                <span>Atrás</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2.5 border border-slate-200 rounded-xl text-slate-500 font-bold hover:bg-slate-50 transition-colors text-xs cursor-pointer"
+              >
+                Cancelar
+              </button>
+            )}
+          </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
-              Compromiso de Limpieza *
-            </label>
-            <select
-              value={salonCompromisoLimpieza}
-              onChange={(e) => setSalonCompromisoLimpieza(e.target.value as any)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs font-semibold bg-white cursor-pointer"
-            >
-              <option value="dejar_limpio">Me comprometo a dejar limpio el salón (Sin costo)</option>
-              <option value="pagar_limpieza">Pagar por el servicio de limpieza (Q. 300.00 adicional)</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Resumen de Costo */}
-        <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1.5 text-xs">
-          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 pb-1">
-            Desglose de Pago Estimado
-          </div>
-          <div className="flex justify-between font-semibold text-slate-600 text-[11px]">
-            <span>Costo Alquiler Base ({salonTipoAlquiler === 'salon' ? `${salonDuracion === '4_horas' ? '4h' : '8h'}` : 'Instalación'}):</span>
-            <span>Q.{
-              salonTipoAlquiler === 'salon' ? (isSocio ? 0 : salonBasePrice) :
-              salonTipoAlquiler === 'parqueo' ? (isSocio ? 1500 : 3500) :
-              (isSocio ? 1500 : (3500 + salonBasePrice))
-            }.00</span>
-          </div>
-          <div className="flex justify-between font-semibold text-slate-600 text-[11px]">
-            <span>Tasa de Servicio Limpieza:</span>
-            <span>Q.{salonCompromisoLimpieza === 'pagar_limpieza' ? 300 : 0}.00</span>
-          </div>
-          <div className="flex justify-between pt-1.5 border-t border-slate-200 font-extrabold text-xs md:text-sm text-blue-900">
-            <span>Costo Total Estimado:</span>
-            <span>Q.{salonCostoTotal}.00</span>
-          </div>
-        </div>
-
-        {/* Requisitos y Checkbox */}
-        <div className="space-y-2 pt-1">
-          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-[11px] text-slate-600 space-y-1 font-medium">
-            <p className="font-bold text-slate-800">Reglamento y Condiciones de Uso:</p>
-            <p>1. Se requiere depósito de garantía de Q. 500 al momento de firmar contrato.</p>
-            <p>2. Prohibido el uso de pirotecnia dentro del salón.</p>
-            <p>3. El evento debe finalizar a la hora estipulada.</p>
-          </div>
-
-          <label className="flex items-start space-x-2.5 cursor-pointer pt-1 select-none">
-            <input
-              type="checkbox"
-              required
-              checked={salonRequisitosAceptados}
-              onChange={(e) => setSalonRequisitosAceptados(e.target.checked)}
-              className="mt-0.5 w-4 h-4 text-blue-900 rounded border-slate-300 focus:ring-blue-900"
-            />
-            <span className="text-xs text-slate-700 font-semibold leading-tight">
-              Acepto los términos, condiciones y reglamento de uso de las instalaciones del Club de Leones de Quetzaltenango.
-            </span>
-          </label>
-        </div>
-
-        {/* Botones de Envío */}
-        <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
-          <button
-            type="button"
-            onClick={() => setIsModalOpen(false)}
-            className="px-4 py-2 border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-colors text-xs"
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={isSaving || !salonRequisitosAceptados || isCapacityError}
-            className="px-6 py-2 bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white font-black rounded-xl shadow-md transition-all text-xs flex items-center justify-center space-x-2 cursor-pointer"
-          >
-            {isSaving ? (
-              <span>Enviando...</span>
+            {salonWizardStep < 4 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-xl shadow-md transition-all text-xs flex items-center space-x-1.5 cursor-pointer active:scale-95"
+              >
+                <span>Siguiente</span>
+                <ChevronRight size={16} />
+              </button>
             ) : (
-              <span>Enviar Solicitud de Alquiler</span>
+              <button
+                type="submit"
+                disabled={isSaving || !salonRequisitosAceptados || isCapacityError}
+                className="px-7 py-3 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-black rounded-xl shadow-lg transition-all text-xs sm:text-sm flex items-center space-x-2 cursor-pointer active:scale-95"
+              >
+                {isSaving ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" />
+                    <span>Enviando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={16} />
+                    <span>Confirmar y Enviar Reservación</span>
+                  </>
+                )}
+              </button>
             )}
-          </button>
+          </div>
         </div>
       </form>
     );
@@ -2495,8 +3020,8 @@ Club de Leones de Quetzaltenango`;
         </div>
       </header>
 
-      {/* SISTEMA DE ACORDEONES UNIFICADO Y RESPONSIVO */}
-      <div className="space-y-4">
+      {/* SISTEMA DE ACORDEONES UNIFICADO Y RESPONSIVO EN 2 COLUMNAS */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
         {tabConfigs.map((cfg) => {
           const isExpanded = activeTab === cfg.id;
           
@@ -2506,7 +3031,7 @@ Club de Leones de Quetzaltenango`;
             <div 
               key={cfg.id}
               className={`border rounded-3xl bg-white overflow-hidden shadow-sm transition-all duration-300 ${
-                isExpanded ? BORDER_CLASSES[cfg.colorTheme] : 'border-slate-200'
+                isExpanded ? `${BORDER_CLASSES[cfg.colorTheme]} lg:col-span-2 shadow-xl ring-2` : 'border-slate-200 hover:border-slate-300 hover:shadow-md'
               }`}
             >
               {/* Encabezado del Acordeón */}
@@ -2795,7 +3320,7 @@ Club de Leones de Quetzaltenango`;
       {/* FORM MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300">
-          <div className={`bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full ${activeTab === 'cartas' ? 'max-w-4xl' : 'max-w-2xl'} max-h-[90vh] overflow-y-auto p-6 sm:p-10 space-y-6 relative animate-in zoom-in-95 duration-300`}>
+          <div className={`bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full ${activeTab === 'cartas' || activeTab === 'salon' ? 'max-w-4xl' : 'max-w-2xl'} max-h-[90vh] overflow-y-auto p-6 sm:p-10 space-y-6 relative animate-in zoom-in-95 duration-300`}>
             <button
               onClick={() => setIsModalOpen(false)}
               className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors"

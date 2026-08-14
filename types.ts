@@ -238,9 +238,13 @@ export interface Solicitud {
   salonDia?: string;
   salonHoraInicio?: string;
   salonHoraFin?: string;
-  salonTipoAlquiler?: 'salon' | 'parqueo' | 'ambos';
+  salonTipoAlquiler?: 'salon' | 'parqueo' | 'parqueo_plazas' | 'ambos';
+  salonPlazasParqueo?: number;
+  salonDuracion?: '4_horas' | '8_horas';
   salonAsistentes?: number;
   salonCompromisoLimpieza?: 'dejar_limpio' | 'pagar_limpieza';
+  salonExoneracion?: boolean;
+  salonMotivoExoneracion?: string;
   salonCostoTotal?: number;
   salonRequisitosAceptados?: boolean;
   salonEsSocio?: boolean;
