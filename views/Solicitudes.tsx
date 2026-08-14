@@ -373,21 +373,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     setTabViewMode(prev => ({ ...prev, [tabId]: mode }));
   };
 
-  // Auto-fill salon form details if user is logged in
-  useEffect(() => {
-    if (user) {
-      setSalonNombreSolicitante(user.nombre);
-      setSalonEmail(user.correo);
-      if (user.telefono) {
-        const clean = user.telefono.replace(/^\+?502/, '').replace(/\D/g, '');
-        setSalonTelefonoDigitos(clean.substring(0, 8));
-      }
-    } else {
-      setSalonNombreSolicitante('');
-      setSalonEmail('');
-      setSalonTelefonoDigitos('');
-    }
-  }, [user]);
+  // Form fields start empty by default
 
   // Form State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -1930,7 +1916,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                   required
                   value={salonNombreSolicitante}
                   onChange={(e) => setSalonNombreSolicitante(e.target.value)}
-                  placeholder="Nombre completo o institución"
+                  placeholder="Nombre"
                   className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none text-xs sm:text-sm font-semibold text-slate-800 bg-white"
                 />
               </div>
@@ -1946,7 +1932,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                     required
                     value={salonEmail}
                     onChange={(e) => setSalonEmail(e.target.value)}
-                    placeholder="correo@dominio.com"
+                    placeholder="correo@leones.com"
                     className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none text-xs sm:text-sm font-semibold text-slate-800 bg-white"
                   />
                 </div>
@@ -1968,7 +1954,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                         const val = e.target.value.replace(/\D/g, '');
                         if (val.length <= 8) setSalonTelefonoDigitos(val);
                       }}
-                      placeholder="5555 5555"
+                      placeholder="54821943"
                       className="w-full px-3.5 py-2.5 outline-none text-xs sm:text-sm text-slate-800 font-semibold"
                     />
                   </div>
