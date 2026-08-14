@@ -251,6 +251,11 @@ export interface Solicitud {
   salonTelefono?: string;
   salonEmail?: string;
   salonNombreSolicitante?: string;
+  salonInstitucion?: string;
+  recurrenteCheckoutUrl?: string;
+  recurrenteCheckoutId?: string;
+  metodoPago?: 'recurrente' | 'transferencia' | 'presencial' | 'exonerado';
+  estadoPago?: 'Pendiente' | 'Pagado' | 'Checkout_Creado' | 'Exonerado';
 }
 
 export type TipoRentaParqueo = 'horario' | 'noche' | 'dia' | 'semana' | 'quincena' | 'mes';

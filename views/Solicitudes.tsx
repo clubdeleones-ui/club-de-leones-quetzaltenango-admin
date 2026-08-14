@@ -44,8 +44,11 @@ import {
   Info,
   ShieldCheck,
   CheckSquare,
-  Square
+  Square,
+  CreditCard,
+  ExternalLink
 } from 'lucide-react';
+import { recurrenteService, RecurrenteItem } from '../services/recurrenteService';
 import { generateCartaOficialPDF, formatFechaCarta } from '../utils/pdfGenerator';
 import { formatDisplayDate } from '../utils/dateSpanishFormatter';
 
@@ -328,6 +331,19 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     }
   };
 
+  const handleCopyPublicSalonLink = () => {
+    const baseUrl = `${window.location.origin}${window.location.pathname}#/solicitudes?tab=salon`;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(baseUrl).then(() => {
+        alert("¡Enlace directo copiado al portapapeles!\n\nPuedes compartir este enlace con los usuarios para que abran directamente el formulario de reservación de salón y parqueo.");
+      }).catch(() => {
+        prompt("Copia este enlace para compartir el formulario de alquiler:", baseUrl);
+      });
+    } else {
+      prompt("Copia este enlace para compartir el formulario de alquiler:", baseUrl);
+    }
+  };
+
   // Count calculations
   const counts = useMemo(() => {
     return {
@@ -348,6 +364,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   // Form State para Alquiler de Salón y Parqueo (Wizard)
   const [salonWizardStep, setSalonWizardStep] = useState<1 | 2 | 3 | 4>(1);
   const [salonNombreSolicitante, setSalonNombreSolicitante] = useState('');
+  const [salonInstitucion, setSalonInstitucion] = useState('');
   const [salonTelefonoDigitos, setSalonTelefonoDigitos] = useState('');
   const [salonEmail, setSalonEmail] = useState('');
   const [salonDia, setSalonDia] = useState('');
@@ -627,8 +644,37 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   }, [firmanteSelector, socios]);
   
   const [isSaving, setIsSaving] = useState(false);
+  const [isRedirectingPayment, setIsRedirectingPayment] = useState(false);
+  const [createdSolicitudCheckoutUrl, setCreatedSolicitudCheckoutUrl] = useState('');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Escuchar retornos de pasarela de pago Recurrente GT
+  useEffect(() => {
+    try {
+      const hash = window.location.hash || '';
+      const search = window.location.search || '';
+      const params = new URLSearchParams(hash.includes('?') ? hash.split('?')[1] : search);
+      const pagoSalon = params.get('pago_salon');
+      const solId = params.get('id');
+
+      if (pagoSalon === 'exitoso') {
+        alert(`🎉 ¡Pago en línea recibido exitosamente! Tu reservación ${solId ? '#' + solId : ''} ha sido registrada.`);
+        if (window.history.replaceState) {
+          const cleanUrl = window.location.pathname + window.location.hash.split('?')[0];
+          window.history.replaceState({}, document.title, cleanUrl);
+        }
+      } else if (pagoSalon === 'cancelado') {
+        alert('ℹ️ La pasarela de pago Recurrente GT fue cancelada. Tu solicitud de reservación quedó registrada como pendiente de pago.');
+        if (window.history.replaceState) {
+          const cleanUrl = window.location.pathname + window.location.hash.split('?')[0];
+          window.history.replaceState({}, document.title, cleanUrl);
+        }
+      }
+    } catch (e) {
+      console.error("Error analizando parámetros de retorno:", e);
+    }
+  }, []);
 
   // Check if logged in user is admin
   const isAdministrative = useMemo(() => {
@@ -660,21 +706,27 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
 
   const salonCostoTotal = useMemo(() => {
     const cleaning = salonCompromisoLimpieza === 'pagar_limpieza' ? 300 : 0;
-    if (salonExoneracion) {
-      return cleaning;
-    }
     let base = 0;
-    const salonPrecioBase = salonDuracion === '4_horas' ? 850 : 1500;
+    const salonPrecioBase = salonDuracion === '4_horas' ? 700 : 1200;
+
     if (salonTipoAlquiler === 'salon') {
-      base = isSocio ? 0 : salonPrecioBase;
+      // Exoneración aplica al 100% en salón de eventos y capacitaciones
+      base = (salonExoneracion || isSocio) ? 0 : salonPrecioBase;
     } else if (salonTipoAlquiler === 'parqueo') {
-      base = isSocio ? 1500 : 3500;
+      // Parqueo completo: Q1,500 todo el día (no cuenta con exoneración)
+      base = 1500;
     } else if (salonTipoAlquiler === 'parqueo_plazas') {
-      const tarifaPlaza = isSocio ? 15 : 20;
-      base = (salonPlazasParqueo || 1) * tarifaPlaza;
+      // Parqueo por plazas: Q50 por plaza por día (no cuenta con exoneración)
+      base = (salonPlazasParqueo || 1) * 50;
     } else if (salonTipoAlquiler === 'ambos') {
-      base = isSocio ? 1500 : (3500 + salonPrecioBase);
+      // Salón y Parqueo Completo: 4h Q2000 / 8h Q2500. Si aplica exoneración de salón, el parqueo queda en Q1500
+      if (salonExoneracion || isSocio) {
+        base = 1500; // Se exonera el salón pero se cobra el parqueo completo
+      } else {
+        base = salonDuracion === '4_horas' ? 2000 : 2500;
+      }
     }
+
     return base + cleaning;
   }, [salonTipoAlquiler, salonDuracion, salonPlazasParqueo, salonCompromisoLimpieza, salonExoneracion, isSocio]);
 
@@ -1462,6 +1514,12 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                       <span className="text-slate-400 font-bold">Solicitante:</span>
                       <span className="font-extrabold text-slate-800">{sol.salonNombreSolicitante || sol.nombre}</span>
                     </div>
+                    {sol.salonInstitucion && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-400 font-bold">Institución:</span>
+                        <span className="font-extrabold text-amber-950 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/60">{sol.salonInstitucion}</span>
+                      </div>
+                    )}
                     {sol.salonTelefono && (
                       <div className="flex justify-between">
                         <span className="text-slate-400 font-bold">Teléfono:</span>
@@ -1507,10 +1565,39 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                         {sol.salonEsSocio ? 'Socio' : 'Público General'}
                       </span>
                     </div>
+                    {sol.metodoPago && (
+                      <div className="flex justify-between items-center text-[11px]">
+                        <span className="text-slate-400 font-bold">Método Pago:</span>
+                        <span className="font-bold text-slate-700 flex items-center space-x-1">
+                          {sol.metodoPago === 'recurrente' ? (
+                            <>
+                              <CreditCard size={12} className="text-amber-500" />
+                              <span>Tarjeta (Recurrente GT)</span>
+                            </>
+                          ) : sol.metodoPago === 'transferencia' ? (
+                            <span>Transferencia / Sede</span>
+                          ) : (
+                            <span>Exonerado</span>
+                          )}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between pt-1.5 border-t border-slate-200/50">
                       <span className="text-slate-400 font-bold text-sm">Costo Total:</span>
                       <span className="font-black text-sm text-blue-900">Q{sol.salonCostoTotal}</span>
                     </div>
+                    {sol.recurrenteCheckoutUrl && sol.estado === 'Pendiente' && (
+                      <a
+                        href={sol.recurrenteCheckoutUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 w-full py-1.5 px-3 bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-800 hover:to-indigo-850 text-white rounded-xl font-bold text-[11px] flex items-center justify-center space-x-1.5 shadow-xs transition-colors"
+                      >
+                        <CreditCard size={12} className="text-amber-400" />
+                        <span>Abrir Pasarela Recurrente GT</span>
+                        <ExternalLink size={11} />
+                      </a>
+                    )}
                   </div>
                 </div>
 
@@ -1689,10 +1776,247 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     );
   };
 
+  // Procesar reservación de salón/parqueo (Con pasarela Recurrente GT o manual)
+  const handleSalonFinalSubmit = async (metodo: 'recurrente' | 'transferencia' | 'exonerado') => {
+    setSaveError(null);
+    setSaveSuccess(false);
+
+    if (!user) {
+      if (!salonNombreSolicitante.trim() || !salonTelefonoDigitos.trim() || !salonEmail.trim()) {
+        setSaveError("Por favor, complete todos los datos de contacto obligatorios.");
+        return;
+      }
+      if (salonTelefonoDigitos.trim().length !== 8) {
+        setSaveError("El número de teléfono debe tener exactamente 8 dígitos.");
+        return;
+      }
+      if (!salonEmail.includes('@')) {
+        setSaveError("Por favor, ingrese un correo electrónico válido.");
+        return;
+      }
+    }
+
+    if (!salonDia || !salonHoraInicio || !salonHoraFin) {
+      setSaveError("Por favor, indique la fecha y horarios del evento.");
+      return;
+    }
+
+    const asistentesNum = parseInt(salonAsistentes);
+    if (isNaN(asistentesNum) || asistentesNum <= 0) {
+      setSaveError("Por favor, ingrese un número de asistentes válido.");
+      return;
+    }
+    if (asistentesNum > 80) {
+      setSaveError("La capacidad máxima del salón es de 80 personas (60 sentadas / 80 de pie).");
+      return;
+    }
+    if (!salonRequisitosAceptados) {
+      setSaveError("Debe aceptar los requisitos y condiciones de uso.");
+      return;
+    }
+    if (salonExoneracion && !salonMotivoExoneracion.trim()) {
+      setSaveError("Por favor, especifique el motivo o referencia de la exoneración especial.");
+      return;
+    }
+
+    let solNombre = 'Alquiler - Salón de Eventos';
+    if (salonTipoAlquiler === 'parqueo') solNombre = 'Alquiler - Parqueo Completo';
+    else if (salonTipoAlquiler === 'parqueo_plazas') solNombre = `Alquiler - Parqueo (${salonPlazasParqueo || 1} Plazas)`;
+    else if (salonTipoAlquiler === 'ambos') solNombre = 'Alquiler - Salón y Parqueo Completo';
+
+    const existingIds = solicitudes.map(s => s.id);
+    const trackingCodeId = generateShortTrackingCode(existingIds);
+
+    const nuevaSolicitud: Solicitud = {
+      id: trackingCodeId,
+      nombre: solNombre,
+      nombreSolicitante: (user ? user.nombre : salonNombreSolicitante).trim(),
+      salonNombreSolicitante: (user ? user.nombre : salonNombreSolicitante).trim(),
+      salonInstitucion: salonInstitucion.trim() || undefined,
+      tipo: 'salon',
+      estado: 'Pendiente',
+      faseTracking: 'recibido',
+      usuarioCreador: user ? `${user.nombre} (${user.correo})` : 'Público',
+      fechaCreacion: new Date().toISOString().split('T')[0],
+      salonDia,
+      salonHoraInicio,
+      salonHoraFin,
+      salonTipoAlquiler,
+      salonPlazasParqueo: salonTipoAlquiler === 'parqueo_plazas' ? salonPlazasParqueo : undefined,
+      salonDuracion: (salonTipoAlquiler === 'salon' || salonTipoAlquiler === 'ambos') ? salonDuracion : undefined,
+      salonAsistentes: asistentesNum,
+      salonCompromisoLimpieza,
+      salonExoneracion,
+      salonMotivoExoneracion: salonExoneracion ? salonMotivoExoneracion.trim() : undefined,
+      salonCostoTotal,
+      salonRequisitosAceptados,
+      salonEsSocio: isSocio,
+      salonTelefono: user ? (user.telefono || '') : `+502${salonTelefonoDigitos}`,
+      salonEmail: user ? user.correo : salonEmail.trim(),
+      metodoPago: metodo,
+      estadoPago: salonCostoTotal === 0 ? 'Exonerado' : 'Pendiente'
+    };
+
+    setIsSaving(true);
+
+    try {
+      if (docDataUrl) {
+        let uploadedDocUrl = docDataUrl;
+        if (docDataUrl.startsWith('data:')) {
+          uploadedDocUrl = await firebaseService.uploadSolicitudDocumento(docDataUrl, docFileName || 'solicitud.pdf');
+        }
+        nuevaSolicitud.documentoUrl = uploadedDocUrl;
+        nuevaSolicitud.documentoNombre = docFileName || 'Documento adjunto';
+      }
+
+      // Si seleccionó pago con Recurrente GT y hay un costo mayor a 0
+      if (metodo === 'recurrente' && salonCostoTotal > 0) {
+        setIsRedirectingPayment(true);
+        const checkoutItems: RecurrenteItem[] = [];
+
+        // 1. Producto principal según la instalación seleccionada
+        if (salonTipoAlquiler === 'salon') {
+          const baseAmount = (salonExoneracion || isSocio) ? 0 : (salonDuracion === '4_horas' ? 700 : 1200);
+          if (baseAmount > 0) {
+            checkoutItems.push({
+              name: `Alquiler Salón de Eventos y Capacitaciones (${salonDuracion === '8_horas' ? '8 Horas' : '4 Horas'})`,
+              amount_in_cents: baseAmount * 100,
+              currency: 'GTQ',
+              quantity: 1
+            });
+          }
+        } else if (salonTipoAlquiler === 'parqueo') {
+          // Parqueo completo no tiene exoneración
+          checkoutItems.push({
+            name: 'Alquiler de Parqueo Privado Completo (Todo el Día)',
+            amount_in_cents: 1500 * 100,
+            currency: 'GTQ',
+            quantity: 1
+          });
+        } else if (salonTipoAlquiler === 'parqueo_plazas') {
+          // Parqueo por plazas: Q50 por plaza por día
+          const qty = salonPlazasParqueo || 1;
+          checkoutItems.push({
+            name: `Reserva de Plazas de Parqueo (${qty} Plazas / Día)`,
+            amount_in_cents: qty * 50 * 100,
+            currency: 'GTQ',
+            quantity: 1
+          });
+        } else if (salonTipoAlquiler === 'ambos') {
+          // Combo: si hay exoneración se exonera el salón pero se cobra el parqueo (Q1,500)
+          if (salonExoneracion) {
+            checkoutItems.push({
+              name: `Combo: Salón Exonerado + Parqueo Completo (Día)`,
+              amount_in_cents: 1500 * 100,
+              currency: 'GTQ',
+              quantity: 1
+            });
+          } else {
+            const baseAmount = isSocio ? 1500 : (salonDuracion === '4_horas' ? 2000 : 2500);
+            checkoutItems.push({
+              name: `Combo Salón (${salonDuracion === '8_horas' ? '8h' : '4h'}) y Parqueo Completo`,
+              amount_in_cents: baseAmount * 100,
+              currency: 'GTQ',
+              quantity: 1
+            });
+          }
+        }
+
+        // 2. Producto de Servicio de Limpieza Post-Evento
+        if (salonCompromisoLimpieza === 'pagar_limpieza') {
+          checkoutItems.push({
+            name: 'Servicio Integral de Limpieza Post-Evento',
+            amount_in_cents: 300 * 100,
+            currency: 'GTQ',
+            quantity: 1
+          });
+        }
+
+        const validItems = checkoutItems.filter(item => item.amount_in_cents > 0);
+        if (validItems.length > 0) {
+          try {
+            const currentBaseUrl = window.location.href.split('#')[0].split('?')[0];
+            const checkoutResponse = await recurrenteService.createCheckout({
+              items: validItems,
+              userEmail: (nuevaSolicitud.salonEmail || user?.correo || '').trim(),
+              successUrl: `${currentBaseUrl}#solicitudes?pago_salon=exitoso&id=${nuevaSolicitud.id}`,
+              cancelUrl: `${currentBaseUrl}#solicitudes?pago_salon=cancelado&id=${nuevaSolicitud.id}`,
+              metadata: {
+                solicitudId: nuevaSolicitud.id,
+                tipo: 'alquiler_salon',
+                nombreSolicitante: nuevaSolicitud.nombreSolicitante,
+                dia: salonDia,
+                horario: `${salonHoraInicio} - ${salonHoraFin}`,
+                total: salonCostoTotal
+              }
+            });
+
+            if (checkoutResponse && checkoutResponse.checkout_url) {
+              nuevaSolicitud.recurrenteCheckoutUrl = checkoutResponse.checkout_url;
+              nuevaSolicitud.recurrenteCheckoutId = checkoutResponse.id;
+              nuevaSolicitud.estadoPago = 'Checkout_Creado';
+              setCreatedSolicitudCheckoutUrl(checkoutResponse.checkout_url);
+
+              await firebaseService.saveSolicitud(nuevaSolicitud);
+              const updatedList = [nuevaSolicitud, ...solicitudes];
+              setSolicitudes(updatedList);
+              localStorage.setItem('club_leones_solicitudes', JSON.stringify(updatedList));
+
+              setCreatedSolicitudId(nuevaSolicitud.id);
+              setSaveSuccess(true);
+
+              // Redireccionar inmediatamente a la pasarela de Recurrente GT
+              window.location.href = checkoutResponse.checkout_url;
+              return;
+            }
+          } catch (payErr: any) {
+            console.error("Error al conectar con la pasarela Recurrente GT:", payErr);
+            alert(`ℹ️ Tu solicitud fue guardada con éxito (Código: ${nuevaSolicitud.id}).\n\nNotificación de Recurrente GT:\n${payErr?.message || 'No se pudo abrir automáticamente la pasarela.'}\n\nPuedes realizar tu pago por transferencia bancaria o en sede.`);
+          }
+        }
+      }
+
+      // Registro estándar (Transferencia / Exonerado / En Sede)
+      await firebaseService.saveSolicitud(nuevaSolicitud);
+      const updatedList = [nuevaSolicitud, ...solicitudes];
+      setSolicitudes(updatedList);
+      localStorage.setItem('club_leones_solicitudes', JSON.stringify(updatedList));
+
+      setCreatedSolicitudId(nuevaSolicitud.id);
+      setCreatedSolicitudCheckoutUrl(nuevaSolicitud.recurrenteCheckoutUrl || '');
+      setSaveSuccess(true);
+
+      // Limpiar estados
+      setDocDataUrl('');
+      setDocFileName('');
+      setSalonDia('');
+      setSalonHoraInicio('');
+      setSalonHoraFin('');
+      setSalonTipoAlquiler('salon');
+      setSalonAsistentes('');
+      setSalonCompromisoLimpieza('dejar_limpio');
+      setSalonExoneracion(false);
+      setSalonMotivoExoneracion('');
+      setSalonRequisitosAceptados(false);
+      if (!user) {
+        setSalonNombreSolicitante('');
+        setSalonInstitucion('');
+        setSalonEmail('');
+        setSalonTelefonoDigitos('');
+      }
+    } catch (err: any) {
+      console.error("Error saving salon solicitud:", err);
+      setSaveError("No se pudo enviar la solicitud. Verifique su conexión.");
+    } finally {
+      setIsSaving(false);
+      setIsRedirectingPayment(false);
+    }
+  };
+
   const renderSalonForm = () => {
     const isCapacityWarning = parseInt(salonAsistentes || '0') > 60 && parseInt(salonAsistentes || '0') <= 80;
     const isCapacityError = parseInt(salonAsistentes || '0') > 80;
-    const salonBasePrice = salonDuracion === '4_horas' ? 850 : 1500;
+    const salonBasePrice = salonDuracion === '4_horas' ? 700 : 1200;
 
     // Step 1 Validation
     const validateStep1 = () => {
@@ -1860,9 +2184,17 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="text-[10px] text-slate-400 font-bold">Dirigido a:</span>
-                  <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-lg bg-blue-100 text-blue-800 border border-blue-200">
-                    Público General, Instituciones y Socios
+                  <button
+                    type="button"
+                    onClick={handleCopyPublicSalonLink}
+                    className="px-3 py-1.5 bg-blue-100/80 hover:bg-blue-200/80 text-blue-900 font-extrabold rounded-xl text-[11px] flex items-center space-x-1.5 border border-blue-300/80 active:scale-95 transition-all shadow-xs cursor-pointer"
+                    title="Copiar y compartir enlace directo a este formulario"
+                  >
+                    <Share2 size={12} className="text-blue-700" />
+                    <span>Compartir Enlace</span>
+                  </button>
+                  <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-lg bg-blue-100 text-blue-800 border border-blue-200 hidden sm:inline-block">
+                    Público General y Socios
                   </span>
                 </div>
               </div>
@@ -1906,19 +2238,35 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
 
             {/* Inputs */}
             <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center">
-                  <User size={13} className="mr-1 text-slate-400" />
-                  Nombre Completo del Solicitante o Institución *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={salonNombreSolicitante}
-                  onChange={(e) => setSalonNombreSolicitante(e.target.value)}
-                  placeholder="Nombre"
-                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none text-xs sm:text-sm font-semibold text-slate-800 bg-white"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center">
+                    <User size={13} className="mr-1 text-slate-400" />
+                    Nombre Completo del Solicitante *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={salonNombreSolicitante}
+                    onChange={(e) => setSalonNombreSolicitante(e.target.value)}
+                    placeholder="Ej: Lic. Juan Carlos Pérez"
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none text-xs sm:text-sm font-semibold text-slate-800 bg-white shadow-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center">
+                    <Building size={13} className="mr-1 text-slate-400" />
+                    Institución / Empresa / Organización
+                  </label>
+                  <input
+                    type="text"
+                    value={salonInstitucion}
+                    onChange={(e) => setSalonInstitucion(e.target.value)}
+                    placeholder="Ej: Colegio de Médicos / Empresa S.A."
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none text-xs sm:text-sm font-semibold text-slate-800 bg-white shadow-xs"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -2017,7 +2365,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                             : 'bg-white text-slate-600 border border-slate-200 hover:bg-amber-50'
                         }`}
                       >
-                        4 Horas ({isSocio ? 'Q0' : 'Q850'})
+                        4 Horas ({isSocio ? 'Q0' : 'Q700'})
                       </button>
                       <button
                         type="button"
@@ -2028,7 +2376,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                             : 'bg-white text-slate-600 border border-slate-200 hover:bg-amber-50'
                         }`}
                       >
-                        8 Horas ({isSocio ? 'Q0' : 'Q1,500'})
+                        8 Horas ({isSocio ? 'Q0' : 'Q1,200'})
                       </button>
                     </div>
                   </div>
@@ -2058,9 +2406,15 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                     Uso total del parqueo privado del club para caravanas, exposiciones o resguardo masivo.
                   </p>
                 </div>
-                <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-xs font-bold text-slate-700">
-                  <span>Tarifa completa:</span>
-                  <span className="font-black text-amber-900">{isSocio ? 'Q. 1,500.00' : 'Q. 3,500.00'}</span>
+                <div className="pt-2 border-t border-amber-200/70 space-y-1 bg-amber-50/80 p-2.5 rounded-xl">
+                  <div className="flex justify-between items-center text-xs font-bold text-slate-800">
+                    <span>Tarifa Todo el Día:</span>
+                    <span className="font-black text-amber-950 text-sm">Q. 1,500.00</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5 text-[11px] text-amber-900 font-medium leading-tight">
+                    <Clock size={13} className="text-amber-600 flex-shrink-0" />
+                    <span>Uso exclusivo del área de parqueo.</span>
+                  </div>
                 </div>
               </div>
 
@@ -2119,7 +2473,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                       <button
                         type="button"
                         onClick={() => setSalonPlazasParqueo(Math.max(1, (salonPlazasParqueo || 1) - 1))}
-                        className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 font-black text-base flex items-center justify-center hover:bg-slate-100"
+                        className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 font-black text-base flex items-center justify-center hover:bg-slate-100 cursor-pointer"
                       >
                         -
                       </button>
@@ -2134,11 +2488,11 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                       <button
                         type="button"
                         onClick={() => setSalonPlazasParqueo(Math.min(40, (salonPlazasParqueo || 1) + 1))}
-                        className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 font-black text-base flex items-center justify-center hover:bg-slate-100"
+                        className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-700 font-black text-base flex items-center justify-center hover:bg-slate-100 cursor-pointer"
                       >
                         +
                       </button>
-                      <span className="text-[10px] text-slate-400 font-semibold">× Q{isSocio ? '15' : '20'}/plaza</span>
+                      <span className="text-[11px] text-amber-900 font-black">× Q50.00 / plaza por día</span>
                     </div>
                   </div>
                 )}
@@ -2182,7 +2536,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                             : 'bg-white text-slate-600 border border-slate-200 hover:bg-amber-50'
                         }`}
                       >
-                        4 Horas
+                        4 Horas ({isSocio ? 'Q1,500' : 'Q2,000'})
                       </button>
                       <button
                         type="button"
@@ -2193,7 +2547,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                             : 'bg-white text-slate-600 border border-slate-200 hover:bg-amber-50'
                         }`}
                       >
-                        8 Horas
+                        8 Horas ({isSocio ? 'Q1,500' : 'Q2,500'})
                       </button>
                     </div>
                   </div>
@@ -2381,33 +2735,63 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
               </div>
             </div>
 
-            {/* Exoneración Especial Switch */}
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
-              <label className="flex items-center justify-between cursor-pointer select-none">
-                <div className="space-y-0.5">
-                  <span className="text-xs font-bold text-slate-800 block">¿Aplica Exoneración Especial de Alquiler?</span>
-                  <span className="text-[11px] text-slate-500 block">Para convenios institucionales, eventos de beneficio o autorizaciones de Junta Directiva.</span>
+            {/* Exoneración Especial Card - Máxima Visibilidad y Claridad */}
+            <div className={`p-5 sm:p-6 rounded-3xl border-2 transition-all duration-300 ${
+              salonExoneracion 
+                ? 'bg-gradient-to-br from-amber-500/15 via-amber-50 to-orange-50/60 border-amber-500 shadow-lg ring-2 ring-amber-400/20' 
+                : 'bg-slate-50 border-slate-200 hover:border-amber-300'
+            }`}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1.5 flex-1">
+                  <div className="flex items-center space-x-2.5">
+                    <div className={`p-2 rounded-xl transition-colors ${salonExoneracion ? 'bg-amber-500 text-white shadow-md' : 'bg-slate-200 text-slate-700'}`}>
+                      <ShieldCheck size={22} />
+                    </div>
+                    <span className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+                      ¿Aplica Exoneración Especial de Alquiler?
+                    </span>
+                    <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 hidden sm:inline-block">
+                      Solo Salón
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-slate-700 font-medium leading-relaxed max-w-xl sm:pl-10">
+                    Aplica únicamente para convenios interinstitucionales, alianzas de servicio, causas benéficas o acuerdos aprobados por la Junta Directiva.
+                  </p>
+                  <p className="text-[11px] sm:text-xs text-amber-900 font-bold sm:pl-10">
+                    ℹ️ <strong>Importante:</strong> La exoneración especial aplica únicamente al valor del Salón de Eventos y Capacitaciones. Los rubros de parqueo y limpieza mantienen su tarifa reglamentaria.
+                  </p>
                 </div>
-                <input
-                  type="checkbox"
-                  checked={salonExoneracion}
-                  onChange={(e) => setSalonExoneracion(e.target.checked)}
-                  className="w-5 h-5 text-amber-600 rounded border-slate-300 focus:ring-amber-500 cursor-pointer"
-                />
-              </label>
+
+                <label className="flex items-center space-x-3 cursor-pointer select-none self-start sm:self-center bg-white px-5 py-3 rounded-2xl border-2 border-amber-300 shadow-md hover:bg-amber-50 transition-all ring-2 ring-amber-400/10">
+                  <input
+                    type="checkbox"
+                    checked={salonExoneracion}
+                    onChange={(e) => setSalonExoneracion(e.target.checked)}
+                    className="w-6 h-6 text-amber-600 rounded-lg border-2 border-amber-400 focus:ring-amber-500 cursor-pointer"
+                  />
+                  <span className={`text-xs sm:text-sm font-black tracking-wide ${salonExoneracion ? 'text-amber-900' : 'text-slate-700'}`}>
+                    {salonExoneracion ? '✓ EXONERACIÓN APLICADA' : 'APLICAR EXONERACIÓN'}
+                  </span>
+                </label>
+              </div>
 
               {salonExoneracion && (
-                <div className="pt-2 border-t border-slate-200 space-y-1.5 animate-in fade-in">
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                    Motivo o Referencia de Exoneración *
+                <div className="mt-4 pt-4 border-t border-amber-200/80 space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <label className="block text-xs font-black text-amber-950 uppercase tracking-wider">
+                    Motivo o Referencia Oficial de Exoneración *
                   </label>
                   <input
                     type="text"
+                    required={salonExoneracion}
                     value={salonMotivoExoneracion}
                     onChange={(e) => setSalonMotivoExoneracion(e.target.value)}
-                    placeholder="Motivo o justificación de la exoneración"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 bg-white focus:ring-2 focus:ring-amber-500 outline-none"
+                    placeholder="Ej: Convenio Educativo, Actividad Benéfica Comunal, Autorización Acta de Junta Directiva..."
+                    className="w-full px-4 py-2.5 border-2 border-amber-300 rounded-xl text-xs sm:text-sm font-bold text-slate-900 bg-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none placeholder:text-slate-400 shadow-xs"
                   />
+                  <p className="text-[11px] text-amber-900 font-semibold flex items-center space-x-1">
+                    <Info size={13} className="text-amber-600 flex-shrink-0" />
+                    <span>La exoneración será validada y aprobada internamente por Presidencia y Secretaría.</span>
+                  </p>
                 </div>
               )}
             </div>
@@ -2422,16 +2806,18 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                 <div className="flex justify-between">
                   <span>Instalación ({
                     salonTipoAlquiler === 'salon' ? `Salón ${salonDuracion === '8_horas' ? '8 Horas' : '4 Horas'}` :
-                    salonTipoAlquiler === 'parqueo' ? 'Parqueo Completo' :
+                    salonTipoAlquiler === 'parqueo' ? 'Parqueo Completo (Todo el Día)' :
                     salonTipoAlquiler === 'parqueo_plazas' ? `${salonPlazasParqueo || 1} Plazas de Parqueo` :
-                    `Salón (${salonDuracion === '8_horas' ? '8h' : '4h'}) + Parqueo`
+                    `Salón (${salonDuracion === '8_horas' ? '8h' : '4h'}) + Parqueo Completo`
                   }):</span>
                   <span className="font-bold text-white">
-                    {salonExoneracion ? 'Exonerado (Q0.00)' : `Q.${
-                      salonTipoAlquiler === 'salon' ? (isSocio ? 0 : salonBasePrice) :
-                      salonTipoAlquiler === 'parqueo' ? (isSocio ? 1500 : 3500) :
-                      salonTipoAlquiler === 'parqueo_plazas' ? ((salonPlazasParqueo || 1) * (isSocio ? 15 : 20)) :
-                      (isSocio ? 1500 : (3500 + salonBasePrice))
+                    {salonTipoAlquiler === 'salon' && (salonExoneracion || isSocio) ? 'Exonerado (Q0.00)' :
+                     salonTipoAlquiler === 'ambos' && (salonExoneracion || isSocio) ? 'Salón Exonerado + Parqueo (Q1,500.00)' :
+                     `Q.${
+                      salonTipoAlquiler === 'salon' ? (salonDuracion === '4_horas' ? 700 : 1200) :
+                      salonTipoAlquiler === 'parqueo' ? 1500 :
+                      salonTipoAlquiler === 'parqueo_plazas' ? ((salonPlazasParqueo || 1) * 50) :
+                      (salonDuracion === '4_horas' ? 2000 : 2500)
                     }.00`}
                   </span>
                 </div>
@@ -2502,10 +2888,42 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                 <span>Siguiente</span>
                 <ChevronRight size={16} />
               </button>
+            ) : salonCostoTotal > 0 ? (
+              <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
+                <button
+                  type="button"
+                  disabled={isSaving || isRedirectingPayment || !salonRequisitosAceptados || isCapacityError || (salonExoneracion && !salonMotivoExoneracion.trim())}
+                  onClick={() => handleSalonFinalSubmit('transferencia')}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 font-bold rounded-xl transition-all text-xs flex items-center justify-center space-x-1.5 cursor-pointer border border-slate-200 shadow-xs active:scale-95"
+                >
+                  <Clock size={14} className="text-slate-500" />
+                  <span>Pagar más tarde (Solo apartar)</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isSaving || isRedirectingPayment || !salonRequisitosAceptados || isCapacityError || (salonExoneracion && !salonMotivoExoneracion.trim())}
+                  onClick={() => handleSalonFinalSubmit('recurrente')}
+                  className="px-6 py-2.5 bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-950 hover:from-blue-800 hover:to-indigo-850 disabled:opacity-50 text-white font-black rounded-xl shadow-lg transition-all text-xs sm:text-sm flex items-center justify-center space-x-2 cursor-pointer active:scale-95 border border-amber-400/30"
+                >
+                  {isRedirectingPayment ? (
+                    <>
+                      <RefreshCw size={15} className="animate-spin text-amber-400" />
+                      <span>Conectando con Recurrente GT...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard size={16} className="text-amber-400" />
+                      <span>Realizar Pago en Línea Q{salonCostoTotal}.00 (Recurrente GT)</span>
+                    </>
+                  )}
+                </button>
+              </div>
             ) : (
               <button
-                type="submit"
-                disabled={isSaving || !salonRequisitosAceptados || isCapacityError}
+                type="button"
+                disabled={isSaving || !salonRequisitosAceptados || isCapacityError || (salonExoneracion && !salonMotivoExoneracion.trim())}
+                onClick={() => handleSalonFinalSubmit('exonerado')}
                 className="px-7 py-3 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-black rounded-xl shadow-lg transition-all text-xs sm:text-sm flex items-center space-x-2 cursor-pointer active:scale-95"
               >
                 {isSaving ? (
@@ -2516,7 +2934,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                 ) : (
                   <>
                     <Sparkles size={16} />
-                    <span>Confirmar y Enviar Reservación</span>
+                    <span>Confirmar Reservación (Q0.00)</span>
                   </>
                 )}
               </button>
@@ -3111,6 +3529,32 @@ Club de Leones de Quetzaltenango`;
         </div>
       )}
 
+      {createdSolicitudCheckoutUrl && (
+        <div className="bg-gradient-to-br from-blue-950 via-slate-900 to-indigo-950 text-white p-5 rounded-2xl max-w-md mx-auto space-y-3 shadow-xl text-left border border-amber-400/30">
+          <div className="flex items-center space-x-2.5">
+            <div className="p-1.5 rounded-lg bg-amber-500 text-slate-950 font-black">
+              <CreditCard size={18} />
+            </div>
+            <div>
+              <h4 className="text-sm font-black tracking-tight text-white">Pasarela de Pago Recurrente GT</h4>
+              <p className="text-[11px] text-amber-300 font-semibold">Pago 100% seguro con tarjeta de crédito/débito</p>
+            </div>
+          </div>
+          <p className="text-xs text-blue-100/90 font-medium leading-relaxed">
+            Haz clic en el siguiente enlace para abrir la pasarela y formalizar tu pago de reservación:
+          </p>
+          <a
+            href={createdSolicitudCheckoutUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black rounded-xl text-xs sm:text-sm transition-all shadow-md active:scale-95 flex items-center justify-center space-x-2 cursor-pointer"
+          >
+            <span>Ir a Pasarela Recurrente GT</span>
+            <ExternalLink size={15} />
+          </a>
+        </div>
+      )}
+
       <div className="pt-4 flex flex-wrap justify-center gap-3">
         <button
           type="button"
@@ -3669,7 +4113,9 @@ Club de Leones de Quetzaltenango`;
             <div>
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Solicitante / Detalle</span>
               <span className="text-xs font-bold text-slate-750 block mt-0.5">
-                {searchedSolicitud.nombreBeneficiario || searchedSolicitud.salonNombreSolicitante || searchedSolicitud.agendaSocioNombre || searchedSolicitud.nombre}
+                {searchedSolicitud.salonInstitucion
+                  ? `${searchedSolicitud.salonNombreSolicitante || searchedSolicitud.nombre} (${searchedSolicitud.salonInstitucion})`
+                  : (searchedSolicitud.nombreBeneficiario || searchedSolicitud.salonNombreSolicitante || searchedSolicitud.agendaSocioNombre || searchedSolicitud.nombre)}
               </span>
             </div>
             <div>
@@ -3907,10 +4353,21 @@ Club de Leones de Quetzaltenango`;
                             <button
                               type="button"
                               onClick={handleCopyPublicAgendaLink}
-                              className="px-3.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-extrabold rounded-xl text-xs flex items-center space-x-1.5 border border-indigo-200 active:scale-95 cursor-pointer"
+                              className="px-3.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-extrabold rounded-xl text-xs flex items-center space-x-1.5 border border-indigo-200 active:scale-95 cursor-pointer shadow-xs"
                             >
                               <Share2 size={13} />
                               <span>Compartir Enlace Público</span>
+                            </button>
+                          )}
+
+                          {cfg.id === 'salon' && (
+                            <button
+                              type="button"
+                              onClick={handleCopyPublicSalonLink}
+                              className="px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 font-extrabold rounded-xl text-xs flex items-center space-x-1.5 border border-amber-200 active:scale-95 cursor-pointer shadow-xs"
+                            >
+                              <Share2 size={13} className="text-amber-600" />
+                              <span>Compartir Enlace Directo</span>
                             </button>
                           )}
                         </div>
