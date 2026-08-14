@@ -238,7 +238,7 @@ export interface Solicitud {
   salonDia?: string;
   salonHoraInicio?: string;
   salonHoraFin?: string;
-  salonTipoAlquiler?: 'salon' | 'parqueo' | 'parqueo_plazas' | 'ambos';
+  salonTipoAlquiler?: 'salon' | 'parqueo' | 'parqueo_plazas' | 'salon_plazas' | 'ambos';
   salonPlazasParqueo?: number;
   salonDuracion?: '4_horas' | '8_horas';
   salonAsistentes?: number;

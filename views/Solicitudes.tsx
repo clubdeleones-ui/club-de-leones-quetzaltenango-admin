@@ -370,7 +370,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   const [salonDia, setSalonDia] = useState('');
   const [salonHoraInicio, setSalonHoraInicio] = useState('');
   const [salonHoraFin, setSalonHoraFin] = useState('');
-  const [salonTipoAlquiler, setSalonTipoAlquiler] = useState<'salon' | 'parqueo' | 'parqueo_plazas' | 'ambos'>('salon');
+  const [salonTipoAlquiler, setSalonTipoAlquiler] = useState<'salon' | 'parqueo' | 'parqueo_plazas' | 'salon_plazas' | 'ambos'>('salon');
   const [salonPlazasParqueo, setSalonPlazasParqueo] = useState<number>(10);
   const [salonDuracion, setSalonDuracion] = useState<'4_horas' | '8_horas'>('4_horas');
   const [salonAsistentes, setSalonAsistentes] = useState('');
@@ -712,6 +712,11 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     if (salonTipoAlquiler === 'salon') {
       // Exoneración aplica al 100% en salón de eventos y capacitaciones
       base = (salonExoneracion || isSocio) ? 0 : salonPrecioBase;
+    } else if (salonTipoAlquiler === 'salon_plazas') {
+      // Salón + Parqueo por plazas: salón exonerable/socio, plazas a Q50 sin exoneración
+      const salonPart = (salonExoneracion || isSocio) ? 0 : salonPrecioBase;
+      const plazasPart = (salonPlazasParqueo || 1) * 50;
+      base = salonPart + plazasPart;
     } else if (salonTipoAlquiler === 'parqueo') {
       // Parqueo completo: Q1,500 todo el día (no cuenta con exoneración)
       base = 1500;
@@ -1535,7 +1540,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                         <span className="font-semibold text-slate-700">{sol.salonEmail}</span>
                       </div>
                     )}
-                    {sol.salonTipoAlquiler === 'parqueo_plazas' && (
+                    {(sol.salonTipoAlquiler === 'parqueo_plazas' || sol.salonTipoAlquiler === 'salon_plazas') && (
                       <div className="flex justify-between">
                         <span className="text-slate-400 font-bold">Plazas reservadas:</span>
                         <span className="font-extrabold text-blue-900">{sol.salonPlazasParqueo || 1} Plazas</span>
@@ -1820,7 +1825,8 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     }
 
     let solNombre = 'Alquiler - Salón de Eventos';
-    if (salonTipoAlquiler === 'parqueo') solNombre = 'Alquiler - Parqueo Completo';
+    if (salonTipoAlquiler === 'salon_plazas') solNombre = `Alquiler - Salón y Parqueo (${salonPlazasParqueo || 1} Plazas)`;
+    else if (salonTipoAlquiler === 'parqueo') solNombre = 'Alquiler - Parqueo Completo';
     else if (salonTipoAlquiler === 'parqueo_plazas') solNombre = `Alquiler - Parqueo (${salonPlazasParqueo || 1} Plazas)`;
     else if (salonTipoAlquiler === 'ambos') solNombre = 'Alquiler - Salón y Parqueo Completo';
 
@@ -1842,8 +1848,8 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       salonHoraInicio,
       salonHoraFin,
       salonTipoAlquiler,
-      salonPlazasParqueo: salonTipoAlquiler === 'parqueo_plazas' ? salonPlazasParqueo : undefined,
-      salonDuracion: (salonTipoAlquiler === 'salon' || salonTipoAlquiler === 'ambos') ? salonDuracion : undefined,
+      salonPlazasParqueo: (salonTipoAlquiler === 'parqueo_plazas' || salonTipoAlquiler === 'salon_plazas') ? salonPlazasParqueo : undefined,
+      salonDuracion: (salonTipoAlquiler === 'salon' || salonTipoAlquiler === 'salon_plazas' || salonTipoAlquiler === 'ambos') ? salonDuracion : undefined,
       salonAsistentes: asistentesNum,
       salonCompromisoLimpieza,
       salonExoneracion,
@@ -1885,6 +1891,23 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
               quantity: 1
             });
           }
+        } else if (salonTipoAlquiler === 'salon_plazas') {
+          const salonBaseAmount = (salonExoneracion || isSocio) ? 0 : (salonDuracion === '4_horas' ? 700 : 1200);
+          if (salonBaseAmount > 0) {
+            checkoutItems.push({
+              name: `Alquiler Salón de Eventos y Capacitaciones (${salonDuracion === '8_horas' ? '8 Horas' : '4 Horas'})`,
+              amount_in_cents: salonBaseAmount * 100,
+              currency: 'GTQ',
+              quantity: 1
+            });
+          }
+          const qty = salonPlazasParqueo || 1;
+          checkoutItems.push({
+            name: `Reserva de Plazas de Parqueo (${qty} Plazas / Día)`,
+            amount_in_cents: qty * 50 * 100,
+            currency: 'GTQ',
+            quantity: 1
+          });
         } else if (salonTipoAlquiler === 'parqueo') {
           // Parqueo completo no tiene exoneración
           checkoutItems.push({
@@ -2038,7 +2061,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
 
     // Step 2 Validation
     const validateStep2 = () => {
-      if (salonTipoAlquiler === 'parqueo_plazas' && (!salonPlazasParqueo || salonPlazasParqueo < 1)) {
+      if ((salonTipoAlquiler === 'parqueo_plazas' || salonTipoAlquiler === 'salon_plazas') && (!salonPlazasParqueo || salonPlazasParqueo < 1)) {
         setSaveError("Selecciona al menos 1 plaza de parqueo.");
         return false;
       }
@@ -2325,9 +2348,9 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
               </div>
             </div>
 
-            {/* 4 Interactive Option Cards */}
+            {/* Interactive Option Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {/* Option 1: Salón de Eventos */}
+              {/* Option 1: Solo Salón de Eventos */}
               <div 
                 onClick={() => setSalonTipoAlquiler('salon')}
                 className={`p-4 rounded-2xl border-2 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-3 ${
@@ -2383,7 +2406,118 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                 )}
               </div>
 
-              {/* Option 2: Parqueo Completo */}
+              {/* Option 2: Salón + Parqueo por Plazas (NUEVO) */}
+              <div 
+                onClick={() => setSalonTipoAlquiler('salon_plazas')}
+                className={`p-4 rounded-2xl border-2 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-3 ${
+                  salonTipoAlquiler === 'salon_plazas'
+                    ? 'border-amber-500 bg-amber-50/40 shadow-md ring-2 ring-amber-500/10'
+                    : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
+                }`}
+              >
+                <div className="space-y-2">
+                  <div className="flex justify-between items-start">
+                    <div className={`p-2 rounded-xl flex items-center space-x-1 ${salonTipoAlquiler === 'salon_plazas' ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                      <Building size={16} />
+                      <Car size={16} />
+                    </div>
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                      Salón + Plazas
+                    </span>
+                  </div>
+                  <h4 className="font-extrabold text-slate-800 text-sm">Salón y Parqueo por Plazas</h4>
+                  <p className="text-[11px] text-slate-500 leading-snug">
+                    Salón de eventos más la cantidad exacta de plazas de parqueo que requieras para tus invitados.
+                  </p>
+                </div>
+
+                {/* Duration & Plazas inside option 2 if selected */}
+                {salonTipoAlquiler === 'salon_plazas' && (
+                  <div className="pt-2 border-t border-amber-200/60 space-y-2.5" onClick={(e) => e.stopPropagation()}>
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold uppercase text-amber-800 tracking-wider block">1. Duración Salón:</span>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setSalonDuracion('4_horas')}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-black transition-all ${
+                            salonDuracion === '4_horas'
+                              ? 'bg-amber-500 text-white shadow-sm'
+                              : 'bg-white text-slate-600 border border-slate-200 hover:bg-amber-50'
+                          }`}
+                        >
+                          4 Horas ({isSocio ? 'Q0' : 'Q700'})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSalonDuracion('8_horas')}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-black transition-all ${
+                            salonDuracion === '8_horas'
+                              ? 'bg-amber-500 text-white shadow-sm'
+                              : 'bg-white text-slate-600 border border-slate-200 hover:bg-amber-50'
+                          }`}
+                        >
+                          8 Horas ({isSocio ? 'Q0' : 'Q1,200'})
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 pt-2 border-t border-amber-200/40">
+                      <div className="flex justify-between items-center text-xs font-bold text-slate-700">
+                        <span>2. Plazas de Parqueo:</span>
+                        <span className="text-amber-900 font-black text-sm">{salonPlazasParqueo} Plazas</span>
+                      </div>
+
+                      {/* Quick Selection Buttons */}
+                      <div className="flex flex-wrap gap-1">
+                        {[5, 10, 15, 20].map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => setSalonPlazasParqueo(n)}
+                            className={`px-2 py-0.5 rounded text-[10px] font-black transition-all ${
+                              salonPlazasParqueo === n
+                                ? 'bg-amber-500 text-white'
+                                : 'bg-white text-slate-600 border border-slate-200 hover:bg-amber-50'
+                            }`}
+                          >
+                            {n} pl.
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Increment / Decrement & input */}
+                      <div className="flex items-center space-x-2 pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setSalonPlazasParqueo(Math.max(1, (salonPlazasParqueo || 1) - 1))}
+                          className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 font-black text-sm flex items-center justify-center hover:bg-slate-100 cursor-pointer"
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          min="1"
+                          max="40"
+                          value={salonPlazasParqueo}
+                          onChange={(e) => setSalonPlazasParqueo(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="w-14 text-center py-1 border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setSalonPlazasParqueo(Math.min(40, (salonPlazasParqueo || 1) + 1))}
+                          className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-700 font-black text-sm flex items-center justify-center hover:bg-slate-100 cursor-pointer"
+                        >
+                          +
+                        </button>
+                        <span className="text-[10px] text-amber-900 font-black">× Q50.00 / plaza</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Option 3: Parqueo Completo */}
               <div 
                 onClick={() => setSalonTipoAlquiler('parqueo')}
                 className={`p-4 rounded-2xl border-2 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-3 ${
@@ -2418,7 +2552,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                 </div>
               </div>
 
-              {/* Option 3: Parqueo por Plazas */}
+              {/* Option 4: Parqueo por Plazas */}
               <div 
                 onClick={() => setSalonTipoAlquiler('parqueo_plazas')}
                 className={`p-4 rounded-2xl border-2 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-3 ${
@@ -2498,10 +2632,10 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                 )}
               </div>
 
-              {/* Option 4: Combo Salón y Parqueo */}
+              {/* Option 5: Combo Salón y Parqueo Completo */}
               <div 
                 onClick={() => setSalonTipoAlquiler('ambos')}
-                className={`p-4 rounded-2xl border-2 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-3 ${
+                className={`p-4 rounded-2xl border-2 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-3 sm:col-span-2 ${
                   salonTipoAlquiler === 'ambos'
                     ? 'border-amber-500 bg-amber-50/40 shadow-md ring-2 ring-amber-500/10'
                     : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
@@ -2806,15 +2940,18 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                 <div className="flex justify-between">
                   <span>Instalación ({
                     salonTipoAlquiler === 'salon' ? `Salón ${salonDuracion === '8_horas' ? '8 Horas' : '4 Horas'}` :
+                    salonTipoAlquiler === 'salon_plazas' ? `Salón (${salonDuracion === '8_horas' ? '8h' : '4h'}) + ${salonPlazasParqueo || 1} Plazas` :
                     salonTipoAlquiler === 'parqueo' ? 'Parqueo Completo (Todo el Día)' :
                     salonTipoAlquiler === 'parqueo_plazas' ? `${salonPlazasParqueo || 1} Plazas de Parqueo` :
                     `Salón (${salonDuracion === '8_horas' ? '8h' : '4h'}) + Parqueo Completo`
                   }):</span>
                   <span className="font-bold text-white">
                     {salonTipoAlquiler === 'salon' && (salonExoneracion || isSocio) ? 'Exonerado (Q0.00)' :
+                     salonTipoAlquiler === 'salon_plazas' && (salonExoneracion || isSocio) ? `Salón Exonerado + Plazas (Q.${(salonPlazasParqueo || 1) * 50}.00)` :
                      salonTipoAlquiler === 'ambos' && (salonExoneracion || isSocio) ? 'Salón Exonerado + Parqueo (Q1,500.00)' :
                      `Q.${
                       salonTipoAlquiler === 'salon' ? (salonDuracion === '4_horas' ? 700 : 1200) :
+                      salonTipoAlquiler === 'salon_plazas' ? ((salonDuracion === '4_horas' ? 700 : 1200) + (salonPlazasParqueo || 1) * 50) :
                       salonTipoAlquiler === 'parqueo' ? 1500 :
                       salonTipoAlquiler === 'parqueo_plazas' ? ((salonPlazasParqueo || 1) * 50) :
                       (salonDuracion === '4_horas' ? 2000 : 2500)
@@ -4290,7 +4427,7 @@ Club de Leones de Quetzaltenango`;
 
               {/* Contenido Expandido del Acordeón con Formulario Integrado Directo */}
               {isExpanded && (
-                <div className="p-6 md:p-8 border-t border-slate-100 bg-slate-50/30 animate-in slide-in-from-top duration-300">
+                <div className="p-2 sm:p-6 md:p-8 border-t border-slate-100 bg-slate-50/30 animate-in slide-in-from-top duration-300">
                   {(() => {
                     const currentMode = getTabMode(cfg.id);
 
@@ -4303,14 +4440,14 @@ Club de Leones de Quetzaltenango`;
                     }
 
                     return (
-                      <div className="space-y-6 w-full text-left">
+                      <div className="space-y-4 sm:space-y-6 w-full text-left">
                         {/* Barra de Navegación Segmentada Integrada */}
-                        <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2 rounded-2xl border border-slate-200 shadow-xs">
-                          <div className="flex items-center space-x-1.5 overflow-x-auto">
+                        <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white p-2 rounded-2xl border border-slate-200 shadow-xs">
+                          <div className="flex items-center space-x-1.5 overflow-x-auto w-full sm:w-auto">
                             <button
                               type="button"
                               onClick={() => setTabMode(cfg.id, 'form')}
-                              className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center space-x-2 transition-all cursor-pointer ${
+                              className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-extrabold flex items-center space-x-1.5 sm:space-x-2 transition-all cursor-pointer flex-shrink-0 ${
                                 currentMode === 'form'
                                   ? BUTTON_CLASSES[cfg.colorTheme] + ' shadow-sm'
                                   : 'text-slate-600 hover:bg-slate-100'
@@ -4323,28 +4460,28 @@ Club de Leones de Quetzaltenango`;
                             <button
                               type="button"
                               onClick={() => setTabMode(cfg.id, 'list')}
-                              className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center space-x-2 transition-all cursor-pointer ${
+                              className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-extrabold flex items-center space-x-1.5 sm:space-x-2 transition-all cursor-pointer flex-shrink-0 ${
                                 currentMode === 'list'
                                   ? BUTTON_CLASSES[cfg.colorTheme] + ' shadow-sm'
                                   : 'text-slate-600 hover:bg-slate-100'
                               }`}
                             >
                               <FileText size={14} />
-                              <span>Solicitudes Registradas ({counts[cfg.id as keyof typeof counts] || 0})</span>
+                              <span>Solicitudes ({counts[cfg.id as keyof typeof counts] || 0})</span>
                             </button>
 
                             {cfg.id !== 'agenda' && (
                               <button
                                 type="button"
                                 onClick={() => setTabMode(cfg.id, 'tracking')}
-                                className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center space-x-2 transition-all cursor-pointer ${
+                                className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-extrabold flex items-center space-x-1.5 sm:space-x-2 transition-all cursor-pointer flex-shrink-0 ${
                                   currentMode === 'tracking'
                                     ? BUTTON_CLASSES[cfg.colorTheme] + ' shadow-sm'
                                     : 'text-slate-600 hover:bg-slate-100'
                                 }`}
                               >
                                 <Shield size={14} />
-                                <span>Consultar Tracking</span>
+                                <span>Tracking</span>
                               </button>
                             )}
                           </div>
@@ -4356,7 +4493,7 @@ Club de Leones de Quetzaltenango`;
                               className="px-3.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-extrabold rounded-xl text-xs flex items-center space-x-1.5 border border-indigo-200 active:scale-95 cursor-pointer shadow-xs"
                             >
                               <Share2 size={13} />
-                              <span>Compartir Enlace Público</span>
+                              <span>Compartir Enlace</span>
                             </button>
                           )}
 
@@ -4367,14 +4504,14 @@ Club de Leones de Quetzaltenango`;
                               className="px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 font-extrabold rounded-xl text-xs flex items-center space-x-1.5 border border-amber-200 active:scale-95 cursor-pointer shadow-xs"
                             >
                               <Share2 size={13} className="text-amber-600" />
-                              <span>Compartir Enlace Directo</span>
+                              <span>Compartir Enlace</span>
                             </button>
                           )}
                         </div>
 
-                        {/* Vista 1: Formulario Integrado Directo */}
+                        {/* Vista 1: Formulario Integrado Directo (Sin doble contenedor en móviles) */}
                         {currentMode === 'form' && (
-                          <div className="bg-white rounded-3xl border border-slate-200 p-6 md:p-8 shadow-xs">
+                          <div className="bg-transparent sm:bg-white rounded-2xl sm:rounded-3xl border-0 sm:border sm:border-slate-200 p-0 sm:p-6 md:p-8 sm:shadow-xs">
                             {saveSuccess ? (
                               renderSuccessBlock()
                             ) : (
