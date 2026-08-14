@@ -362,6 +362,17 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   const [salonMotivoExoneracion, setSalonMotivoExoneracion] = useState('');
   const [salonRequisitosAceptados, setSalonRequisitosAceptados] = useState(false);
 
+  // Tab View Mode (embedded in accordion: 'form' | 'list' | 'tracking')
+  const [tabViewMode, setTabViewMode] = useState<{ [key: string]: 'form' | 'list' | 'tracking' }>({});
+
+  const getTabMode = (tabId: string): 'form' | 'list' | 'tracking' => {
+    return tabViewMode[tabId] || 'form';
+  };
+
+  const setTabMode = (tabId: string, mode: 'form' | 'list' | 'tracking') => {
+    setTabViewMode(prev => ({ ...prev, [tabId]: mode }));
+  };
+
   // Auto-fill salon form details if user is logged in
   useEffect(() => {
     if (user) {
@@ -1761,26 +1772,59 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       }
     };
 
-    const steps = [
-      { num: 1, title: 'Solicitante', icon: <User size={14} /> },
-      { num: 2, title: 'Instalación', icon: <Building size={14} /> },
-      { num: 3, title: 'Horarios', icon: <Clock size={14} /> },
-      { num: 4, title: 'Cotización', icon: <DollarSign size={14} /> }
+    const stepColorThemes = [
+      {
+        num: 1,
+        title: 'Solicitante',
+        icon: <User size={15} />,
+        activeBg: 'bg-blue-600 ring-4 ring-blue-600/20 text-white shadow-lg shadow-blue-500/20',
+        doneBg: 'bg-blue-600 text-white',
+        activeText: 'text-blue-900',
+        badge: 'bg-blue-50 text-blue-700 border-blue-200'
+      },
+      {
+        num: 2,
+        title: 'Instalación',
+        icon: <Building size={15} />,
+        activeBg: 'bg-amber-500 ring-4 ring-amber-500/20 text-white shadow-lg shadow-amber-500/20',
+        doneBg: 'bg-amber-500 text-white',
+        activeText: 'text-amber-900',
+        badge: 'bg-amber-50 text-amber-700 border-amber-200'
+      },
+      {
+        num: 3,
+        title: 'Horarios',
+        icon: <Clock size={15} />,
+        activeBg: 'bg-purple-600 ring-4 ring-purple-600/20 text-white shadow-lg shadow-purple-500/20',
+        doneBg: 'bg-purple-600 text-white',
+        activeText: 'text-purple-900',
+        badge: 'bg-purple-50 text-purple-700 border-purple-200'
+      },
+      {
+        num: 4,
+        title: 'Cotización',
+        icon: <DollarSign size={15} />,
+        activeBg: 'bg-emerald-600 ring-4 ring-emerald-600/20 text-white shadow-lg shadow-emerald-500/20',
+        doneBg: 'bg-emerald-600 text-white',
+        activeText: 'text-emerald-900',
+        badge: 'bg-emerald-50 text-emerald-700 border-emerald-200'
+      }
     ];
 
     return (
       <form onSubmit={handleSubmit} className="space-y-6 text-left animate-in fade-in duration-300">
-        {/* STEPPER PROGRESS BAR */}
-        <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 sm:p-4">
+        {/* STEPPER PROGRESS BAR WITH COLOR CODES */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-xs">
           <div className="flex items-center justify-between relative">
-            {/* Connecting line */}
-            <div className="absolute top-1/2 left-6 right-6 -translate-y-1/2 h-0.5 bg-slate-200 -z-0" />
+            {/* Base line */}
+            <div className="absolute top-4 sm:top-5 left-6 right-6 h-1 bg-slate-100 rounded-full -z-0" />
+            {/* Dynamic Multi-color active gradient line */}
             <div 
-              className="absolute top-1/2 left-6 -translate-y-1/2 h-0.5 bg-amber-500 transition-all duration-500 -z-0"
-              style={{ width: `${((salonWizardStep - 1) / (steps.length - 1)) * 100}%` }}
+              className="absolute top-4 sm:top-5 left-6 h-1 bg-gradient-to-r from-blue-600 via-amber-500 via-purple-600 to-emerald-600 rounded-full transition-all duration-500 -z-0"
+              style={{ width: `${((salonWizardStep - 1) / (stepColorThemes.length - 1)) * 100}%` }}
             />
 
-            {steps.map((s) => {
+            {stepColorThemes.map((s) => {
               const isDone = salonWizardStep > s.num;
               const isCurrent = salonWizardStep === s.num;
               return (
@@ -1793,18 +1837,18 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                         setSaveError(null);
                       }
                     }}
-                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl font-black text-xs flex items-center justify-center transition-all duration-300 shadow-sm ${
+                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl font-black text-xs flex items-center justify-center transition-all duration-300 ${
                       isDone
-                        ? 'bg-amber-500 text-white hover:bg-amber-600 cursor-pointer'
+                        ? `${s.doneBg} shadow-sm hover:scale-105 cursor-pointer`
                         : isCurrent
-                        ? 'bg-amber-600 text-white ring-4 ring-amber-500/20 scale-110'
-                        : 'bg-white border border-slate-200 text-slate-400 cursor-not-allowed'
+                        ? `${s.activeBg} scale-110`
+                        : 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed'
                     }`}
                   >
-                    {isDone ? <Check size={14} /> : s.num}
+                    {isDone ? <Check size={16} /> : s.icon}
                   </button>
-                  <span className={`text-[10px] sm:text-[11px] font-bold mt-1.5 hidden xs:block ${
-                    isCurrent ? 'text-amber-900 font-black' : isDone ? 'text-slate-700' : 'text-slate-400'
+                  <span className={`text-[11px] sm:text-xs mt-2 hidden xs:block tracking-tight ${
+                    isCurrent ? `${s.activeText} font-black` : isDone ? 'text-slate-700 font-bold' : 'text-slate-400 font-medium'
                   }`}>
                     {s.title}
                   </span>
@@ -1817,13 +1861,43 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
         {/* PASO 1: DATOS DEL SOLICITANTE */}
         {salonWizardStep === 1 && (
           <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 flex items-start space-x-3 text-amber-900">
-              <Sparkles className="flex-shrink-0 mt-0.5 text-amber-600" size={18} />
-              <div className="space-y-1">
-                <p className="font-extrabold text-xs sm:text-sm text-amber-950">Paso 1: Información del Solicitante</p>
-                <p className="text-xs text-slate-650 font-medium leading-relaxed">
-                  Ingresa tus datos de contacto para formalizar tu solicitud de alquiler. Nos comunicaremos contigo para confirmar disponibilidad.
-                </p>
+            {/* Tarjeta: ¿Qué hacemos aquí? */}
+            <div className="bg-gradient-to-br from-blue-50/90 via-indigo-50/40 to-slate-50 border border-blue-200/80 rounded-2xl p-5 shadow-xs space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-blue-200/60 pb-2.5">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-sm">
+                    <Info size={16} />
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-sm sm:text-base text-blue-950">¿Qué hacemos aquí?</h4>
+                    <p className="text-[11px] text-blue-750 font-bold">Alquiler de Salón y Parqueo del Club de Leones</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-[10px] text-slate-400 font-bold">Dirigido a:</span>
+                  <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-lg bg-blue-100 text-blue-800 border border-blue-200">
+                    Público General, Instituciones y Socios
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-700 leading-relaxed font-medium">
+                En esta sección puedes solicitar el alquiler del <strong>salón de eventos y capacitaciones</strong> (con capacidad de hasta 80 personas, mesas, sillería y sanitarios) o el <strong>uso del parqueo privado</strong> (completo o por plazas asignadas). Completa los 4 pasos guiados para generar tu cotización y registrar tu reservación oficial.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] font-semibold text-slate-600 pt-1">
+                <div className="flex items-center space-x-1.5 bg-white/80 p-2 rounded-xl border border-blue-100">
+                  <CheckCircle size={13} className="text-emerald-600 flex-shrink-0" />
+                  <span>Aforo: 60 sentados / 80 pie</span>
+                </div>
+                <div className="flex items-center space-x-1.5 bg-white/80 p-2 rounded-xl border border-blue-100">
+                  <CheckCircle size={13} className="text-blue-600 flex-shrink-0" />
+                  <span>Tarifas preferenciales socios</span>
+                </div>
+                <div className="flex items-center space-x-1.5 bg-white/80 p-2 rounded-xl border border-blue-100">
+                  <CheckCircle size={13} className="text-amber-600 flex-shrink-0" />
+                  <span>Depósito garantía reembolsable</span>
+                </div>
               </div>
             </div>
 
@@ -3009,13 +3083,700 @@ Club de Leones de Quetzaltenango`;
     );
   };
 
+  const renderSuccessBlock = () => (
+    <div className="text-center py-8 space-y-6 animate-in zoom-in-95 duration-300">
+      <div className="bg-emerald-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto text-emerald-600 border-4 border-emerald-100 shadow-sm">
+        <CheckCircle size={40} />
+      </div>
+      <div className="space-y-2">
+        <h3 className="text-2xl font-black text-slate-800">¡Registro Exitoso!</h3>
+        <p className="text-slate-600 text-sm font-semibold max-w-md mx-auto leading-relaxed">
+          Tu solicitud ha sido enviada directamente a la Presidencia del Club. Guarda el siguiente código único para consultar su estado en tiempo real:
+        </p>
+      </div>
+      
+      {createdSolicitudId && (
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 max-w-md mx-auto flex items-center justify-between shadow-inner">
+          <div className="text-left">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Código de Seguimiento</span>
+            <span className="text-base font-mono font-bold text-blue-900 select-all block mt-0.5">{createdSolicitudId}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard.writeText(createdSolicitudId);
+              alert("Código copiado al portapapeles.");
+            }}
+            className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center space-x-1.5 cursor-pointer"
+          >
+            <Copy size={14} />
+            <span>Copiar código</span>
+          </button>
+        </div>
+      )}
+
+      <div className="pt-4 flex flex-wrap justify-center gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            setSaveSuccess(false);
+            setCreatedSolicitudId('');
+            setSalonWizardStep(1);
+          }}
+          className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-extrabold rounded-xl text-xs shadow-md transition-all active:scale-[0.98] cursor-pointer"
+        >
+          Crear otra solicitud
+        </button>
+        {activeTab && (
+          <button
+            type="button"
+            onClick={() => {
+              setSaveSuccess(false);
+              setTabMode(activeTab, 'list');
+            }}
+            className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold rounded-xl text-xs transition-all cursor-pointer"
+          >
+            Ver solicitudes registradas
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderSillasForm = () => (
+    <form onSubmit={handleSubmit} className="space-y-5 text-left animate-in fade-in duration-300">
+      {/* Solidarity Note */}
+      <div className="bg-blue-50 border border-blue-200/80 rounded-2xl p-5 flex items-start space-x-3 text-blue-900 text-xs md:text-sm shadow-xs">
+        <Heart className="flex-shrink-0 text-amber-500 fill-amber-500 mt-0.5 animate-pulse" size={18} />
+        <div className="space-y-1">
+          <p className="font-extrabold text-blue-950 text-sm">💡 Nota de Solidaridad y Compromiso</p>
+          <p className="leading-relaxed font-medium text-slate-700">
+            Las sillas de ruedas se entregan en calidad de <strong>préstamo temporal</strong>. Para que este beneficio siga activo y ayude a más personas, <strong>te solicitamos amablemente que devuelvas la silla al Club</strong> una vez que el beneficiario ya no la requiera.
+          </p>
+        </div>
+      </div>
+
+      {/* Section: Applicant Details */}
+      <div className="space-y-4">
+        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1 flex items-center">
+          <User size={14} className="mr-1.5 text-slate-400" />
+          Datos del Solicitante (Responsable del compromiso)
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+              Nombre Completo *
+            </label>
+            <input
+              type="text"
+              required
+              value={nombreSolicitante}
+              onChange={(e) => setNombreSolicitante(e.target.value)}
+              placeholder="Ej. Juan Carlos Pérez Pérez"
+              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+              Número de DPI *
+            </label>
+            <input
+              type="text"
+              required
+              value={dpiSolicitante}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '');
+                if (val.length <= 13) setDpiSolicitante(val);
+              }}
+              placeholder="CUI / DPI (13 dígitos)"
+              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+            Número de Teléfono *
+          </label>
+          <div className="flex rounded-xl border border-slate-200 focus-within:ring-2 focus-within:ring-blue-900 focus-within:border-transparent overflow-hidden bg-white">
+            <span className="bg-slate-100 text-slate-500 px-4 py-3 flex items-center justify-center border-r border-slate-200 text-sm font-extrabold select-none">
+              +502
+            </span>
+            <input
+              type="tel"
+              required
+              value={telefonoSolicitante}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '');
+                if (val.length <= 8) setTelefonoSolicitante(val);
+              }}
+              placeholder="5555 5555"
+              className="w-full px-4 py-2.5 outline-none text-sm text-slate-800 font-semibold"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Section: Beneficiary Details */}
+      <div className="space-y-4 pt-2">
+        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1 flex items-center">
+          <Accessibility size={14} className="mr-1.5 text-slate-400" />
+          Datos del Beneficiario (Persona que usará la silla)
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+              ¿Para quién es la silla? (Nombre Completo) *
+            </label>
+            <input
+              type="text"
+              required
+              value={nombreBeneficiario}
+              onChange={(e) => setNombreBeneficiario(e.target.value)}
+              placeholder="Ej. María Elena Pérez"
+              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+              Edad del Beneficiario (Años) *
+            </label>
+            <input
+              type="number"
+              required
+              min="0"
+              max="120"
+              value={edadBeneficiario}
+              onChange={(e) => setEdadBeneficiario(e.target.value)}
+              placeholder="Ej. 75"
+              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+            ¿Cuánto tiempo pretende usarla? *
+          </label>
+          <input
+            type="text"
+            required
+            value={tiempoUso}
+            onChange={(e) => setTiempoUso(e.target.value)}
+            placeholder="Ej. 3 meses (recuperación de cirugía), permanente, etc."
+            className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+          />
+        </div>
+      </div>
+
+      {/* Submit Buttons */}
+      <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
+        <button
+          type="submit"
+          disabled={isSaving}
+          className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-black rounded-xl shadow-lg transition-all text-sm flex items-center justify-center space-x-2 cursor-pointer"
+        >
+          {isSaving ? (
+            <>
+              <div className="animate-spin text-white flex-shrink-0"><Users size={14} /></div>
+              <span>Enviando...</span>
+            </>
+          ) : (
+            <span>Enviar Solicitud de Silla</span>
+          )}
+        </button>
+      </div>
+    </form>
+  );
+
+  const renderAgendaForm = () => (
+    <form onSubmit={handleSubmit} className="space-y-5 text-left animate-in fade-in duration-300">
+      {/* Agenda Info Alert */}
+      <div className="bg-yellow-50/60 border border-yellow-200/80 rounded-2xl p-5 flex items-start justify-between text-yellow-900 text-xs md:text-sm shadow-xs gap-3">
+        <div className="flex items-start space-x-3">
+          <Calendar className="flex-shrink-0 text-yellow-600 mt-0.5 animate-pulse" size={18} />
+          <div className="space-y-1">
+            <p className="font-extrabold text-yellow-950 text-sm">💡 Propuesta de Punto de Agenda</p>
+            <p className="leading-relaxed font-medium text-slate-750">
+              Puedes proponer temas, puntos a discutir o solicitudes para ser incluidos en el orden del día de las reuniones generales del club.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Form Fields */}
+      <div className="space-y-4">
+        <div>
+          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+            Socio Solicitante *
+          </label>
+          <input
+            type="text"
+            required
+            value={agendaSocioNombre}
+            onChange={(e) => setAgendaSocioNombre(e.target.value)}
+            placeholder="Ingrese el nombre completo del socio solicitante..."
+            className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+            Nombre del Punto *
+          </label>
+          <input
+            type="text"
+            required
+            value={agendaNombrePunto}
+            onChange={(e) => setAgendaNombrePunto(e.target.value)}
+            placeholder="Ej. Campaña Médica Quetzaltenango / Ajuste de cuota de socios"
+            className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+            Contenido del Punto *
+          </label>
+          <textarea
+            rows={3}
+            required
+            value={agendaContenido}
+            onChange={(e) => setAgendaContenido(e.target.value)}
+            placeholder="Describe el contenido o propuesta a detallar en la reunión..."
+            className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold resize-none text-slate-800"
+          />
+        </div>
+
+        {/* Document / Image / PDF Attachment Field */}
+        <div>
+          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+            Carta, Foto o Documento Adjunto (Imagen o PDF, Máx. 10MB) - Opcional
+          </label>
+          <div className="border-2 border-dashed border-slate-200 hover:border-indigo-300 rounded-2xl p-4 text-center transition-all bg-slate-50/50">
+            {docFileName ? (
+              <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl p-3 shadow-xs">
+                <div className="flex items-center space-x-2.5 min-w-0">
+                  <div className="p-2 bg-indigo-50 text-indigo-900 rounded-lg flex-shrink-0">
+                    <FileText size={18} />
+                  </div>
+                  <div className="min-w-0 text-left">
+                    <p className="text-xs font-bold text-slate-800 truncate">{docFileName}</p>
+                    <p className="text-[10px] text-slate-400 font-semibold">Documento listo para enviar</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setDocDataUrl(''); setDocFileName(''); }}
+                  className="p-1 text-slate-400 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
+                  title="Quitar archivo"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <label className="cursor-pointer flex flex-col items-center justify-center space-y-1.5 py-2">
+                <Upload size={22} className="text-indigo-400" />
+                <span className="text-xs font-bold text-indigo-900">Adjuntar Carta, Contexto o Foto</span>
+                <span className="text-[10px] text-slate-400">Archivos PDF, PNG, JPG o WEBP hasta 10MB</span>
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={handleDocFileChange}
+                  className="hidden"
+                />
+              </label>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Submit Buttons */}
+      <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
+        <button
+          type="submit"
+          disabled={isSaving}
+          className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-black rounded-xl shadow-lg transition-all text-sm flex items-center justify-center space-x-2 cursor-pointer"
+        >
+          {isSaving ? (
+            <>
+              <div className="animate-spin text-white flex-shrink-0"><Users size={14} /></div>
+              <span>Enviando...</span>
+            </>
+          ) : (
+            <span>Enviar Propuesta de Punto</span>
+          )}
+        </button>
+      </div>
+    </form>
+  );
+
+  const renderGeneralForm = () => (
+    <form onSubmit={handleSubmit} className="space-y-5 text-left animate-in fade-in duration-300">
+      {/* Request Name and Date */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+            Nombre de la Solicitud *
+          </label>
+          <input
+            type="text"
+            required
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            placeholder="Ej. Compra de Glucómetros para Campaña"
+            className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+            Fecha Sugerida / Límite *
+          </label>
+          <input
+            type="date"
+            required
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+            className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-855 bg-white"
+          />
+        </div>
+      </div>
+
+      {/* Theme Dropdown Cause */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+            Tema / Causa Global *
+          </label>
+          <select
+            value={tema}
+            onChange={(e) => setTema(e.target.value)}
+            className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold bg-white cursor-pointer"
+          >
+            {TEMAS_SOLICITUD.map(t => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </div>
+
+        {tema === 'Otra' && (
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+              Especificar Tema Personalizado *
+            </label>
+            <input
+              type="text"
+              required
+              value={otroTemaDescripcion}
+              onChange={(e) => setOtroTemaDescripcion(e.target.value)}
+              placeholder="Ej. Salud Comunitaria"
+              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Description */}
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+          Descripción de la Solicitud *
+        </label>
+        <textarea
+          rows={3}
+          required
+          value={descripcion}
+          onChange={(e) => setDescripcion(e.target.value)}
+          placeholder="Detalle los objetivos, beneficiarios esperados y justificación del proyecto..."
+          className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold resize-none text-slate-800"
+        />
+      </div>
+
+      {/* Document / Image Attachment */}
+      <div>
+        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+          Documento o Imagen Adjunta (Opcional, Máx 10MB)
+        </label>
+        <div className="border-2 border-dashed border-slate-200 hover:border-blue-400 rounded-2xl p-4 text-center transition-all bg-slate-50/50">
+          {docFileName ? (
+            <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl p-3 shadow-xs">
+              <div className="flex items-center space-x-2.5 min-w-0">
+                <div className="p-2 bg-blue-50 text-blue-900 rounded-lg flex-shrink-0">
+                  <FileText size={18} />
+                </div>
+                <div className="min-w-0 text-left">
+                  <p className="text-xs font-bold text-slate-800 truncate">{docFileName}</p>
+                  <p className="text-[10px] text-slate-400 font-semibold">Documento listo para enviar</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setDocDataUrl(''); setDocFileName(''); }}
+                className="p-1 text-slate-400 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
+                title="Quitar archivo"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          ) : (
+            <label className="cursor-pointer flex flex-col items-center justify-center space-y-1.5 py-2">
+              <Upload size={22} className="text-blue-400" />
+              <span className="text-xs font-bold text-blue-900">Adjuntar Carta, Proyecto o Foto</span>
+              <span className="text-[10px] text-slate-400">Archivos PDF, PNG, JPG o WEBP hasta 10MB</span>
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={handleDocFileChange}
+                className="hidden"
+              />
+            </label>
+          )}
+        </div>
+      </div>
+
+      {/* Responsables */}
+      <div className="pt-2 border-t border-slate-100 space-y-3">
+        <div className="flex justify-between items-center">
+          <label className="block text-xs font-black text-slate-500 uppercase tracking-wider">
+            Responsables de la Solicitud (Máx. 3) *
+          </label>
+          {responsables.length < 3 && (
+            <button
+              type="button"
+              onClick={handleAddResponsable}
+              className="text-xs font-black text-blue-900 hover:text-blue-750 flex items-center space-x-1 bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-100 shadow-xs cursor-pointer"
+            >
+              <UserPlus size={12} />
+              <span>Añadir Responsable</span>
+            </button>
+          )}
+        </div>
+
+        <div className="space-y-3">
+          {responsables.map((resp, index) => (
+            <div 
+              key={index} 
+              className="p-4 bg-slate-50/60 rounded-2xl border border-slate-200/80 space-y-3 relative group animate-in fade-in duration-200"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Responsable #{index + 1}
+                </span>
+                {responsables.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveResponsable(index)}
+                    className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-white cursor-pointer"
+                    title="Eliminar Responsable"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Nombre Completo *"
+                    value={resp.nombre}
+                    onChange={(e) => handleResponsableChange(index, 'nombre', e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-xs font-semibold"
+                  />
+                </div>
+                <div className="flex rounded-xl border border-slate-200 focus-within:ring-2 focus-within:ring-blue-900 focus-within:border-transparent overflow-hidden bg-white">
+                  <span className="bg-slate-100 text-slate-500 px-3 py-2 flex items-center justify-center border-r border-slate-200 text-xs font-extrabold select-none">
+                    +502
+                  </span>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="Teléfono (8 dígitos) *"
+                    value={resp.telefono}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      if (val.length <= 8) {
+                        handleResponsableChange(index, 'telefono', val);
+                      }
+                    }}
+                    className="w-full px-3 py-2 outline-none text-xs text-slate-800 font-semibold"
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Submit Buttons */}
+      <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
+        <button
+          type="submit"
+          disabled={isSaving}
+          className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-black rounded-xl shadow-lg transition-all text-sm flex items-center justify-center space-x-2 cursor-pointer"
+        >
+          {isSaving ? (
+            <>
+              <div className="animate-spin text-white flex-shrink-0"><Users size={14} /></div>
+              <span>Enviando...</span>
+            </>
+          ) : (
+            <span>Enviar Solicitud</span>
+          )}
+        </button>
+      </div>
+    </form>
+  );
+
+  const renderTrackingSection = (cfg: TabConfig) => (
+    <div className="bg-white rounded-3xl border border-slate-200 p-6 md:p-8 shadow-xs space-y-8 animate-in fade-in duration-300">
+      <div className="max-w-xl mx-auto text-center space-y-3">
+        <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center mx-auto shadow-xs">
+          <Shield size={24} />
+        </div>
+        <h4 className="font-extrabold text-lg text-slate-900">Consulta el Estado de tu Solicitud</h4>
+        <p className="text-xs text-slate-600 font-medium leading-relaxed">
+          Ingresa el código único de seguimiento generado al registrar tu solicitud para consultar su fase y resolución en tiempo real.
+        </p>
+
+        {/* Formulario de tracking */}
+        <form onSubmit={(e) => handleSearchTracking(e, cfg.id as any)} className="flex items-center gap-2 max-w-md mx-auto pt-2">
+          <input
+            type="text"
+            value={trackingCode}
+            onChange={(e) => setTrackingCode(e.target.value)}
+            placeholder="Ej. LQX-358"
+            className="flex-1 px-4 py-3 border border-slate-250 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:border-transparent outline-none font-bold text-xs text-slate-800 bg-white placeholder-slate-350 text-center uppercase tracking-widest"
+            maxLength={8}
+          />
+          <button
+            type="submit"
+            className={`px-6 py-3 font-extrabold rounded-xl text-xs transition-all shadow-md active:scale-95 flex items-center justify-center cursor-pointer ${
+              BUTTON_CLASSES[cfg.colorTheme]
+            }`}
+          >
+            Buscar
+          </button>
+        </form>
+      </div>
+
+      {/* Mensaje de error de búsqueda */}
+      {trackingError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl text-xs font-semibold flex items-start space-x-2 animate-in fade-in max-w-xl mx-auto">
+          <AlertCircle size={16} className="flex-shrink-0 mt-0.5 text-red-500" />
+          <span>{trackingError}</span>
+        </div>
+      )}
+
+      {/* Resultado de Seguimiento */}
+      {searchedSolicitud && (
+        <div className="bg-slate-50/70 rounded-3xl border border-slate-200 p-6 md:p-8 shadow-xs max-w-3xl mx-auto space-y-8 animate-in fade-in duration-300">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-xs">
+            <div>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Solicitante / Detalle</span>
+              <span className="text-xs font-bold text-slate-750 block mt-0.5">
+                {searchedSolicitud.nombreBeneficiario || searchedSolicitud.salonNombreSolicitante || searchedSolicitud.agendaSocioNombre || searchedSolicitud.nombre}
+              </span>
+            </div>
+            <div>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Código Único</span>
+              <span className="text-xs font-mono font-bold text-blue-900 block mt-0.5">{searchedSolicitud.id}</span>
+            </div>
+            <div className="text-left sm:text-right">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Fecha de Envío</span>
+              <span className="text-xs font-bold text-slate-755 block mt-0.5">{formatDisplayDate(searchedSolicitud.fechaCreacion)}</span>
+            </div>
+          </div>
+
+          {/* Stepper del Tracking */}
+          <div className="space-y-6">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block text-center sm:text-left">Línea del Proceso</span>
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 sm:gap-2 relative pt-2">
+              {(() => {
+                const phases: { id: string; label: string; desc: string; icon: any }[] = [
+                  { id: 'recibido', label: 'Recibido', desc: 'Ingresada con éxito', icon: CheckCircle },
+                  { id: 'en_proceso', label: 'En Proceso', desc: 'Asignada a revisión', icon: Clock },
+                  { id: 'en_analisis', label: 'En Análisis', desc: 'Evaluando viabilidad', icon: FileText },
+                  { id: 'resolucion', label: 'Resolución', desc: 'Trámite finalizado', icon: Shield }
+                ];
+
+                const currentPhase = searchedSolicitud.faseTracking || (
+                  (searchedSolicitud.estado === 'Aprobada' || searchedSolicitud.estado === 'Rechazada') 
+                    ? 'resolucion' 
+                    : 'recibido'
+                );
+
+                const phaseIndex = phases.findIndex(p => p.id === currentPhase);
+
+                return phases.map((phase, idx) => {
+                  const isCompleted = idx <= phaseIndex;
+                  const isActive = phase.id === currentPhase;
+                  const StepIcon = phase.icon;
+
+                  return (
+                    <div key={phase.id} className="flex sm:flex-col items-center text-left sm:text-center space-x-4 sm:space-x-0 space-y-0 sm:space-y-2 relative group">
+                      {/* Línea conectora */}
+                      {idx < phases.length - 1 && (
+                        <div className="hidden sm:block absolute top-5 left-[60%] w-[80%] h-0.5 bg-slate-200 z-0">
+                          <div className={`h-full transition-all duration-550 ${STEPPER_LINE_CLASSES[cfg.colorTheme]} ${
+                            idx < phaseIndex ? 'w-full' : 'w-0'
+                          }`} />
+                        </div>
+                      )}
+
+                      {/* Círculo indicador */}
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center z-10 border-2 transition-all duration-300 shadow-sm ${
+                        isActive ? STEPPER_CIRCLE_ACTIVE[cfg.colorTheme] + ' scale-110' :
+                        isCompleted ? STEPPER_CIRCLE_COMPLETED[cfg.colorTheme] :
+                        'bg-white border-slate-200 text-slate-400'
+                      }`}>
+                        <StepIcon size={18} />
+                      </div>
+
+                      {/* Textos del paso */}
+                      <div>
+                        <span className={`text-xs font-extrabold tracking-tight block ${
+                          isActive ? STEPPER_TEXT_ACTIVE[cfg.colorTheme] :
+                          isCompleted ? 'text-slate-800' : 'text-slate-400'
+                        }`}>{phase.label}</span>
+                        <span className="text-[10px] text-slate-500 font-bold block mt-0.5">{phase.desc}</span>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+
+          {/* Estado final si es fase resolución */}
+          {searchedSolicitud.estado !== 'Pendiente' && (
+            <div className={`p-5 rounded-2xl border text-xs font-semibold animate-in zoom-in-95 duration-300 ${
+              searchedSolicitud.estado === 'Aprobada' ? 'bg-emerald-50/60 border-emerald-200 text-emerald-700' : 'bg-red-50/60 border-red-200 text-red-700'
+            }`}>
+              <div className="flex items-start space-x-2.5">
+                <CheckCircle className="flex-shrink-0 mt-0.5" size={16} />
+                <div className="space-y-1">
+                  <span className="font-extrabold block text-sm">Solicitud {searchedSolicitud.estado}</span>
+                  {searchedSolicitud.resolucionRazon && (
+                    <p className="leading-relaxed text-slate-655 font-semibold">{searchedSolicitud.resolucionRazon}</p>
+                  )}
+                  {searchedSolicitud.fechaResolucion && (
+                    <span className="text-[10px] text-slate-400 block font-normal mt-1.5">Fecha: {formatDisplayDate(searchedSolicitud.fechaResolucion)}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-8 space-y-8 animate-in fade-in duration-700">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-extrabold text-blue-900 tracking-tight">Gestión de Solicitudes</h1>
           <p className="text-base text-slate-750 mt-1 font-medium">
-            En esta sección puedes subir y hacer tus solicitudes al club como beneficiario, institución o socio.
+            En esta sección puedes realizar solicitudes al club de forma guiada, o consultar tus trámites registrados.
           </p>
         </div>
       </header>
@@ -3044,7 +3805,7 @@ Club de Leones de Quetzaltenango`;
                   }
                   setActiveTab(activeTab === cfg.id ? null : cfg.id);
                 }}
-                className={`w-full px-6 py-5 flex items-center justify-between text-left transition-all ${
+                className={`w-full px-6 py-5 flex items-center justify-between text-left transition-all cursor-pointer ${
                   !cfg.allowed ? 'bg-slate-50/50 text-slate-400 cursor-not-allowed' :
                   isExpanded ? HEADER_EXPANDED_CLASSES[cfg.colorTheme] : 'text-slate-800 hover:bg-slate-50'
                 }`}
@@ -3085,228 +3846,135 @@ Club de Leones de Quetzaltenango`;
                 </div>
               </button>
 
-              {/* Contenido Expandido del Acordeón */}
+              {/* Contenido Expandido del Acordeón con Formulario Integrado Directo */}
               {isExpanded && (
-                <div className="p-6 md:p-8 border-t border-slate-100 bg-slate-50/20 animate-in slide-in-from-top duration-300">
+                <div className="p-6 md:p-8 border-t border-slate-100 bg-slate-50/30 animate-in slide-in-from-top duration-300">
                   {(() => {
-                    const themeAccent = THEME_ACCENTS[cfg.colorTheme] || THEME_ACCENTS.blue;
+                    const currentMode = getTabMode(cfg.id);
+
+                    if (cfg.id === 'cartas') {
+                      return renderCartasCorrespondencia();
+                    }
+
+                    if (cfg.id === 'archivo') {
+                      return renderArchivoView();
+                    }
+
                     return (
-                      <div className="space-y-8 w-full text-left">
-                        {/* Guía de Pasos Unificada */}
-                        <div className={`grid grid-cols-1 ${cfg.id === 'agenda' ? 'md:grid-cols-2 max-w-4xl mx-auto' : 'md:grid-cols-3'} gap-6 w-full`}>
-                          {/* Paso 1: Entiende el Trámite */}
-                          <div className={`bg-white rounded-2xl border ${themeAccent.border} ${themeAccent.borderHover} p-6 shadow-sm transition-all duration-300 space-y-3 flex flex-col justify-between`}>
-                            <div className="space-y-3">
-                              <div className="flex items-center space-x-3">
-                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs ${themeAccent.bg} ${themeAccent.text}`}>
-                                  1
-                                </div>
-                                <h4 className="font-extrabold text-sm text-slate-800 tracking-tight">¿Qué hacemos aquí?</h4>
-                              </div>
-                              <p className="text-xs text-slate-600 leading-relaxed font-semibold">
-                                {cfg.description}
-                              </p>
-                            </div>
-                            <div className="pt-2 flex items-center space-x-2 border-t border-slate-100">
-                              <span className="text-[10px] text-slate-400 font-bold">Dirigido a:</span>
-                              <span className={`text-[9px] font-black uppercase px-2.5 py-0.5 rounded-md border ${themeAccent.badge}`}>
-                                {cfg.audience}
-                              </span>
-                            </div>
+                      <div className="space-y-6 w-full text-left">
+                        {/* Barra de Navegación Segmentada Integrada */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2 rounded-2xl border border-slate-200 shadow-xs">
+                          <div className="flex items-center space-x-1.5 overflow-x-auto">
+                            <button
+                              type="button"
+                              onClick={() => setTabMode(cfg.id, 'form')}
+                              className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center space-x-2 transition-all cursor-pointer ${
+                                currentMode === 'form'
+                                  ? BUTTON_CLASSES[cfg.colorTheme] + ' shadow-sm'
+                                  : 'text-slate-600 hover:bg-slate-100'
+                              }`}
+                            >
+                              <Plus size={14} />
+                              <span>{cfg.id === 'salon' ? 'Asistente de Reservación' : cfg.actionText || 'Llenar Solicitud'}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setTabMode(cfg.id, 'list')}
+                              className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center space-x-2 transition-all cursor-pointer ${
+                                currentMode === 'list'
+                                  ? BUTTON_CLASSES[cfg.colorTheme] + ' shadow-sm'
+                                  : 'text-slate-600 hover:bg-slate-100'
+                              }`}
+                            >
+                              <FileText size={14} />
+                              <span>Solicitudes Registradas ({filteredSolicitudes.length})</span>
+                            </button>
+
+                            {cfg.id !== 'agenda' && (
+                              <button
+                                type="button"
+                                onClick={() => setTabMode(cfg.id, 'tracking')}
+                                className={`px-4 py-2 rounded-xl text-xs font-extrabold flex items-center space-x-2 transition-all cursor-pointer ${
+                                  currentMode === 'tracking'
+                                    ? BUTTON_CLASSES[cfg.colorTheme] + ' shadow-sm'
+                                    : 'text-slate-600 hover:bg-slate-100'
+                                }`}
+                              >
+                                <Shield size={14} />
+                                <span>Consultar Tracking</span>
+                              </button>
+                            )}
                           </div>
 
-                          {/* Paso 2: Completa tu Solicitud */}
-                          <div className={`bg-white rounded-2xl border ${themeAccent.border} ${themeAccent.borderHover} p-6 shadow-sm transition-all duration-300 space-y-4 flex flex-col justify-between`}>
-                            <div className="space-y-3">
-                              <div className="flex items-center space-x-3">
-                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs ${themeAccent.bg} ${themeAccent.text}`}>
-                                  2
-                                </div>
-                                <h4 className="font-extrabold text-sm text-slate-800 tracking-tight">Ingresa tus Datos</h4>
-                              </div>
-                              <p className="text-xs text-slate-600 leading-relaxed font-semibold">
-                                {cfg.id === 'cartas' 
-                                  ? 'Genera documentos formales firmados digitalmente para entregar a otras instituciones de inmediato.'
-                                  : 'Llena el formulario digital con tus datos. No te tomará más de 5 minutos y es totalmente guiado.'
-                                }
-                              </p>
-                            </div>
-                            <div className="space-y-2">
-                              {cfg.showAction && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setActiveTab(cfg.id);
-                                    setIsModalOpen(true);
-                                  }}
-                                  className={`w-full py-3 font-extrabold rounded-xl flex items-center justify-center space-x-2 text-xs shadow-md transition-all duration-200 active:scale-95 hover:shadow-lg ${
-                                    BUTTON_CLASSES[cfg.colorTheme]
-                                  }`}
-                                >
-                                  <Plus size={14} />
-                                  <span>{cfg.actionText}</span>
-                                </button>
-                              )}
-                              {cfg.id === 'agenda' && (
-                                <button
-                                  type="button"
-                                  onClick={handleCopyPublicAgendaLink}
-                                  className="w-full py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-extrabold rounded-xl flex items-center justify-center space-x-2 text-xs transition-colors border border-indigo-200 active:scale-95 shadow-sm"
-                                >
-                                  <Share2 size={14} />
-                                  <span>Compartir Enlace Público</span>
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Paso 3: Seguimiento (No se incluye para Puntos de Agenda) */}
-                          {cfg.id !== 'agenda' && (
-                            <div className={`bg-white rounded-2xl border ${themeAccent.border} ${themeAccent.borderHover} p-6 shadow-sm transition-all duration-300 space-y-4 flex flex-col justify-between`}>
-                              <div className="space-y-3">
-                                <div className="flex items-center space-x-3">
-                                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs ${themeAccent.bg} ${themeAccent.text}`}>
-                                    3
-                                  </div>
-                                  <h4 className="font-extrabold text-sm text-slate-800 tracking-tight">Monitorea en Línea</h4>
-                                </div>
-                                <p className="text-xs text-slate-600 leading-relaxed font-semibold">
-                                  ¿Ya hiciste tu solicitud? Consulta el avance de tu trámite en tiempo real usando tu código.
-                                </p>
-                              </div>
-                              
-                              {/* Formulario de tracking integrado */}
-                              <form onSubmit={(e) => handleSearchTracking(e, cfg.id as any)} className="flex items-center gap-2 w-full mt-auto">
-                                <input
-                                  type="text"
-                                  value={trackingCode}
-                                  onChange={(e) => setTrackingCode(e.target.value)}
-                                  placeholder="Ej. LQX-358"
-                                  className="w-28 flex-shrink-0 px-3 py-2.5 border border-slate-250 rounded-xl focus:ring-2 focus:ring-slate-400 focus:border-transparent outline-none font-bold text-xs text-slate-800 bg-white placeholder-slate-350 text-center"
-                                  maxLength={8}
-                                />
-                                <button
-                                  type="submit"
-                                  className={`flex-grow py-2.5 font-extrabold rounded-xl text-xs transition-all shadow-md active:scale-95 flex items-center justify-center ${
-                                    BUTTON_CLASSES[cfg.colorTheme]
-                                  }`}
-                                >
-                                  Buscar
-                                </button>
-                              </form>
-                            </div>
+                          {cfg.id === 'agenda' && (
+                            <button
+                              type="button"
+                              onClick={handleCopyPublicAgendaLink}
+                              className="px-3.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-extrabold rounded-xl text-xs flex items-center space-x-1.5 border border-indigo-200 active:scale-95 cursor-pointer"
+                            >
+                              <Share2 size={13} />
+                              <span>Compartir Enlace Público</span>
+                            </button>
                           )}
                         </div>
 
-                        {/* Mensaje de error de búsqueda */}
-                        {trackingError && (
-                          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl text-xs font-semibold flex items-start space-x-2 animate-in fade-in max-w-2xl mx-auto">
-                            <AlertCircle size={14} className="flex-shrink-0 mt-0.5 text-red-500" />
-                            <span>{trackingError}</span>
+                        {/* Vista 1: Formulario Integrado Directo */}
+                        {currentMode === 'form' && (
+                          <div className="bg-white rounded-3xl border border-slate-200 p-6 md:p-8 shadow-xs">
+                            {saveSuccess ? (
+                              renderSuccessBlock()
+                            ) : (
+                              <>
+                                {saveError && (
+                                  <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl text-xs font-semibold flex items-start space-x-2 animate-in fade-in mb-6">
+                                    <AlertCircle size={16} className="flex-shrink-0 mt-0.5 text-red-500" />
+                                    <span>{saveError}</span>
+                                  </div>
+                                )}
+                                {cfg.id === 'salon' && renderSalonForm()}
+                                {cfg.id === 'sillas' && renderSillasForm()}
+                                {cfg.id === 'agenda' && renderAgendaForm()}
+                                {(cfg.id === 'abiertas' || cfg.id === 'internas') && renderGeneralForm()}
+                              </>
+                            )}
                           </div>
                         )}
 
-                        {/* Resultado de Seguimiento */}
-                        {searchedSolicitud && (
-                          <div className="bg-white rounded-3xl border border-slate-200 p-6 md:p-8 shadow-md max-w-3xl mx-auto space-y-8 animate-in fade-in duration-300">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                              <div>
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Solicitante / Detalle</span>
-                                <span className="text-xs font-bold text-slate-750 block mt-0.5">
-                                  {searchedSolicitud.nombreBeneficiario || searchedSolicitud.salonNombreSolicitante || searchedSolicitud.agendaSocioNombre || searchedSolicitud.nombre}
+                        {/* Vista 2: Listado de Solicitudes Registradas */}
+                        {currentMode === 'list' && (
+                          <div className="space-y-6 animate-in fade-in duration-300">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                              <h3 className="font-black text-lg text-slate-900 flex items-center space-x-2">
+                                <span>Solicitudes de {cfg.title}</span>
+                                <span className="text-xs font-extrabold px-2.5 py-0.5 bg-slate-100 text-slate-600 rounded-full">
+                                  {filteredSolicitudes.length}
                                 </span>
-                              </div>
-                              <div>
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Código Único</span>
-                                <span className="text-xs font-mono font-bold text-slate-750 block mt-0.5">{searchedSolicitud.id}</span>
-                              </div>
-                              <div className="text-left sm:text-right">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Fecha de Envío</span>
-                                <span className="text-xs font-bold text-slate-755 block mt-0.5">{formatDisplayDate(searchedSolicitud.fechaCreacion)}</span>
-                              </div>
-                            </div>
+                              </h3>
 
-                            {/* Stepper del Tracking */}
-                            <div className="space-y-6">
-                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block text-center sm:text-left">Línea del Proceso</span>
-                              {/* Stepper Grid */}
-                              <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 sm:gap-2 relative pt-2">
-                                {(() => {
-                                  const phases: { id: string; label: string; desc: string; icon: any }[] = [
-                                    { id: 'recibido', label: 'Recibido', desc: 'Ingresada con éxito', icon: CheckCircle },
-                                    { id: 'en_proceso', label: 'En Proceso', desc: 'Asignada a revisión', icon: Clock },
-                                    { id: 'en_analisis', label: 'En Análisis', desc: 'Evaluando viabilidad', icon: FileText },
-                                    { id: 'resolucion', label: 'Resolución', desc: 'Trámite finalizado', icon: Shield }
-                                  ];
-
-                                  const currentPhase = searchedSolicitud.faseTracking || (
-                                    (searchedSolicitud.estado === 'Aprobada' || searchedSolicitud.estado === 'Rechazada') 
-                                      ? 'resolucion' 
-                                      : 'recibido'
-                                  );
-
-                                  const phaseIndex = phases.findIndex(p => p.id === currentPhase);
-
-                                  return phases.map((phase, idx) => {
-                                    const isCompleted = idx <= phaseIndex;
-                                    const isActive = phase.id === currentPhase;
-                                    const StepIcon = phase.icon;
-
-                                    return (
-                                      <div key={phase.id} className="flex sm:flex-col items-center text-left sm:text-center space-x-4 sm:space-x-0 space-y-0 sm:space-y-2 relative group">
-                                        {/* Línea conectora */}
-                                        {idx < phases.length - 1 && (
-                                          <div className="hidden sm:block absolute top-5 left-[60%] w-[80%] h-0.5 bg-slate-105 z-0">
-                                            <div className={`h-full transition-all duration-550 ${STEPPER_LINE_CLASSES[cfg.colorTheme]} ${
-                                              idx < phaseIndex ? 'w-full' : 'w-0'
-                                            }`} />
-                                          </div>
-                                        )}
-
-                                        {/* Círculo indicador */}
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center z-10 border-2 transition-all duration-300 shadow-sm ${
-                                          isActive ? STEPPER_CIRCLE_ACTIVE[cfg.colorTheme] + ' scale-110' :
-                                          isCompleted ? STEPPER_CIRCLE_COMPLETED[cfg.colorTheme] :
-                                          'bg-white border-slate-200 text-slate-400'
-                                        }`}>
-                                          <StepIcon size={18} />
-                                        </div>
-
-                                        {/* Textos del paso */}
-                                        <div>
-                                          <span className={`text-xs font-extrabold tracking-tight block ${
-                                            isActive ? STEPPER_TEXT_ACTIVE[cfg.colorTheme] :
-                                            isCompleted ? 'text-slate-800' : 'text-slate-400'
-                                          }`}>{phase.label}</span>
-                                          <span className="text-[10px] text-slate-500 font-bold block mt-0.5">{phase.desc}</span>
-                                        </div>
-                                      </div>
-                                    );
-                                  });
-                                })()}
+                              {/* Filtro de Estado */}
+                              <div className="flex items-center space-x-2">
+                                <span className="text-xs font-bold text-slate-400">Filtrar:</span>
+                                <select
+                                  value={filtroEstado}
+                                  onChange={(e) => setFiltroEstado(e.target.value as any)}
+                                  className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-blue-900 cursor-pointer"
+                                >
+                                  <option value="todos">Todos los Estados</option>
+                                  <option value="Pendiente">Pendientes</option>
+                                  <option value="Aprobada">Aprobadas</option>
+                                  <option value="Rechazada">Rechazadas</option>
+                                </select>
                               </div>
                             </div>
 
-                            {/* Estado final si es fase resolución */}
-                            {searchedSolicitud.estado !== 'Pendiente' && (
-                              <div className={`p-5 rounded-2xl border text-xs font-semibold animate-in zoom-in-95 duration-300 ${
-                                searchedSolicitud.estado === 'Aprobada' ? 'bg-green-50/60 border-green-200 text-green-700' : 'bg-red-50/60 border-red-200 text-red-700'
-                              }`}>
-                                <div className="flex items-start space-x-2.5">
-                                  <CheckCircle className="flex-shrink-0 mt-0.5" size={16} />
-                                  <div className="space-y-1">
-                                    <span className="font-extrabold block text-sm">Solicitud {searchedSolicitud.estado}</span>
-                                    {searchedSolicitud.resolucionRazon && (
-                                      <p className="leading-relaxed text-slate-655 font-semibold">{searchedSolicitud.resolucionRazon}</p>
-                                    )}
-                                    {searchedSolicitud.fechaResolucion && (
-                                      <span className="text-[10px] text-slate-400 block font-normal mt-1.5">Fecha: {formatDisplayDate(searchedSolicitud.fechaResolucion)}</span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
+                            {renderCardsGrid(filteredSolicitudes)}
                           </div>
+                        )}
+
+                        {/* Vista 3: Tracking de Solicitud */}
+                        {currentMode === 'tracking' && (
+                          renderTrackingSection(cfg)
                         )}
                       </div>
                     );
@@ -3317,13 +3985,13 @@ Club de Leones de Quetzaltenango`;
           );
         })}
       </div>
-      {/* FORM MODAL */}
+      {/* FORM MODAL (Fallback / Alternative popup if triggered) */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-300">
           <div className={`bg-white rounded-[2rem] border border-slate-200 shadow-2xl w-full ${activeTab === 'cartas' || activeTab === 'salon' ? 'max-w-4xl' : 'max-w-2xl'} max-h-[90vh] overflow-y-auto p-6 sm:p-10 space-y-6 relative animate-in zoom-in-95 duration-300`}>
             <button
               onClick={() => setIsModalOpen(false)}
-              className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors"
+              className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors cursor-pointer"
             >
               <X size={20} />
             </button>
@@ -3363,576 +4031,16 @@ Club de Leones de Quetzaltenango`;
             )}
 
             {saveSuccess ? (
-              <div className="text-center py-8 space-y-6 animate-in zoom-in-95 duration-300">
-                <div className="bg-green-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto text-green-600 border-4 border-green-100 shadow-sm">
-                  <CheckCircle size={40} />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-2xl font-black text-slate-800">¡Registro Exitoso!</h3>
-                  <p className="text-slate-600 text-sm font-semibold max-w-sm mx-auto leading-relaxed">
-                    Tu solicitud ha sido enviada directamente a la Presidencia del club. Utiliza el siguiente código único para consultar su estado en la sección de seguimiento:
-                  </p>
-                </div>
-                
-                {createdSolicitudId && (
-                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 max-w-md mx-auto flex items-center justify-between shadow-inner">
-                    <div className="text-left">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Código de Seguimiento</span>
-                      <span className="text-sm font-mono font-bold text-blue-900 select-all block mt-0.5">{createdSolicitudId}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard.writeText(createdSolicitudId);
-                        alert("Código copiado al portapapeles.");
-                      }}
-                      className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center space-x-1.5"
-                    >
-                      <Copy size={14} />
-                      <span>Copiar código</span>
-                    </button>
-                  </div>
-                )}
-
-                <div className="pt-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsModalOpen(false);
-                      setSaveSuccess(false);
-                      setCreatedSolicitudId('');
-                    }}
-                    className="px-8 py-3 bg-slate-900 hover:bg-slate-800 text-white font-extrabold rounded-2xl text-sm shadow-md transition-all active:scale-[0.98]"
-                  >
-                    Entendido, cerrar
-                  </button>
-                </div>
-              </div>
+              renderSuccessBlock()
             ) : (
               <>
-
-            {activeTab === 'cartas' ? (
-              renderCartasForm()
-            ) : activeTab === 'salon' ? (
-              renderSalonForm()
-            ) : activeTab === 'sillas' ? (
-              <form onSubmit={handleSubmit} className="space-y-5 text-left animate-in fade-in duration-300">
-                {/* Solidarity Note */}
-                <div className="bg-blue-50 border border-blue-200/80 rounded-2xl p-5 flex items-start space-x-3 text-blue-900 text-xs md:text-sm shadow-sm">
-                  <Heart className="flex-shrink-0 text-yellow-500 fill-yellow-500 mt-0.5 animate-pulse" size={18} />
-                  <div className="space-y-1">
-                    <p className="font-extrabold text-blue-955 text-sm">💡 Nota de Solidaridad y Compromiso</p>
-                    <p className="leading-relaxed font-medium text-slate-750">
-                      Las sillas de ruedas se entregan en calidad de **préstamo temporal**. Para que este beneficio siga activo y ayude a más personas, **te solicitamos amablemente que devuelvas la silla al Club** una vez que el beneficiario ya no la requiera. ¡De esta manera, más personas de nuestra comunidad en Quetzaltenango podrán beneficiarse!
-                    </p>
-                  </div>
-                </div>
-
-                {/* Section: Applicant Details */}
-                <div className="space-y-4">
-                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1 flex items-center">
-                    <User size={14} className="mr-1.5 text-slate-450" />
-                    Datos del Solicitante (Responsable del compromiso)
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                        Nombre Completo *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={nombreSolicitante}
-                        onChange={(e) => setNombreSolicitante(e.target.value)}
-                        placeholder="Ej. Juan Carlos Pérez Pérez"
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                        Número de DPI *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={dpiSolicitante}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/\D/g, ''); // numbers only
-                          if (val.length <= 13) setDpiSolicitante(val);
-                        }}
-                        placeholder="CUI / DPI (13 dígitos)"
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      Número de Teléfono *
-                    </label>
-                    <div className="flex rounded-xl border border-slate-200 focus-within:ring-2 focus-within:ring-blue-900 focus-within:border-transparent overflow-hidden bg-white">
-                      <span className="bg-slate-100 text-slate-500 px-4 py-3 flex items-center justify-center border-r border-slate-200 text-sm font-extrabold select-none">
-                        +502
-                      </span>
-                      <input
-                        type="tel"
-                        required
-                        value={telefonoSolicitante}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/\D/g, '');
-                          if (val.length <= 8) setTelefonoSolicitante(val);
-                        }}
-                        placeholder="5555 5555"
-                        className="w-full px-4 py-2.5 outline-none text-sm text-slate-800 font-semibold"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section: Beneficiary Details */}
-                <div className="space-y-4 pt-2">
-                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1 flex items-center">
-                    <Accessibility size={14} className="mr-1.5 text-slate-455" />
-                    Datos del Beneficiario (Persona que usará la silla)
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                        ¿Para quién es la silla? (Nombre Completo) *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={nombreBeneficiario}
-                        onChange={(e) => setNombreBeneficiario(e.target.value)}
-                        placeholder="Ej. María Elena Pérez"
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                        Edad del Beneficiario (Años) *
-                      </label>
-                      <input
-                        type="number"
-                        required
-                        min="0"
-                        max="120"
-                        value={edadBeneficiario}
-                        onChange={(e) => setEdadBeneficiario(e.target.value)}
-                        placeholder="Ej. 75"
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      ¿Cuánto tiempo pretende usarla? *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={tiempoUso}
-                      onChange={(e) => setTiempoUso(e.target.value)}
-                      placeholder="Ej. 3 meses (recuperación de cirugía), permanente, etc."
-                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
-                    />
-                  </div>
-                </div>
-
-                {/* Submit Buttons */}
-                <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="px-5 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-colors text-sm"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSaving}
-                    className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-black rounded-xl shadow-lg transition-all text-sm flex items-center justify-center space-x-2"
-                  >
-                    {isSaving ? (
-                      <>
-                        <div className="animate-spin text-white flex-shrink-0"><Users size={14} /></div>
-                        <span>Enviando...</span>
-                      </>
-                    ) : (
-                      <span>Enviar Solicitud</span>
-                    )}
-                  </button>
-                </div>
-              </form>
-            ) : activeTab === 'agenda' ? (
-              <form onSubmit={handleSubmit} className="space-y-5 text-left animate-in fade-in duration-300">
-                {/* Agenda Info Alert */}
-                <div className="bg-yellow-50/60 border border-yellow-200/80 rounded-2xl p-5 flex items-start justify-between text-yellow-900 text-xs md:text-sm shadow-sm gap-3">
-                  <div className="flex items-start space-x-3">
-                    <Calendar className="flex-shrink-0 text-yellow-600 mt-0.5 animate-pulse" size={18} />
-                    <div className="space-y-1">
-                      <p className="font-extrabold text-yellow-950 text-sm">💡 Propuesta de Punto de Agenda</p>
-                      <p className="leading-relaxed font-medium text-slate-750">
-                        Puedes proponer temas, puntos a discutir o solicitudes para ser incluidos en el orden del día de las reuniones generales del club.
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleCopyPublicAgendaLink}
-                    className="flex-shrink-0 px-3 py-1.5 bg-yellow-200/80 hover:bg-yellow-300 text-yellow-950 text-xs font-bold rounded-xl flex items-center space-x-1.5 transition-colors shadow-xs"
-                    title="Copiar enlace público"
-                  >
-                    <Share2 size={13} />
-                    <span className="hidden sm:inline">Compartir</span>
-                  </button>
-                </div>
-
-                {/* Form Fields */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      Socio Solicitante *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={agendaSocioNombre}
-                      onChange={(e) => setAgendaSocioNombre(e.target.value)}
-                      placeholder="Ingrese el nombre completo del socio solicitante..."
-                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      Nombre del Punto *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={agendaNombrePunto}
-                      onChange={(e) => setAgendaNombrePunto(e.target.value)}
-                      placeholder="Ej. Campaña Médica Quetzaltenango / Ajuste de cuota de socios"
-                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800 bg-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      Contenido del Punto *
-                    </label>
-                    <textarea
-                      rows={3}
-                      required
-                      value={agendaContenido}
-                      onChange={(e) => setAgendaContenido(e.target.value)}
-                      placeholder="Describe el contenido o propuesta a detallar en la reunión..."
-                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold resize-none text-slate-800"
-                    />
-                  </div>
-
-                  {/* Document / Image / PDF Attachment Field (Optional) */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      Carta, Foto o Documento Adjunto (Imagen o PDF, Máx. 10MB) - Opcional
-                    </label>
-                    <div className="border-2 border-dashed border-slate-200 hover:border-indigo-300 rounded-2xl p-4 text-center transition-all bg-slate-50/50">
-                      {docFileName ? (
-                        <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl p-3 shadow-xs">
-                          <div className="flex items-center space-x-2.5 min-w-0">
-                            <div className="p-2 bg-indigo-50 text-indigo-900 rounded-lg flex-shrink-0">
-                              <FileText size={18} />
-                            </div>
-                            <div className="min-w-0 text-left">
-                              <p className="text-xs font-bold text-slate-800 truncate">{docFileName}</p>
-                              <p className="text-[10px] text-slate-400 font-semibold">Documento listo para enviar</p>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => { setDocDataUrl(''); setDocFileName(''); }}
-                            className="p-1 text-slate-400 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
-                            title="Quitar archivo"
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-                      ) : (
-                        <label className="cursor-pointer flex flex-col items-center justify-center space-y-1.5 py-2">
-                          <Upload size={22} className="text-indigo-400" />
-                          <span className="text-xs font-bold text-indigo-900">Adjuntar Carta, Contexto o Foto</span>
-                          <span className="text-[10px] text-slate-400">Archivos PDF, PNG, JPG o WEBP hasta 10MB</span>
-                          <input
-                            type="file"
-                            accept="image/*,application/pdf"
-                            onChange={handleDocFileChange}
-                            className="hidden"
-                          />
-                        </label>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Submit Buttons */}
-                <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="px-5 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-colors text-sm"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSaving}
-                    className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-black rounded-xl shadow-lg transition-all text-sm flex items-center justify-center space-x-2"
-                  >
-                    {isSaving ? (
-                      <>
-                        <div className="animate-spin text-white flex-shrink-0"><Users size={14} /></div>
-                        <span>Enviando...</span>
-                      </>
-                    ) : (
-                      <span>Enviar Propuesta</span>
-                    )}
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-5 text-left">
-                {/* Request Name and Date */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      Nombre de la Solicitud *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={nombre}
-                      onChange={(e) => setNombre(e.target.value)}
-                      placeholder="Ej. Compra de Glucómetros para Campaña"
-                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      Fecha Sugerida / Límite *
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={fecha}
-                      onChange={(e) => setFecha(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-855 bg-white"
-                    />
-                  </div>
-                </div>
-
-                {/* Theme Dropdown Cause */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                      Tema / Causa Global *
-                    </label>
-                    <select
-                      value={tema}
-                      onChange={(e) => setTema(e.target.value)}
-                      className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold bg-white cursor-pointer"
-                    >
-                      {TEMAS_SOLICITUD.map(t => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {tema === 'Otra' && (
-                    <div className="animate-in fade-in duration-300">
-                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                        Describa la Categoría / Tema *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={otroTemaDescripcion}
-                        onChange={(e) => setOtroTemaDescripcion(e.target.value)}
-                        placeholder="Ej. Suministros Escolares"
-                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none font-semibold text-slate-800"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Description */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                    Descripción Detallada *
-                  </label>
-                  <textarea
-                    rows={3}
-                    required
-                    value={descripcion}
-                    onChange={(e) => setDescripcion(e.target.value)}
-                    placeholder="Detalla los objetivos, recursos necesarios e impacto comunitario..."
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-sm font-semibold resize-none"
-                  />
-                </div>
-
-                {/* Document / Letter Attachment Field */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                    Carta o Documento Adjunto (Imagen o PDF, Máx. 10MB) - Opcional
-                  </label>
-                  <div className="border-2 border-dashed border-slate-200 hover:border-blue-300 rounded-2xl p-4 text-center transition-all bg-slate-50/50">
-                    {docFileName ? (
-                      <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl p-3 shadow-xs">
-                        <div className="flex items-center space-x-2.5 min-w-0">
-                          <div className="p-2 bg-blue-50 text-blue-900 rounded-lg flex-shrink-0">
-                            <FileText size={18} />
-                          </div>
-                          <div className="min-w-0 text-left">
-                            <p className="text-xs font-bold text-slate-800 truncate">{docFileName}</p>
-                            <p className="text-[10px] text-slate-400 font-semibold">Documento listo para enviar</p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => { setDocDataUrl(''); setDocFileName(''); }}
-                          className="p-1 text-slate-400 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
-                          title="Quitar archivo"
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    ) : (
-                      <label className="cursor-pointer flex flex-col items-center justify-center space-y-1.5 py-2">
-                        <Upload size={22} className="text-slate-400" />
-                        <span className="text-xs font-bold text-blue-900">Adjuntar Carta de Solicitud (PDF o Foto)</span>
-                        <span className="text-[10px] text-slate-400">Archivos PDF, PNG o JPG hasta 10MB</span>
-                        <input
-                          type="file"
-                          accept="image/*,application/pdf"
-                          onChange={handleDocFileChange}
-                          className="hidden"
-                        />
-                      </label>
-                    )}
-                  </div>
-                </div>
-
-                {/* Responsibles Dynamic Header */}
-                <div className="pt-2 border-t border-slate-100 space-y-3">
-                  <div className="flex justify-between items-center">
-                    <label className="block text-xs font-black text-slate-500 uppercase tracking-wider">
-                      Responsables de la Solicitud (Máx. 3) *
-                    </label>
-                    {responsables.length < 3 && (
-                      <button
-                        type="button"
-                        onClick={handleAddResponsable}
-                        className="text-xs font-black text-blue-900 hover:text-blue-750 flex items-center space-x-1 bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-100 shadow-sm"
-                      >
-                        <UserPlus size={12} />
-                        <span>Añadir Responsable</span>
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Responsibles List */}
-                  <div className="space-y-3">
-                    {responsables.map((resp, index) => (
-                      <div 
-                        key={index}
-                        className="bg-slate-50 p-4 rounded-2xl border border-slate-200/60 flex flex-col sm:flex-row gap-3 items-end sm:items-center relative"
-                      >
-                        <span className="absolute top-3 left-4 bg-slate-200/80 text-slate-600 text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full">
-                          {index + 1}
-                        </span>
-
-                        <div className="flex-1 w-full pl-6 grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
-                          <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                              Nombre Completo *
-                            </label>
-                            <input
-                              type="text"
-                              required
-                              value={resp.nombre}
-                              onChange={(e) => handleUpdateResponsable(index, 'nombre', e.target.value)}
-                              placeholder="Nombre del responsable"
-                              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-xs font-semibold text-slate-800 bg-white"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                              Número de Teléfono *
-                            </label>
-                            <div className="flex rounded-lg border border-slate-200 focus-within:ring-2 focus-within:ring-blue-900 focus-within:border-transparent overflow-hidden bg-white">
-                              <span className="bg-slate-100 text-slate-500 px-3 py-2 flex items-center justify-center border-r border-slate-200 text-xs font-extrabold select-none">
-                                +502
-                              </span>
-                              <input
-                                type="tel"
-                                required
-                                value={resp.telefono}
-                                onChange={(e) => {
-                                  const val = e.target.value.replace(/\D/g, '');
-                                  if (val.length <= 8) {
-                                    handleUpdateResponsable(index, 'telefono', val);
-                                  }
-                                }}
-                                placeholder="55555555"
-                                className="w-full px-3 py-2 outline-none text-xs text-slate-800 font-semibold"
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        {responsables.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveResponsable(index)}
-                            className="bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-lg border border-red-200 flex items-center justify-center flex-shrink-0"
-                            title="Eliminar responsable"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Submit Buttons */}
-                <div className="flex justify-end space-x-3 pt-4 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="px-5 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 transition-colors text-sm"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSaving}
-                    className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-black rounded-xl shadow-lg transition-all text-sm flex items-center justify-center space-x-2"
-                  >
-                    {isSaving ? (
-                      <>
-                        <div className="animate-spin text-white flex-shrink-0"><Users size={14} /></div>
-                        <span>Enviando...</span>
-                      </>
-                    ) : (
-                      <span>Enviar Solicitud</span>
-                    )}
-                  </button>
-                </div>
-              </form>
+                {activeTab === 'cartas' && renderCartasForm()}
+                {activeTab === 'salon' && renderSalonForm()}
+                {activeTab === 'sillas' && renderSillasForm()}
+                {activeTab === 'agenda' && renderAgendaForm()}
+                {(activeTab === 'abiertas' || activeTab === 'internas') && renderGeneralForm()}
+              </>
             )}
-          </>
-        )}
           </div>
         </div>
       )}
