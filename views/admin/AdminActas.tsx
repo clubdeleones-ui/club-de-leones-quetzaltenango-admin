@@ -663,79 +663,123 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
             </button>
           </div>
 
-          {/* Step Indicator */}
-          <div className="block md:hidden text-center space-y-2 mb-6">
-            <div className="flex justify-between items-center text-xs font-black text-slate-400 uppercase tracking-wider px-1">
-              <span>Redacción de Acta</span>
-              <span className="text-amber-600 font-extrabold">
-                Paso {['datos', 'asistencia', 'protocolo', 'solicitudes', 'libre', 'vista_previa'].indexOf(actaWizardStep) + 1} de 6
-              </span>
-            </div>
-            <div className="text-base font-extrabold text-blue-900">
-              {actaWizardStep === 'datos' && 'Datos Generales de la Sesión'}
-              {actaWizardStep === 'asistencia' && 'Control de Asistencia y Quórum'}
-              {actaWizardStep === 'protocolo' && 'Puntos de Protocolo'}
-              {actaWizardStep === 'solicitudes' && 'Resolución de Solicitudes'}
-              {actaWizardStep === 'libre' && 'Redacción de Agenda Libre'}
-              {actaWizardStep === 'vista_previa' && 'Previsualización y Publicación'}
-            </div>
-            <div className="h-2 bg-slate-100 rounded-full w-full overflow-hidden mt-1 shadow-inner">
-              <div 
-                className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
-                style={{ width: `${((['datos', 'asistencia', 'protocolo', 'solicitudes', 'libre', 'vista_previa'].indexOf(actaWizardStep) + 1) / 6) * 100}%` }}
-              ></div>
-            </div>
-          </div>
+          {/* Step Indicator Mobile */}
+          {(() => {
+            const stepsList = [
+              { id: 'datos', label: 'Datos Generales', short: 'Datos', color: 'from-blue-600 to-indigo-600', textColor: 'text-blue-700', bgBadge: 'bg-blue-600', activeRing: 'ring-blue-100', pastBg: 'bg-blue-100 text-blue-700 border-blue-200', icon: FileText },
+              { id: 'asistencia', label: 'Asistencia y Quórum', short: 'Asistencia', color: 'from-emerald-600 to-teal-600', textColor: 'text-emerald-700', bgBadge: 'bg-emerald-600', activeRing: 'ring-emerald-100', pastBg: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: Users },
+              { id: 'protocolo', label: 'Puntos de Protocolo', short: 'Protocolo', color: 'from-amber-500 to-yellow-600', textColor: 'text-amber-700', bgBadge: 'bg-amber-500', activeRing: 'ring-amber-100', pastBg: 'bg-amber-100 text-amber-700 border-amber-200', icon: Building },
+              { id: 'solicitudes', label: 'Resolución de Solicitudes', short: 'Solicitudes', color: 'from-cyan-600 to-sky-600', textColor: 'text-cyan-700', bgBadge: 'bg-cyan-600', activeRing: 'ring-cyan-100', pastBg: 'bg-cyan-100 text-cyan-700 border-cyan-200', icon: Mail },
+              { id: 'libre', label: 'Agenda Libre & Comisiones', short: 'Agenda Libre', color: 'from-purple-600 to-violet-600', textColor: 'text-purple-700', bgBadge: 'bg-purple-600', activeRing: 'ring-purple-100', pastBg: 'bg-purple-100 text-purple-700 border-purple-200', icon: Briefcase },
+              { id: 'vista_previa', label: 'Vista Previa & Cierre', short: 'Vista Previa', color: 'from-rose-600 to-red-600', textColor: 'text-rose-700', bgBadge: 'bg-rose-600', activeRing: 'ring-rose-100', pastBg: 'bg-rose-100 text-rose-700 border-rose-200', icon: CheckCircle }
+            ];
+            const currentIdx = stepsList.findIndex(s => s.id === actaWizardStep);
+            const currentStepObj = stepsList[currentIdx] || stepsList[0];
 
-          {/* Desktop Full Stepper */}
-          <div className="hidden md:flex justify-between items-center relative my-8 px-8">
-            <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 h-1 bg-slate-100 rounded-full z-0"></div>
-            <div 
-              className="absolute left-8 top-1/2 -translate-y-1/2 h-1 bg-amber-500 rounded-full z-0 transition-all duration-500"
-              style={{ width: `${(['datos', 'asistencia', 'protocolo', 'solicitudes', 'libre', 'vista_previa'].indexOf(actaWizardStep)) * 20}%` }}
-            ></div>
-            
-            {[
-              { id: 'datos', label: 'Datos', icon: FileText },
-              { id: 'asistencia', label: 'Asistencia', icon: Users },
-              { id: 'protocolo', label: 'Protocolo', icon: Building },
-              { id: 'solicitudes', label: 'Solicitudes', icon: Mail },
-              { id: 'libre', label: 'Agenda', icon: Briefcase },
-              { id: 'vista_previa', label: 'Previa', icon: CheckCircle }
-            ].map((s, idx) => {
-              const active = actaWizardStep === s.id;
-              const past = idx <= ['datos', 'asistencia', 'protocolo', 'solicitudes', 'libre', 'vista_previa'].indexOf(actaWizardStep);
-              const Icon = s.icon;
-              return (
-                <button 
-                  key={s.id}
-                  type="button"
-                  onClick={() => setActaWizardStep(s.id as any)}
-                  className="relative z-10 flex flex-col items-center gap-2 focus:outline-none group"
-                >
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm ${
-                    active 
-                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-orange-500/30 scale-110 ring-4 ring-orange-50' 
-                      : past
-                        ? 'bg-amber-100 text-amber-600'
-                        : 'bg-white text-slate-300 border-2 border-slate-100 group-hover:border-amber-200 group-hover:text-amber-400'
-                  }`}>
-                    <Icon size={active ? 20 : 18} />
+            return (
+              <>
+                {/* Mobile Stepper */}
+                <div className="block md:hidden bg-slate-50/80 rounded-2xl p-4 border border-slate-200/80 space-y-3 mb-6 shadow-xs">
+                  <div className="flex justify-between items-center text-xs font-black text-slate-500 uppercase tracking-wider px-1">
+                    <span className="flex items-center space-x-1.5">
+                      <span className={`w-2.5 h-2.5 rounded-full ${currentStepObj.bgBadge} animate-pulse`}></span>
+                      <span>Paso {currentIdx + 1} de {stepsList.length}</span>
+                    </span>
+                    <span className={`font-black text-xs px-2.5 py-0.5 rounded-full text-white ${currentStepObj.bgBadge}`}>
+                      {currentStepObj.short}
+                    </span>
                   </div>
-                  <span className={`text-xs font-bold transition-colors ${
-                    active ? 'text-orange-600' : past ? 'text-amber-600' : 'text-slate-400'
-                  }`}>
-                    <span className="hidden md:inline">{idx + 1}. </span>{s.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+
+                  <div className="text-sm font-black text-slate-900">
+                    {currentStepObj.label}
+                  </div>
+
+                  {/* Step dots */}
+                  <div className="grid grid-cols-6 gap-1.5 pt-1">
+                    {stepsList.map((st, i) => {
+                      const isCur = i === currentIdx;
+                      const isPast = i < currentIdx;
+                      return (
+                        <button
+                          key={st.id}
+                          type="button"
+                          onClick={() => setActaWizardStep(st.id as any)}
+                          className={`h-2 rounded-full transition-all duration-300 ${
+                            isCur 
+                              ? `bg-gradient-to-r ${st.color} shadow-sm ring-2 ring-slate-200` 
+                              : isPast 
+                                ? `${st.bgBadge} opacity-70` 
+                                : 'bg-slate-200'
+                          }`}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Desktop Full Executive Stepper */}
+                <div className="hidden md:block bg-gradient-to-b from-slate-50/90 to-slate-100/60 rounded-[2rem] p-5 lg:p-7 border border-slate-200/80 shadow-xs mb-8">
+                  <div className="flex justify-between items-center relative px-4 lg:px-8">
+                    {/* Background track line */}
+                    <div className="absolute left-8 right-8 top-6 -translate-y-1/2 h-1.5 bg-slate-200/80 rounded-full z-0"></div>
+                    
+                    {/* Active progress colored bar */}
+                    <div 
+                      className="absolute left-8 top-6 -translate-y-1/2 h-1.5 bg-gradient-to-r from-blue-600 via-emerald-500 via-amber-500 via-cyan-500 via-purple-500 to-rose-600 rounded-full z-0 transition-all duration-500 shadow-sm"
+                      style={{ width: `${(currentIdx / 5) * (100 - 8)}%` }}
+                    ></div>
+                    
+                    {stepsList.map((s, idx) => {
+                      const active = actaWizardStep === s.id;
+                      const past = idx < currentIdx;
+                      const Icon = s.icon;
+
+                      return (
+                        <button 
+                          key={s.id}
+                          type="button"
+                          onClick={() => setActaWizardStep(s.id as any)}
+                          className="relative z-10 flex flex-col items-center gap-2 focus:outline-none group cursor-pointer"
+                        >
+                          <div className={`w-12 h-12 lg:w-13 lg:h-13 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-md ${
+                            active 
+                              ? `bg-gradient-to-r ${s.color} text-white shadow-lg scale-110 ring-4 ${s.activeRing}` 
+                              : past
+                                ? `${s.pastBg} border font-bold hover:scale-105`
+                                : 'bg-white text-slate-400 border border-slate-200 hover:border-slate-300 hover:text-slate-700 hover:bg-slate-50'
+                          }`}>
+                            {past ? (
+                              <div className="flex items-center justify-center">
+                                <Icon size={18} className="opacity-90" />
+                              </div>
+                            ) : (
+                              <Icon size={active ? 22 : 18} />
+                            )}
+                          </div>
+
+                          <div className="text-center">
+                            <span className={`block text-xs font-black transition-colors ${
+                              active ? s.textColor : past ? 'text-slate-700' : 'text-slate-400'
+                            }`}>
+                              {idx + 1}. {s.short}
+                            </span>
+                            <span className="hidden xl:block text-[10px] text-slate-400 font-medium">
+                              {s.label.split(' ')[1] || ''}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            );
+          })()}
 
           {/* Form Step Contents */}
           <div className="py-2">
             {actaWizardStep === 'datos' && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 max-w-3xl mx-auto">
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 w-full">
                 <div className="bg-slate-50/50 rounded-3xl p-4 sm:p-8 space-y-6 border border-slate-100/60 shadow-sm text-left">
                   
                   {/* Importar Agenda de Reunión */}
@@ -983,7 +1027,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
             )}
 
             {actaWizardStep === 'protocolo' && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 max-w-3xl mx-auto">
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 w-full">
                 {/* Invocación */}
                 <div className="bg-slate-50/50 p-4 sm:p-8 rounded-3xl border border-slate-100/60 shadow-sm space-y-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1131,7 +1175,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
             )}
 
             {actaWizardStep === 'solicitudes' && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 max-w-3xl mx-auto">
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 w-full">
                 <div className="text-sm font-black text-slate-800 uppercase tracking-widest mb-2 flex items-center bg-amber-50 w-fit px-4 py-2 rounded-xl">
                   <FileText size={18} className="mr-2 text-amber-500" />
                   Lectura y Resolución de Solicitudes Pendientes
