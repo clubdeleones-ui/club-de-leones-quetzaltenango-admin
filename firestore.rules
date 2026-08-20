@@ -20,6 +20,13 @@ service cloud.firestore {
       return !(field in data) ? optional : data[field] is list;
     }
 
+    // Valida que al menos uno de dos campos sea string (doble compatibilidad de esquema)
+    function eitherString(data, fieldA, fieldB) {
+      if (fieldA in data) return data[fieldA] is string;
+      if (fieldB in data) return data[fieldB] is string;
+      return false;
+    }
+
     // --- RULES FOR CLUB DE LEONES COLLECTIONS ---
 
     match /propuestas/{document} {
@@ -62,7 +69,7 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isValidString(request.resource.data, 'nombre', false)
                    && isValidString(request.resource.data, 'tipo', false)
-                   && (request.resource.data.estado in ['Pendiente', 'Aprobada', 'Rechazada']);
+                   && (request.resource.data.estado in ['Pendiente', 'Aprobada', 'Rechazada', 'Descartada']);
     }
 
     match /solicitudes_voluntarios/{document} {
@@ -100,7 +107,7 @@ service cloud.firestore {
 
     match /minutas/{document} {
       allow read: if true;
-      allow write: if isValidString(request.resource.data, 'titulo', false)
+      allow write: if eitherString(request.resource.data, 'tema', 'titulo')
                    && isValidString(request.resource.data, 'comisionId', false);
     }
 
@@ -123,7 +130,7 @@ service cloud.firestore {
 
     match /tareas_comisiones/{document} {
       allow read: if true;
-      allow write: if isValidString(request.resource.data, 'titulo', false)
+      allow write: if eitherString(request.resource.data, 'punto', 'titulo')
                    && isValidString(request.resource.data, 'comisionId', false);
     }
 
@@ -139,25 +146,26 @@ service cloud.firestore {
 
     match /presupuestos_fondos/{document} {
       allow read: if true;
-      allow write: if isValidString(request.resource.data, 'nombre', false);
+      allow write: if (('tipo' in request.resource.data && request.resource.data.tipo is string)
+                    || 'monto' in request.resource.data);
     }
 
     match /presupuestos_asignaciones/{document} {
       allow read: if true;
-      allow write: if isValidString(request.resource.data, 'rubroId', false)
-                   && isValidString(request.resource.data, 'fondoId', false)
+      allow write: if isValidString(request.resource.data, 'rubroId', true)
+                   && isValidString(request.resource.data, 'comision', true)
                    && isValidNumber(request.resource.data, 'monto', false);
     }
 
     match /config_roles/{document} {
       allow read: if true;
-      allow write: if isValidString(request.resource.data, 'id', false)
+      allow write: if isValidString(request.resource.data, 'label', false)
                    && isValidList(request.resource.data, 'allowedTabs', true);
     }
 
     match /config_puestos/{document} {
       allow read: if true;
-      allow write: if isValidString(request.resource.data, 'id', false);
+      allow write: if isValidString(request.resource.data, 'nombre', false);
     }
 
     match /parqueo/{document} {
@@ -199,18 +207,35 @@ service cloud.firestore {
       allow write: if true;
     }
 
+    match /categorias_inventario/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'label', false);
+    }
+
+    match /inventario/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'codigo', false)
+                   && isValidString(request.resource.data, 'nombre', false)
+                   && isValidNumber(request.resource.data, 'cantidad', false);
+    }
+
+    match /config/{document} {
+      allow read: if true;
+      allow write: if true;
+    }
+
     // --- GENERAL COMPATIBILITY CATCH-ALL ---
-    // Regla de compatibilidad para otros desarrollos en el proyecto parqueo-cueva (Válido hasta finales de 2027)
-    // Se restringe para no interceptar ni relajar las reglas de las colecciones del Club de Leones declaradas arriba.
+    // Restringe la regla de compatibilidad para otros desarrollos en el proyecto parqueo-cueva
+    // para no interceptar ni relajar las reglas de las colecciones del Club de Leones declaradas arriba.
     match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2027, 12, 31)
-        && !(request.path[4] in [
+      allow read, write: if !(request.path[4] in [
           'propuestas', 'socios', 'actas', 'actividades', 'solicitudes', 
           'solicitudes_voluntarios', 'galeria', 'linea_tiempo', 'comisiones', 
           'minutas', 'agenda', 'agendas', 'tareas_comisiones', 'asistencias', 
           'presupuestos_rubros', 'presupuestos_fondos', 'presupuestos_asignaciones', 
           'config_roles', 'config_puestos', 'parqueo', 'convencion_config', 'convencion_registros', 'registro_participaciones', 'requerimientos_actividades',
-          'nevera_inventario', 'nevera_consumos', 'nevera_cuentas'
+          'nevera_inventario', 'nevera_consumos', 'nevera_cuentas',
+          'inventario', 'categorias_inventario', 'config'
         ]);
     }
   }

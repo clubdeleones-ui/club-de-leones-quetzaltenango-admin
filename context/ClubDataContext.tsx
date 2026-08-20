@@ -306,9 +306,26 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     };
 
+    // Migración única: subir a Storage las fotos de socios que quedaron embebidas como Base64
+    const migrateBase64Photos = async () => {
+      const MIGRATION_KEY = 'club_leones_socios_photos_migrated_v1';
+      if (localStorage.getItem(MIGRATION_KEY) !== 'true') {
+        try {
+          const fixed = await firebaseService.migrateSociosBase64Photos();
+          if (fixed > 0) {
+            console.log(`Migradas ${fixed} fotos base64 de socios a Firebase Storage.`);
+          }
+          localStorage.setItem(MIGRATION_KEY, 'true');
+        } catch (err) {
+          console.error("Error running base64 photo migration:", err);
+        }
+      }
+    };
+
     const initData = async () => {
       // await cleanPaymentsMigration();
       await performInitialSync();
+      await migrateBase64Photos();
     };
 
     initData();

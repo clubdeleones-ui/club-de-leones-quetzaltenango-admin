@@ -113,7 +113,8 @@ const ProponerSocio: React.FC = () => {
 
     setLoading(true);
     const candidateId = `prop-${Date.now()}`;
-    let finalPhotoUrl = fotoCandidato || 'https://picsum.photos/seed/' + Math.random() + '/200/200';
+    // No se persiste ninguna URL placeholder de ejemplo: si no hay foto, se deja vacía
+    let finalPhotoUrl = fotoCandidato || '';
 
     try {
       // 1. Upload photo (simply returns the base64 URL now to avoid Storage latency)

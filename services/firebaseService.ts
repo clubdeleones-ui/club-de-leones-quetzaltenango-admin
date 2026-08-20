@@ -33,8 +33,8 @@ export const firebaseService = {
       return downloadURL;
     } catch (error) {
       console.error("Error al subir foto a Firebase Storage:", error);
-      // Fallback a base64 si hay error (ej. reglas de Storage no configuradas)
-      return base64Data;
+      // NO devolver el base64: se evitaría persistir datos enormes y saturar localStorage/Firestore
+      throw new Error("No se pudo subir la fotografía a Firebase Storage. Intente de nuevo.");
     }
   },
 
@@ -43,7 +43,13 @@ export const firebaseService = {
     try {
       const docRef = doc(db, "propuestas", proposal.id);
       const cleanData = JSON.parse(JSON.stringify(proposal));
-      await setDoc(docRef, cleanData);
+
+      // No persistir nunca placeholders de imagen de ejemplo (picsum)
+      if (cleanData.fotoCandidato && String(cleanData.fotoCandidato).startsWith('https://picsum.photos')) {
+        delete cleanData.fotoCandidato;
+      }
+
+      await setDoc(docRef, cleanData, { merge: true });
     } catch (error) {
       console.error("Error saving proposal in Firestore:", error);
       throw error;
@@ -174,11 +180,14 @@ export const firebaseService = {
       return downloadURL;
     } catch (error) {
       console.error("Error al subir foto de socio a Firebase Storage:", error);
-      return base64Data;
+      // NO devolver el base64: se evitaría persistir datos enormes y saturar localStorage/Firestore
+      throw new Error("No se pudo subir la fotografía a Firebase Storage. Intente de nuevo.");
     }
   },
 
   // Save or update an active member in Firestore
+  // NOTA: Se usa merge para NUNCA sobrescribir campos existentes (como `foto`)
+  // cuando el objeto recibido está incompleto o proviene de datos desactualizados.
   saveSocio: async (socio: Socio): Promise<void> => {
     try {
       let finalFoto = socio.foto;
@@ -188,7 +197,15 @@ export const firebaseService = {
       const socioToSave = { ...socio, foto: finalFoto };
       const docRef = doc(db, "socios", socio.id);
       const cleanData = JSON.parse(JSON.stringify(socioToSave));
-      await setDoc(docRef, cleanData);
+
+      // Si la foto es un placeholder de ejemplo (picsum) o está vacía,
+      // se omite del payload para NO pisar la foto real guardada (merge preserva el valor existente).
+      const isPlaceholderFoto = !cleanData.foto || String(cleanData.foto).startsWith('https://picsum.photos');
+      if (isPlaceholderFoto) {
+        delete cleanData.foto;
+      }
+
+      await setDoc(docRef, cleanData, { merge: true });
     } catch (error) {
       console.error("Error saving socio in Firestore:", error);
       throw error;
@@ -226,12 +243,37 @@ export const firebaseService = {
     }
   },
 
+  // Migración única: convierte fotos de socios que quedaron como Base64 en Firestore
+  // a URLs de Firebase Storage (repara el problema de datos/anch storage no persistible).
+  migrateSociosBase64Photos: async (): Promise<number> => {
+    let fixed = 0;
+    try {
+      const snapshot = await getDocs(collection(db, "socios"));
+      for (const docSnap of snapshot.docs) {
+        const data = docSnap.data() as Socio;
+        if (data.foto && data.foto.startsWith('data:')) {
+          try {
+            const url = await firebaseService.uploadSocioPhoto(data.foto, data.id);
+            await setDoc(doc(db, "socios", data.id), { foto: url }, { merge: true });
+            fixed++;
+          } catch (err) {
+            console.error(`Error migrando foto base64 del socio ${data.id}:`, err);
+          }
+        }
+      }
+      return fixed;
+    } catch (error) {
+      console.error("Error migrating base64 socio photos:", error);
+      return fixed;
+    }
+  },
+
   // Save a new request (solicitud)
   saveSolicitud: async (solicitud: Solicitud): Promise<void> => {
     try {
       const docRef = doc(db, "solicitudes", solicitud.id);
       const cleanData = JSON.parse(JSON.stringify(solicitud));
-      await setDoc(docRef, cleanData);
+      await setDoc(docRef, cleanData, { merge: true });
     } catch (error) {
       console.error("Error saving solicitud in Firestore:", error);
       throw error;
@@ -286,7 +328,7 @@ export const firebaseService = {
     try {
       const docRef = doc(db, "actividades", actividad.id);
       const cleanData = JSON.parse(JSON.stringify(actividad));
-      await setDoc(docRef, cleanData);
+      await setDoc(docRef, cleanData, { merge: true });
     } catch (error) {
       console.error("Error saving actividad in Firestore:", error);
       throw error;
@@ -370,7 +412,7 @@ export const firebaseService = {
     try {
       const docRef = doc(db, "parqueo", vehiculo.id);
       const cleanData = JSON.parse(JSON.stringify(vehiculo));
-      await setDoc(docRef, cleanData);
+      await setDoc(docRef, cleanData, { merge: true });
     } catch (error) {
       console.error("Error saving vehiculo in Firestore:", error);
       throw error;
@@ -393,7 +435,7 @@ export const firebaseService = {
   saveRubroPresupuesto: async (rubro: RubroPresupuesto): Promise<void> => {
     try {
       const docRef = doc(db, "presupuestos_rubros", rubro.id);
-      await setDoc(docRef, rubro);
+      await setDoc(docRef, rubro, { merge: true });
     } catch (error) {
       console.error("Error saving rubro:", error);
       throw error;
@@ -413,7 +455,7 @@ export const firebaseService = {
   saveFondoPresupuesto: async (fondo: FondoPresupuesto): Promise<void> => {
     try {
       const docRef = doc(db, "presupuestos_fondos", fondo.id);
-      await setDoc(docRef, fondo);
+      await setDoc(docRef, fondo, { merge: true });
     } catch (error) {
       console.error("Error saving fondo:", error);
       throw error;
@@ -433,7 +475,7 @@ export const firebaseService = {
   saveAsignacionComision: async (asignacion: AsignacionComision): Promise<void> => {
     try {
       const docRef = doc(db, "presupuestos_asignaciones", asignacion.id);
-      await setDoc(docRef, asignacion);
+      await setDoc(docRef, asignacion, { merge: true });
     } catch (error) {
       console.error("Error saving asignacion:", error);
       throw error;
@@ -771,7 +813,7 @@ export const firebaseService = {
     try {
       const docRef = doc(db, "solicitudes_voluntarios", solicitud.id);
       const cleanData = JSON.parse(JSON.stringify(solicitud));
-      await setDoc(docRef, cleanData);
+      await setDoc(docRef, cleanData, { merge: true });
     } catch (error) {
       console.error("Error saving volunteer request in Firestore:", error);
       throw error;
@@ -808,7 +850,7 @@ export const firebaseService = {
     try {
       const docRef = doc(db, "registro_participaciones", registro.id);
       const cleanData = JSON.parse(JSON.stringify(registro));
-      await setDoc(docRef, cleanData);
+      await setDoc(docRef, cleanData, { merge: true });
     } catch (error) {
       console.error("Error saving RSVP request in Firestore:", error);
       throw error;
@@ -1003,7 +1045,7 @@ export const firebaseService = {
     try {
       const docRef = doc(db, "inventario", bien.id);
       const cleanData = JSON.parse(JSON.stringify(bien));
-      await setDoc(docRef, cleanData);
+      await setDoc(docRef, cleanData, { merge: true });
     } catch (error) {
       console.error("Error saving bien in Firestore:", error);
       throw error;
@@ -1039,7 +1081,7 @@ export const firebaseService = {
     try {
       const docRef = doc(db, "categorias_inventario", cat.id);
       const cleanData = JSON.parse(JSON.stringify(cat));
-      await setDoc(docRef, cleanData);
+      await setDoc(docRef, cleanData, { merge: true });
     } catch (error) {
       console.error("Error saving category in Firestore:", error);
       throw error;
@@ -1169,7 +1211,7 @@ export const firebaseService = {
     try {
       const docRef = doc(db, "convencion_config", "config");
       const cleanData = JSON.parse(JSON.stringify(config));
-      await setDoc(docRef, cleanData);
+      await setDoc(docRef, cleanData, { merge: true });
     } catch (error) {
       console.error("Error saving convencion config in Firestore:", error);
       throw error;
@@ -1180,7 +1222,7 @@ export const firebaseService = {
     try {
       const docRef = doc(db, "convencion_registros", registro.id);
       const cleanData = JSON.parse(JSON.stringify(registro));
-      await setDoc(docRef, cleanData);
+      await setDoc(docRef, cleanData, { merge: true });
     } catch (error) {
       console.error("Error saving convencion registration in Firestore:", error);
       throw error;
@@ -1244,7 +1286,7 @@ export const firebaseService = {
       return await getDownloadURL(storageRef);
     } catch (error: any) {
       console.error("Error al subir documento de solicitud a Storage:", error);
-      return dataUrl; // Fallback to data_url if storage upload fails
+      throw new Error("No se pudo subir el documento adjunto a Firebase Storage. Intente de nuevo.");
     }
   },
 

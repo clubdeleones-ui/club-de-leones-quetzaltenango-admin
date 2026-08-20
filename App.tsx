@@ -45,6 +45,8 @@ interface UserSessionSyncProps {
 const UserSessionSync: React.FC<UserSessionSyncProps> = ({ auth, onUpdateUser }) => {
   const { socios } = useClubData();
 
+  const isPlaceholderPhoto = (url?: string) => !url || url.startsWith('https://picsum.photos');
+
   useEffect(() => {
     if (auth.isAuthenticated && auth.user && socios.length > 0) {
       const currentId = auth.user.id;
@@ -53,6 +55,10 @@ const UserSessionSync: React.FC<UserSessionSyncProps> = ({ auth, onUpdateUser })
         s => s.id === currentId || (currentCorreo && s.correo && s.correo.toLowerCase() === currentCorreo.toLowerCase())
       );
       if (matchingSocio) {
+        // Nunca degradar la foto real de la sesión a un placeholder de ejemplo
+        if (isPlaceholderPhoto(matchingSocio.foto) && !isPlaceholderPhoto(auth.user.foto)) {
+          return;
+        }
         if (JSON.stringify(matchingSocio) !== JSON.stringify(auth.user)) {
           onUpdateUser(matchingSocio);
         }

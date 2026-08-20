@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Lock, Briefcase, ArrowRight, Loader2, QrCode, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MOCK_SOCIOS } from '../constants';
 import { Socio, UserRole } from '../types';
 import { firebaseService } from '../services/firebaseService';
 
@@ -134,54 +133,15 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       console.error("Error fetching socios on credentials login:", err);
     }
 
-    // Find user matching selected position
-    let user = sociosList.find(s => {
+    // Find user matching selected position (SÓLO desde Firestore, fuente de verdad)
+    const user = sociosList.find(s => {
       const sPuesto = (s.puesto || '').toLowerCase().trim();
       const selPuesto = puesto.toLowerCase().trim();
       return sPuesto === selPuesto || sPuesto.startsWith(selPuesto) || selPuesto.startsWith(sPuesto);
     });
 
-    if (!user) {
-      user = MOCK_SOCIOS.find(s => {
-        const sPuesto = (s.puesto || '').toLowerCase().trim();
-        const selPuesto = puesto.toLowerCase().trim();
-        return sPuesto === selPuesto || sPuesto.startsWith(selPuesto) || selPuesto.startsWith(sPuesto);
-      });
-    }
-
-    // Construct a fallback mock user if not found in db or MOCK_SOCIOS
-    if (!user && puesto) {
-      let role = UserRole.SOCIO;
-      if (puesto === 'Donante') {
-        role = UserRole.DONANTE;
-      } else if (puesto === 'Club Leo') {
-        role = UserRole.SOCIO;
-      } else if (puesto === 'Presidente' || puesto === 'Administrador Principal') {
-        role = UserRole.SUPER_ADMIN;
-      } else if (puesto === 'Secretario') {
-        role = UserRole.SECRETARIO;
-      } else if (puesto === 'Tesorero') {
-        role = UserRole.TESORERO;
-      } else if (puesto === 'Asesor de Servicio') {
-        role = UserRole.ASESOR_SERVICIOS;
-      } else if (puesto === 'Presidente de Afiliación') {
-        role = UserRole.PRESIDENTE_AFILIACION;
-      }
-
-      user = {
-        id: `login-fallback-${puesto.toLowerCase().replace(/\s+/g, '-')}`,
-        nombre: `Usuario ${puesto}`,
-        correo: `${puesto.toLowerCase().replace(/\s+/g, '')}@leonesxela.com`,
-        rol: role,
-        puesto: puesto,
-        estadoCuotas: 'Al día',
-        montoPendiente: 0,
-        foto: `https://picsum.photos/seed/${puesto}/200/200`,
-        fechaIngreso: new Date().toISOString().split('T')[0],
-        estatus: 'Active',
-        club: 'QUETZALTENANGO'
-      };
-    }
+    // NOTA: NUNCA se fabrica ni se usa un usuario de ejemplo (MOCK) para iniciar sesión.
+    // Un usuario inventado con foto de ejemplo podría sobrescribir los datos reales en Firestore.
 
     const isSuperAdminPuesto = 
       puesto === 'Presidente' || 
