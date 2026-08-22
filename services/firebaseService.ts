@@ -33,8 +33,10 @@ export const firebaseService = {
       const downloadURL = await getDownloadURL(storageRef);
       return downloadURL;
     } catch (error) {
-      console.error("Error al subir foto a Firebase Storage:", error);
-      // NO devolver el base64: se evitaría persistir datos enormes y saturar localStorage/Firestore
+      console.warn("Storage no disponible o sin permisos para candidato, usando imagen optimizada:", error);
+      if (base64Data.length < 500000) {
+        return base64Data;
+      }
       throw new Error("No se pudo subir la fotografía a Firebase Storage. Intente de nuevo.");
     }
   },
@@ -182,8 +184,12 @@ export const firebaseService = {
       const downloadURL = await getDownloadURL(storageRef);
       return downloadURL;
     } catch (error) {
-      console.error("Error al subir foto de socio a Firebase Storage:", error);
-      // NO devolver el base64: se evitaría persistir datos enormes y saturar localStorage/Firestore
+      console.warn("Storage no disponible o sin permisos para socio, utilizando imagen optimizada directa:", error);
+      // Si Firebase Storage falla (por ejemplo permisos 403 o reglas no publicadas),
+      // retornamos el base64 comprimido para que el socio no pierda sus cambios y pueda guardar su perfil sin bloquearse.
+      if (base64Data.length < 500000) {
+        return base64Data;
+      }
       throw new Error("No se pudo subir la fotografía a Firebase Storage. Intente de nuevo.");
     }
   },
