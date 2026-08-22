@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useConfirm } from '../../components/ConfirmProvider';
 import { 
   Save, 
   Users, 
@@ -58,6 +59,7 @@ const DEFAULT_ALIANZAS: ConvencionAlianza[] = [
 ];
 
 export function AdminConvencion() {
+  const { confirm } = useConfirm();
   const [activeSubTab, setActiveSubTab] = useState<'config' | 'registros'>('config');
   const [activeConfigTab, setActiveConfigTab] = useState<'general' | 'actividades' | 'experiencias' | 'alianzas' | 'difusion'>('general');
   
@@ -326,7 +328,8 @@ export function AdminConvencion() {
   };
 
   const handleDeleteActividad = async (id: string) => {
-    if (!window.confirm("¿Estás seguro de eliminar esta actividad cultural?")) return;
+    const ok = await confirm({ title: "Eliminar actividad", message: "¿Estás seguro de eliminar esta actividad cultural?", confirmLabel: "Eliminar", danger: true });
+    if (!ok) return;
     
     const updatedList = (config.actividadesCulturales || []).filter(a => a.id !== id);
     const updatedConfig = { ...config, actividadesCulturales: updatedList };
@@ -401,7 +404,8 @@ export function AdminConvencion() {
   };
 
   const handleDeleteExperiencia = async (id: string) => {
-    if (!window.confirm("¿Estás seguro de eliminar esta experiencia?")) return;
+    const ok = await confirm({ title: "Eliminar experiencia", message: "¿Estás seguro de eliminar esta experiencia?", confirmLabel: "Eliminar", danger: true });
+    if (!ok) return;
     
     const updatedList = (config.experienciasUnicas || []).filter(e => e.id !== id);
     const updatedConfig = { ...config, experienciasUnicas: updatedList };
@@ -565,7 +569,8 @@ export function AdminConvencion() {
   };
 
   const handleDeleteAlianza = async (id: string) => {
-    if (!window.confirm("¿Estás seguro de eliminar este logo de las alianzas?")) return;
+    const ok = await confirm({ title: "Eliminar alianza", message: "¿Estás seguro de eliminar este logo de las alianzas?", confirmLabel: "Eliminar", danger: true });
+    if (!ok) return;
 
     const currentList = (config.alianzas && config.alianzas.length > 0) ? config.alianzas : DEFAULT_ALIANZAS;
     const updatedList = currentList.filter(item => item.id !== id);

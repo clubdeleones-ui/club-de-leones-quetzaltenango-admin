@@ -1,3 +1,4 @@
+import { safeSetItem } from '../utils/storage';
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
@@ -60,7 +61,7 @@ export const AgendaPublica: React.FC = () => {
         if (data && isMounted) {
           setAgenda(data);
           try {
-            localStorage.setItem(`club_leones_agenda_public_${id}`, JSON.stringify(data));
+            safeSetItem(`club_leones_agenda_public_${id}`, JSON.stringify(data));
           } catch (e) {}
         }
       } catch (err) {
@@ -79,7 +80,7 @@ export const AgendaPublica: React.FC = () => {
 
   const handleCopyLink = () => {
     const shareUrl = window.location.href;
-    navigator.clipboard.writeText(shareUrl);
+    navigator.clipboard.writeText(shareUrl).catch(() => {});
     setCopied(true);
     showToast("Enlace de la agenda copiado al portapapeles", "success");
     setTimeout(() => setCopied(false), 2500);

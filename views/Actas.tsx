@@ -104,7 +104,7 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
   const stats = useMemo(() => {
     const total = actas.length;
     const latest = actas.length > 0 
-      ? [...actas].sort((a, b) => b.fecha.localeCompare(a.fecha))[0].fecha 
+      ? [...actas].sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''))[0].fecha 
       : 'Sin registros';
 
     const authors: Record<string, number> = {};

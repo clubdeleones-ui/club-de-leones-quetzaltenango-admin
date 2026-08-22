@@ -1,3 +1,4 @@
+import { safeSetItem } from './utils/storage';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
@@ -20,7 +21,7 @@ if (typeof window !== 'undefined') {
       const lastReload = localStorage.getItem('last_chunk_error_reload');
       const now = Date.now();
       if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
-        localStorage.setItem('last_chunk_error_reload', now.toString());
+        safeSetItem('last_chunk_error_reload', now.toString());
         window.location.reload();
       }
     }
@@ -40,7 +41,7 @@ if (typeof window !== 'undefined') {
       const lastReload = localStorage.getItem('last_chunk_error_reload');
       const now = Date.now();
       if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
-        localStorage.setItem('last_chunk_error_reload', now.toString());
+        safeSetItem('last_chunk_error_reload', now.toString());
         window.location.reload();
       }
     }

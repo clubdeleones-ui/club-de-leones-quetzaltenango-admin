@@ -1,3 +1,4 @@
+import { safeSetItem } from '../../utils/storage';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   FileText, Plus, Search, Filter, Trash2, Edit, Download, X, Clock, Users, Mail, Briefcase, CheckCircle, Pencil, Building, BookOpen, ChevronUp, ChevronDown, ArrowUp, ArrowDown, GripVertical, ListOrdered, ArrowUpDown, CheckCircle2, MessageSquare, Bookmark
@@ -585,7 +586,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     }
 
     setActas(newActas);
-    localStorage.setItem('club_leones_actas', JSON.stringify(newActas));
+    safeSetItem('club_leones_actas', JSON.stringify(newActas));
 
     const pendingSols = solicitudes.filter(s => s.estado === 'Pendiente' && !s.archivada);
     
@@ -628,7 +629,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     }
     const updated = actas.filter(a => a.id !== id);
     setActas(updated);
-    localStorage.setItem('club_leones_actas', JSON.stringify(updated));
+    safeSetItem('club_leones_actas', JSON.stringify(updated));
     setDeleteActaConfirmId(null);
     setDeleteActaConfirmText('');
   };
@@ -1885,7 +1886,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                       type="button"
                       onClick={() => {
                         const rawText = compileActaText(actaWizardData);
-                        navigator.clipboard.writeText(rawText);
+                        navigator.clipboard.writeText(rawText).catch(() => {});
                         showToast('¡Texto del acta copiado al portapapeles!', 'success');
                       }}
                       className="p-2.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-blue-900 rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer"
@@ -2336,7 +2337,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     <button
                       type="button"
                       onClick={() => {
-                        navigator.clipboard.writeText(publishedSuccessModal.code);
+                        navigator.clipboard.writeText(publishedSuccessModal.code).catch(() => {});
                         showToast('Código copiado al portapapeles', 'success');
                       }}
                       className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg text-[10px] font-black transition-all cursor-pointer flex-shrink-0"

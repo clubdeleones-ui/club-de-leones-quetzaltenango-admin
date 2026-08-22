@@ -40,7 +40,7 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
         if (orderA !== orderB) {
           return orderA - orderB;
         }
-        return a.nombre.localeCompare(b.nombre);
+        return (a.nombre || '').localeCompare(b.nombre || '');
       });
   }, [socios, rolesConfig]);
 
@@ -77,6 +77,15 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
 
       {/* ACTIVE MEMBERS LIST */}
       <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-10 pt-4">
+        {displayedSocios.length === 0 && (
+          <div className="col-span-full flex flex-col items-center justify-center text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200">
+            <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+              <Users size={28} className="text-slate-400" />
+            </div>
+            <h3 className="text-lg font-black text-slate-800">Aún no hay socios en el directorio</h3>
+            <p className="text-sm text-slate-500 mt-1 max-w-sm">Cuando se registren los miembros activos, aparecerán aquí ordenados por cargo.</p>
+          </div>
+        )}
         {displayedSocios.map((socio) => (
           <div 
             key={socio.id} 

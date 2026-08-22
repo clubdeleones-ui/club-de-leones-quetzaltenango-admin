@@ -1,7 +1,10 @@
+import { safeSetItem } from '../utils/storage';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Socio, UserRole, Solicitud, Responsable } from '../types';
 import { firebaseService } from '../services/firebaseService';
 import { useModal } from '../context/ModalContext';
+import { useToast } from '../context/ToastContext';
+import { useConfirm } from '../components/ConfirmProvider';
 import { useClubData } from '../context/ClubDataContext';
 import { validateImageFile, compressPngSignature } from '../utils/imageCompressor';
 import { 
@@ -266,6 +269,8 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   const alert = (msg: string) => {
     showAlert("Notificación", msg);
   };
+  const { confirm, prompt } = useConfirm();
+  const { showToast } = useToast();
 
   const { solicitudes: dbSolicitudes, socios, loading, rolesConfig } = useClubData();
   const [activeTab, setActiveTab] = useState<'abiertas' | 'sillas' | 'internas' | 'agenda' | 'cartas' | 'salon' | 'archivo' | null>(null);
@@ -318,29 +323,29 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     }
   }, []);
 
-  const handleCopyPublicAgendaLink = () => {
+  const handleCopyPublicAgendaLink = async () => {
     const baseUrl = `${window.location.origin}${window.location.pathname}#/solicitudes?tab=agenda&proponer=true`;
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(baseUrl).then(() => {
-        alert("¡Enlace público copiado al portapapeles!\n\nPuedes compartir este enlace para que cualquier socio o persona pueda proponer un punto de agenda directamente.");
-      }).catch(() => {
-        prompt("Copia este enlace público para proponer un punto de agenda:", baseUrl);
+      navigator.clipboard.writeText(baseUrl).catch(() => {}).then(() => {
+        showToast("Enlace público copiado al portapapeles. ¡Compártelo para proponer puntos de agenda!", "success");
+      }).catch(async () => {
+        await prompt({ title: "Enlace público de agenda", message: "No se pudo copiar al portapapeles. Copia el enlace manualmente:", defaultValue: baseUrl, okLabel: "Listo" });
       });
     } else {
-      prompt("Copia este enlace público para proponer un punto de agenda:", baseUrl);
+      await prompt({ title: "Enlace público de agenda", message: "Copia el enlace para proponer un punto de agenda:", defaultValue: baseUrl, okLabel: "Listo" });
     }
   };
 
-  const handleCopyPublicSalonLink = () => {
+  const handleCopyPublicSalonLink = async () => {
     const baseUrl = `${window.location.origin}${window.location.pathname}#/solicitudes?tab=salon`;
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(baseUrl).then(() => {
-        alert("¡Enlace directo copiado al portapapeles!\n\nPuedes compartir este enlace con los usuarios para que abran directamente el formulario de reservación de salón y parqueo.");
-      }).catch(() => {
-        prompt("Copia este enlace para compartir el formulario de alquiler:", baseUrl);
+      navigator.clipboard.writeText(baseUrl).catch(() => {}).then(() => {
+        showToast("Enlace directo copiado al portapapeles. ¡Compártelo para reservaciones de salón y parqueo!", "success");
+      }).catch(async () => {
+        await prompt({ title: "Enlace de reservación de salón", message: "No se pudo copiar al portapapeles. Copia el enlace manualmente:", defaultValue: baseUrl, okLabel: "Listo" });
       });
     } else {
-      prompt("Copia este enlace para compartir el formulario de alquiler:", baseUrl);
+      await prompt({ title: "Enlace de reservación de salón", message: "Copia el enlace para compartir el formulario de alquiler:", defaultValue: baseUrl, okLabel: "Listo" });
     }
   };
 
@@ -438,7 +443,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       await firebaseService.saveSolicitud(updated);
       const updatedList = solicitudes.map(s => s.id === id ? updated : s);
       setSolicitudes(updatedList);
-      localStorage.setItem('club_leones_solicitudes', JSON.stringify(updatedList));
+      safeSetItem('club_leones_solicitudes', JSON.stringify(updatedList));
       alert(newArchivedState ? "Solicitud movida al Archivo con éxito." : "Solicitud restaurada a la lista activa.");
     } catch (err) {
       console.error("Error toggling archive status:", err);
@@ -504,7 +509,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     };
     const updated = [newDraft, ...drafts];
     setDrafts(updated);
-    localStorage.setItem('club_leones_carta_drafts', JSON.stringify(updated));
+    safeSetItem('club_leones_carta_drafts', JSON.stringify(updated));
     alert("Borrador guardado exitosamente.");
   };
 
@@ -523,11 +528,12 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     alert("Borrador cargado.");
   };
 
-  const deleteDraft = (id: string) => {
-    if (!window.confirm("¿Está seguro de eliminar este borrador?")) return;
+  const deleteDraft = async (id: string) => {
+    const ok = await confirm({ title: "Eliminar borrador", message: "¿Está seguro de eliminar este borrador?", confirmLabel: "Eliminar", danger: true });
+    if (!ok) return;
     const updated = drafts.filter(d => d.id !== id);
     setDrafts(updated);
-    localStorage.setItem('club_leones_carta_drafts', JSON.stringify(updated));
+    safeSetItem('club_leones_carta_drafts', JSON.stringify(updated));
   };
 
   // Helper to split document text into letter-sized pages
@@ -960,7 +966,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       await firebaseService.saveSolicitud(nuevaSolicitud);
       const updatedList = [nuevaSolicitud, ...solicitudes];
       setSolicitudes(updatedList);
-      localStorage.setItem('club_leones_solicitudes', JSON.stringify(updatedList));
+      safeSetItem('club_leones_solicitudes', JSON.stringify(updatedList));
 
       setCreatedSolicitudId(nuevaSolicitud.id);
       setSaveSuccess(true);
@@ -1024,7 +1030,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       await firebaseService.saveSolicitud(updated);
       const newList = solicitudes.map(s => s.id === solicitudId ? updated : s);
       setSolicitudes(newList);
-      localStorage.setItem('club_leones_solicitudes', JSON.stringify(newList));
+      safeSetItem('club_leones_solicitudes', JSON.stringify(newList));
       alert(`La solicitud ha sido ${nuevoEstado.toLowerCase()} exitosamente.`);
     } catch (err) {
       console.error("Error updating status:", err);
@@ -1041,7 +1047,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       await firebaseService.deleteSolicitud(solicitudId);
       const newList = solicitudes.filter(s => s.id !== solicitudId);
       setSolicitudes(newList);
-      localStorage.setItem('club_leones_solicitudes', JSON.stringify(newList));
+      safeSetItem('club_leones_solicitudes', JSON.stringify(newList));
       alert("Solicitud eliminada correctamente.");
     } catch (err) {
       console.error("Error deleting solicitud:", err);
@@ -1983,7 +1989,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
               await firebaseService.saveSolicitud(nuevaSolicitud);
               const updatedList = [nuevaSolicitud, ...solicitudes];
               setSolicitudes(updatedList);
-              localStorage.setItem('club_leones_solicitudes', JSON.stringify(updatedList));
+              safeSetItem('club_leones_solicitudes', JSON.stringify(updatedList));
 
               setCreatedSolicitudId(nuevaSolicitud.id);
               setSaveSuccess(true);
@@ -2003,7 +2009,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       await firebaseService.saveSolicitud(nuevaSolicitud);
       const updatedList = [nuevaSolicitud, ...solicitudes];
       setSolicitudes(updatedList);
-      localStorage.setItem('club_leones_solicitudes', JSON.stringify(updatedList));
+      safeSetItem('club_leones_solicitudes', JSON.stringify(updatedList));
 
       setCreatedSolicitudId(nuevaSolicitud.id);
       setCreatedSolicitudCheckoutUrl(nuevaSolicitud.recurrenteCheckoutUrl || '');
@@ -3404,7 +3410,7 @@ Atentamente,
 ${cartaFirmaNombre}
 ${cartaFirmaPuesto}
 Club de Leones de Quetzaltenango`;
-                navigator.clipboard.writeText(textToCopy);
+                navigator.clipboard.writeText(textToCopy).catch(() => {});
                 alert("Texto copiado al portapapeles. Listo para pegar en Google Docs.");
               }}
               disabled={!cartaCuerpo.trim()}
@@ -3655,7 +3661,7 @@ Club de Leones de Quetzaltenango`;
           <button
             type="button"
             onClick={() => {
-              navigator.clipboard.writeText(createdSolicitudId);
+              navigator.clipboard.writeText(createdSolicitudId).catch(() => {});
               alert("Código copiado al portapapeles.");
             }}
             className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center space-x-1.5 cursor-pointer"

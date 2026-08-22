@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useToast } from '../context/ToastContext';
 import { 
   MapPin, 
   Calendar, 
@@ -167,6 +168,7 @@ const ALIANZAS_CONVENCION = [
 ];
 
 export default function Convencion() {
+  const { showToast } = useToast();
   const [config, setConfig] = useState<ConvencionConfig>({
     titulo: 'Distrito D3 Guatemala',
     lema: 'Rugiendo con fuerza, sirviendo con amor y uniendo voluntades por nuestra nación',
@@ -362,15 +364,15 @@ export default function Convencion() {
   const handleNextStep = (step: 1 | 2 | 3 | 4) => {
     if (step === 2) {
       if (!form.nombre.trim() || !form.email.trim() || !telefonoDigitos.trim() || !dpiDigitos.trim()) {
-        alert("Por favor completa todos los campos requeridos del Paso 1.");
+        showToast("Por favor completa todos los campos requeridos del Paso 1.", "error");
         return;
       }
       if (telefonoDigitos.length !== 8) {
-        alert("El número de teléfono debe tener exactamente 8 dígitos.");
+        showToast("El número de teléfono debe tener exactamente 8 dígitos.", "error");
         return;
       }
       if (dpiDigitos.length !== 13) {
-        alert("El número de DPI debe tener 13 dígitos numéricos.");
+        showToast("El número de DPI debe tener 13 dígitos numéricos.", "error");
         return;
       }
     }
@@ -378,7 +380,7 @@ export default function Convencion() {
     if (step === 3) {
       if (form.distrito === 'Otro / Internacional' || form.club === 'Otro Club') {
         if (!customClub.trim()) {
-          alert("Por favor escribe el nombre de tu club.");
+          showToast("Por favor escribe el nombre de tu club.", "error");
           return;
         }
       }
@@ -413,7 +415,7 @@ export default function Convencion() {
 
   const handleFinalSubmit = async (metodo: 'recurrente' | 'transferencia') => {
     if (telefonoDigitos.length !== 8) {
-      alert("Por favor, ingresa un número de teléfono válido de 8 dígitos.");
+      showToast("Por favor, ingresa un número de teléfono válido de 8 dígitos.", "error");
       return;
     }
     
@@ -422,7 +424,7 @@ export default function Convencion() {
       : form.club;
 
     if ((form.distrito === 'Otro / Internacional' || form.club === 'Otro Club') && !finalClub) {
-      alert("Por favor, ingresa el nombre de tu club.");
+      showToast("Por favor, ingresa el nombre de tu club.", "error");
       return;
     }
 
@@ -525,14 +527,14 @@ export default function Convencion() {
           }
         } catch (payErr: any) {
           console.error("Error al conectar con la pasarela de pagos Recurrente GT:", payErr);
-          alert(`ℹ️ Tu pre-registro fue guardado con éxito.\n\nNotificación de Recurrente GT:\n${payErr?.message || 'No se pudo generar el enlace directo de pago.'}\n\nUn comisionado revisará tu registro y se pondrá en contacto contigo para completar el pago.`);
+          showToast(`Tu pre-registro fue guardado con éxito. ${payErr?.message || 'No se pudo generar el enlace directo de pago.'} Un comisionado revisará tu registro y se pondrá en contacto contigo para completar el pago.`, "info");
         }
       }
 
       setIsSubmitted(true);
     } catch (error) {
       console.error("Error al registrar participante:", error);
-      alert("Hubo un problema al registrar tus datos. Por favor inténtalo de nuevo.");
+      showToast("Hubo un problema al registrar tus datos. Por favor inténtalo de nuevo.", "error");
     } finally {
       setLoading(false);
       setIsRedirectingPayment(false);

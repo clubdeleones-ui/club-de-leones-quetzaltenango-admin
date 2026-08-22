@@ -550,7 +550,7 @@ export const NeveraAdmin: React.FC = () => {
                   <div className="flex items-center space-x-4">
                     <div className="text-right">
                       <span className="text-[10px] uppercase font-bold text-slate-400 block">Saldo Deudor</span>
-                      <span className="text-lg font-black text-amber-900">Q. {cuenta.saldoPendiente.toFixed(2)}</span>
+                      <span className="text-lg font-black text-amber-900">Q. {(cuenta.saldoPendiente || 0).toFixed(2)}</span>
                     </div>
 
                     <button
@@ -815,7 +815,7 @@ export const NeveraAdmin: React.FC = () => {
             <form onSubmit={handleSaveAbono} className="space-y-4">
               <div className="bg-amber-50 p-3 rounded-2xl border border-amber-200 text-xs">
                 <span className="text-amber-900 font-bold">Saldo Deudor Actual: </span>
-                <strong className="text-amber-950 font-black text-sm">Q. {selectedCuentaForAbono.saldoPendiente.toFixed(2)}</strong>
+                <strong className="text-amber-950 font-black text-sm">Q. {(selectedCuentaForAbono.saldoPendiente || 0).toFixed(2)}</strong>
               </div>
 
               <div>

@@ -1,3 +1,4 @@
+import { safeSetItem } from '../utils/storage';
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle } from 'lucide-react';
 
@@ -39,7 +40,7 @@ class ErrorBoundary extends Component<Props, State> {
       const lastReload = localStorage.getItem('last_chunk_error_reload');
       const now = Date.now();
       if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
-        localStorage.setItem('last_chunk_error_reload', now.toString());
+        safeSetItem('last_chunk_error_reload', now.toString());
         window.location.reload();
       }
     }

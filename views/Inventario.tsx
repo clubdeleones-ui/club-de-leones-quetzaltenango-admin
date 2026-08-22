@@ -1,4 +1,7 @@
+import { safeSetItem } from '../utils/storage';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useToast } from '../context/ToastContext';
+import { useConfirm } from '../components/ConfirmProvider';
 import { 
   Package, Plus, Search, Archive, MapPin, User, Tag, Heart, Shield, AlertTriangle, 
   Trash2, Edit, X, Calendar, DollarSign, AlertCircle, CheckCircle, Check, Info,
@@ -225,9 +228,12 @@ const SCHEMES = [
 ];
 
 export const Inventario: React.FC = () => {
+  const { showToast } = useToast();
+  const { confirm } = useConfirm();
   const [bienes, setBienes] = useState<BienInventario[]>([]);
   const [categories, setCategories] = useState<CategoriaInventario[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSavingBien, setIsSavingBien] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [selectedCondition, setSelectedCondition] = useState('all');
@@ -288,8 +294,8 @@ export const Inventario: React.FC = () => {
         }
         setBienes(items);
 
-        localStorage.setItem('club_leones_inventario', JSON.stringify(items));
-        localStorage.setItem('club_leones_categorias_inventario', JSON.stringify(cats));
+        safeSetItem('club_leones_inventario', JSON.stringify(items));
+        safeSetItem('club_leones_categorias_inventario', JSON.stringify(cats));
       } catch (e) {
         console.error("Error fetching data:", e);
         const localItems = localStorage.getItem('club_leones_inventario');
@@ -360,28 +366,30 @@ export const Inventario: React.FC = () => {
   };
 
   const handleDeleteBien = async (id: string) => {
-    if (!window.confirm("¿Está seguro de eliminar este bien de inventario permanentemente?")) return;
+    const ok = await confirm({ title: "Eliminar bien", message: "¿Está seguro de eliminar este bien de inventario permanentemente?", confirmLabel: "Eliminar", danger: true });
+    if (!ok) return;
     try {
       await firebaseService.deleteBienInventario(id);
       const updated = bienes.filter(b => b.id !== id);
       setBienes(updated);
-      localStorage.setItem('club_leones_inventario', JSON.stringify(updated));
+      safeSetItem('club_leones_inventario', JSON.stringify(updated));
+      showToast("Bien eliminado del inventario", "success");
     } catch (e) {
       console.error("Error deleting item:", e);
-      alert("No se pudo eliminar el bien.");
+      showToast("No se pudo eliminar el bien.", "error");
     }
   };
 
   const handleAddCategoryInline = async () => {
     if (!newCatLabel.trim() || !newCatPrefix.trim()) {
-      alert("Ingrese nombre y prefijo de código para la categoría.");
+      showToast("Ingrese nombre y prefijo de código para la categoría.", "error");
       return;
     }
     const cleanPrefix = newCatPrefix.trim().toUpperCase().slice(0, 4);
     const generatedId = newCatLabel.trim().toLowerCase().replace(/\s+/g, '_');
 
     if (categories.some(c => c.id === generatedId || c.prefix === cleanPrefix)) {
-      alert("Ya existe una categoría con ese nombre o prefijo.");
+      showToast("Ya existe una categoría con ese nombre o prefijo.", "error");
       return;
     }
 
@@ -395,7 +403,7 @@ export const Inventario: React.FC = () => {
       await firebaseService.saveCategoriaInventario(newCat);
       const updatedCats = [...categories, newCat];
       setCategories(updatedCats);
-      localStorage.setItem('club_leones_categorias_inventario', JSON.stringify(updatedCats));
+      safeSetItem('club_leones_categorias_inventario', JSON.stringify(updatedCats));
 
       setFormData(prev => ({ ...prev, categoria: generatedId }));
       setNewCatLabel('');
@@ -403,14 +411,14 @@ export const Inventario: React.FC = () => {
       setShowNewCatSubform(false);
     } catch (e) {
       console.error("Error saving category:", e);
-      alert("No se pudo registrar la nueva categoría.");
+      showToast("No se pudo registrar la nueva categoría.", "error");
     }
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.nombre.trim() || !formData.categoria || !formData.ubicacion.trim() || !formData.responsableNombre.trim()) {
-      alert("Por favor, llene los campos obligatorios.");
+      showToast("Por favor, llene los campos obligatorios.", "error");
       return;
     }
 
@@ -440,17 +448,20 @@ export const Inventario: React.FC = () => {
     };
 
     try {
+      setIsSavingBien(true);
       await firebaseService.saveBienInventario(newBien);
       const updated = editingBien 
         ? bienes.map(b => b.id === uniqueId ? newBien : b)
         : [newBien, ...bienes];
       
       setBienes(updated);
-      localStorage.setItem('club_leones_inventario', JSON.stringify(updated));
+      safeSetItem('club_leones_inventario', JSON.stringify(updated));
       setShowModal(false);
     } catch (e) {
       console.error("Error saving inventory item:", e);
-      alert("No se pudo guardar el bien en la base de datos.");
+      showToast("No se pudo guardar el bien en la base de datos.", "error");
+    } finally {
+      setIsSavingBien(false);
     }
   };
 
@@ -1136,9 +1147,10 @@ export const Inventario: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 bg-blue-900 hover:bg-blue-805 text-white font-extrabold rounded-xl transition-all shadow-md shadow-blue-900/10 active:scale-98 text-sm"
+                  disabled={isSavingBien}
+                  className="flex-1 py-3 bg-blue-900 hover:bg-blue-805 text-white font-extrabold rounded-xl transition-all shadow-md shadow-blue-900/10 active:scale-98 text-sm disabled:opacity-60 disabled:pointer-events-none"
                 >
-                  {editingBien ? 'Guardar Cambios' : 'Registrar en Inventario'}
+                  {isSavingBien ? 'Guardando...' : editingBien ? 'Guardar Cambios' : 'Registrar en Inventario'}
                 </button>
               </div>
             </form>

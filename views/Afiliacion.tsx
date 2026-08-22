@@ -1,8 +1,10 @@
+import { safeSetItem } from '../utils/storage';
 import React, { useState, useEffect, useMemo } from 'react';
 import { MOCK_PROPUESTAS } from '../constants';
 import { Socio, PropuestaSocio, UserRole } from '../types';
 import { firebaseService } from '../services/firebaseService';
 import { useModal } from '../context/ModalContext';
+import { useConfirm } from '../components/ConfirmProvider';
 import { useClubData } from '../context/ClubDataContext';
 import { compressImageFile, validateImageFile } from '../utils/imageCompressor';
 import { generateCartasInvitacionPDF } from '../utils/pdfGenerator';
@@ -87,6 +89,7 @@ interface AfiliacionProps {
 }
 
 export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
+  const { prompt } = useConfirm();
   const { showAlert, showConfirm } = useModal();
   const alert = (msg: string) => {
     showAlert("Notificación", msg);
@@ -484,7 +487,7 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                             const nextConfirmState = !propuesta.invitacionConfirmada;
                             let phone = propuesta.telefonoConfirmacionCandidato || '';
                             if (nextConfirmState && !phone) {
-                              const inputPhone = window.prompt("Ingrese el número de teléfono de 8 dígitos del candidato (opcional):", "");
+                              const inputPhone = await prompt({ title: "Teléfono del candidato", message: "Ingrese el número de teléfono de 8 dígitos del candidato (opcional):", defaultValue: "", okLabel: "Guardar", cancelLabel: "Cancelar" });
                               if (inputPhone === null) return;
                               const cleanDigits = inputPhone.replace(/\D/g, '');
                               if (cleanDigits.length === 8) {
@@ -665,7 +668,7 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                 // 2. Save to localStorage immediately as unsynced
                 const localPropuestas = localStorage.getItem('club_leones_propuestas');
                 const propuestasActuales: PropuestaSocio[] = localPropuestas ? JSON.parse(localPropuestas) : [];
-                localStorage.setItem('club_leones_propuestas', JSON.stringify(
+                safeSetItem('club_leones_propuestas', JSON.stringify(
                   propuestasActuales.map(p => p.id === updatedPropuesta.id ? { ...updatedPropuesta, synced: false } : p)
                 ));
 
@@ -698,7 +701,7 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                     // Mark as synced in localStorage
                     const currentLocal = localStorage.getItem('club_leones_propuestas');
                     const currentProps: PropuestaSocio[] = currentLocal ? JSON.parse(currentLocal) : [];
-                    localStorage.setItem('club_leones_propuestas', JSON.stringify(
+                    safeSetItem('club_leones_propuestas', JSON.stringify(
                       currentProps.map(p => p.id === updatedPropuesta.id ? { ...p, fotoCandidato: finalPhotoUrl, synced: true } : p)
                     ));
                   } catch (backgroundErr: any) {
@@ -1104,7 +1107,7 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                     type="button"
                     onClick={() => {
                       const link = `${window.location.origin}${window.location.pathname}#/ficha-evaluacion/${shareConfigPropuesta.id}`;
-                      navigator.clipboard.writeText(link);
+                      navigator.clipboard.writeText(link).catch(() => {});
                       setCopiedLink(true);
                       setTimeout(() => setCopiedLink(false), 2000);
                     }}
@@ -1279,7 +1282,7 @@ export const Afiliacion: React.FC<AfiliacionProps> = ({ user }) => {
                     type="button"
                     onClick={() => {
                       const link = `${window.location.origin}${window.location.pathname}#/evaluacion-compartida`;
-                      navigator.clipboard.writeText(link);
+                      navigator.clipboard.writeText(link).catch(() => {});
                       setCopiedCollective(true);
                       setTimeout(() => setCopiedCollective(false), 2000);
                     }}

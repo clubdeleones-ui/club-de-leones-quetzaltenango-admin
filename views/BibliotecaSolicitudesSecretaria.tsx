@@ -155,7 +155,7 @@ export const BibliotecaSolicitudesSecretaria: React.FC<BibliotecaSolicitudesSecr
   };
 
   const handleCopyCode = (id: string) => {
-    navigator.clipboard.writeText(id);
+    navigator.clipboard.writeText(id).catch(() => {});
     showToast(`Código de solicitud "${id}" copiado al portapapeles`, "info");
   };
 

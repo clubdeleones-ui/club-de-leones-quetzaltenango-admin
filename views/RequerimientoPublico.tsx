@@ -1,3 +1,4 @@
+import { safeSetItem } from '../utils/storage';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { RequerimientoActividad, ComisionRequerimiento, TareaVoluntario, MaterialNecesidad } from '../types';
@@ -92,7 +93,7 @@ export const RequerimientoPublico: React.FC = () => {
 
   // Save signed up items to localStorage
   useEffect(() => {
-    localStorage.setItem('club_leones_public_signups', JSON.stringify(mySignedUpItems));
+    safeSetItem('club_leones_public_signups', JSON.stringify(mySignedUpItems));
   }, [mySignedUpItems]);
 
   // Open modal to sign up
@@ -141,7 +142,7 @@ export const RequerimientoPublico: React.FC = () => {
     }
 
     // Save profile to localStorage for future pre-fills
-    localStorage.setItem('club_leones_vol_profile', JSON.stringify({ nombre: volNombre, telefono: volTelefono }));
+    safeSetItem('club_leones_vol_profile', JSON.stringify({ nombre: volNombre, telefono: volTelefono }));
 
     const updatedComisiones = req.comisionesRequeridas.map(c => {
       if (c.id === selectedItem.comId) {

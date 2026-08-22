@@ -82,7 +82,7 @@ export const MuseoPersonajes: React.FC<MuseoPersonajesProps> = ({ items }) => {
         url: window.location.href,
       }).catch(() => {});
     } else {
-      navigator.clipboard.writeText(`${personaje.titulo} - ${personaje.puestoCargo} (${personaje.periodoServicio})`);
+      navigator.clipboard.writeText(`${personaje.titulo} - ${personaje.puestoCargo} (${personaje.periodoServicio})`).catch(() => {});
       showToast("Enlace de ficha histórica copiado al portapapeles", "info");
     }
   };

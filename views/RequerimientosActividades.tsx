@@ -47,7 +47,7 @@ export const RequerimientosActividades: React.FC<RequerimientosActividadesProps>
 
   const handleCopyLink = (reqId: string) => {
     const url = getShareUrl(reqId);
-    navigator.clipboard.writeText(url);
+    navigator.clipboard.writeText(url).catch(() => {});
     showToast('Enlace copiado al portapapeles', 'success');
   };
 

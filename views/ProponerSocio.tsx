@@ -1,3 +1,4 @@
+import { safeSetItem } from '../utils/storage';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserRole, PropuestaSocio } from '../types';
@@ -164,7 +165,7 @@ const ProponerSocio: React.FC = () => {
       // 3. Save to localStorage
       const localPropuestas = localStorage.getItem('club_leones_propuestas');
       const propuestasActuales = localPropuestas ? JSON.parse(localPropuestas) : [];
-      localStorage.setItem('club_leones_propuestas', JSON.stringify([propuestaLocal, ...propuestasActuales]));
+      safeSetItem('club_leones_propuestas', JSON.stringify([propuestaLocal, ...propuestasActuales]));
 
       setSubmitted(true);
     } catch (err) {

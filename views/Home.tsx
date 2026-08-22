@@ -190,7 +190,7 @@ const Home: React.FC = () => {
       window.open(url, '_blank', 'noopener,noreferrer');
     } else if (network === 'copy') {
       const fullText = `${shareText}\n\nEnlace del evento: ${shareUrl}`;
-      navigator.clipboard.writeText(fullText).then(() => {
+      navigator.clipboard.writeText(fullText).catch(() => {}).then(() => {
         setCopiedId(act.id);
         setTimeout(() => setCopiedId(null), 2500);
       });

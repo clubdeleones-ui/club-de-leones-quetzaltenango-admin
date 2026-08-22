@@ -1,3 +1,4 @@
+import { safeSetItem } from '../utils/storage';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { 
@@ -29,6 +30,7 @@ import { firebaseService } from '../services/firebaseService';
 import { useClubData } from '../context/ClubDataContext';
 import { useModal } from '../context/ModalContext';
 import { useToast } from '../context/ToastContext';
+import { useConfirm } from '../components/ConfirmProvider';
 import { getWrittenDateTimeSpanish } from '../utils/dateSpanishFormatter';
 import { 
   TrendingUp, 
@@ -386,6 +388,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   } = useClubData();
 
   const { showToast } = useToast();
+  const { prompt } = useConfirm();
 
   const [socios, setSocios] = useState<Socio[]>(dbSocios);
   const [propuestas, setPropuestas] = useState<PropuestaSocio[]>(dbPropuestas);
@@ -1305,7 +1308,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     }
 
     setActas(newActas);
-    localStorage.setItem('club_leones_actas', JSON.stringify(newActas));
+    safeSetItem('club_leones_actas', JSON.stringify(newActas));
 
     const pendingSols = solicitudes.filter(s => s.estado === 'Pendiente');
     const updatedSolicitudes = [...solicitudes];
@@ -1334,7 +1337,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     }
 
     setSolicitudes(updatedSolicitudes);
-    localStorage.setItem('club_leones_solicitudes', JSON.stringify(updatedSolicitudes));
+    safeSetItem('club_leones_solicitudes', JSON.stringify(updatedSolicitudes));
 
     setEditingActaId(null);
     setShowAddActa(false);
@@ -1441,7 +1444,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     };
     const updated = [created, ...beneficios];
     setBeneficios(updated);
-    localStorage.setItem('club_leones_beneficios', JSON.stringify(updated));
+    safeSetItem('club_leones_beneficios', JSON.stringify(updated));
     setNewBeneficio({ titulo: '', descripcion: '', convenioCon: '', descuento: '', categoria: 'Salud' });
     setShowAddBeneficio(false);
   };
@@ -1499,7 +1502,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
     const newSocios = socios.map(s => s.id === socioId ? updatedSocio : s);
     setSocios(newSocios);
-    localStorage.setItem('club_leones_socios', JSON.stringify(newSocios));
+    safeSetItem('club_leones_socios', JSON.stringify(newSocios));
 
     try {
       await firebaseService.saveSocio(updatedSocio);
@@ -1540,7 +1543,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       
       const newList = socios.map(s => s.id === socio.id ? updatedSocio : s);
       setSocios(newList);
-      localStorage.setItem('club_leones_socios', JSON.stringify(newList));
+      safeSetItem('club_leones_socios', JSON.stringify(newList));
       
       setQrSocio(updatedSocio);
     } catch (err) {
@@ -1566,7 +1569,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       
       const newList = socios.map(s => s.id === socioId ? updatedSocio : s);
       setSocios(newList);
-      localStorage.setItem('club_leones_socios', JSON.stringify(newList));
+      safeSetItem('club_leones_socios', JSON.stringify(newList));
       
       setQrSocio(updatedSocio);
       alert("Código QR regenerado con éxito. El anterior ha sido invalidado.");
@@ -2763,7 +2766,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                         type="button"
                         onClick={() => {
                           const publicUrl = `${window.location.origin}/#/agenda-publica/${agenda.id}`;
-                          navigator.clipboard.writeText(publicUrl);
+                          navigator.clipboard.writeText(publicUrl).catch(() => {});
                           showToast("Enlace de agenda digital copiado al portapapeles", "success");
                         }}
                         className="p-2 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 border border-slate-200/60 hover:border-emerald-200 rounded-xl transition-all cursor-pointer"
@@ -4190,7 +4193,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       
       const newSociosList = socios.filter(s => s.id !== socio.id);
       setSocios(newSociosList);
-      localStorage.setItem('club_leones_socios', JSON.stringify(newSociosList));
+      safeSetItem('club_leones_socios', JSON.stringify(newSociosList));
       alert("Socio eliminado con éxito.");
     } catch (err: any) {
       console.error("Error deleting socio:", err);
@@ -4202,12 +4205,11 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     const shareUrl = `${window.location.origin}${window.location.pathname}#/completar-ficha-socio/${socioId}`;
     navigator.clipboard.writeText(shareUrl)
       .then(() => {
-        alert("¡Enlace de autogestión copiado con éxito! Puedes enviárselo al socio para que actualice sus datos.");
+        showToast("¡Enlace de autogestión copiado con éxito! Puedes enviárselo al socio para que actualice sus datos.", "success");
       })
       .catch(err => {
         console.error("Error copying link: ", err);
-        // Fallback prompt
-        window.prompt("Copia este enlace de autogestión para el socio:", shareUrl);
+        prompt({ title: "Enlace de autogestión", message: "No se pudo copiar al portapapeles. Copia el enlace manualmente:", defaultValue: shareUrl, okLabel: "Listo" });
       });
   };
 
@@ -4259,7 +4261,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
         newSociosList = socios.map(s => s.id === updated.id ? updated : s);
       }
       setSocios(newSociosList);
-      localStorage.setItem('club_leones_socios', JSON.stringify(newSociosList));
+      safeSetItem('club_leones_socios', JSON.stringify(newSociosList));
 
       // If editing self, notify parent to refresh auth state
       if (updated.id === user.id && onUpdateUser) {
@@ -4328,7 +4330,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     }
     const updated = actas.filter(a => a.id !== id);
     setActas(updated);
-    localStorage.setItem('club_leones_actas', JSON.stringify(updated));
+    safeSetItem('club_leones_actas', JSON.stringify(updated));
     setDeleteActaConfirmId(null);
     setDeleteActaConfirmText('');
   };
@@ -5304,7 +5306,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                             {s.estadoCuotas}
                           </span>
                           <span className="text-sm font-black text-red-600 bg-red-50/50 px-3 py-1 rounded-xl">
-                            Q {s.montoPendiente.toFixed(2)}
+                            Q {(s.montoPendiente || 0).toFixed(2)}
                           </span>
                         </div>
                       </div>
@@ -5708,7 +5710,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                           if (confirmed) {
                             const updated = beneficios.filter(b => b.id !== ben.id);
                             setBeneficios(updated);
-                            localStorage.setItem('club_leones_beneficios', JSON.stringify(updated));
+                            safeSetItem('club_leones_beneficios', JSON.stringify(updated));
                           }
                         }}
                         className="text-blue-600 hover:text-red-600 p-2 rounded-lg hover:bg-blue-50 transition-colors"

@@ -1,3 +1,4 @@
+import { safeSetItem } from '../utils/storage';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../services/firebase';
 import { 
@@ -129,7 +130,7 @@ function getLocalData<T>(key: string, fallback: T): T {
 // Safe local storage writer with quota protection
 function safeSetLocalData(key: string, data: any): void {
   try {
-    localStorage.setItem(key, JSON.stringify(data));
+    safeSetItem(key, JSON.stringify(data));
   } catch (e: any) {
     if (e && (e.name === 'QuotaExceededError' || e.code === 22)) {
       console.warn(`LocalStorage quota exceeded writing ${key}. Clearing temporary caches...`);
@@ -140,7 +141,7 @@ function safeSetLocalData(key: string, data: any): void {
         }
       });
       try {
-        localStorage.setItem(key, JSON.stringify(data));
+        safeSetItem(key, JSON.stringify(data));
       } catch (retryErr) {
         console.error(`Failed to write ${key} even after eviction:`, retryErr);
       }
@@ -299,7 +300,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             console.log("Firestore socios payment histories cleared successfully.");
           }
           
-          localStorage.setItem(MIGRATION_KEY, 'true');
+          safeSetItem(MIGRATION_KEY, 'true');
         } catch (err) {
           console.error("Error running payments clearing migration:", err);
         }
@@ -315,7 +316,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (fixed > 0) {
             console.log(`Migradas ${fixed} fotos base64 de socios a Firebase Storage.`);
           }
-          localStorage.setItem(MIGRATION_KEY, 'true');
+          safeSetItem(MIGRATION_KEY, 'true');
         } catch (err) {
           console.error("Error running base64 photo migration:", err);
         }
@@ -393,7 +394,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // 3f. Actas (ordered by date descending)
     const unsubActas = onSnapshot(collection(db, 'actas'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Acta)
-        .sort((a, b) => b.fecha.localeCompare(a.fecha));
+        .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
       setActas(list);
       safeSetLocalData(KEYS.ACTAS, list);
       setLoading(prev => ({ ...prev, actas: false }));
@@ -543,7 +544,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       if (list.length === 0) {
         DEFAULT_ROLES_CONFIG.forEach(async (role) => {
-          await setDoc(doc(db, 'config_roles', role.id), { label: role.label, allowedTabs: role.allowedTabs, orden: role.orden });
+          await setDoc(doc(db, 'config_roles', role.id), { label: role.label, allowedTabs: role.allowedTabs, orden: role.orden }).catch(err => console.error("Error seeding role:", role.id, err));
         });
       } else {
         // Dynamic automatic migration: Ensure any module in ALL_APP_MODULES is granted to defaultRoles (or SUPER_ADMIN) if missing
@@ -561,13 +562,13 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           });
 
           if (changed) {
-            await setDoc(doc(db, 'config_roles', role.id), { label: role.label, allowedTabs: updatedTabs, orden: role.orden }, { merge: true });
+            await setDoc(doc(db, 'config_roles', role.id), { label: role.label, allowedTabs: updatedTabs, orden: role.orden }, { merge: true }).catch(err => console.error("Error migrating role:", role.id, err));
           }
         });
 
         list.sort((a: any, b: any) => (a.orden ?? 999) - (b.orden ?? 999));
         setRolesConfig(list);
-        localStorage.setItem('club_leones_roles_config', JSON.stringify(list));
+        safeSetItem('club_leones_roles_config', JSON.stringify(list));
       }
     }, (err) => {
       console.error("Error subscribing to config_roles:", err);
@@ -577,11 +578,11 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       if (list.length === 0) {
         DEFAULT_PUESTOS.forEach(async (puesto) => {
-          await setDoc(doc(db, 'config_puestos', puesto.id), { nombre: puesto.nombre, rolAsociado: puesto.rolAsociado });
+          await setDoc(doc(db, 'config_puestos', puesto.id), { nombre: puesto.nombre, rolAsociado: puesto.rolAsociado }).catch(err => console.error("Error seeding puesto:", puesto.id, err));
         });
       } else {
         setPuestosList(list);
-        localStorage.setItem('club_leones_puestos_list', JSON.stringify(list));
+        safeSetItem('club_leones_puestos_list', JSON.stringify(list));
       }
     }, (err) => {
       console.error("Error subscribing to config_puestos:", err);

@@ -1,3 +1,4 @@
+import { safeSetItem } from '../utils/storage';
 import React, { useState, useMemo, useEffect } from 'react';
 import { CLUB_STATUTES } from '../constants';
 import { ShieldCheck, Scale, ScrollText, Loader2, Search, List, ChevronRight, Hash, Bookmark, Copy, Check, Type, Sun, Moon, Coffee, Sparkles, BookOpen } from 'lucide-react';
@@ -85,7 +86,7 @@ const Estatutos: React.FC<EstatutosProps> = ({ accessToken }) => {
 
   // Sync bookmarks to localStorage
   useEffect(() => {
-    localStorage.setItem('club_leones_estatutos_bookmarks', JSON.stringify(bookmarks));
+    safeSetItem('club_leones_estatutos_bookmarks', JSON.stringify(bookmarks));
   }, [bookmarks]);
 
   // Check URL hash on load to scroll to target article
@@ -133,7 +134,7 @@ const Estatutos: React.FC<EstatutosProps> = ({ accessToken }) => {
 
   const handleCopyLink = (id: string) => {
     const shareUrl = `${window.location.origin}${window.location.pathname}#${id}`;
-    navigator.clipboard.writeText(shareUrl);
+    navigator.clipboard.writeText(shareUrl).catch(() => {});
     setCopiedId(id);
     setTimeout(() => {
       setCopiedId(null);

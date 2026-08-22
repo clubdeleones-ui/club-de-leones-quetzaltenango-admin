@@ -1,3 +1,4 @@
+import { safeSetItem } from '../utils/storage';
 import { env } from '../config/env';
 
 export interface RecurrenteItem {
@@ -47,7 +48,7 @@ class RecurrenteService {
 
   public setTestMode(testMode: boolean) {
     this.isTestMode = testMode;
-    localStorage.setItem('recurrente_test_mode', String(testMode));
+    safeSetItem('recurrente_test_mode', String(testMode));
   }
 
   public getTestMode(): boolean {
@@ -55,8 +56,8 @@ class RecurrenteService {
   }
 
   public setKeys(testKey: string, liveKey: string) {
-    if (testKey) localStorage.setItem('recurrente_test_key', testKey);
-    if (liveKey) localStorage.setItem('recurrente_live_key', liveKey);
+    if (testKey) safeSetItem('recurrente_test_key', testKey);
+    if (liveKey) safeSetItem('recurrente_live_key', liveKey);
   }
 
   public getSecretKey(): string {

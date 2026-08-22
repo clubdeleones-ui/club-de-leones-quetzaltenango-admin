@@ -405,7 +405,7 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
 
     const handleCopyFullMessage = (act: Actividad) => {
         const fullMessage = getShareText(act);
-        navigator.clipboard.writeText(fullMessage).then(() => {
+        navigator.clipboard.writeText(fullMessage).catch(() => {}).then(() => {
             setCopiedType('message');
             setTimeout(() => setCopiedType(null), 2500);
         });
@@ -413,7 +413,7 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
 
     const handleCopyLink = (act: Actividad) => {
         const shareUrl = getShareUrl(act);
-        navigator.clipboard.writeText(shareUrl).then(() => {
+        navigator.clipboard.writeText(shareUrl).catch(() => {}).then(() => {
             setCopiedType('link');
             setTimeout(() => setCopiedType(null), 2500);
         });

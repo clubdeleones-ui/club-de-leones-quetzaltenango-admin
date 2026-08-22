@@ -1,3 +1,4 @@
+import { safeSetItem } from './utils/storage';
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
@@ -6,6 +7,7 @@ import { AuthState, Socio, UserRole } from './types';
 import { firebaseService } from './services/firebaseService';
 import { ToastProvider } from './context/ToastContext';
 import { ModalProvider } from './context/ModalContext';
+import { ConfirmProvider } from './components/ConfirmProvider';
 import { ClubDataProvider, useClubData } from './context/ClubDataContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import { env } from './config/env';
@@ -120,13 +122,13 @@ const App: React.FC = () => {
   const handleLogin = (user: Socio, accessToken?: string) => {
     const newAuth = { user, isAuthenticated: true, accessToken };
     setAuth(newAuth);
-    localStorage.setItem('club_leones_auth', JSON.stringify(newAuth));
+    safeSetItem('club_leones_auth', JSON.stringify(newAuth));
   };
 
   const handleUpdateUser = (updatedUser: Socio) => {
     setAuth(prev => {
       const newAuth = { ...prev, user: updatedUser };
-      localStorage.setItem('club_leones_auth', JSON.stringify(newAuth));
+      safeSetItem('club_leones_auth', JSON.stringify(newAuth));
       return newAuth;
     });
   };
@@ -140,6 +142,7 @@ const App: React.FC = () => {
     <GoogleOAuthProvider clientId={env.googleClientId}>
       <ModalProvider>
         <ToastProvider>
+          <ConfirmProvider>
           <ErrorBoundary>
             <ClubDataProvider>
               <UserSessionSync auth={auth} onUpdateUser={handleUpdateUser} />
@@ -236,6 +239,7 @@ const App: React.FC = () => {
             </Router>
           </ClubDataProvider>
         </ErrorBoundary>
+        </ConfirmProvider>
       </ToastProvider>
       </ModalProvider>
     </GoogleOAuthProvider>

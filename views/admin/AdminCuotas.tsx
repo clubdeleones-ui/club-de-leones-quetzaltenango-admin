@@ -1,3 +1,4 @@
+import { safeSetItem } from '../../utils/storage';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   TrendingUp, Plus, Check, Send, ChevronDown, AlertTriangle, AlertCircle, CheckCircle, CreditCard, Download, DollarSign, X as XIcon, Search, Filter, Calendar, Users, Edit, Trash2, Image, Link2, Upload
@@ -8,12 +9,14 @@ import { recurrenteService } from '../../services/recurrenteService';
 import { useClubData } from '../../context/ClubDataContext';
 import { generateReciboPagoPDF } from '../../utils/pdfGenerator';
 import { useToast } from '../../context/ToastContext';
+import { useConfirm } from '../../components/ConfirmProvider';
 import { formatDisplayDate } from '../../utils/dateSpanishFormatter';
 
 export const AdminCuotas: React.FC = () => {
   const { socios: dbSocios } = useClubData();
   const [socios, setSocios] = useState<Socio[]>(dbSocios);
   const { showToast } = useToast();
+  const { confirm } = useConfirm();
   const [isTestMode, setIsTestMode] = useState<boolean>(recurrenteService.getTestMode());
 
   const handleToggleRecurrenteTestMode = (newMode: boolean) => {
@@ -278,7 +281,7 @@ export const AdminCuotas: React.FC = () => {
   const handleEnviarRecordatorio = (socio: Socio) => {
     const unpaid = getSocioUnpaidMonths(socio);
     const pendingBalance = unpaid.length * 125;
-    alert(`Recordatorio de cobro de Q${pendingBalance} enviado por correo a: ${socio.correo}`);
+    showToast(`Recordatorio de cobro de Q${pendingBalance} enviado por correo a: ${socio.correo}`, "success");
   };
 
   const handleRegistrarPago = (socioId: string) => {
@@ -340,7 +343,8 @@ export const AdminCuotas: React.FC = () => {
   };
 
   const handleBorrarPago = async (socioId: string, pagoId: string) => {
-    if (!window.confirm("¿Está seguro de que desea eliminar este registro de pago? Esto afectará el saldo pendiente del socio.")) return;
+    const ok = await confirm({ title: "Eliminar registro de pago", message: "¿Está seguro de que desea eliminar este registro de pago? Esto afectará el saldo pendiente del socio.", confirmLabel: "Eliminar", danger: true });
+    if (!ok) return;
 
     const socio = socios.find(s => s.id === socioId);
     if (!socio) return;
@@ -365,7 +369,7 @@ export const AdminCuotas: React.FC = () => {
 
     const newSocios = socios.map(s => s.id === socioId ? updatedSocio : s);
     setSocios(newSocios);
-    localStorage.setItem('club_leones_socios', JSON.stringify(newSocios));
+    safeSetItem('club_leones_socios', JSON.stringify(newSocios));
 
     try {
       await firebaseService.saveSocio(updatedSocio);
@@ -575,7 +579,7 @@ export const AdminCuotas: React.FC = () => {
 
       const newSocios = socios.map(s => s.id === socioId ? updatedSocio : s);
       setSocios(newSocios);
-      localStorage.setItem('club_leones_socios', JSON.stringify(newSocios));
+      safeSetItem('club_leones_socios', JSON.stringify(newSocios));
 
       await firebaseService.saveSocio(updatedSocio);
       showToast(editingPagoId ? '¡Aportación modificada con éxito!' : '¡Aportación registrada con éxito!', 'success');
@@ -719,7 +723,7 @@ export const AdminCuotas: React.FC = () => {
           <button
             onClick={() => {
               const publicUrl = `${window.location.origin}${window.location.pathname}#/pago-cuota`;
-              navigator.clipboard.writeText(publicUrl);
+              navigator.clipboard.writeText(publicUrl).catch(() => {});
               showToast('¡Enlace del formulario público copiado!', 'success');
             }}
             className="bg-amber-500 hover:bg-amber-600 text-white font-black px-5 py-3 rounded-xl flex items-center justify-center space-x-2 shadow-lg shadow-amber-500/10 active:scale-95 transition-all w-full sm:flex-1 md:w-auto text-xs"
@@ -1107,7 +1111,7 @@ export const AdminCuotas: React.FC = () => {
                     <button
                       onClick={() => {
                         const shareUrl = `${window.location.origin}${window.location.pathname}#/pago-cuota?socioId=${s.id}`;
-                        navigator.clipboard.writeText(shareUrl);
+                        navigator.clipboard.writeText(shareUrl).catch(() => {});
                         showToast('¡Enlace de cobro copiado al portapapeles!', 'success');
                       }}
                       className="bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800 border border-amber-200/80 p-2.5 rounded-xl font-bold text-xs transition-colors shadow-sm flex items-center justify-center flex-shrink-0"
@@ -1184,7 +1188,7 @@ export const AdminCuotas: React.FC = () => {
                             <div key={pago.id} className="bg-slate-50/50 border border-slate-150 rounded-2xl p-4 space-y-3 text-xs text-left">
                               <div className="flex justify-between items-center">
                                 <span className="font-extrabold text-blue-900 text-sm leading-none">{pago.periodo}</span>
-                                <span className="font-black text-slate-800 text-sm leading-none">Q {pago.monto.toFixed(2)}</span>
+                                <span className="font-black text-slate-800 text-sm leading-none">Q {(pago.monto || 0).toFixed(2)}</span>
                               </div>
                               <div className="flex justify-between text-slate-500 font-semibold text-[11px] leading-none pt-1">
                                  <span>Fecha: {formatDisplayDate(pago.fechaPago)}</span>
@@ -1261,7 +1265,7 @@ export const AdminCuotas: React.FC = () => {
                                 <tr key={pago.id} className="hover:bg-slate-50 transition-colors">
                                    <td className="p-3 font-semibold text-slate-800">{formatDisplayDate(pago.fechaPago)}</td>
                                   <td className="p-3 font-bold text-blue-900">{pago.periodo}</td>
-                                  <td className="p-3 font-extrabold text-slate-850">Q {pago.monto.toFixed(2)}</td>
+                                  <td className="p-3 font-extrabold text-slate-850">Q {(pago.monto || 0).toFixed(2)}</td>
                                   <td className="p-3 text-slate-600 font-semibold">{pago.metodo}</td>
                                   <td className="p-3 text-slate-500 font-semibold">{pago.metodo !== 'Efectivo' ? `${pago.numeroReferencia || '-'} (${pago.bancoReferencia || '-'})` : 'Pago en Ventanilla'}</td>
                                   <td className="p-3 text-right pr-6">

@@ -1,3 +1,4 @@
+import { safeSetItem } from '../utils/storage';
 import { db, storage } from "./firebase";
 import { 
   collection, 
@@ -584,7 +585,7 @@ export const firebaseService = {
         list.push({ id: doc.id, ...doc.data() } as ContactoAgenda);
       });
       // Sort alphabetically by nombre
-      return list.sort((a, b) => a.nombre.localeCompare(b.nombre));
+      return list.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
     } catch (error) {
       console.error("Error fetching agenda:", error);
       throw error;
@@ -709,7 +710,7 @@ export const firebaseService = {
         list.push({ id: doc.id, ...doc.data() } as Acta);
       });
       // Ordenar por fecha descendente
-      return list.sort((a, b) => b.fecha.localeCompare(a.fecha));
+      return list.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
     } catch (error) {
       console.error("Error fetching actas from Firestore:", error);
       throw error;
@@ -905,7 +906,7 @@ export const firebaseService = {
       if (snap.exists()) {
         const item = { id: snap.id, ...snap.data() } as ReunionAgenda;
         try {
-          localStorage.setItem(`club_leones_agenda_public_${id}`, JSON.stringify(item));
+          safeSetItem(`club_leones_agenda_public_${id}`, JSON.stringify(item));
         } catch (e) {}
         return item;
       }
@@ -936,7 +937,7 @@ export const firebaseService = {
       }
       try {
         const fullItem = { ...agenda, id: targetId };
-        localStorage.setItem(`club_leones_agenda_public_${targetId}`, JSON.stringify(fullItem));
+        safeSetItem(`club_leones_agenda_public_${targetId}`, JSON.stringify(fullItem));
       } catch (e) {}
     } catch (error) {
       console.error("Error saving agenda:", error);
