@@ -1,30 +1,35 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    // Fotos de perfil de socios (subidas desde Dashboard/SuperAdmin)
+    match /socios/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+    // Recibos de pago de cuotas (flujo público de pago)
     match /recibos_pagos/{allPaths=**} {
       allow read: if true;
       allow write: if request.resource.size < 10 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*|application/pdf');
     }
+    // Imágenes de la galería pública
     match /galeria/{allPaths=**} {
       allow read: if true;
       allow write: if request.resource.size < 10 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
     }
+    // Fotos de candidatos propuestos (formulario público)
     match /candidatos/{allPaths=**} {
       allow read: if true;
       allow write: if request.resource.size < 5 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
     }
+    // Documentos de solicitudes (formularios públicos)
     match /solicitudes_documentos/{allPaths=**} {
       allow read: if true;
       allow write: if request.resource.size < 10 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*|application/pdf');
     }
-    match /{allPaths=**} {
-      allow read: if true;
-      allow write: if request.resource.size < 10 * 1024 * 1024;
-    }
   }
 }
-
