@@ -174,9 +174,11 @@ export const firebaseService = {
       if (!base64Data.startsWith('data:image')) {
         return base64Data;
       }
+      const match = base64Data.match(/^data:([^;]+);base64,/);
+      const contentType = match ? match[1] : 'image/jpeg';
       const uniqueName = `socio_${socioId}_${Date.now()}`;
       const storageRef = ref(storage, `socios/${uniqueName}`);
-      await uploadString(storageRef, base64Data, 'data_url');
+      await uploadString(storageRef, base64Data, 'data_url', { contentType });
       const downloadURL = await getDownloadURL(storageRef);
       return downloadURL;
     } catch (error) {
