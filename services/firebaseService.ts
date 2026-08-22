@@ -197,7 +197,7 @@ export const firebaseService = {
   // Save or update an active member in Firestore
   // NOTA: Se usa merge para NUNCA sobrescribir campos existentes (como `foto`)
   // cuando el objeto recibido está incompleto o proviene de datos desactualizados.
-  saveSocio: async (socio: Socio): Promise<void> => {
+  saveSocio: async (socio: Socio): Promise<Socio> => {
     try {
       let finalFoto = socio.foto;
       if (finalFoto && finalFoto.startsWith('data:image')) {
@@ -215,6 +215,7 @@ export const firebaseService = {
       }
 
       await setDoc(docRef, cleanData, { merge: true });
+      return socioToSave;
     } catch (error) {
       console.error("Error saving socio in Firestore:", error);
       throw error;
