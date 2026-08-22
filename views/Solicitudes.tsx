@@ -4438,11 +4438,11 @@ Club de Leones de Quetzaltenango`;
                     const currentMode = getTabMode(cfg.id);
 
                     if (cfg.id === 'cartas') {
-                      return renderCartasCorrespondencia();
+                      return renderCartasForm();
                     }
 
                     if (cfg.id === 'archivo') {
-                      return renderArchivoView();
+                      return renderSolicitudesList('archivo');
                     }
 
                     return (
