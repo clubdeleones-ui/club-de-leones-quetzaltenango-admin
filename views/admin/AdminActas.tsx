@@ -512,11 +512,13 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
   const handlePolishPointsWithAI = async (customPuntos?: typeof actaWizardData.puntosAgenda) => {
     let puntosToProcess = customPuntos ? [...customPuntos] : [...(actaWizardData.puntosAgenda || [])];
+    let targetTab = typeof selectedAgendaPointTab === 'number' ? selectedAgendaPointTab : 0;
 
     // Si el usuario tenía escrito un punto nuevo en el formulario pero no le dio "Agregar", lo incluimos
     if (!customPuntos && selectedAgendaPointTab === 'new' && (newAgendaPoint.tema.trim() || newAgendaPoint.debate.trim() || newAgendaPoint.acuerdo.trim())) {
       const temaFinal = newAgendaPoint.tema.trim() || `Punto de Agenda #${puntosToProcess.length + 1}`;
       puntosToProcess.push({ ...newAgendaPoint, tema: temaFinal });
+      targetTab = puntosToProcess.length - 1;
       setNewAgendaPoint({ tema: '', debate: '', acuerdo: '', socioSolicitante: '', agendaContenido: '' });
     }
 
@@ -537,10 +539,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           ...prev,
           puntosAgenda: improved
         }));
-        // Posicionar en el punto editado o en el primer punto para que los inputs muestren los campos pulidos
-        if (selectedAgendaPointTab === 'new' || typeof selectedAgendaPointTab !== 'number') {
-          setSelectedAgendaPointTab(0);
-        }
+        setSelectedAgendaPointTab(targetTab < improved.length ? targetTab : 0);
         showToast('✨ Redacción, ortografía y acuerdos registrados en los campos', 'success');
         return improved;
       }
@@ -560,18 +559,24 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
     if (actaWizardStep === 'libre') {
       // Al avanzar desde el paso 5 (Puntos de Agenda) hacia la Vista Previa,
-      // sincronizamos el borrador y ejecutamos la optimización con Gemini IA
+      // sincronizamos el borrador y ejecutamos la optimización y generación de acuerdos
       let currentPuntos = [...(actaWizardData.puntosAgenda || [])];
+      let targetTab = typeof selectedAgendaPointTab === 'number' ? selectedAgendaPointTab : 0;
+
       if (selectedAgendaPointTab === 'new' && (newAgendaPoint.tema.trim() || newAgendaPoint.debate.trim() || newAgendaPoint.acuerdo.trim())) {
         const temaFinal = newAgendaPoint.tema.trim() || `Punto de Agenda #${currentPuntos.length + 1}`;
         const newP = { ...newAgendaPoint, tema: temaFinal };
         currentPuntos.push(newP);
-        setActaWizardData(prev => ({ ...prev, puntosAgenda: currentPuntos }));
+        targetTab = currentPuntos.length - 1;
         setNewAgendaPoint({ tema: '', debate: '', acuerdo: '', socioSolicitante: '', agendaContenido: '' });
       }
 
       if (currentPuntos.length > 0) {
-        await handlePolishPointsWithAI(currentPuntos);
+        const improved = await handlePolishPointsWithAI(currentPuntos);
+        if (improved && improved.length > 0) {
+          setActaWizardData(prev => ({ ...prev, puntosAgenda: improved }));
+          setSelectedAgendaPointTab(targetTab < improved.length ? targetTab : 0);
+        }
       }
       setActaWizardStep('vista_previa');
     } else if (idx < steps.length - 1) {
