@@ -167,17 +167,24 @@ export const AdminActas: React.FC<AdminActasProps> = ({ user }) => {
   }, [solicitudes]);
 
   const handleInsertMemberMention = (memberName: string) => {
+    const formattedName = `C.L. ${memberName}: `;
     const textarea = debateRef.current;
     if (!textarea) {
       if (selectedAgendaPointTab === 'new') {
         setNewAgendaPoint(prev => ({
           ...prev,
-          debate: prev.debate ? `${prev.debate}\n${memberName}: ` : `${memberName}: `
+          debate: prev.debate 
+            ? (prev.debate.endsWith(' ') || prev.debate.endsWith('\n') ? `${prev.debate}${formattedName}` : `${prev.debate} ${formattedName}`)
+            : formattedName
         }));
       } else {
         const currentDebate = (actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.debate || '';
-        handleUpdateAgendaPoint(selectedAgendaPointTab as number, 'debate', 
-          currentDebate ? `${currentDebate}\n${memberName}: ` : `${memberName}: `
+        handleUpdateAgendaPoint(
+          selectedAgendaPointTab as number, 
+          'debate', 
+          currentDebate 
+            ? (currentDebate.endsWith(' ') || currentDebate.endsWith('\n') ? `${currentDebate}${formattedName}` : `${currentDebate} ${formattedName}`)
+            : formattedName
         );
       }
       return;
@@ -189,7 +196,9 @@ export const AdminActas: React.FC<AdminActasProps> = ({ user }) => {
     const before = text.substring(0, start);
     const after = text.substring(end, text.length);
     
-    const insertion = before.endsWith('\n') || start === 0 ? `${memberName}: ` : `\n${memberName}: `;
+    // Inserción de corrido en la línea actual (sin forzar salto de línea)
+    const needsLeadingSpace = start > 0 && !before.endsWith(' ') && !before.endsWith('\n');
+    const insertion = needsLeadingSpace ? ` ${formattedName}` : formattedName;
     const newValue = before + insertion + after;
 
     if (selectedAgendaPointTab === 'new') {
@@ -1579,7 +1588,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                       }}
                                     />
                                     <span>
-                                      {member.nombre.split(' ')[0]} {member.nombre.split(' ')[1] ? member.nombre.split(' ')[1][0] + '.' : ''}
+                                      C.L. {member.nombre.split(' ')[0]} {member.nombre.split(' ')[1] ? member.nombre.split(' ')[1][0] + '.' : ''}
                                     </span>
                                   </button>
                                 ))}
@@ -1735,7 +1744,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                       }}
                                     />
                                     <span>
-                                      {member.nombre.split(' ')[0]} {member.nombre.split(' ')[1] ? member.nombre.split(' ')[1][0] + '.' : ''}
+                                      C.L. {member.nombre.split(' ')[0]} {member.nombre.split(' ')[1] ? member.nombre.split(' ')[1][0] + '.' : ''}
                                     </span>
                                   </button>
                                 ))}
