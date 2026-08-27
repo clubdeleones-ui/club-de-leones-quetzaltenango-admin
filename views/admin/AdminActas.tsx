@@ -537,7 +537,11 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           ...prev,
           puntosAgenda: improved
         }));
-        showToast('✨ Redacción, ortografía y acuerdos perfeccionados con Gemini IA', 'success');
+        // Posicionar en el punto editado o en el primer punto para que los inputs muestren los campos pulidos
+        if (selectedAgendaPointTab === 'new' || typeof selectedAgendaPointTab !== 'number') {
+          setSelectedAgendaPointTab(0);
+        }
+        showToast('✨ Redacción, ortografía y acuerdos registrados en los campos', 'success');
         return improved;
       }
     } catch (error) {
@@ -1418,21 +1422,6 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     
                     {/* Action Controls */}
                     <div className="flex flex-wrap items-center gap-2.5 self-start md:self-auto">
-                      <button
-                        type="button"
-                        onClick={() => handlePolishPointsWithAI()}
-                        disabled={isPolishingWithAI || ((actaWizardData.puntosAgenda || []).length === 0 && !newAgendaPoint.tema.trim() && !newAgendaPoint.debate.trim())}
-                        className="px-4 py-2.5 bg-gradient-to-r from-purple-700 via-indigo-600 to-blue-700 hover:from-purple-800 hover:to-indigo-800 text-white rounded-2xl text-xs font-black flex items-center space-x-2 transition-all shadow-md hover:shadow-lg active:scale-95 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
-                        title="Corregir ortografía, mejorar redacción formal Leonística y estructurar acuerdos con Gemini IA"
-                      >
-                        {isPolishingWithAI ? (
-                          <Loader2 size={16} className="animate-spin text-amber-300" />
-                        ) : (
-                          <Sparkles size={16} className="text-amber-300 animate-pulse" />
-                        )}
-                        <span>{isPolishingWithAI ? 'Pulinedo...' : '✨ Pulir con Gemini IA'}</span>
-                      </button>
-
                       <button
                         type="button"
                         onClick={() => setShowOrganizePointsModal(true)}
