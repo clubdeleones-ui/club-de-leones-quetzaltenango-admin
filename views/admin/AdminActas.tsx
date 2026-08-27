@@ -1,13 +1,14 @@
 import { safeSetItem } from '../../utils/storage';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
-  FileText, Plus, Search, Filter, Trash2, Edit, Download, X, Clock, Users, Mail, Briefcase, CheckCircle, Pencil, Building, BookOpen, ChevronUp, ChevronDown, ArrowUp, ArrowDown, GripVertical, ListOrdered, ArrowUpDown, CheckCircle2, MessageSquare, Bookmark
+  FileText, Plus, Search, Filter, Trash2, Edit, Download, X, Clock, Users, Mail, Briefcase, CheckCircle, Pencil, Building, BookOpen, ChevronUp, ChevronDown, ArrowUp, ArrowDown, GripVertical, ListOrdered, ArrowUpDown, CheckCircle2, MessageSquare, Bookmark, Sparkles, Wand2, Loader2
 } from 'lucide-react';
 
 
 
 import { Acta, Socio, Solicitud, UserRole } from '../../types';
 import { firebaseService } from '../../services/firebaseService';
+import { geminiService } from '../../services/geminiService';
 import { useClubData } from '../../context/ClubDataContext';
 import { useToast } from '../../context/ToastContext';
 import { getWrittenDateTimeSpanish, formatDisplayDate } from '../../utils/dateSpanishFormatter';
@@ -507,6 +508,72 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     }
   };
 
+  const [isPolishingWithAI, setIsPolishingWithAI] = useState(false);
+
+  const handlePolishPointsWithAI = async (customPuntos?: typeof actaWizardData.puntosAgenda) => {
+    let puntosToProcess = customPuntos ? [...customPuntos] : [...(actaWizardData.puntosAgenda || [])];
+
+    // Si el usuario tenía escrito un punto nuevo en el formulario pero no le dio "Agregar", lo incluimos
+    if (!customPuntos && selectedAgendaPointTab === 'new' && (newAgendaPoint.tema.trim() || newAgendaPoint.debate.trim() || newAgendaPoint.acuerdo.trim())) {
+      const temaFinal = newAgendaPoint.tema.trim() || `Punto de Agenda #${puntosToProcess.length + 1}`;
+      puntosToProcess.push({ ...newAgendaPoint, tema: temaFinal });
+      setNewAgendaPoint({ tema: '', debate: '', acuerdo: '', socioSolicitante: '', agendaContenido: '' });
+    }
+
+    if (puntosToProcess.length === 0) {
+      return puntosToProcess;
+    }
+
+    setIsPolishingWithAI(true);
+    try {
+      const improved = await geminiService.improveAndFormatPuntosAgenda({
+        titulo: actaWizardData.titulo,
+        categoria: actaWizardData.categoria,
+        puntos: puntosToProcess
+      });
+
+      if (improved && improved.length > 0) {
+        setActaWizardData(prev => ({
+          ...prev,
+          puntosAgenda: improved
+        }));
+        showToast('✨ Redacción, ortografía y acuerdos perfeccionados con Gemini IA', 'success');
+        return improved;
+      }
+    } catch (error) {
+      console.error("Error al procesar puntos con Gemini:", error);
+      showToast('No se pudo conectar con Gemini IA. Se mantendrán los puntos actuales.', 'info');
+    } finally {
+      setIsPolishingWithAI(false);
+    }
+
+    return puntosToProcess;
+  };
+
+  const handleNextStep = async () => {
+    const steps: typeof actaWizardStep[] = ['datos', 'asistencia', 'protocolo', 'solicitudes', 'libre', 'vista_previa'];
+    const idx = steps.indexOf(actaWizardStep);
+
+    if (actaWizardStep === 'libre') {
+      // Al avanzar desde el paso 5 (Puntos de Agenda) hacia la Vista Previa,
+      // sincronizamos el borrador y ejecutamos la optimización con Gemini IA
+      let currentPuntos = [...(actaWizardData.puntosAgenda || [])];
+      if (selectedAgendaPointTab === 'new' && (newAgendaPoint.tema.trim() || newAgendaPoint.debate.trim() || newAgendaPoint.acuerdo.trim())) {
+        const temaFinal = newAgendaPoint.tema.trim() || `Punto de Agenda #${currentPuntos.length + 1}`;
+        const newP = { ...newAgendaPoint, tema: temaFinal };
+        currentPuntos.push(newP);
+        setActaWizardData(prev => ({ ...prev, puntosAgenda: currentPuntos }));
+        setNewAgendaPoint({ tema: '', debate: '', acuerdo: '', socioSolicitante: '', agendaContenido: '' });
+      }
+
+      if (currentPuntos.length > 0) {
+        await handlePolishPointsWithAI(currentPuntos);
+      }
+      setActaWizardStep('vista_previa');
+    } else if (idx < steps.length - 1) {
+      setActaWizardStep(steps[idx + 1]);
+    }
+  };
 
   const handleSaveStructuredActa = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1353,6 +1420,21 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     <div className="flex flex-wrap items-center gap-2.5 self-start md:self-auto">
                       <button
                         type="button"
+                        onClick={() => handlePolishPointsWithAI()}
+                        disabled={isPolishingWithAI || ((actaWizardData.puntosAgenda || []).length === 0 && !newAgendaPoint.tema.trim() && !newAgendaPoint.debate.trim())}
+                        className="px-4 py-2.5 bg-gradient-to-r from-purple-700 via-indigo-600 to-blue-700 hover:from-purple-800 hover:to-indigo-800 text-white rounded-2xl text-xs font-black flex items-center space-x-2 transition-all shadow-md hover:shadow-lg active:scale-95 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                        title="Corregir ortografía, mejorar redacción formal Leonística y estructurar acuerdos con Gemini IA"
+                      >
+                        {isPolishingWithAI ? (
+                          <Loader2 size={16} className="animate-spin text-amber-300" />
+                        ) : (
+                          <Sparkles size={16} className="text-amber-300 animate-pulse" />
+                        )}
+                        <span>{isPolishingWithAI ? 'Pulinedo...' : '✨ Pulir con Gemini IA'}</span>
+                      </button>
+
+                      <button
+                        type="button"
                         onClick={() => setShowOrganizePointsModal(true)}
                         className="px-4 py-2.5 bg-white hover:bg-amber-50 text-slate-800 border border-slate-300 hover:border-amber-300 rounded-2xl text-xs font-black flex items-center space-x-2 transition-all shadow-sm active:scale-95 cursor-pointer"
                       >
@@ -1884,6 +1966,20 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     </div>
                     <button
                       type="button"
+                      onClick={() => handlePolishPointsWithAI()}
+                      disabled={isPolishingWithAI || (actaWizardData.puntosAgenda || []).length === 0}
+                      className="px-3.5 py-2 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white rounded-xl text-xs font-black flex items-center space-x-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                      title="Re-analizar y mejorar redacción de puntos con Gemini IA"
+                    >
+                      {isPolishingWithAI ? (
+                        <Loader2 size={14} className="animate-spin text-amber-300" />
+                      ) : (
+                        <Sparkles size={14} className="text-amber-300 animate-pulse" />
+                      )}
+                      <span>{isPolishingWithAI ? 'Pulinedo...' : 'Re-pulir con IA'}</span>
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => {
                         const rawText = compileActaText(actaWizardData);
                         navigator.clipboard.writeText(rawText).catch(() => {});
@@ -1928,25 +2024,49 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
             )}
           </div>
 
+          {/* AI Processing Overlay */}
+          {isPolishingWithAI && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+              <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-purple-100 text-center space-y-4 animate-in zoom-in-95 duration-200">
+                <div className="w-16 h-16 bg-gradient-to-tr from-purple-700 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-purple-500/30 text-white relative">
+                  <Sparkles size={28} className="animate-spin text-amber-300" style={{ animationDuration: '3s' }} />
+                </div>
+                <div>
+                  <h4 className="text-lg font-black text-slate-800">
+                    Perfeccionando con Gemini IA
+                  </h4>
+                  <p className="text-xs text-slate-500 font-medium mt-1.5 leading-relaxed">
+                    Corrigiendo ortografía y gramática, formalizando la redacción del debate con solemnidad Leonística y estructurando resoluciones...
+                  </p>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                  <div className="bg-gradient-to-r from-purple-600 via-indigo-600 to-amber-400 h-full rounded-full animate-pulse w-full"></div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Footer / Navigation */}
           <div className="pt-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:justify-between gap-3 sm:gap-4 flex-shrink-0 w-full">
             <div className="flex flex-row w-full sm:w-auto gap-3">
               <button
                 type="button"
+                disabled={isPolishingWithAI}
                 onClick={() => setShowAddActa(false)}
-                className="flex-1 sm:flex-initial text-center bg-white hover:bg-slate-50 border border-slate-200 text-slate-500 font-extrabold px-4 sm:px-6 py-2.5 rounded-xl transition-all text-xs sm:text-sm"
+                className="flex-1 sm:flex-initial text-center bg-white hover:bg-slate-50 border border-slate-200 text-slate-500 font-extrabold px-4 sm:px-6 py-2.5 rounded-xl transition-all text-xs sm:text-sm disabled:opacity-50"
               >
                 Cancelar
               </button>
               {actaWizardStep !== 'datos' && (
                 <button
                   type="button"
+                  disabled={isPolishingWithAI}
                   onClick={() => {
                     const steps: typeof actaWizardStep[] = ['datos', 'asistencia', 'protocolo', 'solicitudes', 'libre', 'vista_previa'];
                     const idx = steps.indexOf(actaWizardStep);
                     if (idx > 0) setActaWizardStep(steps[idx - 1]);
                   }}
-                  className="flex-1 sm:flex-initial text-center bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold px-4 sm:px-6 py-2.5 rounded-xl transition-all text-xs sm:text-sm"
+                  className="flex-1 sm:flex-initial text-center bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold px-4 sm:px-6 py-2.5 rounded-xl transition-all text-xs sm:text-sm disabled:opacity-50"
                 >
                   Atrás
                 </button>
@@ -1957,20 +2077,32 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               {actaWizardStep !== 'vista_previa' ? (
                 <button
                   type="button"
-                  onClick={() => {
-                    const steps: typeof actaWizardStep[] = ['datos', 'asistencia', 'protocolo', 'solicitudes', 'libre', 'vista_previa'];
-                    const idx = steps.indexOf(actaWizardStep);
-                    if (idx < steps.length - 1) setActaWizardStep(steps[idx + 1]);
-                  }}
-                  className="w-full sm:w-auto text-center bg-blue-900 hover:bg-blue-800 text-white font-black px-4 sm:px-6 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg text-xs sm:text-sm"
+                  disabled={isPolishingWithAI}
+                  onClick={handleNextStep}
+                  className={`w-full sm:w-auto text-center font-black px-4 sm:px-6 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg text-xs sm:text-sm flex items-center justify-center space-x-2 disabled:opacity-50 ${
+                    actaWizardStep === 'libre'
+                      ? 'bg-gradient-to-r from-purple-700 via-indigo-700 to-blue-900 hover:from-purple-800 hover:to-blue-950 text-white'
+                      : 'bg-blue-900 hover:bg-blue-800 text-white'
+                  }`}
                 >
-                  Siguiente
+                  {isPolishingWithAI ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin text-amber-300" />
+                      <span>Perfeccionando con IA...</span>
+                    </>
+                  ) : (
+                    <>
+                      {actaWizardStep === 'libre' && <Sparkles size={16} className="text-amber-300 animate-pulse" />}
+                      <span>{actaWizardStep === 'libre' ? 'Pulir y Ver Acta Previa' : 'Siguiente'}</span>
+                    </>
+                  )}
                 </button>
               ) : (
                 <button
                   type="button"
+                  disabled={isPolishingWithAI}
                   onClick={handleSaveStructuredActa}
-                  className="w-full sm:w-auto text-center bg-emerald-500 hover:bg-emerald-600 text-white font-black px-4 sm:px-6 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg text-xs sm:text-sm"
+                  className="w-full sm:w-auto text-center bg-emerald-500 hover:bg-emerald-600 text-white font-black px-4 sm:px-6 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg text-xs sm:text-sm disabled:opacity-50"
                 >
                   Publicar Acta
                 </button>
