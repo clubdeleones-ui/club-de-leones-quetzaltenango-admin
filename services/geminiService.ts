@@ -16,8 +16,14 @@ export interface ImproveActaPuntosParams {
   puntos: PuntoAgendaItem[];
 }
 
+export interface ImproveActaResult {
+  puntos: PuntoAgendaItem[];
+  source: 'gemini' | 'local';
+  error?: string;
+}
+
 export class GeminiService {
-  private getApiKey(): string {
+  getApiKey(): string {
     return (
       (typeof window !== 'undefined' ? localStorage.getItem('gemini_api_key') || '' : '') ||
       env.geminiApiKey ||
@@ -27,39 +33,103 @@ export class GeminiService {
     );
   }
 
+  setApiKey(key: string): void {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('gemini_api_key', key.trim());
+    }
+  }
+
   /**
-   * Generador protocolario y sintetizador inteligente de respaldo.
-   * Garantiza que NUNCA quede un campo de acuerdo vacío y genera redacción formal Leonística.
+   * Corrector y sintetizador protocolario local profundo de respaldo.
+   * Corrige ortografía habitual, limpia redundancias y asegura que los acuerdos queden formalizados.
    */
   private formatAndSynthesizePuntosLocal(params: ImproveActaPuntosParams): PuntoAgendaItem[] {
     const { puntos } = params;
 
+    const commonSpellingFixes: Record<string, string> = {
+      'sesion': 'sesión',
+      'sesiones': 'sesiones',
+      'acta': 'acta',
+      'comite': 'comité',
+      'comision': 'comisión',
+      'comisiones': 'comisiones',
+      'asamblea': 'asamblea',
+      'reunion': 'reunión',
+      'reuniones': 'reuniones',
+      'ordinaria': 'ordinaria',
+      'extraordinaria': 'extraordinaria',
+      'aprobacion': 'aprobación',
+      'aprobado': 'aprobado',
+      'quorun': 'quórum',
+      'quorum': 'quórum',
+      'presupuesto': 'presupuesto',
+      'presuspuesto': 'presupuesto',
+      'beneficiario': 'beneficiario',
+      'donacion': 'donación',
+      'donaciones': 'donaciones',
+      'socio': 'socio',
+      'socios': 'socios',
+      'presidente': 'presidente',
+      'secretario': 'secretario',
+      'tesorero': 'tesorero',
+      'mas': 'más',
+      'tambien': 'también',
+      'ademas': 'además',
+      'despues': 'después',
+      'estubo': 'estuvo',
+      'hizo': 'hizo',
+      'hiso': 'hizo',
+      'desicion': 'decisión',
+      'resolucion': 'resolución',
+      'organizacion': 'organización',
+      'actividad': 'actividad',
+      'actividades': 'actividades'
+    };
+
+    const fixSpelling = (text: string): string => {
+      let cleaned = text;
+      Object.entries(commonSpellingFixes).forEach(([wrong, right]) => {
+        const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
+        cleaned = cleaned.replace(regex, (match) => {
+          if (match[0] === match[0].toUpperCase()) {
+            return right.charAt(0).toUpperCase() + right.slice(1);
+          }
+          return right;
+        });
+      });
+      return cleaned;
+    };
+
     return puntos.map((p, idx) => {
-      let tema = (p.tema || `Punto de Agenda #${idx + 1}`).trim();
-      // Capitalizar tema si viene en minúsculas
+      let tema = fixSpelling((p.tema || `Punto de Agenda #${idx + 1}`).trim());
       if (tema.length > 0) {
         tema = tema.charAt(0).toUpperCase() + tema.slice(1);
       }
 
-      let debate = (p.debate || '').trim();
+      let debate = fixSpelling((p.debate || '').trim());
       if (!debate && p.agendaContenido) {
-        debate = `Se dio lectura y consideración a la propuesta presentada por ${p.socioSolicitante || 'el socio proponente'}: "${p.agendaContenido}". Los miembros de la asamblea deliberaron sobre su viabilidad y conveniencia para el club.`;
+        debate = `Se dio lectura y consideración a la propuesta presentada por ${p.socioSolicitante ? `el C.L. ${p.socioSolicitante}` : 'el socio proponente'}: "${p.agendaContenido}". Los miembros de la asamblea deliberaron sobre su viabilidad y conveniencia para los fines del club.`;
       } else if (!debate) {
-        debate = `Los socios presentes procedieron al análisis y discusión del tema "${tema}", evaluando las distintas alternativas y consideraciones pertinentes para beneficio del club.`;
+        debate = `Los socios presentes procedieron al análisis y discusión del tema "${tema}", evaluando las distintas consideraciones pertinentes en beneficio de las obras del club.`;
       } else {
-        // Asegurar puntuación final
+        // Asegurar que las menciones lleven C.L.
+        debate = debate.replace(/\b([A-ZÁÉÍÓÚ][a-zñáéíóú]+ [A-ZÁÉÍÓÚ][a-zñáéíóú]+):/g, (match, name) => {
+          if (!match.startsWith('C.L.')) {
+            return `C.L. ${name}:`;
+          }
+          return match;
+        });
+
         if (!debate.endsWith('.') && !debate.endsWith(';') && !debate.endsWith('!')) {
           debate = `${debate}.`;
         }
       }
 
-      let acuerdo = (p.acuerdo || '').trim();
-      // Si el usuario no escribió acuerdo o es muy corto, generar resolución formal solemne
+      let acuerdo = fixSpelling((p.acuerdo || '').trim());
       if (!acuerdo || acuerdo.toLowerCase().includes('sin acuerdo') || acuerdo.length < 5) {
-        const propuestoPor = p.socioSolicitante ? ` presentada por ${p.socioSolicitante}` : '';
+        const propuestoPor = p.socioSolicitante ? ` presentada por el C.L. ${p.socioSolicitante}` : '';
         acuerdo = `Por unanimidad de votos de los socios miembros presentes en la asamblea, se ACUERDA: Aprobar y respaldar la propuesta relativa a "${tema}"${propuestoPor}, encomendando a la Junta Directiva y a la comisión respectiva la ejecución, seguimiento y debido cumplimiento de lo resuelto.`;
       } else {
-        // Formalizar acuerdo existente si no tiene encabezado protocolario
         if (!acuerdo.toLowerCase().includes('acuerda') && !acuerdo.toLowerCase().includes('resuelve') && !acuerdo.toLowerCase().includes('por unanimidad')) {
           acuerdo = `Por decisión de la asamblea de socios, se ACUERDA: ${acuerdo.charAt(0).toUpperCase() + acuerdo.slice(1)}`;
         }
@@ -84,7 +154,7 @@ export class GeminiService {
   async summarizeActas(actas: Acta[], query: string): Promise<string> {
     const apiKey = this.getApiKey();
     if (!apiKey) {
-      return "Para usar la búsqueda con IA, configure una clave de API de Gemini válida.";
+      return "Para usar la búsqueda con IA, configure una clave de API de Gemini válida en la configuración.";
     }
 
     const ai = new GoogleGenAI({ apiKey });
@@ -112,62 +182,68 @@ export class GeminiService {
   }
 
   /**
-   * Perfecciona, corrige ortografía y gramática, formaliza la redacción y autocompleta/estructura
-   * los puntos de agenda y acuerdos de un acta con estilo institucional Leonístico.
-   * Escribe y registra los textos directamente en cada campo.
+   * Perfecciona, corrige ortografía y gramática a profundidad, formaliza la redacción y autocompleta/estructura
+   * los puntos de agenda y acuerdos de un acta con estilo institucional Leonístico de alto nivel.
    */
-  async improveAndFormatPuntosAgenda(params: ImproveActaPuntosParams): Promise<PuntoAgendaItem[]> {
+  async improveAndFormatPuntosAgenda(params: ImproveActaPuntosParams): Promise<ImproveActaResult> {
     const apiKey = this.getApiKey();
     const { puntos, titulo, categoria } = params;
 
     if (!puntos || puntos.length === 0) {
-      return [];
+      return { puntos: [], source: 'local' };
     }
 
-    // Si no hay API key configurada, usamos el motor protocolario inteligente local inmediatamente
     if (!apiKey) {
-      console.info("Gemini API Key no configurada. Utilizando sintetizador protocolario Leonístico integrado.");
-      return this.formatAndSynthesizePuntosLocal(params);
+      console.warn("No se encontró API Key de Gemini. Ejecutando sintetizador protocolario local.");
+      return {
+        puntos: this.formatAndSynthesizePuntosLocal(params),
+        source: 'local',
+        error: 'NO_API_KEY'
+      };
     }
 
     const ai = new GoogleGenAI({ apiKey });
 
-    const systemPrompt = `Eres el redactor oficial y asesor de secretaría del Club de Leones de Quetzaltenango (Lions International).
-Tu función es transformar, corregir y perfeccionar las notas y borradores de los puntos de agenda tratados en una sesión de ${categoria || 'Asamblea Ordinaria'} titulada "${titulo || 'Sesión de Club'}".
+    const systemPrompt = `Eres el redactor oficial mayor y asesor de secretaría del Club de Leones de Quetzaltenango (Lions International).
+Tu misión es realizar una CORRECCIÓN PROFUNDA, EXHAUSTIVA Y ESTILÍSTICA de los puntos de agenda para el acta oficial de la sesión "${categoria || 'Asamblea Ordinaria'}" titulada "${titulo || 'Sesión Ordinaria'}".
 
-INSTRUCCIONES CLAVE DE REDACCIÓN Y ESTILO:
-1. ORTOGRAFÍA Y GRAMÁTICA: Corrige rigurosamente tildes, puntuación, mayúsculas, concordancia y tiempos verbales.
-2. TEMA DEL PUNTO: Mantén o mejora el título del asunto para que sea formal, conciso y claro.
-3. DEBATE Y DISCUSIÓN:
-   - Redacta en tercera persona formal e institucional (estilo de acta notarial/corporativa de club de servicio).
-   - Si se mencionan nombres de socios (ej. "Socio X dijo...", "Hermano León Y apoyó..."), mantén explícitamente sus intervenciones con respeto y fluidez.
-   - Si hay notas cortas o ideas en viñetas, redacta un párrafo continuo, fluido y solemne que refleje la deliberación ocurrida.
-   - Si se incluyó contenido de propuesta o socio solicitante, dale un contexto ordenado.
-4. ACUERDO / RESOLUCIÓN (OBLIGATORIO):
-   - NUNCA devuelvas el campo "acuerdo" vacío ni con "Sin acuerdo".
-   - Si el usuario dejó el acuerdo vacío o incompleto (ej. "se aprobó", "comprar"), deduce y redacta formalmente la resolución acordada por la asamblea en lenguaje protocolario solemne (ej. "Por unanimidad de votos de los socios presentes en la asamblea, se ACUERDA: Aprobar la realización de... encomendando su ejecución y seguimiento a la comisión respectiva.").
-   - Si ya contenía un acuerdo, formalízalo con solemnidad reglamentaria.
-5. PRESERVACIÓN: Devuelve exactamente la misma cantidad de puntos y conserva las propiedades socioSolicitante y agendaContenido si venían presentes.
+REGLAS ESTRICTAS DE CORRECCIÓN PROFUNDA:
+1. ORTOGRAFÍA Y GRAMÁTICA RIGUROSA:
+   - Corrige TODAS las faltas ortográficas, palabras mal escritas, erratas tipográficas, palabras incompletas o fuera de contexto.
+   - Corrige la acentuación (tildes), signos de puntuación, mayúsculas y concordancia de género/número.
+   - Si una palabra está mal escrita o parece un error de tipeo (ej. "presuspuesto" -> "presupuesto", "estubo" -> "estuvo", "hiso" -> "hizo"), corrígela inmediatamente al término correcto según el contexto.
+2. TÍTULO / TEMA:
+   - Redáctalo con mayúsculas y minúsculas formales, claro, sobrio y conciso.
+3. DEBATE Y DISCUSIÓN (LENGUAJE PROTOCOLARIO LEONÍSTICO):
+   - Transforma las notas coloquiales, apuntes rápidos o viñetas en una redacción formal solemne en tercera persona.
+   - Si intervienen socios, mantén SIEMPRE su nombre precedido por el tratamiento leonístico "C.L. [Nombre del Socio]" (ej. "El C.L. Juan Pérez expuso... a lo cual el C.L. Mario Gómez secundó...").
+   - Dale fluidez, solemnidad y coherencia sintáctica impecable.
+4. ACUERDO / RESOLUCIÓN (OBLIGATORIO Y COMPLETO):
+   - NUNCA devuelvas el campo "acuerdo" vacío, nulo o con la frase "Sin acuerdo".
+   - Si el usuario no escribió un acuerdo o es muy breve (ej. "se aprobó"), deduce y redacta formalmente la resolución solemne adoptada por la asamblea (ej. "Por unanimidad de votos de los socios presentes en la asamblea, se ACUERDA: Aprobar la realización de... encomendando a la Junta Directiva y a la comisión respectiva el seguimiento y ejecución de lo acordado.").
+   - Si ya venía un acuerdo redactado, perfecciona su estilo reglamentario institucional.
+5. FORMATO DE RESPUESTA:
+   - Debes responder ÚNICA Y EXCLUSIVAMENTE con un arreglo JSON válido con los mismos índices de puntos.
 
-DEBES RESPONDER EXCLUSIVAMENTE CON UN ARREGLO JSON VÁLIDO.
-Ejemplo de salida esperada:
+Estructura JSON esperada:
 [
   {
-    "tema": "Título formal del punto",
-    "debate": "Redacción formal, fluida y corregida de las deliberaciones...",
+    "tema": "Tema corregido y formal",
+    "debate": "Redacción formal, fluida y corregida ortográficamente...",
     "acuerdo": "Por unanimidad de votos, se ACUERDA: ...",
     "socioSolicitante": "Nombre si aplica",
     "agendaContenido": "Propuesta si aplica"
   }
 ]`;
 
-    const userContent = `Aquí tienes los puntos de agenda originales ingresados para esta acta:
+    const userContent = `Puntos de agenda a corregir y perfeccionar:
 
 ${JSON.stringify(puntos, null, 2)}
 
-Por favor, devuélveme el arreglo JSON perfeccionado con todas las correcciones, redacción fluida y acuerdos solemnes generados.`;
+Devuelve únicamente el arreglo JSON con la corrección ortográfica profunda y redacción formal Leonística.`;
 
     const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+    let lastErrorMsg = '';
 
     for (const modelName of modelsToTry) {
       try {
@@ -175,7 +251,7 @@ Por favor, devuélveme el arreglo JSON perfeccionado con todas las correcciones,
           model: modelName,
           contents: `${systemPrompt}\n\n${userContent}`,
           config: {
-            temperature: 0.3,
+            temperature: 0.2,
             responseMimeType: "application/json",
           }
         });
@@ -190,7 +266,7 @@ Por favor, devuélveme el arreglo JSON perfeccionado con todas las correcciones,
 
         const parsed = JSON.parse(cleanedText);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((item, idx) => {
+          const formattedPoints = parsed.map((item, idx) => {
             const original = puntos[idx] || ({} as PuntoAgendaItem);
             const itemTema = String(item.tema || original.tema || `Punto #${idx + 1}`).trim();
             const itemDebate = String(item.debate || original.debate || '').trim();
@@ -208,15 +284,24 @@ Por favor, devuélveme el arreglo JSON perfeccionado con todas las correcciones,
               agendaContenido: item.agendaContenido || original.agendaContenido,
             };
           });
+
+          return {
+            puntos: formattedPoints,
+            source: 'gemini'
+          };
         }
-      } catch (err) {
-        console.warn(`Intento con modelo ${modelName} no completado:`, err);
+      } catch (err: any) {
+        lastErrorMsg = err?.message || String(err);
+        console.warn(`Intento con ${modelName} falló:`, lastErrorMsg);
       }
     }
 
-    // Fallback inteligente: si la API no responde, el sintetizador protocolario formaliza y genera los acuerdos inmediatamente
-    console.info("Aplicando sintetizador protocolario Leonístico de respaldo para formalizar y rellenar acuerdos.");
-    return this.formatAndSynthesizePuntosLocal(params);
+    console.warn("Fallo en llamada a Gemini API. Aplicando sintetizador protocolario local.");
+    return {
+      puntos: this.formatAndSynthesizePuntosLocal(params),
+      source: 'local',
+      error: lastErrorMsg || 'API_CALL_FAILED'
+    };
   }
 }
 

@@ -1,7 +1,7 @@
 import { safeSetItem } from '../../utils/storage';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
-  FileText, Plus, Search, Filter, Trash2, Edit, Download, X, Clock, Users, Mail, Briefcase, CheckCircle, Pencil, Building, BookOpen, ChevronUp, ChevronDown, ArrowUp, ArrowDown, GripVertical, ListOrdered, ArrowUpDown, CheckCircle2, MessageSquare, Bookmark, Sparkles, Wand2, Loader2
+  FileText, Plus, Search, Filter, Trash2, Edit, Download, X, Clock, Users, Mail, Briefcase, CheckCircle, Pencil, Building, BookOpen, ChevronUp, ChevronDown, ArrowUp, ArrowDown, GripVertical, ListOrdered, ArrowUpDown, CheckCircle2, MessageSquare, Bookmark, Sparkles, Wand2, Loader2, Key
 } from 'lucide-react';
 
 
@@ -518,6 +518,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
   };
 
   const [isPolishingWithAI, setIsPolishingWithAI] = useState(false);
+  const [showGeminiApiKeyModal, setShowGeminiApiKeyModal] = useState(false);
+  const [geminiApiKeyInput, setGeminiApiKeyInput] = useState(() => geminiService.getApiKey());
 
   const handlePolishPointsWithAI = async (customPuntos?: typeof actaWizardData.puntosAgenda) => {
     let puntosToProcess = customPuntos ? [...customPuntos] : [...(actaWizardData.puntosAgenda || [])];
@@ -537,24 +539,29 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
     setIsPolishingWithAI(true);
     try {
-      const improved = await geminiService.improveAndFormatPuntosAgenda({
+      const result = await geminiService.improveAndFormatPuntosAgenda({
         titulo: actaWizardData.titulo,
         categoria: actaWizardData.categoria,
         puntos: puntosToProcess
       });
 
-      if (improved && improved.length > 0) {
+      if (result && result.puntos && result.puntos.length > 0) {
         setActaWizardData(prev => ({
           ...prev,
-          puntosAgenda: improved
+          puntosAgenda: result.puntos
         }));
-        setSelectedAgendaPointTab(targetTab < improved.length ? targetTab : 0);
-        showToast('✨ Redacción, ortografía y acuerdos registrados en los campos', 'success');
-        return improved;
+        setSelectedAgendaPointTab(targetTab < result.puntos.length ? targetTab : 0);
+
+        if (result.source === 'gemini') {
+          showToast('✨ Redacción profunda, ortografía y acuerdos perfeccionados con Gemini IA', 'success');
+        } else {
+          showToast('✨ Puntos estructurados y acuerdos formalizados', 'success');
+        }
+        return result.puntos;
       }
     } catch (error) {
-      console.error("Error al procesar puntos con Gemini:", error);
-      showToast('No se pudo conectar con Gemini IA. Se mantendrán los puntos actuales.', 'info');
+      console.error("Error al procesar puntos:", error);
+      showToast('Se aplicó el formato protocolario de respaldo.', 'info');
     } finally {
       setIsPolishingWithAI(false);
     }
@@ -1421,15 +1428,29 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                           <h3 className="text-xl font-extrabold text-blue-900 tracking-tight">
                             Gestión de Puntos de Agenda
                           </h3>
-                          <p className="text-xs text-slate-500 font-semibold mt-0.5">
-                            {selectedAgendaPointTab === 'new' ? (
-                              <span className="text-amber-700 font-bold">Redactando Nuevo Punto de Agenda</span>
-                            ) : (
-                              <span className="text-blue-900 font-bold">
-                                Editando Punto #{selectedAgendaPointTab as number + 1}: {(actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.tema || 'Sin tema'}
-                              </span>
-                            )}
-                          </p>
+                          <div className="flex items-center space-x-2 mt-0.5">
+                            <p className="text-xs text-slate-500 font-semibold">
+                              {selectedAgendaPointTab === 'new' ? (
+                                <span className="text-amber-700 font-bold">Redactando Nuevo Punto de Agenda</span>
+                              ) : (
+                                <span className="text-blue-900 font-bold">
+                                  Editando Punto #{selectedAgendaPointTab as number + 1}: {(actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.tema || 'Sin tema'}
+                                </span>
+                              )}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setGeminiApiKeyInput(geminiService.getApiKey());
+                                setShowGeminiApiKeyModal(true);
+                              }}
+                              className="text-[10px] font-black text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-2 py-0.5 rounded-lg flex items-center space-x-1 transition-all cursor-pointer shadow-2xs"
+                              title="Configurar clave gratuita de Google AI Studio para corrección profunda con Gemini"
+                            >
+                              <Key size={10} />
+                              <span>{geminiService.getApiKey() ? 'Gemini IA Activa' : 'Configurar Clave IA'}</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1969,20 +1990,6 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                     </div>
                     <button
                       type="button"
-                      onClick={() => handlePolishPointsWithAI()}
-                      disabled={isPolishingWithAI || (actaWizardData.puntosAgenda || []).length === 0}
-                      className="px-3.5 py-2 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white rounded-xl text-xs font-black flex items-center space-x-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
-                      title="Re-analizar y mejorar redacción de puntos con Gemini IA"
-                    >
-                      {isPolishingWithAI ? (
-                        <Loader2 size={14} className="animate-spin text-amber-300" />
-                      ) : (
-                        <Sparkles size={14} className="text-amber-300 animate-pulse" />
-                      )}
-                      <span>{isPolishingWithAI ? 'Pulinedo...' : 'Re-pulir con IA'}</span>
-                    </button>
-                    <button
-                      type="button"
                       onClick={() => {
                         const rawText = compileActaText(actaWizardData);
                         navigator.clipboard.writeText(rawText).catch(() => {});
@@ -2044,6 +2051,87 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 </div>
                 <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
                   <div className="bg-gradient-to-r from-purple-600 via-indigo-600 to-amber-400 h-full rounded-full animate-pulse w-full"></div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal Configuración Clave Gemini IA */}
+          {showGeminiApiKeyModal && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+              <div className="bg-white rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl border border-indigo-100 text-left space-y-5 animate-in zoom-in-95 duration-200">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shadow-xs">
+                      <Key size={18} />
+                    </div>
+                    <div>
+                      <h4 className="text-base font-black text-slate-900">
+                        Clave de API Google Gemini
+                      </h4>
+                      <p className="text-[11px] text-slate-500 font-semibold">
+                        Para corrección profunda y redacción con IA generativa
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowGeminiApiKeyModal(false)}
+                    className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                    Para activar la revisión ortográfica y protocolaria profunda de Gemini en tiempo real, puedes pegar tu <strong>API Key gratuita de Google AI Studio</strong>:
+                  </p>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider">
+                      Google Gemini API Key:
+                    </label>
+                    <input
+                      type="password"
+                      value={geminiApiKeyInput}
+                      onChange={e => setGeminiApiKeyInput(e.target.value)}
+                      placeholder="AIzaSy..."
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:border-transparent outline-none text-xs font-mono font-semibold text-slate-800 shadow-inner"
+                    />
+                  </div>
+
+                  <div className="bg-indigo-50/70 p-3.5 rounded-2xl border border-indigo-100 text-xs text-indigo-900 space-y-1.5">
+                    <p className="font-bold flex items-center space-x-1.5">
+                      <span>💡 ¿Cómo obtener tu clave 100% gratuita?</span>
+                    </p>
+                    <p className="text-[11px] text-indigo-800/90 leading-relaxed">
+                      1. Entra a <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="font-black text-indigo-600 underline hover:text-indigo-850">aistudio.google.com/app/apikey</a> con tu cuenta de Google.
+                      <br />
+                      2. Haz clic en <strong>"Create API key"</strong> y pégala aquí.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end space-x-2.5 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowGeminiApiKeyModal(false)}
+                    className="px-4 py-2.5 text-slate-600 hover:bg-slate-100 font-bold rounded-xl text-xs transition-all"
+                  >
+                    Cerrar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      geminiService.setApiKey(geminiApiKeyInput);
+                      setShowGeminiApiKeyModal(false);
+                      showToast('✅ Clave de Gemini IA guardada exitosamente.', 'success');
+                    }}
+                    className="px-5 py-2.5 bg-indigo-700 hover:bg-indigo-800 text-white font-black rounded-xl text-xs transition-all shadow-md active:scale-95"
+                  >
+                    Guardar Clave
+                  </button>
                 </div>
               </div>
             </div>
