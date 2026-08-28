@@ -1,6 +1,7 @@
 import React from 'react';
-import { Calendar, User, Award, FileText } from 'lucide-react';
+import { Calendar, User, Award, FileText, CheckCircle2, ShieldCheck, MapPin, Hash, Sparkles } from 'lucide-react';
 import { generateActaCode } from '../utils/pdfGenerator';
+import { cleanAndDeduplicateCL } from '../services/geminiService';
 
 interface FormattedActaProps {
   titulo: string;
@@ -25,7 +26,7 @@ export const FormattedActa: React.FC<FormattedActaProps> = ({
   codigoRegistro,
   numeroActa,
 }) => {
-  // Generate unique registry code
+  // Generar código único si no existe
   const code = codigoRegistro || generateActaCode(
     categoria,
     fecha,
@@ -34,182 +35,342 @@ export const FormattedActa: React.FC<FormattedActaProps> = ({
     titulo
   );
 
-  // Parse the text into styled blocks
-  const parseContent = (text: string) => {
-    const lines = text.split('\n');
-    const blocks: React.ReactNode[] = [];
+  // Parsear el contenido estructurado en bloques limpios y uniformes
+  const parseActaBody = (rawText: string) => {
+    if (!rawText) return null;
     
-    let currentListItems: React.ReactNode[] = [];
-    let inList = false;
+    // Normalizar C.L. y saltos de línea
+    const text = cleanAndDeduplicateCL(rawText);
+    const lines = text.split('\n');
+    const elements: React.ReactNode[] = [];
 
-    const flushList = (key: number) => {
-      if (currentListItems.length > 0) {
-        blocks.push(
-          <ul key={`list-${key}`} className="space-y-2 mb-4 pl-4 font-sans">
-            {...currentListItems}
-          </ul>
+    let currentSectionTitle = '';
+    let currentParagraphs: string[] = [];
+    let currentPointData: { num: string; tema: string; debate: string; acuerdo: string } | null = null;
+
+    const flushParagraphs = (key: string) => {
+      if (currentParagraphs.length > 0) {
+        elements.push(
+          <div key={`p-group-${key}`} className="space-y-3 my-3">
+            {currentParagraphs.map((p, pIdx) => (
+              <p key={`p-${key}-${pIdx}`} className="text-slate-800 text-[13.5px] leading-relaxed text-justify">
+                {p}
+              </p>
+            ))}
+          </div>
         );
-        currentListItems = [];
-        inList = false;
+        currentParagraphs = [];
       }
     };
 
-    lines.forEach((line, index) => {
-      const trimmed = line.trim();
-      
-      if (trimmed === '') {
-        flushList(index);
-        return;
-      }
-
-      // Check if it is a major header (all uppercase ending in ":" and length > 3)
-      const isHeader = /^[A-ZÁÉÍÓÚÑ\s0-9]+:$/.test(trimmed) && trimmed.length > 3;
-
-      if (isHeader) {
-        flushList(index);
-        blocks.push(
-          <h4
-            key={`header-${index}`}
-            className="text-blue-900 font-sans font-black text-sm uppercase tracking-wider border-l-4 border-yellow-500 pl-3 mt-8 mb-4 first:mt-2"
+    const flushPoint = (key: string) => {
+      if (currentPointData) {
+        elements.push(
+          <div 
+            key={`point-card-${key}`}
+            className="my-5 rounded-2xl border border-slate-200/90 bg-white overflow-hidden shadow-xs hover:border-amber-300/80 transition-all"
           >
-            {trimmed}
-          </h4>
-        );
-      } else {
-        // Check if list item (starts with "-", "*" or a digit/dot like "1.")
-        const isListItem = trimmed.startsWith('-') || /^\d+\./.test(trimmed);
+            {/* Encabezado del Punto */}
+            <div className="bg-gradient-to-r from-blue-950 to-blue-900 px-5 py-3 text-white flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center space-x-2.5">
+                <span className="bg-amber-400 text-blue-950 font-black text-[11px] px-2.5 py-0.5 rounded-md uppercase tracking-wider shadow-xs">
+                  {currentPointData.num || 'Punto'}
+                </span>
+                <h5 className="font-black text-sm text-amber-100 tracking-tight">
+                  {currentPointData.tema || 'Punto de Agenda'}
+                </h5>
+              </div>
+            </div>
 
-        if (isListItem) {
-          inList = true;
-          // Clean the starting indicator for presentation
-          const listText = trimmed.replace(/^[-*]\s*/, '').replace(/^\d+\.\s*/, '');
-          const isNumbered = /^\d+\./.test(trimmed);
-          const prefix = trimmed.match(/^\d+\./)?.[0];
-
-          currentListItems.push(
-            <li key={`li-${index}`} className="flex items-start space-x-2 text-slate-700 text-sm leading-relaxed text-justify">
-              {isNumbered ? (
-                <span className="text-yellow-600 font-bold shrink-0">{prefix}</span>
-              ) : (
-                <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 mt-2 shrink-0" />
+            <div className="p-5 space-y-4 text-left">
+              {/* Debate / Discusión */}
+              {currentPointData.debate && (
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-black text-blue-900 uppercase tracking-wider flex items-center">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600 mr-2"></span>
+                    Deliberación y Debate
+                  </span>
+                  <div className="text-slate-700 text-xs sm:text-[13px] leading-relaxed pl-3.5 border-l-2 border-slate-200 text-justify">
+                    {currentPointData.debate}
+                  </div>
+                </div>
               )}
-              <span>{listText}</span>
-            </li>
-          );
-        } else {
-          flushList(index);
-          blocks.push(
-            <p
-              key={`p-${index}`}
-              className="text-slate-700 text-[13.5px] leading-relaxed mb-4 text-justify font-serif"
-            >
-              {trimmed}
-            </p>
-          );
-        }
-      }
-    });
 
-    flushList(lines.length);
-    return blocks;
+              {/* Acuerdo / Resolución */}
+              {currentPointData.acuerdo && (
+                <div className="bg-amber-50/60 rounded-xl p-4 border border-amber-200/80 space-y-1">
+                  <div className="flex items-center space-x-1.5 text-amber-900">
+                    <CheckCircle2 size={15} className="text-amber-600 shrink-0" />
+                    <span className="text-xs font-black uppercase tracking-wider">
+                      Acuerdo / Resolución Adoptada
+                    </span>
+                  </div>
+                  <p className="text-slate-800 text-xs sm:text-[13px] font-semibold leading-relaxed pl-5 text-justify">
+                    {currentPointData.acuerdo}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+        currentPointData = null;
+      }
+    };
+
+    let i = 0;
+    while (i < lines.length) {
+      const line = lines[i].trim();
+
+      if (!line) {
+        i++;
+        continue;
+      }
+
+      // 1. Títulos Mayores (Secciones como ASISTENCIA Y QUÓRUM, PUNTOS DE AGENDA, etc.)
+      if (/^[A-ZÁÉÍÓÚÑ\s0-9]{4,}:?$/.test(line) && !line.startsWith('PUNTO ') && !line.startsWith('TOTAL')) {
+        flushPoint(`sec-${i}`);
+        flushParagraphs(`sec-${i}`);
+        const cleanTitle = line.replace(/:$/, '').trim();
+        elements.push(
+          <div key={`header-${i}`} className="mt-8 mb-4 pt-4 border-t border-slate-200/80 first:mt-2 first:border-0">
+            <div className="flex items-center space-x-3">
+              <span className="w-2.5 h-5 bg-gradient-to-b from-blue-900 to-amber-500 rounded-xs"></span>
+              <h4 className="text-blue-950 font-black text-sm uppercase tracking-wider">
+                {cleanTitle}
+              </h4>
+            </div>
+          </div>
+        );
+        i++;
+        continue;
+      }
+
+      // 2. Detección de Punto de Agenda (ej. "Punto 1: Tema...")
+      const pointMatch = line.match(/^Punto\s+(\d+):\s*(.*)$/i);
+      if (pointMatch) {
+        flushPoint(`pt-${i}`);
+        flushParagraphs(`pt-${i}`);
+
+        const numStr = `PUNTO #${pointMatch[1]}`;
+        const temaStr = pointMatch[2].trim();
+        let debateStr = '';
+        let acuerdoStr = '';
+
+        i++;
+        while (i < lines.length) {
+          const subLine = lines[i].trim();
+          if (/^Punto\s+\d+:/i.test(subLine) || (/^[A-ZÁÉÍÓÚÑ\s0-9]{4,}:?$/.test(subLine) && !subLine.startsWith('-') && !subLine.startsWith('PUNTO'))) {
+            break;
+          }
+          if (subLine.startsWith('- Debate:') || subLine.startsWith('Debate:')) {
+            debateStr = subLine.replace(/^[-*]?\s*Debate:\s*/i, '').trim();
+          } else if (subLine.startsWith('- Acuerdo:') || subLine.startsWith('Acuerdo:')) {
+            acuerdoStr = subLine.replace(/^[-*]?\s*Acuerdo:\s*/i, '').trim();
+          } else if (debateStr && !acuerdoStr) {
+            debateStr += ` ${subLine}`;
+          } else if (acuerdoStr) {
+            acuerdoStr += ` ${subLine}`;
+          } else if (subLine) {
+            debateStr = subLine;
+          }
+          i++;
+        }
+
+        currentPointData = {
+          num: numStr,
+          tema: temaStr,
+          debate: cleanAndDeduplicateCL(debateStr),
+          acuerdo: cleanAndDeduplicateCL(acuerdoStr)
+        };
+        flushPoint(`done-${i}`);
+        continue;
+      }
+
+      // 3. Lista de Asistencia o Viñetas numeradas (ej. "1. Nombre")
+      if (/^\d+\.\s+/.test(line)) {
+        flushPoint(`list-${i}`);
+        flushParagraphs(`list-${i}`);
+
+        const listItems: string[] = [];
+        while (i < lines.length && /^\d+\.\s+/.test(lines[i].trim())) {
+          listItems.push(lines[i].trim().replace(/^\d+\.\s+/, ''));
+          i++;
+        }
+
+        elements.push(
+          <div key={`quorum-grid-${i}`} className="my-4 bg-slate-50/70 p-4 sm:p-5 rounded-2xl border border-slate-200/70 shadow-2xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {listItems.map((item, lIdx) => (
+                <div key={`item-${lIdx}`} className="flex items-center space-x-2 text-slate-800 text-xs font-semibold py-1 px-2.5 bg-white rounded-xl border border-slate-100 shadow-2xs">
+                  <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-900 font-bold text-[10px] flex items-center justify-center shrink-0">
+                    {lIdx + 1}
+                  </span>
+                  <span className="truncate">{cleanAndDeduplicateCL(item)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+        continue;
+      }
+
+      // 4. Párrafo narrativo regular
+      currentParagraphs.push(line);
+      i++;
+    }
+
+    flushPoint('end');
+    flushParagraphs('end');
+
+    return elements;
   };
 
   return (
-    <div className="w-full bg-white border border-slate-200 rounded-[2rem] sm:rounded-[2.5rem] p-4 sm:p-8 md:p-12 shadow-xl relative overflow-hidden max-w-4xl mx-auto text-left group select-all">
-      {/* Decorative top bars */}
-      <div className="absolute top-0 left-0 w-full h-3 bg-blue-900" />
-      <div className="absolute top-3 left-0 w-full h-1 bg-yellow-500" />
+    <div className="w-full bg-white border border-slate-200 rounded-[2.5rem] p-5 sm:p-8 md:p-12 shadow-xl relative overflow-hidden max-w-4xl mx-auto text-left group select-all font-sans text-slate-850">
+      {/* Decorative top bars oficiales */}
+      <div className="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-900" />
+      <div className="absolute top-3 left-0 w-full h-1.5 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500" />
 
-      {/* Subtle background medallion */}
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 border-4 border-yellow-500/[0.025] rounded-full flex items-center justify-center pointer-events-none select-none">
-        <span className="text-yellow-500/[0.03] text-9xl font-black font-sans">L</span>
+      {/* Marca de agua institucional de fondo */}
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 opacity-[0.03] pointer-events-none select-none flex items-center justify-center">
+        <img 
+          src="/images/logo.png" 
+          alt="Lions Watermark" 
+          className="w-full h-full object-contain grayscale"
+        />
       </div>
 
-      {/* Official Header */}
-      <div className="flex items-center space-x-3 mb-6 mt-4 pb-4 border-b border-slate-100 flex-wrap">
-        <div className="w-12 h-12 rounded-full bg-blue-900 border-2 border-yellow-500 flex items-center justify-center shrink-0 shadow-md">
-          <span className="text-yellow-500 text-2xl font-black select-none leading-none">L</span>
+      {/* Membrete Oficial Institucional con Logo */}
+      <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-5 pb-6 mb-6 border-b-2 border-slate-100">
+        <div className="flex items-center space-x-4">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white p-2 border-2 border-amber-400/80 shadow-md flex items-center justify-center shrink-0">
+            <img 
+              src="/images/logo.png" 
+              alt="Club de Leones Quetzaltenango" 
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <div className="text-left space-y-1">
+            <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest block">
+              Asociación Internacional de Clubes de Leones • Distrito B-4
+            </span>
+            <h2 className="font-black text-xl sm:text-2xl text-blue-950 uppercase tracking-tight leading-tight">
+              Club de Leones de Quetzaltenango
+            </h2>
+            <div className="flex items-center space-x-2 text-slate-500 text-xs font-semibold">
+              <span className="flex items-center">
+                <MapPin size={13} className="text-blue-900 mr-1 shrink-0" />
+                Quetzaltenango, Guatemala, C.A.
+              </span>
+              <span>•</span>
+              <span className="text-amber-800 font-black italic">
+                «Nosotros Servimos»
+              </span>
+            </div>
+          </div>
         </div>
-        <div className="text-left">
-          <h3 className="font-sans font-black text-lg sm:text-xl md:text-2xl text-blue-900 uppercase tracking-tight leading-none">
-            Club de Leones de Quetzaltenango
-          </h3>
-          <p className="font-sans text-[10px] text-yellow-650 font-extrabold uppercase tracking-widest mt-1">
-            Nosotros Servimos
+
+        {/* Badge Oficial del Acta */}
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 sm:text-right shrink-0 shadow-2xs self-stretch sm:self-auto flex flex-col justify-center">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+            Sesión {categoria}
+          </span>
+          <span className="text-base font-black text-blue-950">
+            {numeroActa ? `ACTA No. ${numeroActa}` : 'ACTA DE SESIÓN'}
+          </span>
+          <span className="text-xs font-bold text-slate-600">
+            {fecha}
+          </span>
+        </div>
+      </div>
+
+      {/* Título Oficial del Documento */}
+      <div className="bg-gradient-to-r from-blue-50/70 via-indigo-50/40 to-slate-50 p-4 sm:p-5 rounded-2xl border border-blue-100/80 mb-6 text-center space-y-1">
+        <span className="text-[10px] font-black text-blue-900 uppercase tracking-widest bg-blue-100/80 px-3 py-0.5 rounded-full inline-block">
+          Registro Oficial de Secretaría
+        </span>
+        <h3 className="text-base sm:text-lg font-black text-blue-950 uppercase tracking-tight">
+          {titulo || 'Acta Oficial de Sesión Plenaria'}
+        </h3>
+      </div>
+
+      {/* Ficha Técnica Protocolaria */}
+      <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 sm:p-5 mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3 shadow-2xs">
+        <div className="flex items-center space-x-3 text-slate-700 bg-white p-3 rounded-xl border border-slate-100 shadow-2xs">
+          <div className="bg-blue-50 text-blue-950 p-2 rounded-lg shrink-0">
+            <Hash size={16} />
+          </div>
+          <div className="min-w-0">
+            <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Código de Registro</span>
+            <span className="text-xs font-mono font-black text-blue-950 truncate block">{code}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-3 text-slate-700 bg-white p-3 rounded-xl border border-slate-100 shadow-2xs">
+          <div className="bg-amber-50 text-amber-800 p-2 rounded-lg shrink-0">
+            <Award size={16} />
+          </div>
+          <div className="min-w-0">
+            <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Presidente en Turno</span>
+            <span className="text-xs font-extrabold text-slate-800 truncate block">C.L. {presidentName.replace(/^C\.L\.\s*/i, '')}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-3 text-slate-700 bg-white p-3 rounded-xl border border-slate-100 shadow-2xs">
+          <div className="bg-indigo-50 text-indigo-800 p-2 rounded-lg shrink-0">
+            <User size={16} />
+          </div>
+          <div className="min-w-0">
+            <span className="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Secretario de Actas</span>
+            <span className="text-xs font-extrabold text-slate-800 truncate block">C.L. {secretaryName.replace(/^C\.L\.\s*/i, '')}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Cuerpo y Desarrollo del Acta */}
+      <div className="py-2 space-y-2 min-h-[250px]">
+        {parseActaBody(contenido)}
+      </div>
+
+      {/* Bloque de Firmas Oficiales */}
+      <div className="mt-14 pt-8 border-t-2 border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-8 text-center">
+        <div className="flex flex-col items-center justify-end">
+          <div className="w-56 h-0.5 bg-slate-300 mb-2.5" />
+          <span className="text-xs font-black text-blue-950 uppercase tracking-wider">
+            C.L. {secretaryName.replace(/^C\.L\.\s*/i, '')}
+          </span>
+          <span className="text-[11px] font-bold text-slate-500 uppercase">
+            Secretario del Club
+          </span>
+          <span className="text-[9px] text-slate-400 font-semibold mt-0.5">
+            Fe y constancia notarial interna
+          </span>
+        </div>
+
+        <div className="flex flex-col items-center justify-end">
+          <div className="w-56 h-0.5 bg-slate-300 mb-2.5" />
+          <span className="text-xs font-black text-blue-950 uppercase tracking-wider">
+            C.L. {presidentName.replace(/^C\.L\.\s*/i, '')}
+          </span>
+          <span className="text-[11px] font-bold text-slate-500 uppercase">
+            Presidente del Club
+          </span>
+          <span className="text-[9px] text-slate-400 font-semibold mt-0.5">
+            Visto Bueno y Aprobación
+          </span>
+        </div>
+      </div>
+
+      {/* Sello y Certificación */}
+      <div className="mt-10 pt-4 flex flex-col sm:flex-row items-center justify-between text-slate-400 border-t border-slate-100 gap-3 text-center sm:text-left">
+        <div className="flex items-center space-x-2">
+          <ShieldCheck size={16} className="text-amber-500 shrink-0" />
+          <p className="text-[10px] font-bold uppercase tracking-wider">
+            Documento Certificado del Libro de Actas Oficial
           </p>
         </div>
-      </div>
-
-      {/* Metadata Grid Card */}
-      <div className="bg-slate-50 border border-slate-200/60 rounded-[2rem] sm:rounded-2xl p-4 sm:p-5 md:p-6 mb-6 sm:mb-8 font-sans grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="flex items-center space-x-3 text-slate-700">
-          <div className="bg-blue-50 text-blue-900 p-2.5 rounded-xl shrink-0">
-            <FileText size={18} />
-          </div>
-          <div>
-            <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">Código de Registro</span>
-            <span className="text-sm font-extrabold text-slate-800 leading-tight break-all">{code}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-3 text-slate-700">
-          <div className="bg-blue-50 text-blue-900 p-2.5 rounded-xl shrink-0">
-            <User size={18} />
-          </div>
-          <div>
-            <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">Secretario / Redactor</span>
-            <span className="text-sm font-extrabold text-slate-800 leading-tight">{secretaryName}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-3 text-slate-700">
-          <div className="bg-blue-50 text-blue-900 p-2.5 rounded-xl shrink-0">
-            <Award size={18} />
-          </div>
-          <div>
-            <span className="block text-[10px] font-black text-slate-400 uppercase tracking-wider">Presidente en Turno</span>
-            <span className="text-sm font-extrabold text-slate-800 leading-tight">{presidentName}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      <div className="border-t border-b border-slate-100 py-6 my-6 min-h-[300px]">
-        {parseContent(contenido)}
-      </div>
-
-      {/* Signatures Block */}
-      <div className="mt-12 pt-8 grid grid-cols-1 sm:grid-cols-2 gap-8 font-sans">
-        <div className="flex flex-col items-center text-center">
-          <div className="w-48 h-px bg-slate-300 mb-3" />
-          <span className="text-xs font-black text-slate-500 uppercase tracking-wider">Firma del Secretario</span>
-          <span className="text-[11px] font-bold text-slate-400 mt-1 uppercase italic">{secretaryName}</span>
-          <span className="text-[9px] text-slate-400">Secretario de Actas</span>
-        </div>
-
-        <div className="flex flex-col items-center text-center">
-          <div className="w-48 h-px bg-slate-300 mb-3" />
-          <span className="text-xs font-black text-slate-500 uppercase tracking-wider">Firma del Presidente</span>
-          <span className="text-[11px] font-bold text-slate-400 mt-1 uppercase italic">{presidentName}</span>
-          <span className="text-[9px] text-slate-400">Presidente del Club</span>
-        </div>
-      </div>
-
-      {/* Official Stamp Decoration */}
-      <div className="mt-8 flex justify-center opacity-30 select-none pointer-events-none">
-        <div className="border border-dashed border-yellow-650/50 rounded-full p-2">
-          <div className="border border-yellow-650/40 rounded-full px-6 py-1.5 text-[8px] font-black text-yellow-750 uppercase tracking-widest">
-            SELLO CLUB DE LEONES QX
-          </div>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="mt-12 pt-4 border-t border-slate-100 text-center font-sans">
-        <p className="text-[9px] text-slate-400 uppercase tracking-wider leading-relaxed">
-          Documento oficial de carácter privado y confidencial.
-          <br />
-          Club de Leones de Quetzaltenango © 2026. Todos los derechos reservados.
+        <p className="text-[9px] font-semibold">
+          Club de Leones de Quetzaltenango © {new Date().getFullYear()}
         </p>
       </div>
     </div>
