@@ -29,30 +29,40 @@ export const generateActaCode = (
   return `${catCode}-${dateCode}-${numCode}-${presCode}-${titleClean || 'ACTA'}`;
 };
 
-export const generateActaPDF = (acta: Acta, action: 'download' | 'open' = 'download') => {
+const loadImage = (url: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = url;
+    img.onload = () => resolve(img);
+    img.onerror = (e) => reject(e);
+  });
+};
+
+export const generateActaPDF = async (acta: Acta, action: 'download' | 'open' = 'download') => {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
     format: 'letter'
   });
 
-  const margin = 20;
   const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 14; // Margen optimizado de 14mm para maximizar área útil
   const contentWidth = pageWidth - (margin * 2);
+  const bottomMargin = 18;
 
-  // Header Blue Bar (Primary Color)
-  doc.setFillColor(27, 54, 93); // Blue-900
-  doc.rect(0, 0, pageWidth, 15, 'F');
-  
-  // Header Gold Bar (Secondary Accent Color)
-  doc.setFillColor(234, 179, 8); // Yellow-500
-  doc.rect(0, 15, pageWidth, 2, 'F');
+  // Franja superior de marca leonística (Azul Marino y Oro)
+  doc.setFillColor(0, 43, 102); // #002B66
+  doc.rect(0, 0, pageWidth, 5, 'F');
+  doc.setFillColor(245, 158, 11); // #F59E0B
+  doc.rect(0, 5, pageWidth, 1.5, 'F');
 
-  // Dynamic Names Lookup
+  // Nombres dinámicos de Presidente y Secretario
   let presidentName = 'Edwin Ernesto Pacheco López';
   let secretaryName = 'Flor Rodríguez Cifuentes';
   try {
-    const local = localStorage.getItem('club_leones_socios');
+    const local = localStorage.getItem('club_leones_socios_v3') || localStorage.getItem('club_leones_socios');
     if (local) {
       const sociosList = JSON.parse(local);
       const president = sociosList.find((s: any) => s.puesto?.toLowerCase().includes('presidente del club') || s.puesto?.toLowerCase() === 'presidente') || sociosList.find((s: any) => s.puesto?.toLowerCase().includes('presidente'));
@@ -62,7 +72,7 @@ export const generateActaPDF = (acta: Acta, action: 'download' | 'open' = 'downl
     }
   } catch (e) {}
 
-  // Generate unique registry code
+  // Código de registro único
   const code = acta.codigoRegistro || generateActaCode(
     acta.categoria || 'Ordinaria',
     acta.fecha,
@@ -71,124 +81,227 @@ export const generateActaPDF = (acta: Acta, action: 'download' | 'open' = 'downl
     acta.titulo
   );
 
-  // Draw Logo on the left (X coord: margin, Y coord: 22)
+  // Carga del Logo Oficial de Lions International
+  let logoImg: HTMLImageElement | null = null;
+  try {
+    const base = window.location.pathname.endsWith('/') 
+      ? window.location.pathname 
+      : window.location.pathname + '/';
+    const logoUrl = `${window.location.origin}${base}images/logo.png`;
+    logoImg = await loadImage(logoUrl);
+  } catch (err) {
+    try {
+      logoImg = await loadImage('/images/logo.png');
+    } catch (e) {}
+  }
+
+  // MEMBRETE OFICIAL (Y coord: 10)
+  const headerY = 10;
+  const logoSize = 16; // 16x16 mm
   const logoX = margin;
-  const logoY = 22;
-  const logoRadius = 7; // 14mm diameter
-  
-  // Blue filled circle
-  doc.setFillColor(27, 54, 93); // Blue-900
-  doc.circle(logoX + logoRadius, logoY + logoRadius, logoRadius, 'F');
-  
-  // Gold circle outline
-  doc.setDrawColor(234, 179, 8); // Yellow-500
-  doc.setLineWidth(0.5);
-  doc.circle(logoX + logoRadius, logoY + logoRadius, logoRadius - 0.5, 'S');
-  
-  // Gold 'L' in the center
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.setTextColor(234, 179, 8); // Yellow-500
-  doc.text('L', logoX + logoRadius, logoY + logoRadius + 4.5, { align: 'center' });
 
-  // Title Branding on the right of the logo (X coord: logoX + 18)
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.setTextColor(27, 54, 93);
-  doc.text('CLUB DE LEONES DE QUETZALTENANGO', logoX + 18, logoY + 5.5);
+  if (logoImg) {
+    doc.addImage(logoImg, 'PNG', logoX, headerY, logoSize, logoSize);
+  } else {
+    // Fallback circular dorado si no cargara imagen
+    doc.setFillColor(0, 43, 102);
+    doc.circle(logoX + (logoSize / 2), headerY + (logoSize / 2), logoSize / 2, 'F');
+    doc.setDrawColor(245, 158, 11);
+    doc.setLineWidth(0.6);
+    doc.circle(logoX + (logoSize / 2), headerY + (logoSize / 2), (logoSize / 2) - 0.4, 'S');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(245, 158, 11);
+    doc.text('L', logoX + (logoSize / 2), headerY + (logoSize / 2) + 4, { align: 'center' });
+  }
 
-  // Subtitle (Nosotros Servimos - removing D-4 references)
+  // Textos del Membrete
+  const textStartX = logoX + logoSize + 4;
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(217, 119, 6); // Amber-600
-  doc.text('NOSOTROS SERVIMOS', logoX + 18, logoY + 11.5);
+  doc.setFontSize(8);
+  doc.setTextColor(100, 116, 139); // Slate-500
+  doc.text('ASOCIACIÓN INTERNACIONAL DE CLUBES DE LEONES • DISTRITO B-4', textStartX, headerY + 3.5);
 
-  // Metadata block in box (More compact to eliminate redundancy)
-  const metaY = 42;
-  doc.setFillColor(248, 250, 252); // Slate-50 (light grey)
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(0, 43, 102); // Azul Marino Leonístico
+  doc.text('CLUB DE LEONES DE QUETZALTENANGO', textStartX, headerY + 8.5);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(71, 85, 105);
+  doc.text('Quetzaltenango, Guatemala, Centroamérica  •  Fundado en 1947', textStartX, headerY + 12.5);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(217, 119, 6); // Ámbar-600
+  doc.text('« NOSOTROS SERVIMOS • WE SERVE »', textStartX, headerY + 16);
+
+  // Línea divisoria del membrete
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.4);
+  doc.line(margin, headerY + 18.5, pageWidth - margin, headerY + 18.5);
+
+  // CAJA NOTARIAL DE METADATOS COMPACTA (Aprovechamiento de espacio)
+  const metaY = headerY + 21;
+  const metaH = 17;
+  doc.setFillColor(248, 250, 252); // Slate-50
   doc.setDrawColor(226, 232, 240); // Slate-200
   doc.setLineWidth(0.3);
-  doc.roundedRect(margin, metaY, contentWidth, 20, 2.5, 2.5, 'FD'); // background box
+  doc.roundedRect(margin, metaY, contentWidth, metaH, 2, 2, 'FD');
 
-  // Meta details
+  const colWidth = contentWidth / 3;
+  const col1 = margin + 3.5;
+  const col2 = margin + colWidth + 2;
+  const col3 = margin + (colWidth * 2) + 2;
+
+  // Columna 1: Código de Registro y Tipo
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
-  doc.setTextColor(71, 85, 105); // Slate-600
-
-  const col1X = margin + 4;
-  const col2X = margin + (contentWidth / 2) + 4;
-
-  // Row 1: Código de Registro
-  doc.text('CÓDIGO DE REGISTRO:', col1X, metaY + 6.5);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(27, 54, 93); // Navy Blue for code
-  doc.setFontSize(9);
-  doc.text(code, col1X + 38, metaY + 6.5);
-
-  // Row 2: Secretario & Presidente
+  doc.setFontSize(7.5);
+  doc.setTextColor(100, 116, 139);
+  doc.text('CÓDIGO OFICIAL:', col1, metaY + 5.5);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
-  doc.setTextColor(71, 85, 105);
-  doc.text('SECRETARIO:', col1X, metaY + 14.5);
+  doc.setFontSize(8);
+  doc.setTextColor(0, 43, 102);
+  doc.text(code, col1, metaY + 11.5);
+
+  // Columna 2: Tipo de Sesión y Número
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(100, 116, 139);
+  doc.text('SESIÓN & NÚMERO:', col2, metaY + 5.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(51, 65, 85);
+  doc.text(`${acta.categoria || 'Ordinaria'} • Acta No. ${acta.numeroActa || '1'}`, col2, metaY + 11.5);
+
+  // Columna 3: Dignatarios
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(100, 116, 139);
+  doc.text('SECRETARIO:', col3, metaY + 5.5);
   doc.setFont('helvetica', 'normal');
-  doc.text(secretaryName, col1X + 38, metaY + 14.5);
+  doc.setFontSize(7.5);
+  doc.setTextColor(51, 65, 85);
+  doc.text(secretaryName, col3 + 22, metaY + 5.5);
 
   doc.setFont('helvetica', 'bold');
-  doc.text('PRESIDENTE EN TURNO:', col2X, metaY + 14.5);
+  doc.setTextColor(100, 116, 139);
+  doc.text('PRESIDENTE:', col3, metaY + 11.5);
   doc.setFont('helvetica', 'normal');
-  doc.text(presidentName, col2X + 38, metaY + 14.5);
+  doc.setTextColor(51, 65, 85);
+  doc.text(presidentName, col3 + 22, metaY + 11.5);
 
-  // Content Body
-  const rawLines = acta.contenido.split('\n');
-  let y = 72;
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const bottomMargin = 22;
+  // Título del Acta
+  let y = metaY + metaH + 7;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(0, 43, 102);
+  const titleLines = doc.splitTextToSize(acta.titulo.toUpperCase(), contentWidth);
+  titleLines.forEach((tLine: string) => {
+    doc.text(tLine, pageWidth / 2, y, { align: 'center' });
+    y += 5.5;
+  });
+  y += 2;
 
+  // Función de control de salto de página
   const checkPageOverflow = (neededHeight: number) => {
     if (y + neededHeight > pageHeight - bottomMargin) {
       doc.addPage();
       
-      // Page Header for extra pages
-      doc.setFillColor(27, 54, 93);
-      doc.rect(0, 0, pageWidth, 12, 'F');
-      doc.setFillColor(234, 179, 8);
-      doc.rect(0, 12, pageWidth, 1.5, 'F');
-      
+      // Franja superior de páginas sucesivas
+      doc.setFillColor(0, 43, 102);
+      doc.rect(0, 0, pageWidth, 5, 'F');
+      doc.setFillColor(245, 158, 11);
+      doc.rect(0, 5, pageWidth, 1, 'F');
+
+      // Encabezado compacto en página secundaria
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.setTextColor(148, 163, 184); // Slate-400
-      doc.text(`Acta: ${acta.titulo} - Página ${doc.internal.pages.length - 1}`, margin, 18);
+      doc.setFontSize(7.5);
+      doc.setTextColor(148, 163, 184);
+      doc.text(`Club de Leones de Quetzaltenango  •  ${code}`, margin, 11);
+      doc.text(`Página ${doc.internal.pages.length - 1}`, pageWidth - margin, 11, { align: 'right' });
       
-      y = 26; // Reset Y coordinate
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.3);
+      doc.line(margin, 13, pageWidth - margin, 13);
+
+      y = 18; // Reiniciar coordenada Y
     }
   };
+
+  // Renderizado del Cuerpo del Acta
+  const rawLines = (acta.contenido || '').split('\n');
 
   rawLines.forEach((line) => {
     const trimmedLine = line.trim();
     if (trimmedLine === '') {
-      y += 4; // Spacing for empty lines
+      y += 2.5; // Espacio entre párrafos reducido y limpio
       return;
     }
 
-    // Check if it is a major header
-    const isHeader = /^[A-ZÁÉÍÓÚÑ\s0-9]+:$/.test(trimmedLine) && trimmedLine.length > 3;
+    // Encabezados Principales (Ej. I. APERTURA Y QUÓRUM:, LECTURA DE SOLICITUDES:, etc.)
+    const isMajorHeader = (/^[I|V|X]+\.\s+[A-ZÁÉÍÓÚÑ\s0-9]+:?$/.test(trimmedLine) || 
+                          (/^[A-ZÁÉÍÓÚÑ\s0-9]{4,}:$/.test(trimmedLine) && !trimmedLine.includes('ACUERDO:')));
 
-    if (isHeader) {
-      checkPageOverflow(15);
-      y += 4; // Top spacing before header
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.setTextColor(27, 54, 93); // Navy Blue
-      doc.text(trimmedLine, margin, y);
-      y += 6.5;
-    } else {
-      // Regular line (could be list item or normal paragraph)
-      const isListItem = trimmedLine.startsWith('-') || /^\d+\./.test(trimmedLine);
-      const currentIndent = isListItem ? 6 : 0;
+    // Puntos de Agenda (Ej. PUNTO 1:, TEMA:, etc.)
+    const isAgendaPointHeader = /^PUNTO\s+\d+:|^PUNTO\s+DE\s+AGENDA\s+#?\d+:?/i.test(trimmedLine);
+
+    // Acuerdos y Resoluciones
+    const isAcuerdoLine = /^ACUERDO:|^RESOLUCIÓN:|^DECISIÓN:/i.test(trimmedLine);
+
+    if (isMajorHeader) {
+      checkPageOverflow(14);
+      y += 3;
       
-      doc.setFont('times', 'normal');
-      doc.setFontSize(10.5);
-      doc.setTextColor(51, 65, 85); // Slate-700
+      // Fondo decorativo sutil para títulos de sección
+      doc.setFillColor(241, 245, 249); // Slate-100
+      doc.roundedRect(margin, y - 4, contentWidth, 6.5, 1, 1, 'F');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(0, 43, 102); // Azul Marino
+      doc.text(trimmedLine, margin + 2.5, y + 0.5);
+      y += 5.5;
+    } else if (isAgendaPointHeader) {
+      checkPageOverflow(10);
+      y += 2;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(15, 23, 42); // Slate-900
+      doc.text(trimmedLine, margin, y);
+      y += 4.5;
+    } else if (isAcuerdoLine) {
+      checkPageOverflow(14);
+      y += 2;
+      
+      // Caja destacada de acuerdo con fondo ámbar suave
+      doc.setFillColor(254, 243, 199, 50); // Amber-100 suave
+      doc.setDrawColor(245, 158, 11); // Borde Oro
+      doc.setLineWidth(0.3);
+
+      const acuerdoText = trimmedLine;
+      const splitAcuerdo = doc.splitTextToSize(acuerdoText, contentWidth - 8);
+      const boxHeight = (splitAcuerdo.length * 4.2) + 4;
+      
+      checkPageOverflow(boxHeight + 2);
+      doc.roundedRect(margin, y - 3, contentWidth, boxHeight, 1.5, 1.5, 'FD');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(180, 83, 9); // Amber-700
+      splitAcuerdo.forEach((sLine: string, sIdx: number) => {
+        doc.text(sLine, margin + 4, y + (sIdx * 4.2) + 0.5);
+      });
+      y += boxHeight + 1.5;
+    } else {
+      // Línea normal o viñeta de lista
+      const isListItem = trimmedLine.startsWith('-') || /^\d+\./.test(trimmedLine);
+      const currentIndent = isListItem ? 5 : 0;
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(30, 41, 59); // Slate-800
       
       const wrapWidth = contentWidth - currentIndent;
       
@@ -210,95 +323,122 @@ export const generateActaPDF = (acta: Acta, action: 'download' | 'open' = 'downl
       const splitLines = doc.splitTextToSize(displayLine, wrapWidth);
       
       splitLines.forEach((subLine: string, subIdx: number) => {
-        checkPageOverflow(6.5);
+        checkPageOverflow(5);
         if (isListItem && subIdx === 0) {
-          // Draw the bullet point/number prefix in bold gold
           doc.setFont('helvetica', 'bold');
-          doc.setTextColor(217, 119, 6); // Amber-600
+          doc.setTextColor(217, 119, 6); // Oro para viñeta
           doc.text(symbolPrefix, margin, y);
           
-          doc.setFont('times', 'normal');
-          doc.setTextColor(51, 65, 85); // Slate-700
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(30, 41, 59);
           doc.text(subLine, margin + currentIndent, y);
         } else {
           doc.text(subLine, margin + currentIndent, y);
         }
-        y += 5.8; // Line height
+        y += 4.5; // Interlineado compacto y legible
       });
-      y += 1.5; // Small spacing after paragraph/item
+      y += 1;
     }
   });
 
-  // Signatures section (Secretary and President pulled dynamically)
-  if (y + 45 > pageHeight - bottomMargin) {
+  // Generar código QR para autenticidad notarial
+  let qrDataUrl = '';
+  try {
+    qrDataUrl = await QRCode.toDataURL(
+      `https://clubdeleonesquetzaltenango.org/actas?codigo=${encodeURIComponent(code)}`,
+      { width: 100, margin: 1 }
+    );
+  } catch (e) {}
+
+  // BLOQUE DE FIRMAS Y CERTIFICACIÓN OFICIAL
+  const signaturesHeight = 36;
+  if (y + signaturesHeight > pageHeight - bottomMargin) {
     doc.addPage();
-    doc.setFillColor(27, 54, 93);
-    doc.rect(0, 0, pageWidth, 12, 'F');
-    doc.setFillColor(234, 179, 8);
-    doc.rect(0, 12, pageWidth, 1.5, 'F');
-    y = 26;
+    // Header secundario
+    doc.setFillColor(0, 43, 102);
+    doc.rect(0, 0, pageWidth, 5, 'F');
+    doc.setFillColor(245, 158, 11);
+    doc.rect(0, 5, pageWidth, 1, 'F');
+    y = 20;
+  } else {
+    y += 8;
   }
 
-  y += 15;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.setTextColor(71, 85, 105);
+  // Certificación y Firmas
+  const sigColWidth = (contentWidth - 28) / 2; // Dos columnas para firmas + espacio central para QR/Sello
+  const leftSigX = margin + 4;
+  const rightSigX = pageWidth - margin - sigColWidth - 4;
+  const qrX = margin + sigColWidth + 6;
+  const qrSize = 18;
+
+  // Línea y Firma Secretario (Izquierda)
+  doc.setDrawColor(71, 85, 105);
+  doc.setLineWidth(0.4);
+  doc.line(leftSigX, y + 16, leftSigX + sigColWidth, y + 16);
   
-  // Left signature (Secretary)
-  doc.line(margin, y + 15, margin + 60, y + 15);
-  doc.text('Firma del Secretario', margin, y + 20);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(0, 43, 102);
+  doc.text(secretaryName, leftSigX + (sigColWidth / 2), y + 20.5, { align: 'center' });
   doc.setFont('helvetica', 'normal');
-  doc.text(secretaryName, margin, y + 25);
+  doc.setFontSize(7.5);
+  doc.setTextColor(100, 116, 139);
+  doc.text('Secretario del Club', leftSigX + (sigColWidth / 2), y + 24.5, { align: 'center' });
 
-  // Right signature (President)
-  doc.line(pageWidth - margin - 60, y + 15, pageWidth - margin, y + 15);
-  doc.text('Firma del Presidente', pageWidth - margin - 60, y + 20);
-  doc.setFont('helvetica', 'normal');
-  doc.text(presidentName, pageWidth - margin - 60, y + 25);
-
-  // Decorative stamp
-  y += 35;
-  if (y + 10 < pageHeight - bottomMargin) {
-    doc.setDrawColor(217, 119, 6); // Amber-650
-    doc.setLineWidth(0.2);
-    const stampW = 60;
-    const stampH = 7;
-    const stampX = (pageWidth - stampW) / 2;
-    doc.roundedRect(stampX, y, stampW, stampH, 1.5, 1.5, 'S');
-    
+  // QR de Autenticación / Sello Central
+  if (qrDataUrl) {
+    doc.addImage(qrDataUrl, 'PNG', qrX, y + 2, qrSize, qrSize);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(6.5);
-    doc.setTextColor(217, 119, 6);
-    doc.text('SELLO OFICIAL - CLUB DE LEONES QX', pageWidth / 2, y + 4.8, { align: 'center' });
+    doc.setFontSize(6);
+    doc.setTextColor(100, 116, 139);
+    doc.text('VERIFICACIÓN QR', qrX + (qrSize / 2), y + qrSize + 5, { align: 'center' });
   }
 
-  // Document Footer (all pages)
+  // Línea y Firma Presidente (Derecha)
+  doc.line(rightSigX, y + 16, rightSigX + sigColWidth, y + 16);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(0, 43, 102);
+  doc.text(presidentName, rightSigX + (sigColWidth / 2), y + 20.5, { align: 'center' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(100, 116, 139);
+  doc.text('Presidente del Club', rightSigX + (sigColWidth / 2), y + 24.5, { align: 'center' });
+
+  // Pie de Página en Todas las Hojas
   const pageCount = doc.internal.pages.length - 1;
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.3);
+    doc.line(margin, pageHeight - 11, pageWidth - margin, pageHeight - 11);
+
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(148, 163, 184);
+    doc.setFontSize(7);
+    doc.setTextColor(148, 163, 184); // Slate-400
     doc.text(
-      'Documento de carácter privado y confidencial - Club de Leones de Quetzaltenango © 2026', 
+      'Documento Oficial Registrado • Club de Leones de Quetzaltenango • Todos los derechos reservados © 2026', 
       margin, 
-      pageHeight - 10
+      pageHeight - 7
     );
+    doc.setFont('helvetica', 'bold');
     doc.text(
-      `Pág. ${i} de ${pageCount}`, 
-      pageWidth - margin - 15, 
-      pageHeight - 10
+      `Página ${i} de ${pageCount}`, 
+      pageWidth - margin, 
+      pageHeight - 7,
+      { align: 'right' }
     );
   }
 
-  // Handle PDF Output
+  // Salida del Documento
   if (action === 'open') {
     const blob = doc.output('blob');
     const blobUrl = URL.createObjectURL(blob);
     window.open(blobUrl, '_blank');
   } else {
-    const cleanTitle = acta.titulo.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    doc.save(`acta-${cleanTitle}.pdf`);
+    const cleanTitle = (acta.numeroActa ? `acta-no-${acta.numeroActa}` : acta.titulo.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
+    doc.save(`${cleanTitle}.pdf`);
   }
 };
 
@@ -817,16 +957,6 @@ export const generateMinutaPDF = (
     const cleanTitle = minuta.tema.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     doc.save(`minuta-${cleanTitle}.pdf`);
   }
-};
-
-const loadImage = (url: string): Promise<HTMLImageElement> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = url;
-    img.onload = () => resolve(img);
-    img.onerror = (e) => reject(e);
-  });
 };
 
 export interface CartaInvitacionInput {
