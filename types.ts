@@ -136,6 +136,16 @@ export interface GaleriaItem {
   puestoCargo?: string;
   logrosDestacados?: string[];
   citaHonorifica?: string;
+
+  // Promoción de Rentas y Alquileres (Salones, Parqueo, Oficinas)
+  esRenta?: boolean;
+  tipoEspacio?: 'salon' | 'parqueo' | 'oficina' | 'otro';
+  capacidadPersonas?: string;
+  dimensionesArea?: string;
+  amenidades?: string[];
+  tarifaReferencial?: string;
+  disponibilidadHorario?: string;
+  telefonoContacto?: string;
 }
 
 export interface HitoHistorico {

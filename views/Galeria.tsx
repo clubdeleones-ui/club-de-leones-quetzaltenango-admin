@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, Calendar, Tag, Crown, ImageIcon } from 'lucide-react';
+import { Camera, Calendar, Tag, Crown, ImageIcon, Building2, Sparkles } from 'lucide-react';
 import { GaleriaItem } from '../types';
 import { firebaseService } from '../services/firebaseService';
 import { MOCK_GALERIA } from '../constants';
 import { formatDisplayDate } from '../utils/dateSpanishFormatter';
 import { MuseoPersonajes } from './MuseoPersonajes';
+import { RentasSalonesSection } from '../components/RentasSalonesSection';
 
 const Galeria: React.FC = () => {
   const [items, setItems] = useState<GaleriaItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'museo' | 'fotos'>('museo');
+  const [activeTab, setActiveTab] = useState<'rentas' | 'museo' | 'fotos'>('rentas');
 
   useEffect(() => {
     const initializeGaleria = async () => {
@@ -28,8 +29,14 @@ const Galeria: React.FC = () => {
     initializeGaleria();
   }, []);
 
-  // Filter regular gallery items (exclude Museo de Personajes items from standard photo categories)
-  const itemsGaleriaNormal = items.filter(i => i.categoria !== 'Museo de Personajes' && !i.tipoPersonaje);
+  // Filter regular gallery items (exclude Museo and Rentas from standard photo categories)
+  const itemsGaleriaNormal = items.filter(i => 
+    i.categoria !== 'Museo de Personajes' && 
+    i.categoria !== 'Rentas & Salones del Club' && 
+    !i.tipoPersonaje && 
+    !i.esRenta && 
+    !i.tipoEspacio
+  );
 
   // Group items by category
   const itemsPorCategoria = itemsGaleriaNormal.reduce((acc, item) => {
@@ -57,38 +64,56 @@ const Galeria: React.FC = () => {
         </div>
         <h1 className="text-4xl sm:text-5xl font-black text-blue-950 tracking-tight">Galería & Patrimonio</h1>
         <p className="text-lg text-slate-500 font-medium leading-relaxed italic">
-          Preservando la memoria, historia y liderazgo del <span className="font-bold text-amber-900">Club de Leones Quetzaltenango</span> a través del tiempo.
+          Instalaciones, memoria histórica y liderazgo del <span className="font-bold text-amber-900">Club de Leones Quetzaltenango</span>.
         </p>
 
         {/* Tab Switcher */}
-        <div className="inline-flex p-1.5 bg-slate-100 rounded-3xl border border-slate-200 shadow-inner mt-4">
+        <div className="inline-flex p-1.5 bg-slate-100 rounded-3xl border border-slate-200 shadow-inner mt-4 flex-wrap justify-center gap-1">
+          <button
+            onClick={() => setActiveTab('rentas')}
+            className={`px-5 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center space-x-2 cursor-pointer ${
+              activeTab === 'rentas'
+                ? 'bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 text-white shadow-md scale-102'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Building2 size={16} className="text-amber-200" />
+            <span>🏰 Salones & Rentas del Club</span>
+            <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+              Eventos
+            </span>
+          </button>
+
           <button
             onClick={() => setActiveTab('museo')}
-            className={`px-6 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center space-x-2 cursor-pointer ${
+            className={`px-5 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center space-x-2 cursor-pointer ${
               activeTab === 'museo'
                 ? 'bg-gradient-to-r from-amber-900 to-slate-900 text-amber-300 shadow-md scale-102'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <Crown size={16} className="text-amber-400" />
-            <span>🏛️ Museo de Personajes Ilustres</span>
+            <span>🏛️ Museo de Personajes</span>
           </button>
+
           <button
             onClick={() => setActiveTab('fotos')}
-            className={`px-6 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center space-x-2 cursor-pointer ${
+            className={`px-5 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center space-x-2 cursor-pointer ${
               activeTab === 'fotos'
                 ? 'bg-blue-900 text-white shadow-md scale-102'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <ImageIcon size={16} />
-            <span>🖼️ Galería Fotográfica</span>
+            <span>🖼️ Galería de Actividades</span>
           </button>
         </div>
       </header>
 
       {/* Main Tab Content */}
-      {activeTab === 'museo' ? (
+      {activeTab === 'rentas' ? (
+        <RentasSalonesSection items={items} />
+      ) : activeTab === 'museo' ? (
         <MuseoPersonajes items={items} />
       ) : (
         Object.entries(itemsPorCategoria).length === 0 ? (
