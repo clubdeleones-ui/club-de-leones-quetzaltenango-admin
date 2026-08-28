@@ -264,9 +264,11 @@ export const GaleriaAdmin: React.FC = () => {
           amenidades: amenidades,
           tarifaReferencial: formData.tarifaReferencial.trim(),
           disponibilidadHorario: formData.disponibilidadHorario.trim(),
-          telefonoContacto: formData.telefonoContacto.trim(),
-          fotos: uploadedExtraUrls
-        } : {})
+          telefonoContacto: formData.telefonoContacto.trim()
+        } : {}),
+
+        // Collage / Álbum de fotos adicionales (disponible para Galería, Museo y Rentas)
+        fotos: uploadedExtraUrls
       };
 
       await firebaseService.saveGaleriaItem(galeriaItem);
@@ -400,7 +402,7 @@ export const GaleriaAdmin: React.FC = () => {
             className="flex items-center space-x-2 bg-amber-900 hover:bg-amber-800 text-white px-5 py-2.5 rounded-2xl font-bold transition-all hover:scale-105 active:scale-95 shadow-md cursor-pointer text-xs"
           >
             <Plus size={18} />
-            <span>+ Nuevo Elemento</span>
+            <span>Nuevo Elemento</span>
           </button>
         </div>
       </header>
@@ -422,6 +424,7 @@ export const GaleriaAdmin: React.FC = () => {
           ) : (
             filteredItems.map(item => {
               const isRenta = item.categoria === 'Rentas & Salones del Club' || item.esRenta;
+              const extraCount = Array.isArray(item.fotos) ? item.fotos.length : 0;
               return (
                 <div key={item.id} className="bg-white rounded-3xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-lg transition-all group flex flex-col h-full">
                   <div className="relative h-48 bg-slate-100 overflow-hidden shrink-0">
@@ -430,9 +433,16 @@ export const GaleriaAdmin: React.FC = () => {
                       alt={item.titulo} 
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl text-xs font-bold text-slate-700 flex items-center shadow-sm">
-                      <Tag size={12} className="mr-1.5 text-blue-600" />
-                      {item.categoria || 'Sin Categoría'}
+                    <div className="absolute top-3 left-3 flex items-center space-x-1.5">
+                      <div className="bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl text-xs font-bold text-slate-700 flex items-center shadow-sm">
+                        <Tag size={12} className="mr-1.5 text-blue-600" />
+                        {item.categoria || 'Sin Categoría'}
+                      </div>
+                      {extraCount > 0 && (
+                        <div className="bg-amber-500 text-blue-950 px-2.5 py-1 rounded-xl text-xs font-black flex items-center shadow-sm">
+                          <span>📸 +{extraCount}</span>
+                        </div>
+                      )}
                     </div>
                     <div className="absolute top-3 right-3 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button 
@@ -593,6 +603,73 @@ export const GaleriaAdmin: React.FC = () => {
                       </div>
                     </div>
 
+                    {/* 📸 ÁLBUM & COLLAGE DE FOTOS ADICIONALES (Universal: Galería, Museo y Rentas) */}
+                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className="block text-xs font-black uppercase tracking-wider text-slate-700">
+                            📸 Álbum & Fotos del Collage
+                          </label>
+                          <p className="text-[10px] text-slate-400">
+                            Fotos adicionales para la galería (máx 5MB c/u)
+                          </p>
+                        </div>
+                        
+                        <label className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center space-x-1.5 cursor-pointer shadow-xs transition-all active:scale-95">
+                          <Plus size={13} />
+                          <span>+ Agregar Fotos</span>
+                          <input 
+                            type="file" 
+                            multiple
+                            accept="image/*" 
+                            onChange={handleExtraImagesChange}
+                            className="hidden" 
+                          />
+                        </label>
+                      </div>
+
+                      {/* Grid de Fotos Existentes y Pendientes */}
+                      {(formData.fotos.length > 0 || extraPreviews.length > 0) ? (
+                        <div className="grid grid-cols-3 gap-2 pt-1">
+                          {/* Fotos ya guardadas */}
+                          {formData.fotos.map((photoUrl, pIdx) => (
+                            <div key={`saved-${pIdx}`} className="relative aspect-4/3 rounded-xl overflow-hidden bg-slate-200 border border-slate-300 group shadow-xs">
+                              <img src={photoUrl} alt={`Foto ${pIdx}`} className="w-full h-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={() => removeExistingPhoto(pIdx)}
+                                className="absolute top-1 right-1 bg-red-600/90 hover:bg-red-600 text-white p-1 rounded-full opacity-80 hover:opacity-100 transition-all cursor-pointer shadow-xs"
+                                title="Eliminar foto"
+                              >
+                                <XIcon size={11} />
+                              </button>
+                              <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[8px] font-bold px-1 rounded">Guardada</span>
+                            </div>
+                          ))}
+
+                          {/* Fotos pendientes de subir */}
+                          {extraPreviews.map((previewUrl, pIdx) => (
+                            <div key={`pending-${pIdx}`} className="relative aspect-4/3 rounded-xl overflow-hidden bg-amber-100 border-2 border-dashed border-amber-400 group shadow-xs">
+                              <img src={previewUrl} alt={`Nueva Foto ${pIdx}`} className="w-full h-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={() => removePendingExtraFile(pIdx)}
+                                className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full transition-all cursor-pointer shadow-xs"
+                                title="Remover"
+                              >
+                                <XIcon size={11} />
+                              </button>
+                              <span className="absolute bottom-1 left-1 bg-amber-700 text-white text-[8px] font-bold px-1 rounded">Nueva</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="bg-slate-50 p-3 rounded-xl border border-dashed border-slate-200 text-center text-slate-400 text-[11px]">
+                          Sin fotos secundarias aún. Haz clic en <strong>+ Agregar Fotos</strong> para crear un collage.
+                        </div>
+                      )}
+                    </div>
+
                     {/* Checkbox Pop-up Anuncio */}
                     <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
                       <div className="flex items-start space-x-3">
@@ -616,7 +693,7 @@ export const GaleriaAdmin: React.FC = () => {
                   </div>
 
                   <div className="text-[11px] text-slate-400 bg-amber-50/50 p-3 rounded-xl border border-amber-200/50 leading-relaxed hidden md:block">
-                    💡 <strong>Tip:</strong> Las fotos de alta resolución en formato horizontal lucen mejor en las fichas del Museo y Catálogo de Salones.
+                    💡 <strong>Tip:</strong> Puedes subir varias fotos para armar el collage interactivo en la Galería, Museo y Catálogo de Salones.
                   </div>
                 </div>
 
@@ -822,73 +899,6 @@ export const GaleriaAdmin: React.FC = () => {
                             placeholder="Mesas y sillas&#10;Equipo de sonido&#10;Parqueo interno"
                             className="w-full bg-white border border-amber-200 rounded-xl px-2.5 py-1.5 text-xs font-medium text-slate-800 resize-none"
                           />
-                        </div>
-
-                        {/* Collage de Fotos Adicionales */}
-                        <div className="sm:col-span-2 pt-2 border-t border-amber-200/60 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <label className="block text-[10px] font-black uppercase text-slate-700">
-                                📸 Álbum & Collage de Fotos del Espacio
-                              </label>
-                              <p className="text-[10px] text-slate-500">
-                                Sube múltiples fotos del salón (diferentes ángulos, detalles, iluminación, mobiliario).
-                              </p>
-                            </div>
-                            
-                            <label className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center space-x-1.5 cursor-pointer shadow-xs transition-all">
-                              <Plus size={12} />
-                              <span>Agregar Fotos</span>
-                              <input 
-                                type="file" 
-                                multiple
-                                accept="image/*" 
-                                onChange={handleExtraImagesChange}
-                                className="hidden" 
-                              />
-                            </label>
-                          </div>
-
-                          {/* Grid de Fotos Existentes y Pendientes */}
-                          {(formData.fotos.length > 0 || extraPreviews.length > 0) ? (
-                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 pt-1">
-                              {/* Fotos ya guardadas */}
-                              {formData.fotos.map((photoUrl, pIdx) => (
-                                <div key={`saved-${pIdx}`} className="relative aspect-4/3 rounded-xl overflow-hidden bg-slate-200 border border-slate-300 group">
-                                  <img src={photoUrl} alt={`Foto ${pIdx}`} className="w-full h-full object-cover" />
-                                  <button
-                                    type="button"
-                                    onClick={() => removeExistingPhoto(pIdx)}
-                                    className="absolute top-1 right-1 bg-red-600/90 text-white p-1 rounded-full opacity-80 hover:opacity-100 transition-all cursor-pointer shadow-xs"
-                                    title="Eliminar foto"
-                                  >
-                                    <XIcon size={10} />
-                                  </button>
-                                  <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[8px] font-bold px-1 rounded">Guardada</span>
-                                </div>
-                              ))}
-
-                              {/* Fotos pendientes de subir */}
-                              {extraPreviews.map((previewUrl, pIdx) => (
-                                <div key={`pending-${pIdx}`} className="relative aspect-4/3 rounded-xl overflow-hidden bg-amber-100 border-2 border-dashed border-amber-400 group">
-                                  <img src={previewUrl} alt={`Nueva Foto ${pIdx}`} className="w-full h-full object-cover" />
-                                  <button
-                                    type="button"
-                                    onClick={() => removePendingExtraFile(pIdx)}
-                                    className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full transition-all cursor-pointer shadow-xs"
-                                    title="Remover"
-                                  >
-                                    <XIcon size={10} />
-                                  </button>
-                                  <span className="absolute bottom-1 left-1 bg-amber-700 text-white text-[8px] font-bold px-1 rounded">Nueva</span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="bg-white/60 p-3 rounded-xl border border-dashed border-amber-300 text-center text-slate-400 text-[11px]">
-                              No has añadido fotos adicionales al collage aún.
-                            </div>
-                          )}
                         </div>
                       </div>
                     </div>

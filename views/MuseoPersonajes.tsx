@@ -416,6 +416,27 @@ export const MuseoPersonajes: React.FC<MuseoPersonajesProps> = ({ items }) => {
                 </div>
               )}
 
+              {/* Fotografías Adicionales / Galería del Personaje */}
+              {selectedPersonaje.fotos && selectedPersonaje.fotos.length > 0 && (
+                <div className="space-y-3 pt-2">
+                  <h4 className="text-xs font-black text-amber-800 uppercase tracking-widest flex items-center">
+                    <Sparkles size={14} className="mr-1.5 text-amber-700" />
+                    <span>Fotografías Históricas & Reconocimientos ({selectedPersonaje.fotos.length})</span>
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    {selectedPersonaje.fotos.map((fotoUrl, idx) => (
+                      <div key={idx} className="relative aspect-4/3 rounded-xl overflow-hidden border border-amber-200/80 shadow-xs bg-slate-100 group">
+                        <img 
+                          src={fotoUrl} 
+                          alt={`Registro ${idx + 1}`} 
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Modal Footer Actions */}
               <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
                 <button
