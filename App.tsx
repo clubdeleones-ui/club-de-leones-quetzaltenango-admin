@@ -12,31 +12,33 @@ import { ClubDataProvider, useClubData } from './context/ClubDataContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import { env } from './config/env';
 
-// Lazy loading views for performance optimization
-const Home = lazy(() => import('./views/Home'));
-const Login = lazy(() => import('./views/Login'));
-const Dashboard = lazy(() => import('./views/Dashboard'));
-const Actas = lazy(() => import('./views/Actas'));
-const Socios = lazy(() => import('./views/Socios'));
-const Galeria = lazy(() => import('./views/Galeria'));
-const Historia = lazy(() => import('./views/Historia'));
-const Estatutos = lazy(() => import('./views/Estatutos'));
-const Calendario = lazy(() => import('./views/Calendario'));
-const SuperAdmin = lazy(() => import('./views/SuperAdmin'));
-const ProponerSocio = lazy(() => import('./views/ProponerSocio'));
-const Donar = lazy(() => import('./views/Donar'));
-const Solicitudes = lazy(() => import('./views/Solicitudes'));
-const FichaEvaluacion = lazy(() => import('./views/FichaEvaluacion').then(m => ({ default: m.FichaEvaluacion })));
-const EvaluacionCompartida = lazy(() => import('./views/EvaluacionCompartida').then(m => ({ default: m.EvaluacionCompartida })));
-const ConfirmarInvitacion = lazy(() => import('./views/ConfirmarInvitacion'));
-const RetencionSocios = lazy(() => import('./views/RetencionSocios'));
-const Convencion = lazy(() => import('./views/Convencion'));
-const CompletarFichaSocio = lazy(() => import('./views/CompletarFichaSocio'));
-const PublicPagoCuota = lazy(() => import('./views/PublicPagoCuota').then(m => ({ default: m.PublicPagoCuota })));
-const RequerimientoPublico = lazy(() => import('./views/RequerimientoPublico'));
-const AgendaPublica = lazy(() => import('./views/AgendaPublica').then(m => ({ default: m.AgendaPublica })));
-const NeveraPublica = lazy(() => import('./views/NeveraPublica').then(m => ({ default: m.NeveraPublica })));
-const ProgramaFuturo = lazy(() => import('./views/ProgramaFuturo'));
+import { lazyWithRetry } from './utils/lazyRetry';
+
+// Lazy loading views with automatic recovery for production deployments
+const Home = lazyWithRetry(() => import('./views/Home'), 'Home');
+const Login = lazyWithRetry(() => import('./views/Login'), 'Login');
+const Dashboard = lazyWithRetry(() => import('./views/Dashboard'), 'Dashboard');
+const Actas = lazyWithRetry(() => import('./views/Actas'), 'Actas');
+const Socios = lazyWithRetry(() => import('./views/Socios'), 'Socios');
+const Galeria = lazyWithRetry(() => import('./views/Galeria'), 'Galeria');
+const Historia = lazyWithRetry(() => import('./views/Historia'), 'Historia');
+const Estatutos = lazyWithRetry(() => import('./views/Estatutos'), 'Estatutos');
+const Calendario = lazyWithRetry(() => import('./views/Calendario'), 'Calendario');
+const SuperAdmin = lazyWithRetry(() => import('./views/SuperAdmin'), 'SuperAdmin');
+const ProponerSocio = lazyWithRetry(() => import('./views/ProponerSocio'), 'ProponerSocio');
+const Donar = lazyWithRetry(() => import('./views/Donar'), 'Donar');
+const Solicitudes = lazyWithRetry(() => import('./views/Solicitudes'), 'Solicitudes');
+const FichaEvaluacion = lazyWithRetry(() => import('./views/FichaEvaluacion').then(m => ({ default: m.FichaEvaluacion })), 'FichaEvaluacion');
+const EvaluacionCompartida = lazyWithRetry(() => import('./views/EvaluacionCompartida').then(m => ({ default: m.EvaluacionCompartida })), 'EvaluacionCompartida');
+const ConfirmarInvitacion = lazyWithRetry(() => import('./views/ConfirmarInvitacion'), 'ConfirmarInvitacion');
+const RetencionSocios = lazyWithRetry(() => import('./views/RetencionSocios'), 'RetencionSocios');
+const Convencion = lazyWithRetry(() => import('./views/Convencion'), 'Convencion');
+const CompletarFichaSocio = lazyWithRetry(() => import('./views/CompletarFichaSocio'), 'CompletarFichaSocio');
+const PublicPagoCuota = lazyWithRetry(() => import('./views/PublicPagoCuota').then(m => ({ default: m.PublicPagoCuota })), 'PublicPagoCuota');
+const RequerimientoPublico = lazyWithRetry(() => import('./views/RequerimientoPublico'), 'RequerimientoPublico');
+const AgendaPublica = lazyWithRetry(() => import('./views/AgendaPublica').then(m => ({ default: m.AgendaPublica })), 'AgendaPublica');
+const NeveraPublica = lazyWithRetry(() => import('./views/NeveraPublica').then(m => ({ default: m.NeveraPublica })), 'NeveraPublica');
+const ProgramaFuturo = lazyWithRetry(() => import('./views/ProgramaFuturo'), 'ProgramaFuturo');
 
 // Component to synchronize authenticated user session in real-time with Firestore socios collection
 interface UserSessionSyncProps {
