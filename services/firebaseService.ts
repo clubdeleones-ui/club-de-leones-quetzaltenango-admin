@@ -665,12 +665,16 @@ export const firebaseService = {
   saveGaleriaItem: async (item: GaleriaItem): Promise<void> => {
     try {
       const { id, ...data } = item;
+      // Eliminar claves undefined para compatibilidad con Firestore
+      const cleanData = Object.fromEntries(
+        Object.entries(data).filter(([_, v]) => v !== undefined)
+      );
       if (id) {
         const docRef = doc(db, "galeria", id);
-        await setDoc(docRef, data, { merge: true });
+        await setDoc(docRef, cleanData, { merge: true });
       } else {
         const newDocRef = doc(collection(db, "galeria"));
-        await setDoc(newDocRef, data);
+        await setDoc(newDocRef, cleanData);
       }
     } catch (error) {
       console.error("Error saving galeria item:", error);

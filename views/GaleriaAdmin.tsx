@@ -181,31 +181,38 @@ export const GaleriaAdmin: React.FC = () => {
         .filter(a => a.length > 0);
 
       const isRentaCategory = formData.categoria === 'Rentas & Salones del Club';
+      const isMuseoCategory = formData.categoria === 'Museo de Personajes';
 
       const galeriaItem: GaleriaItem = {
         id: editingItem?.id || `gal_${Date.now()}`,
-        titulo: formData.titulo,
+        titulo: formData.titulo.trim(),
         fecha: formData.fecha,
-        descripcion: formData.descripcion,
+        descripcion: formData.descripcion.trim(),
         categoria: formData.categoria,
-        contextoPremium: formData.contextoPremium,
+        contextoPremium: formData.contextoPremium ? formData.contextoPremium.trim() : '',
         url: finalUrl,
-        esFondoPantalla: formData.esFondoPantalla,
+        esFondoPantalla: !!formData.esFondoPantalla,
 
-        // Museo
-        tipoPersonaje: formData.categoria === 'Museo de Personajes' ? formData.tipoPersonaje : undefined,
-        periodoServicio: formData.categoria === 'Museo de Personajes' ? formData.periodoServicio : undefined,
-        puestoCargo: formData.categoria === 'Museo de Personajes' ? formData.puestoCargo : undefined,
-        logrosDestacados: formData.categoria === 'Museo de Personajes' ? logros : undefined,
-        // Rentas
-        esRenta: isRentaCategory,
-        tipoEspacio: isRentaCategory ? formData.tipoEspacio : undefined,
-        capacidadPersonas: isRentaCategory ? formData.capacidadPersonas : undefined,
-        dimensionesArea: isRentaCategory ? formData.dimensionesArea : undefined,
-        amenidades: isRentaCategory ? amenidades : undefined,
-        tarifaReferencial: isRentaCategory ? formData.tarifaReferencial : undefined,
-        disponibilidadHorario: isRentaCategory ? formData.disponibilidadHorario : undefined,
-        telefonoContacto: isRentaCategory ? formData.telefonoContacto : undefined
+        // Museo de Personajes
+        ...(isMuseoCategory ? {
+          tipoPersonaje: formData.tipoPersonaje,
+          periodoServicio: formData.periodoServicio.trim(),
+          puestoCargo: formData.puestoCargo.trim(),
+          logrosDestacados: logros,
+          citaHonorifica: formData.citaHonorifica.trim()
+        } : {}),
+
+        // Rentas & Salones del Club
+        ...(isRentaCategory ? {
+          esRenta: true,
+          tipoEspacio: formData.tipoEspacio,
+          capacidadPersonas: formData.capacidadPersonas.trim(),
+          dimensionesArea: formData.dimensionesArea.trim(),
+          amenidades: amenidades,
+          tarifaReferencial: formData.tarifaReferencial.trim(),
+          disponibilidadHorario: formData.disponibilidadHorario.trim(),
+          telefonoContacto: formData.telefonoContacto.trim()
+        } : {})
       };
 
       await firebaseService.saveGaleriaItem(galeriaItem);
