@@ -146,6 +146,7 @@ export interface GaleriaItem {
   tarifaReferencial?: string;
   disponibilidadHorario?: string;
   telefonoContacto?: string;
+  fotos?: string[]; // Álbum / Collage de fotos adicionales del espacio
 }
 
 export interface HitoHistorico {

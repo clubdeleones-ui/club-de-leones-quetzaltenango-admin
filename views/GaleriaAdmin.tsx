@@ -54,10 +54,13 @@ export const GaleriaAdmin: React.FC = () => {
     amenidadesText: '',
     tarifaReferencial: '',
     disponibilidadHorario: '',
-    telefonoContacto: ''
+    telefonoContacto: '',
+    fotos: [] as string[] // Fotos adicionales para el collage
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
+  const [extraImageFiles, setExtraImageFiles] = useState<File[]>([]);
+  const [extraPreviews, setExtraPreviews] = useState<string[]>([]);
 
   useEffect(() => {
     fetchItems();
@@ -75,6 +78,8 @@ export const GaleriaAdmin: React.FC = () => {
   };
 
   const openModal = (item?: GaleriaItem) => {
+    setExtraImageFiles([]);
+    setExtraPreviews([]);
     if (item) {
       setEditingItem(item);
       setFormData({
@@ -99,7 +104,8 @@ export const GaleriaAdmin: React.FC = () => {
         amenidadesText: item.amenidades ? item.amenidades.join('\n') : '',
         tarifaReferencial: item.tarifaReferencial || '',
         disponibilidadHorario: item.disponibilidadHorario || '',
-        telefonoContacto: item.telefonoContacto || ''
+        telefonoContacto: item.telefonoContacto || '',
+        fotos: Array.isArray(item.fotos) ? item.fotos : []
       });
       setImagePreview(item.url);
     } else {
@@ -125,7 +131,8 @@ export const GaleriaAdmin: React.FC = () => {
         amenidadesText: '',
         tarifaReferencial: '',
         disponibilidadHorario: 'Lunes a Domingo / Horario flexible',
-        telefonoContacto: '50277612345'
+        telefonoContacto: '50277612345',
+        fotos: []
       });
       setImagePreview('');
     }
@@ -151,6 +158,38 @@ export const GaleriaAdmin: React.FC = () => {
     }
   };
 
+  const handleExtraImagesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const filesArray = Array.from(e.target.files);
+      const validFiles: File[] = [];
+      const newPreviews: string[] = [];
+
+      for (const file of filesArray) {
+        const validation = validateImageFile(file);
+        if (validation.valid) {
+          validFiles.push(file);
+          const previewUrl = URL.createObjectURL(file);
+          newPreviews.push(previewUrl);
+        }
+      }
+
+      setExtraImageFiles(prev => [...prev, ...validFiles]);
+      setExtraPreviews(prev => [...prev, ...newPreviews]);
+    }
+  };
+
+  const removeExistingPhoto = (indexToRemove: number) => {
+    setFormData(prev => ({
+      ...prev,
+      fotos: prev.fotos.filter((_, idx) => idx !== indexToRemove)
+    }));
+  };
+
+  const removePendingExtraFile = (indexToRemove: number) => {
+    setExtraImageFiles(prev => prev.filter((_, idx) => idx !== indexToRemove));
+    setExtraPreviews(prev => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.titulo || (!formData.url && !imageFile)) {
@@ -162,10 +201,24 @@ export const GaleriaAdmin: React.FC = () => {
     try {
       let finalUrl = formData.url;
 
-      // Upload new image if selected
+      // Upload main image if selected
       if (imageFile) {
         const compressedBase64 = await compressImageFile(imageFile, 1200, 1200, 0.8);
         finalUrl = await firebaseService.uploadGaleriaImage(compressedBase64, 'gal');
+      }
+
+      // Upload extra collage images if any
+      const uploadedExtraUrls: string[] = [...(formData.fotos || [])];
+      for (const extraFile of extraImageFiles) {
+        try {
+          const compressed = await compressImageFile(extraFile, 1200, 1200, 0.8);
+          const uploadedUrl = await firebaseService.uploadGaleriaImage(compressed, 'gal_extra');
+          if (uploadedUrl) {
+            uploadedExtraUrls.push(uploadedUrl);
+          }
+        } catch (err) {
+          console.warn("Error uploading additional collage image:", err);
+        }
       }
 
       // Parse achievements line by line
@@ -211,7 +264,8 @@ export const GaleriaAdmin: React.FC = () => {
           amenidades: amenidades,
           tarifaReferencial: formData.tarifaReferencial.trim(),
           disponibilidadHorario: formData.disponibilidadHorario.trim(),
-          telefonoContacto: formData.telefonoContacto.trim()
+          telefonoContacto: formData.telefonoContacto.trim(),
+          fotos: uploadedExtraUrls
         } : {})
       };
 
@@ -768,6 +822,73 @@ export const GaleriaAdmin: React.FC = () => {
                             placeholder="Mesas y sillas&#10;Equipo de sonido&#10;Parqueo interno"
                             className="w-full bg-white border border-amber-200 rounded-xl px-2.5 py-1.5 text-xs font-medium text-slate-800 resize-none"
                           />
+                        </div>
+
+                        {/* Collage de Fotos Adicionales */}
+                        <div className="sm:col-span-2 pt-2 border-t border-amber-200/60 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <label className="block text-[10px] font-black uppercase text-slate-700">
+                                📸 Álbum & Collage de Fotos del Espacio
+                              </label>
+                              <p className="text-[10px] text-slate-500">
+                                Sube múltiples fotos del salón (diferentes ángulos, detalles, iluminación, mobiliario).
+                              </p>
+                            </div>
+                            
+                            <label className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-xl text-[11px] font-black flex items-center space-x-1.5 cursor-pointer shadow-xs transition-all">
+                              <Plus size={12} />
+                              <span>Agregar Fotos</span>
+                              <input 
+                                type="file" 
+                                multiple
+                                accept="image/*" 
+                                onChange={handleExtraImagesChange}
+                                className="hidden" 
+                              />
+                            </label>
+                          </div>
+
+                          {/* Grid de Fotos Existentes y Pendientes */}
+                          {(formData.fotos.length > 0 || extraPreviews.length > 0) ? (
+                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 pt-1">
+                              {/* Fotos ya guardadas */}
+                              {formData.fotos.map((photoUrl, pIdx) => (
+                                <div key={`saved-${pIdx}`} className="relative aspect-4/3 rounded-xl overflow-hidden bg-slate-200 border border-slate-300 group">
+                                  <img src={photoUrl} alt={`Foto ${pIdx}`} className="w-full h-full object-cover" />
+                                  <button
+                                    type="button"
+                                    onClick={() => removeExistingPhoto(pIdx)}
+                                    className="absolute top-1 right-1 bg-red-600/90 text-white p-1 rounded-full opacity-80 hover:opacity-100 transition-all cursor-pointer shadow-xs"
+                                    title="Eliminar foto"
+                                  >
+                                    <XIcon size={10} />
+                                  </button>
+                                  <span className="absolute bottom-1 left-1 bg-black/60 text-white text-[8px] font-bold px-1 rounded">Guardada</span>
+                                </div>
+                              ))}
+
+                              {/* Fotos pendientes de subir */}
+                              {extraPreviews.map((previewUrl, pIdx) => (
+                                <div key={`pending-${pIdx}`} className="relative aspect-4/3 rounded-xl overflow-hidden bg-amber-100 border-2 border-dashed border-amber-400 group">
+                                  <img src={previewUrl} alt={`Nueva Foto ${pIdx}`} className="w-full h-full object-cover" />
+                                  <button
+                                    type="button"
+                                    onClick={() => removePendingExtraFile(pIdx)}
+                                    className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full transition-all cursor-pointer shadow-xs"
+                                    title="Remover"
+                                  >
+                                    <XIcon size={10} />
+                                  </button>
+                                  <span className="absolute bottom-1 left-1 bg-amber-700 text-white text-[8px] font-bold px-1 rounded">Nueva</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="bg-white/60 p-3 rounded-xl border border-dashed border-amber-300 text-center text-slate-400 text-[11px]">
+                              No has añadido fotos adicionales al collage aún.
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
