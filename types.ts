@@ -60,9 +60,13 @@ export interface Acta {
   autor: string;
   pdfUrl: string;
   categoria?: string;
-  estado?: 'Borrador' | 'Publicada';
+  estado?: 'Borrador' | 'Publicada' | 'Papelera';
   codigoRegistro?: string;
   numeroActa?: string;
+  enPapelera?: boolean;
+  eliminadaFecha?: string;
+  eliminadaPor?: string;
+  wizardData?: any;
 }
 
 export interface Donacion {

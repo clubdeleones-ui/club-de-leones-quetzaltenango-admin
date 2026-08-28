@@ -1,7 +1,7 @@
 import { safeSetItem } from '../../utils/storage';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
-  FileText, Plus, Search, Filter, Trash2, Edit, Download, X, Clock, Users, Mail, Briefcase, CheckCircle, Pencil, Building, BookOpen, ChevronUp, ChevronDown, ArrowUp, ArrowDown, GripVertical, ListOrdered, ArrowUpDown, CheckCircle2, MessageSquare, Bookmark, Sparkles, Wand2, Loader2, Key
+  FileText, Plus, Search, Filter, Trash2, Edit, Download, X, Clock, Users, Mail, Briefcase, CheckCircle, Pencil, Building, BookOpen, ChevronUp, ChevronDown, ArrowUp, ArrowDown, GripVertical, ListOrdered, ArrowUpDown, CheckCircle2, MessageSquare, Bookmark, Sparkles, Wand2, Loader2, Key, RotateCcw, Archive, Calendar
 } from 'lucide-react';
 
 
@@ -41,8 +41,10 @@ export const AdminActas: React.FC<AdminActasProps> = ({ user }) => {
   });
 
   const [editingActaId, setEditingActaId] = useState<string | null>(null);
+  const [actasViewMode, setActasViewMode] = useState<'activas' | 'papelera'>('activas');
   const [deleteActaConfirmId, setDeleteActaConfirmId] = useState<string | null>(null);
   const [deleteActaConfirmText, setDeleteActaConfirmText] = useState('');
+  const [isPermanentDelete, setIsPermanentDelete] = useState(false);
   const [publishedSuccessModal, setPublishedSuccessModal] = useState<{ isOpen: boolean; title: string; code: string; isEdit: boolean; acta: Acta } | null>(null);
   const [showInvocacionModal, setShowInvocacionModal] = useState(false);
   const [showSaludoModal, setShowSaludoModal] = useState(false);
@@ -77,11 +79,13 @@ export const AdminActas: React.FC<AdminActasProps> = ({ user }) => {
         console.error("Error parsing saved minutes wizard data", e);
       }
     }
+    const today = new Date();
     return {
       titulo: '',
       categoria: 'Ordinaria' as 'Ordinaria' | 'Extraordinaria' | 'Reunión de Comisión',
       lugar: 'Quetzaltenango, Sede Social denominada "La Cueva", ubicada en la Calle Rodolfo Robles, 24-53 de la zona 1.',
-      fechaHoraText: '',
+      fechaActa: today.toISOString().split('T')[0],
+      fechaHoraText: getWrittenDateTimeSpanish(today),
       invocacionResponsableType: 'socio' as 'socio' | 'invitado',
       invocacionSocioId: '',
       invocacionInvitadoName: '',
@@ -375,30 +379,35 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
   const handleOpenRedactarActa = () => {
     const defaultLugar = 'Quetzaltenango, Sede Social denominada "La Cueva", ubicada en la Calle Rodolfo Robles, 24-53 de la zona 1.';
-    const autoDateTime = getWrittenDateTimeSpanish(new Date());
-    
     const initialResoluciones: Record<string, { decision: 'Aprobada' | 'Rechazada' | 'Descartada' | 'Pendiente', razon: string }> = {};
     const pendingSols = solicitudes.filter(s => s.estado === 'Pendiente' && !s.archivada);
     pendingSols.forEach(s => {
       initialResoluciones[s.id] = { decision: 'Pendiente', razon: '' };
     });
 
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const autoDateTime = getWrittenDateTimeSpanish(today);
+    const defaultSocioId = socios[0]?.id || '';
+    const activeActasCount = actas.filter(a => !a.enPapelera && a.estado !== 'Papelera').length;
+
     setEditingActaId(null);
     setActaWizardData({
       titulo: '',
       categoria: 'Ordinaria',
       lugar: defaultLugar,
+      fechaActa: todayStr,
       fechaHoraText: autoDateTime,
       invocacionResponsableType: 'socio',
-      invocacionSocioId: socios[0]?.id || '',
+      invocacionSocioId: defaultSocioId,
       invocacionInvitadoName: '',
       saludoResponsableType: 'socio',
-      saludoSocioId: socios[0]?.id || '',
+      saludoSocioId: defaultSocioId,
       saludoInvitadoName: '',
       solicitudesResoluciones: initialResoluciones,
       puntosAgenda: [],
       asistencia: [],
-      numeroActa: (actas.length + 1).toString()
+      numeroActa: (activeActasCount + 1).toString()
     });
     setSelectedAgendaPointTab('new');
     setActaWizardStep('datos');
@@ -407,14 +416,17 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
   const handleEditActaClick = (acta: Acta) => {
     const defaultLugar = 'Quetzaltenango, Sede Social denominada "La Cueva", ubicada en la Calle Rodolfo Robles, 24-53 de la zona 1.';
-    let wData = (acta as any).wizardData;
+    let wData = (acta as any).wizardData ? { ...(acta as any).wizardData } : null;
+
+    const rawFecha = acta.fecha ? (acta.fecha.includes('T') ? acta.fecha.split('T')[0] : acta.fecha) : new Date().toISOString().split('T')[0];
 
     if (!wData) {
       wData = {
         titulo: acta.titulo,
         categoria: acta.categoria || 'Ordinaria',
         lugar: defaultLugar,
-        fechaHoraText: getWrittenDateTimeSpanish(new Date(acta.fecha)),
+        fechaActa: rawFecha,
+        fechaHoraText: getWrittenDateTimeSpanish(new Date(rawFecha + 'T18:00:00')),
         invocacionResponsableType: 'socio',
         invocacionSocioId: socios[0]?.id || '',
         invocacionInvitadoName: '',
@@ -434,6 +446,12 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       };
     }
 
+    if (!wData.fechaActa) {
+      wData.fechaActa = rawFecha;
+    }
+    if (!wData.fechaHoraText) {
+      wData.fechaHoraText = getWrittenDateTimeSpanish(new Date(rawFecha + 'T18:00:00'));
+    }
     if (!wData.asistencia) {
       wData.asistencia = [];
     }
@@ -613,9 +631,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
   const handleSaveStructuredActa = async (e: React.FormEvent) => {
     e.preventDefault();
     const finalTitulo = actaWizardData.titulo.trim() || `Acta de Sesión - ${new Date().toLocaleDateString('es-GT')}`;
-    const fechaActa = editingActaId 
+    const fechaActa = actaWizardData.fechaActa || (editingActaId 
       ? actas.find(a => a.id === editingActaId)?.fecha || new Date().toISOString().split('T')[0]
-      : new Date().toISOString().split('T')[0];
+      : new Date().toISOString().split('T')[0]);
     const numActa = actaWizardData.numeroActa || '1';
 
     const code = generateActaCode(
@@ -628,7 +646,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
     const generatedContent = compileActaText({
       ...actaWizardData,
-      titulo: finalTitulo
+      titulo: finalTitulo,
+      fechaActa: fechaActa
     });
 
     const sanitizedPuntos = (actaWizardData.puntosAgenda || []).map(p => ({
@@ -642,6 +661,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     const finalWizardData = {
       ...actaWizardData,
       titulo: finalTitulo,
+      fechaActa: fechaActa,
       codigoRegistro: code,
       numeroActa: numActa,
       puntosAgenda: sanitizedPuntos
@@ -655,6 +675,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           return {
             ...a,
             titulo: finalTitulo,
+            fecha: fechaActa,
             categoria: actaWizardData.categoria,
             contenido: generatedContent,
             codigoRegistro: code,
@@ -732,27 +753,87 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     setShowAddActa(false);
   };
 
-  const handleDeleteActa = async (id: string) => {
+  const handleMoveToTrash = async (id: string) => {
+    const target = actas.find(a => a.id === id);
+    if (!target) return;
+
+    const updatedActa: Acta = {
+      ...target,
+      enPapelera: true,
+      estado: 'Papelera',
+      eliminadaFecha: new Date().toISOString(),
+      eliminadaPor: user?.nombre || 'Administrador'
+    };
+
+    try {
+      await firebaseService.saveActa(updatedActa);
+    } catch (err) {
+      console.error("Error moviendo acta a papelera en Firestore:", err);
+    }
+
+    const updatedList = actas.map(a => a.id === id ? updatedActa : a);
+    setActas(updatedList);
+    safeSetItem('club_leones_actas', JSON.stringify(updatedList));
+    showToast('🗑️ Acta movida a la Papelera de Reciclaje. Puedes restaurarla cuando desees.', 'info');
+    setDeleteActaConfirmId(null);
+  };
+
+  const handleRestoreActa = async (id: string) => {
+    const target = actas.find(a => a.id === id);
+    if (!target) return;
+
+    const updatedActa: Acta = {
+      ...target,
+      enPapelera: false,
+      estado: 'Publicada',
+      eliminadaFecha: undefined,
+      eliminadaPor: undefined
+    };
+
+    try {
+      await firebaseService.saveActa(updatedActa);
+    } catch (err) {
+      console.error("Error restaurando acta en Firestore:", err);
+    }
+
+    const updatedList = actas.map(a => a.id === id ? updatedActa : a);
+    setActas(updatedList);
+    safeSetItem('club_leones_actas', JSON.stringify(updatedList));
+    showToast('✅ Acta restaurada con éxito a las actas oficiales.', 'success');
+  };
+
+  const handlePermanentDelete = async (id: string) => {
     try {
       await firebaseService.deleteActa(id);
     } catch (err) {
-      console.error("Error al eliminar acta de Firestore:", err);
+      console.error("Error al eliminar acta definitivamente de Firestore:", err);
     }
     const updated = actas.filter(a => a.id !== id);
     setActas(updated);
     safeSetItem('club_leones_actas', JSON.stringify(updated));
     setDeleteActaConfirmId(null);
     setDeleteActaConfirmText('');
+    setIsPermanentDelete(false);
+    showToast('Acta eliminada definitivamente.', 'info');
   };
 
+  const activeActas = useMemo(() => {
+    return actas.filter(a => !a.enPapelera && a.estado !== 'Papelera');
+  }, [actas]);
+
+  const trashActas = useMemo(() => {
+    return actas.filter(a => a.enPapelera || a.estado === 'Papelera');
+  }, [actas]);
+
   const filteredActas = useMemo(() => {
-    return actas.filter(a => {
+    const listToFilter = actasViewMode === 'activas' ? activeActas : trashActas;
+    return listToFilter.filter(a => {
       const matchesSearch = a.titulo.toLowerCase().includes(actaSearch.toLowerCase()) || 
                             a.contenido.toLowerCase().includes(actaSearch.toLowerCase());
       const matchesCategory = actaFilterCategory === 'Todas' || a.categoria === actaFilterCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [actas, actaSearch, actaFilterCategory]);
+  }, [actasViewMode, activeActas, trashActas, actaSearch, actaFilterCategory]);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -975,24 +1056,53 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                       className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm font-semibold text-slate-800"
                     />
                   </div>
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <label className="block text-sm font-bold text-slate-700">Fecha y Hora Automática (Numérica y Escrita)</label>
-                      <button 
-                        type="button"
-                        onClick={() => setActaWizardData(prev => ({ ...prev, fechaHoraText: getWrittenDateTimeSpanish(new Date()) }))}
-                        className="text-[10px] font-black text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg uppercase tracking-wider hover:bg-amber-100 flex items-center space-x-1 transition-colors"
-                      >
-                        <Clock size={12} />
-                        <span>Refrescar hora</span>
-                      </button>
+                  {/* Selector de Fecha y Hora Protocolaria */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-amber-50/40 p-4 sm:p-5 rounded-2xl border border-amber-200/60">
+                    <div>
+                      <label className="block text-xs font-black text-amber-900 uppercase tracking-wider mb-2 flex items-center">
+                        <Calendar size={14} className="mr-1.5 text-amber-600" />
+                        <span>Fecha de la Sesión</span>
+                      </label>
+                      <input 
+                        type="date"
+                        value={actaWizardData.fechaActa || new Date().toISOString().split('T')[0]}
+                        onChange={e => {
+                          const selectedDate = e.target.value;
+                          setActaWizardData(prev => ({
+                            ...prev,
+                            fechaActa: selectedDate,
+                            fechaHoraText: getWrittenDateTimeSpanish(new Date(selectedDate + 'T18:00:00'))
+                          }));
+                        }}
+                        className="w-full px-4 py-3 bg-white border border-amber-300/80 rounded-xl focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all text-sm font-bold text-slate-800 shadow-xs cursor-pointer"
+                      />
                     </div>
-                    <input 
-                      type="text"
-                      disabled
-                      value={actaWizardData.fechaHoraText}
-                      className="w-full px-5 py-3.5 bg-slate-100/50 border border-slate-200 rounded-2xl text-slate-500 font-semibold text-sm outline-none cursor-not-allowed"
-                    />
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <label className="block text-xs font-black text-amber-900 uppercase tracking-wider">
+                          Texto Protocolario de Fecha y Hora
+                        </label>
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            const baseDate = actaWizardData.fechaActa ? new Date(actaWizardData.fechaActa + 'T18:00:00') : new Date();
+                            setActaWizardData(prev => ({ ...prev, fechaHoraText: getWrittenDateTimeSpanish(baseDate) }));
+                          }}
+                          className="text-[10px] font-black text-amber-700 bg-white border border-amber-200 px-2 py-0.5 rounded-md uppercase tracking-wider hover:bg-amber-100 flex items-center space-x-1 transition-colors cursor-pointer shadow-2xs"
+                          title="Restablecer texto según la fecha seleccionada"
+                        >
+                          <Clock size={11} />
+                          <span>Restablecer</span>
+                        </button>
+                      </div>
+                      <textarea 
+                        rows={2}
+                        value={actaWizardData.fechaHoraText}
+                        onChange={e => setActaWizardData(prev => ({ ...prev, fechaHoraText: e.target.value }))}
+                        placeholder="Ej. veinte de agosto del año dos mil veintiséis, a las dieciocho horas con cero minutos"
+                        className="w-full px-4 py-2.5 bg-white border border-amber-300/80 rounded-xl focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all text-xs font-semibold text-slate-700 shadow-xs resize-none"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2210,14 +2320,71 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       ) : (
         <>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <h3 className="text-3xl font-black text-slate-800 tracking-tight">Biblioteca y Redacción de Actas</h3>
-            <button 
-              onClick={handleOpenRedactarActa}
-              className="w-full md:w-auto justify-center bg-blue-900 hover:bg-blue-800 text-white font-black px-6 py-3 rounded-xl flex items-center space-x-2 shadow-lg shadow-blue-900/10 active:scale-95 transition-all"
-            >
-              <Plus size={18} />
-              <span>Redactar Acta</span>
-            </button>
+            <div>
+              <h3 className="text-3xl font-black text-slate-800 tracking-tight">Biblioteca y Redacción de Actas</h3>
+              <p className="text-xs text-slate-500 font-semibold mt-1">
+                Consulta, redacta, edita o restaura actas oficiales de sesión del Club.
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-3 self-start md:self-auto">
+              <button 
+                onClick={handleOpenRedactarActa}
+                className="justify-center bg-blue-900 hover:bg-blue-800 text-white font-black px-6 py-3 rounded-2xl flex items-center space-x-2 shadow-lg shadow-blue-900/10 active:scale-95 transition-all cursor-pointer text-sm"
+              >
+                <Plus size={18} />
+                <span>Redactar Acta</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Selector de Pestañas: Oficiales vs Papelera */}
+          <div className="flex items-center justify-between border-b border-slate-200 gap-4 flex-wrap pb-1">
+            <div className="flex items-center space-x-2">
+              <button
+                type="button"
+                onClick={() => setActasViewMode('activas')}
+                className={`px-4 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center space-x-2 cursor-pointer ${
+                  actasViewMode === 'activas'
+                    ? 'bg-blue-900 text-white shadow-sm shadow-blue-900/20'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <FileText size={15} />
+                <span>Actas Oficiales</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  actasViewMode === 'activas' ? 'bg-blue-800 text-amber-300' : 'bg-slate-200 text-slate-700'
+                }`}>
+                  {activeActas.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActasViewMode('papelera')}
+                className={`px-4 py-2.5 rounded-2xl text-xs font-black transition-all flex items-center space-x-2 cursor-pointer ${
+                  actasViewMode === 'papelera'
+                    ? 'bg-red-600 text-white shadow-sm shadow-red-600/20'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <Trash2 size={15} />
+                <span>Papelera de Seguridad</span>
+                {trashActas.length > 0 && (
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    actasViewMode === 'papelera' ? 'bg-red-700 text-white' : 'bg-red-100 text-red-700'
+                  }`}>
+                    {trashActas.length}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {actasViewMode === 'papelera' && (
+              <span className="text-[11px] font-bold text-red-700 bg-red-50 border border-red-200 px-3 py-1 rounded-xl">
+                🛡️ Las actas en papelera no se muestran al público y pueden restaurarse en 1 clic
+              </span>
+            )}
           </div>
 
           {/* Filters */}
@@ -2249,70 +2416,121 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
           {/* List of Actas */}
           <div className="grid gap-4 text-left">
-            {filteredActas.map(acta => (
-              <div key={acta.id} className="bg-white p-4 sm:p-6 md:p-9 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 hover:shadow-md transition-shadow w-full">
-                <div className="flex items-center space-x-4 min-w-0 w-full md:w-auto">
-                  <div className="bg-yellow-50 text-yellow-600 p-3.5 rounded-2xl flex-shrink-0">
-                    <FileText size={24} />
+            {filteredActas.map(acta => {
+              const isTrash = acta.enPapelera || acta.estado === 'Papelera';
+              return (
+                <div 
+                  key={acta.id} 
+                  className={`bg-white p-4 sm:p-6 md:p-8 rounded-3xl border transition-all w-full flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 ${
+                    isTrash 
+                      ? 'border-red-200/80 bg-red-50/10 hover:border-red-300' 
+                      : 'border-slate-200/80 shadow-sm hover:shadow-md'
+                  }`}
+                >
+                  <div className="flex items-center space-x-4 min-w-0 w-full md:w-auto">
+                    <div className={`p-3.5 rounded-2xl flex-shrink-0 ${
+                      isTrash ? 'bg-red-100 text-red-700' : 'bg-yellow-50 text-yellow-600'
+                    }`}>
+                      {isTrash ? <Trash2 size={24} /> : <FileText size={24} />}
+                    </div>
+                    <div className="min-w-0 flex-grow w-full">
+                      <div className="flex items-center space-x-2">
+                        <h4 className="font-extrabold text-slate-800 text-base md:text-lg break-words leading-tight">{acta.titulo}</h4>
+                        {isTrash && (
+                          <span className="text-[10px] font-black bg-red-100 text-red-800 px-2 py-0.5 rounded-md uppercase">
+                            En Papelera
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-450 mt-1.5">
+                        Redactada por <span className="font-bold text-blue-900/60 uppercase">{acta.autor}</span> • Fecha de Sesión: <span className="font-bold text-slate-700">{formatDisplayDate(acta.fecha)}</span>
+                        {acta.numeroActa && <span> • Acta No. {acta.numeroActa}</span>}
+                      </p>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-grow w-full">
-                    <h4 className="font-extrabold text-slate-800 text-base md:text-lg break-words leading-tight">{acta.titulo}</h4>
-                    <p className="text-xs text-slate-450 mt-1.5">
-                      Redactada por <span className="font-bold text-blue-900/60 uppercase">{acta.autor}</span> • {formatDisplayDate(acta.fecha)}
-                    </p>
+
+                  <div className="flex flex-row items-center justify-between md:justify-end gap-3 w-full md:w-auto pt-4 md:pt-0 border-t border-slate-100 md:border-t-0 flex-wrap">
+                    <span className="text-[10px] font-black bg-slate-100 text-slate-650 px-3 py-1 rounded-full uppercase">
+                      {acta.categoria || 'Ordinaria'}
+                    </span>
+                    <div className="flex items-center space-x-2">
+                      {!isTrash ? (
+                        <>
+                          <button
+                            onClick={() => handleEditActaClick(acta)}
+                            className="p-2.5 text-slate-500 hover:text-blue-900 hover:bg-blue-50 rounded-xl transition-all border border-slate-150 bg-slate-50/50 active:scale-95 cursor-pointer"
+                            title="Editar acta y fecha"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            onClick={() => generateActaPDF(acta)}
+                            className="p-2.5 text-slate-500 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all border border-slate-150 bg-slate-50/50 active:scale-95 cursor-pointer"
+                            title="Descargar PDF"
+                          >
+                            <Download size={16} />
+                          </button>
+                          <button 
+                            onClick={() => handleMoveToTrash(acta.id)}
+                            className="p-2.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all border border-slate-150 bg-slate-50/50 active:scale-95 cursor-pointer"
+                            title="Mover a Papelera de Seguridad"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleRestoreActa(acta.id)}
+                            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black flex items-center space-x-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+                            title="Restaurar a las actas oficiales"
+                          >
+                            <RotateCcw size={14} />
+                            <span>Restaurar Acta</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setIsPermanentDelete(true);
+                              setDeleteActaConfirmId(acta.id);
+                            }}
+                            className="p-2 text-slate-450 hover:text-red-700 hover:bg-red-100 rounded-xl transition-all border border-red-200 active:scale-95 cursor-pointer text-xs font-bold"
+                            title="Eliminar definitivamente"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="flex flex-row items-center justify-between md:justify-end gap-3 w-full md:w-auto pt-4 md:pt-0 border-t border-slate-100 md:border-t-0 flex-wrap">
-                  <span className="text-[10px] font-black bg-slate-100 text-slate-650 px-3 py-1 rounded-full uppercase">
-                    {acta.categoria || 'Ordinaria'}
-                  </span>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => handleEditActaClick(acta)}
-                      className="p-2.5 text-slate-500 hover:text-blue-900 hover:bg-blue-50 rounded-xl transition-all border border-slate-150 bg-slate-50/50 active:scale-95"
-                      title="Editar acta"
-                    >
-                      <Edit size={16} />
-                    </button>
-                    <button
-                      onClick={() => generateActaPDF(acta)}
-                      className="p-2.5 text-slate-500 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all border border-slate-150 bg-slate-50/50 active:scale-95"
-                      title="Descargar PDF"
-                    >
-                      <Download size={16} />
-                    </button>
-                    <button 
-                      onClick={() => setDeleteActaConfirmId(acta.id)}
-                      className="p-2.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all border border-slate-150 bg-slate-50/50 active:scale-95"
-                      title="Eliminar acta"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
+
             {filteredActas.length === 0 && (
-              <div className="text-center py-12 text-slate-400 italic">No se encontraron actas con esos criterios de búsqueda.</div>
+              <div className="text-center py-12 text-slate-400 italic bg-white rounded-3xl border border-slate-100 p-8">
+                {actasViewMode === 'papelera'
+                  ? 'La papelera de reciclaje está vacía. Todas tus actas están seguras.'
+                  : 'No se encontraron actas con esos criterios de búsqueda.'}
+              </div>
             )}
           </div>
         </>
       )}
 
-      {/* Delete Confirmation Modal */}
-      {deleteActaConfirmId && (
+      {/* Delete Confirmation Modal (Solo para borrado permanente desde papelera) */}
+      {deleteActaConfirmId && isPermanentDelete && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl border border-red-100 animate-in zoom-in-95 duration-200 text-left">
             <div className="flex items-center space-x-4 mb-6 text-red-600">
               <div className="bg-red-50 p-3 rounded-full border border-red-100">
                 <Trash2 size={24} />
               </div>
-              <h3 className="text-xl font-black">Eliminar Acta</h3>
+              <h3 className="text-xl font-black">Eliminar Definitivamente</h3>
             </div>
             <p className="text-slate-600 mb-6 text-sm leading-relaxed">
-              Estás a punto de eliminar esta acta de forma permanente. 
+              Esta acción purgará el acta de Firestore <strong>de forma irreversible</strong>.
               <br/><br/>
-              Para evitar eliminaciones por error, por favor escribe la palabra <strong className="font-bold text-slate-900">ELIMINAR</strong> en el recuadro de abajo.
+              Para confirmar, escribe la palabra <strong className="font-bold text-slate-900">ELIMINAR</strong> abajo:
             </p>
             <div className="mb-6">
               <input
@@ -2328,22 +2546,23 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 onClick={() => {
                   setDeleteActaConfirmId(null);
                   setDeleteActaConfirmText('');
+                  setIsPermanentDelete(false);
                 }}
-                className="flex-1 py-3 text-slate-600 font-bold hover:bg-slate-50 border border-slate-200 rounded-xl transition-all"
+                className="flex-1 py-3 text-slate-600 font-bold hover:bg-slate-50 border border-slate-200 rounded-xl transition-all cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 onClick={() => {
                   if (deleteActaConfirmText === 'ELIMINAR') {
-                    handleDeleteActa(deleteActaConfirmId);
+                    handlePermanentDelete(deleteActaConfirmId);
                   }
                 }}
                 disabled={deleteActaConfirmText !== 'ELIMINAR'}
-                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-600/20 active:scale-95 flex items-center justify-center space-x-2"
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-600/20 active:scale-95 flex items-center justify-center space-x-2 cursor-pointer"
               >
                 <Trash2 size={16} />
-                <span>Eliminar</span>
+                <span>Purgar</span>
               </button>
             </div>
           </div>

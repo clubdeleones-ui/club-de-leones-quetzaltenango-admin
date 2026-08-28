@@ -86,10 +86,14 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
     fetchActas();
   }, [accessToken]);
 
+  const publicActas = useMemo(() => {
+    return actas.filter(a => !a.enPapelera && a.estado !== 'Papelera');
+  }, [actas]);
+
   // Extract years
   const years = useMemo(() => {
     const yearsSet = new Set<string>();
-    actas.forEach(a => {
+    publicActas.forEach(a => {
       if (a.fecha) {
         const yStr = a.fecha.split('-')[0];
         if (yStr && yStr.length === 4) {
@@ -98,17 +102,17 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
       }
     });
     return Array.from(yearsSet).sort((a, b) => b.localeCompare(a));
-  }, [actas]);
+  }, [publicActas]);
 
   // Stats calculation
   const stats = useMemo(() => {
-    const total = actas.length;
-    const latest = actas.length > 0 
-      ? [...actas].sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''))[0].fecha 
+    const total = publicActas.length;
+    const latest = publicActas.length > 0 
+      ? [...publicActas].sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''))[0].fecha 
       : 'Sin registros';
 
     const authors: Record<string, number> = {};
-    actas.forEach(a => {
+    publicActas.forEach(a => {
       authors[a.autor] = (authors[a.autor] || 0) + 1;
     });
     let topAuthor = 'N/A';
@@ -121,18 +125,18 @@ const Actas: React.FC<ActasProps> = ({ accessToken }) => {
     });
 
     return { total, latest, topAuthor };
-  }, [actas]);
+  }, [publicActas]);
 
   // Filter logic
   const filteredActas = useMemo(() => {
-    return actas.filter(a => {
+    return publicActas.filter(a => {
       const matchesSearch = a.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             a.contenido.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategory === 'Todas' || a.categoria === selectedCategory;
       const matchesYear = selectedYear === 'Todos' || (a.fecha && a.fecha.startsWith(selectedYear));
       return matchesSearch && matchesCategory && matchesYear;
     });
-  }, [actas, searchTerm, selectedCategory, selectedYear]);
+  }, [publicActas, searchTerm, selectedCategory, selectedYear]);
 
   const handleAiSearch = async () => {
     if (!aiQuery.trim()) return;
