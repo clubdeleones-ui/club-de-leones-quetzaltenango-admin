@@ -22,6 +22,30 @@ export interface ImproveActaResult {
   error?: string;
 }
 
+/**
+ * Limpia y normaliza el tratamiento "C.L." (Compañero León)
+ * eliminando duplicados consecutivos y eliminando C.L. que hayan quedado intercalados entre nombres y apellidos.
+ */
+export const cleanAndDeduplicateCL = (text: string): string => {
+  if (!text) return text;
+  let cleaned = text;
+
+  // 1. Eliminar C.L. duplicados consecutivos (ej. "C.L. C.L. Juan", "C.L. C.L. C.L.")
+  cleaned = cleaned.replace(/(?:(?:\bC\.L\.|\bCL\b|\bC\.L\b|Compañero León)\s*){2,}/gi, 'C.L. ');
+
+  // 2. Eliminar C.L. intercalados erróneamente entre nombres y apellidos (ej. "Edwin C.L. Pacheco", "Juan C.L. Carlos")
+  cleaned = cleaned.replace(/(\b[A-ZÁÉÍÓÚ][a-zñáéíóú]+)\s+C\.L\.\s+([A-ZÁÉÍÓÚ][a-zñáéíóú]+)/g, '$1 $2');
+  cleaned = cleaned.replace(/(\b[A-ZÁÉÍÓÚ][a-zñáéíóú]+)\s+C\.L\.\s+([A-ZÁÉÍÓÚ][a-zñáéíóú]+)/g, '$1 $2');
+
+  // 3. Normalizar espacios después de C.L.
+  cleaned = cleaned.replace(/\bC\.L\.\s+/g, 'C.L. ');
+
+  // 4. Limpieza de posibles "C.L. :" o "C.L.:" sueltos
+  cleaned = cleaned.replace(/\bC\.L\.\s*:\s*/g, '');
+
+  return cleaned.trim();
+};
+
 export class GeminiService {
   getApiKey(): string {
     return (
@@ -41,7 +65,7 @@ export class GeminiService {
 
   /**
    * Corrector y sintetizador protocolario local profundo de respaldo.
-   * Corrige ortografía habitual, limpia redundancias y asegura que los acuerdos queden formalizados.
+   * Corrige ortografía habitual, limpia redundancias y asegura que los acuerdos queden formalizados sin duplicar C.L.
    */
   private formatAndSynthesizePuntosLocal(params: ImproveActaPuntosParams): PuntoAgendaItem[] {
     const { puntos } = params;
@@ -97,7 +121,7 @@ export class GeminiService {
           return right;
         });
       });
-      return cleaned;
+      return cleanAndDeduplicateCL(cleaned);
     };
 
     return puntos.map((p, idx) => {
@@ -112,14 +136,7 @@ export class GeminiService {
       } else if (!debate) {
         debate = `Los socios presentes procedieron al análisis y discusión del tema "${tema}", evaluando las distintas consideraciones pertinentes en beneficio de las obras del club.`;
       } else {
-        // Asegurar que las menciones lleven C.L.
-        debate = debate.replace(/\b([A-ZÁÉÍÓÚ][a-zñáéíóú]+ [A-ZÁÉÍÓÚ][a-zñáéíóú]+):/g, (match, name) => {
-          if (!match.startsWith('C.L.')) {
-            return `C.L. ${name}:`;
-          }
-          return match;
-        });
-
+        debate = cleanAndDeduplicateCL(debate);
         if (!debate.endsWith('.') && !debate.endsWith(';') && !debate.endsWith('!')) {
           debate = `${debate}.`;
         }
@@ -127,12 +144,14 @@ export class GeminiService {
 
       let acuerdo = fixSpelling((p.acuerdo || '').trim());
       if (!acuerdo || acuerdo.toLowerCase().includes('sin acuerdo') || acuerdo.length < 5) {
-        const propuestoPor = p.socioSolicitante ? ` presentada por el C.L. ${p.socioSolicitante}` : '';
+        const cleanSocio = p.socioSolicitante ? p.socioSolicitante.replace(/^C\.L\.\s*/i, '').trim() : '';
+        const propuestoPor = cleanSocio ? ` presentada por el C.L. ${cleanSocio}` : '';
         acuerdo = `Por unanimidad de votos de los socios miembros presentes en la asamblea, se ACUERDA: Aprobar y respaldar la propuesta relativa a "${tema}"${propuestoPor}, encomendando a la Junta Directiva y a la comisión respectiva la ejecución, seguimiento y debido cumplimiento de lo resuelto.`;
       } else {
         if (!acuerdo.toLowerCase().includes('acuerda') && !acuerdo.toLowerCase().includes('resuelve') && !acuerdo.toLowerCase().includes('por unanimidad')) {
           acuerdo = `Por decisión de la asamblea de socios, se ACUERDA: ${acuerdo.charAt(0).toUpperCase() + acuerdo.slice(1)}`;
         }
+        acuerdo = cleanAndDeduplicateCL(acuerdo);
         if (!acuerdo.endsWith('.') && !acuerdo.endsWith(';')) {
           acuerdo = `${acuerdo}.`;
         }
@@ -140,9 +159,9 @@ export class GeminiService {
 
       return {
         tema,
-        debate,
-        acuerdo,
-        socioSolicitante: p.socioSolicitante,
+        debate: cleanAndDeduplicateCL(debate),
+        acuerdo: cleanAndDeduplicateCL(acuerdo),
+        socioSolicitante: p.socioSolicitante ? p.socioSolicitante.replace(/^C\.L\.\s*/i, '').trim() : undefined,
         agendaContenido: p.agendaContenido
       };
     });
@@ -212,17 +231,21 @@ REGLAS ESTRICTAS DE CORRECCIÓN PROFUNDA:
    - Corrige TODAS las faltas ortográficas, palabras mal escritas, erratas tipográficas, palabras incompletas o fuera de contexto.
    - Corrige la acentuación (tildes), signos de puntuación, mayúsculas y concordancia de género/número.
    - Si una palabra está mal escrita o parece un error de tipeo (ej. "presuspuesto" -> "presupuesto", "estubo" -> "estuvo", "hiso" -> "hizo"), corrígela inmediatamente al término correcto según el contexto.
-2. TÍTULO / TEMA:
+2. REGLA ESTRICTA DE TRATAMIENTO LEONÍSTICO (C.L.):
+   - El prefijo "C.L." (Compañero León) se coloca ÚNICAMENTE UNA SOLA VEZ antes del nombre completo de cada socio (ejemplo correcto: "C.L. Edwin Ernesto Pacheco López:").
+   - ESTÁ ESTRICTAMENTE PROHIBIDO colocar "C.L." entre nombres y apellidos (incorrecto: "Edwin C.L. Pacheco" o "Juan C.L. Carlos Gómez").
+   - ESTÁ ESTRICTAMENTE PROHIBIDO duplicar "C.L. C.L.".
+   - Si el texto original ya tiene "C.L." o "Compañero León" o repeticiones, unifícalo a un único "C.L. [Nombre y Apellidos]".
+3. TÍTULO / TEMA:
    - Redáctalo con mayúsculas y minúsculas formales, claro, sobrio y conciso.
-3. DEBATE Y DISCUSIÓN (LENGUAJE PROTOCOLARIO LEONÍSTICO):
+4. DEBATE Y DISCUSIÓN (LENGUAJE PROTOCOLARIO LEONÍSTICO):
    - Transforma las notas coloquiales, apuntes rápidos o viñetas en una redacción formal solemne en tercera persona.
-   - Si intervienen socios, mantén SIEMPRE su nombre precedido por el tratamiento leonístico "C.L. [Nombre del Socio]" (ej. "El C.L. Juan Pérez expuso... a lo cual el C.L. Mario Gómez secundó...").
    - Dale fluidez, solemnidad y coherencia sintáctica impecable.
-4. ACUERDO / RESOLUCIÓN (OBLIGATORIO Y COMPLETO):
+5. ACUERDO / RESOLUCIÓN (OBLIGATORIO Y COMPLETO):
    - NUNCA devuelvas el campo "acuerdo" vacío, nulo o con la frase "Sin acuerdo".
    - Si el usuario no escribió un acuerdo o es muy breve (ej. "se aprobó"), deduce y redacta formalmente la resolución solemne adoptada por la asamblea (ej. "Por unanimidad de votos de los socios presentes en la asamblea, se ACUERDA: Aprobar la realización de... encomendando a la Junta Directiva y a la comisión respectiva el seguimiento y ejecución de lo acordado.").
    - Si ya venía un acuerdo redactado, perfecciona su estilo reglamentario institucional.
-5. FORMATO DE RESPUESTA:
+6. FORMATO DE RESPUESTA:
    - Debes responder ÚNICA Y EXCLUSIVAMENTE con un arreglo JSON válido con los mismos índices de puntos.
 
 Estructura JSON esperada:
@@ -268,9 +291,9 @@ Devuelve únicamente el arreglo JSON con la corrección ortográfica profunda y 
         if (Array.isArray(parsed) && parsed.length > 0) {
           const formattedPoints = parsed.map((item, idx) => {
             const original = puntos[idx] || ({} as PuntoAgendaItem);
-            const itemTema = String(item.tema || original.tema || `Punto #${idx + 1}`).trim();
-            const itemDebate = String(item.debate || original.debate || '').trim();
-            let itemAcuerdo = String(item.acuerdo || original.acuerdo || '').trim();
+            const itemTema = cleanAndDeduplicateCL(String(item.tema || original.tema || `Punto #${idx + 1}`).trim());
+            const itemDebate = cleanAndDeduplicateCL(String(item.debate || original.debate || '').trim());
+            let itemAcuerdo = cleanAndDeduplicateCL(String(item.acuerdo || original.acuerdo || '').trim());
 
             if (!itemAcuerdo || itemAcuerdo.toLowerCase().includes('sin acuerdo')) {
               itemAcuerdo = `Por unanimidad de votos de los socios miembros de la asamblea, se ACUERDA: Aprobar y dar curso a lo deliberado sobre "${itemTema}", encomendando a la directiva su debido seguimiento y ejecución.`;
@@ -280,7 +303,7 @@ Devuelve únicamente el arreglo JSON con la corrección ortográfica profunda y 
               tema: itemTema,
               debate: itemDebate,
               acuerdo: itemAcuerdo,
-              socioSolicitante: item.socioSolicitante || original.socioSolicitante,
+              socioSolicitante: item.socioSolicitante ? cleanAndDeduplicateCL(item.socioSolicitante).replace(/^C\.L\.\s*/i, '') : original.socioSolicitante,
               agendaContenido: item.agendaContenido || original.agendaContenido,
             };
           });

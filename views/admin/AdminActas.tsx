@@ -8,7 +8,7 @@ import {
 
 import { Acta, Socio, Solicitud, UserRole } from '../../types';
 import { firebaseService } from '../../services/firebaseService';
-import { geminiService } from '../../services/geminiService';
+import { geminiService, cleanAndDeduplicateCL } from '../../services/geminiService';
 import { useClubData } from '../../context/ClubDataContext';
 import { useToast } from '../../context/ToastContext';
 import { getWrittenDateTimeSpanish, formatDisplayDate } from '../../utils/dateSpanishFormatter';
@@ -167,24 +167,28 @@ export const AdminActas: React.FC<AdminActasProps> = ({ user }) => {
   }, [solicitudes]);
 
   const handleInsertMemberMention = (memberName: string) => {
-    const formattedName = `C.L. ${memberName}: `;
+    const cleanMemberName = memberName.replace(/^(?:C\.L\.|\bCL\b|Compañero León)\s*/i, '').trim();
+    const formattedName = `C.L. ${cleanMemberName}: `;
     const textarea = debateRef.current;
     if (!textarea) {
       if (selectedAgendaPointTab === 'new') {
         setNewAgendaPoint(prev => ({
           ...prev,
-          debate: prev.debate 
-            ? (prev.debate.endsWith(' ') || prev.debate.endsWith('\n') ? `${prev.debate}${formattedName}` : `${prev.debate} ${formattedName}`)
-            : formattedName
+          debate: cleanAndDeduplicateCL(
+            prev.debate 
+              ? (prev.debate.endsWith(' ') || prev.debate.endsWith('\n') ? `${prev.debate}${formattedName}` : `${prev.debate} ${formattedName}`)
+              : formattedName
+          )
         }));
       } else {
         const currentDebate = (actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.debate || '';
+        const rawNewDebate = currentDebate 
+          ? (currentDebate.endsWith(' ') || currentDebate.endsWith('\n') ? `${currentDebate}${formattedName}` : `${currentDebate} ${formattedName}`)
+          : formattedName;
         handleUpdateAgendaPoint(
           selectedAgendaPointTab as number, 
           'debate', 
-          currentDebate 
-            ? (currentDebate.endsWith(' ') || currentDebate.endsWith('\n') ? `${currentDebate}${formattedName}` : `${currentDebate} ${formattedName}`)
-            : formattedName
+          cleanAndDeduplicateCL(rawNewDebate)
         );
       }
       return;
@@ -193,13 +197,18 @@ export const AdminActas: React.FC<AdminActasProps> = ({ user }) => {
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const text = textarea.value;
-    const before = text.substring(0, start);
+    let before = text.substring(0, start);
     const after = text.substring(end, text.length);
     
-    // Inserción de corrido en la línea actual (sin forzar salto de línea)
-    const needsLeadingSpace = start > 0 && !before.endsWith(' ') && !before.endsWith('\n');
+    // Si justo antes del cursor ya está escrito "C.L." o "C.L. ", lo removemos de before para no duplicar
+    if (/(?:C\.L\.|\bCL\b|Compañero León)\s*$/i.test(before)) {
+      before = before.replace(/(?:C\.L\.|\bCL\b|Compañero León)\s*$/i, '');
+    }
+
+    const needsLeadingSpace = before.length > 0 && !before.endsWith(' ') && !before.endsWith('\n');
     const insertion = needsLeadingSpace ? ` ${formattedName}` : formattedName;
-    const newValue = before + insertion + after;
+    const rawValue = before + insertion + after;
+    const newValue = cleanAndDeduplicateCL(rawValue);
 
     if (selectedAgendaPointTab === 'new') {
       setNewAgendaPoint(prev => ({
@@ -212,7 +221,7 @@ export const AdminActas: React.FC<AdminActasProps> = ({ user }) => {
 
     setTimeout(() => {
       textarea.focus();
-      const newCursorPos = start + insertion.length;
+      const newCursorPos = Math.min(before.length + insertion.length, newValue.length);
       textarea.setSelectionRange(newCursorPos, newCursorPos);
     }, 0);
   };
@@ -343,10 +352,11 @@ export const AdminActas: React.FC<AdminActasProps> = ({ user }) => {
     if (data.puntosAgenda && data.puntosAgenda.length > 0) {
       agendaSection = '\nPUNTOS DE AGENDA DISCUTIDOS:\n\n';
       data.puntosAgenda.forEach((p, idx) => {
-        const propLabel = p.socioSolicitante ? ` (Solicitado por: ${p.socioSolicitante})` : '';
-        agendaSection += `Punto ${idx + 1}: ${p.tema.trim() || 'Sin tema'}${propLabel}\n`;
-        agendaSection += `   - Debate: ${p.debate.trim() || 'Sin debate registrado.'}\n`;
-        agendaSection += `   - Acuerdo: ${p.acuerdo.trim() || 'Sin acuerdo registrado.'}\n\n`;
+        const cleanSocio = p.socioSolicitante ? cleanAndDeduplicateCL(p.socioSolicitante).replace(/^C\.L\.\s*/i, '').trim() : '';
+        const propLabel = cleanSocio ? ` (Solicitado por: C.L. ${cleanSocio})` : '';
+        agendaSection += `Punto ${idx + 1}: ${cleanAndDeduplicateCL(p.tema.trim()) || 'Sin tema'}${propLabel}\n`;
+        agendaSection += `   - Debate: ${cleanAndDeduplicateCL(p.debate.trim()) || 'Sin debate registrado.'}\n`;
+        agendaSection += `   - Acuerdo: ${cleanAndDeduplicateCL(p.acuerdo.trim()) || 'Sin acuerdo registrado.'}\n\n`;
       });
     }
 
@@ -621,11 +631,20 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       titulo: finalTitulo
     });
 
+    const sanitizedPuntos = (actaWizardData.puntosAgenda || []).map(p => ({
+      ...p,
+      tema: cleanAndDeduplicateCL(p.tema || ''),
+      debate: cleanAndDeduplicateCL(p.debate || ''),
+      acuerdo: cleanAndDeduplicateCL(p.acuerdo || ''),
+      socioSolicitante: p.socioSolicitante ? cleanAndDeduplicateCL(p.socioSolicitante).replace(/^C\.L\.\s*/i, '').trim() : undefined
+    }));
+
     const finalWizardData = {
       ...actaWizardData,
       titulo: finalTitulo,
       codigoRegistro: code,
-      numeroActa: numActa
+      numeroActa: numActa,
+      puntosAgenda: sanitizedPuntos
     };
     
     let savedActaItem: Acta;
