@@ -21,6 +21,19 @@
         window.location.replace('https://clubdeleonesquetzaltenango.org' + window.location.pathname + window.location.search + window.location.hash);
       }
     })();
+
+    // Suprimir advertencias asíncronas generadas por extensiones del navegador (Chrome Extensions)
+    window.addEventListener('unhandledrejection', function(event) {
+      var reason = event.reason;
+      var msg = (reason && (reason.message || (typeof reason === 'string' ? reason : ''))) || '';
+      if (
+        msg.indexOf('message channel closed before a response was received') !== -1 ||
+        msg.indexOf('A listener indicated an asynchronous response') !== -1
+      ) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    }, true);
   </script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
   <link rel="icon" type="image/png" href="./images/logo.png">
