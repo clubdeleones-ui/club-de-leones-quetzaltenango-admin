@@ -1428,29 +1428,15 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                           <h3 className="text-xl font-extrabold text-blue-900 tracking-tight">
                             Gestión de Puntos de Agenda
                           </h3>
-                          <div className="flex items-center space-x-2 mt-0.5">
-                            <p className="text-xs text-slate-500 font-semibold">
-                              {selectedAgendaPointTab === 'new' ? (
-                                <span className="text-amber-700 font-bold">Redactando Nuevo Punto de Agenda</span>
-                              ) : (
-                                <span className="text-blue-900 font-bold">
-                                  Editando Punto #{selectedAgendaPointTab as number + 1}: {(actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.tema || 'Sin tema'}
-                                </span>
-                              )}
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setGeminiApiKeyInput(geminiService.getApiKey());
-                                setShowGeminiApiKeyModal(true);
-                              }}
-                              className="text-[10px] font-black text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-2 py-0.5 rounded-lg flex items-center space-x-1 transition-all cursor-pointer shadow-2xs"
-                              title="Configurar clave gratuita de Google AI Studio para corrección profunda con Gemini"
-                            >
-                              <Key size={10} />
-                              <span>{geminiService.getApiKey() ? 'Gemini IA Activa' : 'Configurar Clave IA'}</span>
-                            </button>
-                          </div>
+                          <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                            {selectedAgendaPointTab === 'new' ? (
+                              <span className="text-amber-700 font-bold">Redactando Nuevo Punto de Agenda</span>
+                            ) : (
+                              <span className="text-blue-900 font-bold">
+                                Editando Punto #{selectedAgendaPointTab as number + 1}: {(actaWizardData.puntosAgenda || [])[selectedAgendaPointTab as number]?.tema || 'Sin tema'}
+                              </span>
+                            )}
+                          </p>
                         </div>
                       </div>
                     </div>

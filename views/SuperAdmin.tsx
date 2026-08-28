@@ -27,6 +27,7 @@ import {
   MinutaComision
 } from '../types';
 import { firebaseService } from '../services/firebaseService';
+import { geminiService } from '../services/geminiService';
 import { useClubData } from '../context/ClubDataContext';
 import { useModal } from '../context/ModalContext';
 import { useToast } from '../context/ToastContext';
@@ -91,7 +92,8 @@ import {
   Settings,
   Key,
   ClipboardList,
-  Refrigerator
+  Refrigerator,
+  Sparkles
 } from 'lucide-react';
 import { generateActaPDF, generateActaCode, generateReciboPagoPDF, generateAgendaPDF } from '../utils/pdfGenerator';
 import { FormattedActa } from '../components/FormattedActa';
@@ -305,6 +307,8 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>('Principal');
   const [moduleSearchQuery, setModuleSearchQuery] = useState('');
+  const [showApisModal, setShowApisModal] = useState(false);
+  const [geminiApiKeyInput, setGeminiApiKeyInput] = useState(() => geminiService.getApiKey());
 
   // Filtrar categorías y expandir dinámicamente si hay búsqueda
   const filteredCategorias = useMemo(() => {
@@ -4425,6 +4429,26 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           <h1 className="text-5xl font-black text-blue-900 tracking-tight mt-3">Panel de Gestión de Módulos</h1>
           <p className="text-lg text-slate-500 mt-2">Gestiona las actividades, finanzas, actas y beneficios del club en un solo lugar.</p>
         </div>
+
+        {/* Action button for APIs & Integrations */}
+        {(user.rol === UserRole.SUPER_ADMIN || user.rol === UserRole.SECRETARIO) && (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                setGeminiApiKeyInput(geminiService.getApiKey());
+                setShowApisModal(true);
+              }}
+              className="flex items-center space-x-2.5 bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-700 hover:text-blue-950 font-extrabold px-4 sm:px-5 py-3 rounded-2xl text-xs sm:text-sm shadow-sm hover:shadow-md transition-all active:scale-95 cursor-pointer"
+              title="Configuración centralizada de APIs, Gemini IA e Integraciones"
+            >
+              <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-xs">
+                <Sparkles size={13} className="text-amber-300 animate-pulse" />
+              </div>
+              <span>Integraciones & IA</span>
+              <span className={`w-2 h-2 rounded-full ${geminiService.getApiKey() ? 'bg-emerald-500 shadow-xs shadow-emerald-500/50' : 'bg-slate-300'}`}></span>
+            </button>
+          </div>
+        )}
       </header>
 
       <div className="flex flex-col lg:flex-row gap-8">
@@ -6458,8 +6482,110 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           </div>
         </div>
       )}
-    </div>
-  );
-};
+
+        {/* Modal Integraciones & APIs */}
+        {showApisModal && (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-100 text-left space-y-6 animate-in zoom-in-95 duration-200">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-purple-500/20">
+                    <Sparkles size={20} className="text-amber-300" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-black text-slate-900">
+                      Integraciones & APIs
+                    </h4>
+                    <p className="text-xs text-slate-500 font-semibold">
+                      Configuración de servicios de Inteligencia Artificial y conectores
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowApisModal(false)}
+                  className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
+                >
+                  <XIcon size={18} />
+                </button>
+              </div>
+
+              {/* Gemini AI Card */}
+              <div className="p-4 rounded-2xl border border-purple-100 bg-purple-50/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-purple-600"></span>
+                    <span className="text-xs font-black text-purple-950 uppercase tracking-wider">
+                      Google Gemini AI (LLM)
+                    </span>
+                  </div>
+                  <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${
+                    geminiService.getApiKey()
+                      ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                      : 'bg-amber-100 text-amber-800 border-amber-200'
+                  }`}>
+                    {geminiService.getApiKey() ? '● Activa en navegador' : '○ Pendiente'}
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                  Utilizada para la corrección ortográfica profunda, redacción de acuerdos solemnes de actas y búsquedas inteligentes en la biblioteca leonística.
+                </p>
+
+                <div className="space-y-1.5 pt-1">
+                  <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider">
+                    API Key de Google AI Studio:
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="password"
+                      value={geminiApiKeyInput}
+                      onChange={e => setGeminiApiKeyInput(e.target.value)}
+                      placeholder="AIzaSy..."
+                      className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-600 focus:border-transparent outline-none text-xs font-mono font-bold text-slate-800 shadow-inner"
+                    />
+                  </div>
+                </div>
+
+                <div className="text-[11px] text-purple-900/80 bg-white/80 p-3 rounded-xl border border-purple-100 leading-relaxed">
+                  💡 Clave gratuita de por vida en{' '}
+                  <a
+                    href="https://aistudio.google.com/app/apikey"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-black text-purple-700 underline hover:text-purple-900"
+                  >
+                    aistudio.google.com/app/apikey
+                  </a>
+                </div>
+              </div>
+
+              {/* Botones de acción */}
+              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowApisModal(false)}
+                  className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 font-bold rounded-xl text-xs transition-all"
+                >
+                  Cerrar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    geminiService.setApiKey(geminiApiKeyInput);
+                    setShowApisModal(false);
+                    showAlert('Configuración guardada', '✅ La clave de Google Gemini IA se ha actualizado y está lista para ser usada en todo el sistema.');
+                  }}
+                  className="px-6 py-2.5 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white font-black rounded-xl text-xs transition-all shadow-md active:scale-95"
+                >
+                  Guardar Configuración
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
 export default SuperAdmin;
