@@ -458,314 +458,381 @@ export const GaleriaAdmin: React.FC = () => {
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[95vh] flex flex-col">
-            <header className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 flex-shrink-0">
-              <h2 className="text-xl font-black text-slate-800 flex items-center">
-                <Camera className="mr-3 text-blue-600" />
-                {editingItem ? 'Editar Elemento de Galería' : 'Subir Nueva Foto o Espacio'}
-              </h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 bg-white p-2 rounded-full shadow-sm cursor-pointer">
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-6 overflow-hidden">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
+            
+            {/* Header del Modal */}
+            <header className="px-6 sm:px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/70 flex-shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="bg-amber-500/10 text-amber-700 p-2.5 rounded-2xl">
+                  <Camera size={22} />
+                </div>
+                <div>
+                  <h2 className="text-lg sm:text-xl font-black text-slate-800">
+                    {editingItem ? 'Editar Elemento de Galería / Museo' : 'Subir Nueva Foto o Espacio'}
+                  </h2>
+                  <p className="text-xs text-slate-500 font-medium">
+                    {formData.categoria === 'Museo de Personajes' 
+                      ? '🏛️ Editando ficha del Museo de Personajes Ilustres' 
+                      : formData.categoria === 'Rentas & Salones del Club'
+                      ? '🏰 Editando ficha de espacio en alquiler'
+                      : '🖼️ Editando fotografía de actividades del Club'}
+                  </p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setIsModalOpen(false)} 
+                className="text-slate-400 hover:text-slate-700 hover:bg-slate-200 bg-white p-2 rounded-full shadow-xs transition-all cursor-pointer"
+              >
                 <XIcon size={20} />
               </button>
             </header>
 
-            <form onSubmit={handleSubmit} className="p-8 space-y-6 overflow-y-auto flex-1">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Fotografía *</label>
-                  <div className="relative border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50 hover:bg-slate-100 transition-colors group overflow-hidden">
-                    {imagePreview ? (
-                      <div className="relative h-64 w-full">
-                        <img src={imagePreview} alt="Preview" className="w-full h-full object-contain bg-slate-200" />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <span className="text-white font-bold flex items-center bg-black/50 px-4 py-2 rounded-xl backdrop-blur-sm">
-                            <UploadCloud className="mr-2" /> Cambiar Imagen
-                          </span>
+            {/* Formulario con Layout de 2 Columnas */}
+            <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden">
+                
+                {/* COLUMNA IZQUIERDA: Fotografía y Ajustes Generales */}
+                <div className="w-full md:w-5/12 p-6 bg-slate-50/80 border-b md:border-b-0 md:border-r border-slate-200 flex flex-col justify-between overflow-y-auto space-y-4">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-black uppercase tracking-wider text-slate-600 mb-2">
+                        Fotografía Principal *
+                      </label>
+                      <div className="relative border-2 border-dashed border-slate-300 hover:border-amber-500 rounded-2xl bg-white transition-all group overflow-hidden shadow-inner">
+                        {imagePreview ? (
+                          <div className="relative aspect-4/3 w-full bg-slate-100 flex items-center justify-center">
+                            <img 
+                              src={imagePreview} 
+                              alt="Vista previa" 
+                              className="w-full h-full object-cover" 
+                            />
+                            <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <span className="text-white text-xs font-bold flex items-center bg-black/60 px-3 py-1.5 rounded-xl backdrop-blur-md">
+                                <UploadCloud size={16} className="mr-1.5" /> Cambiar Fotografía
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-10 px-4 text-center text-slate-500">
+                            <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mb-2 shadow-xs">
+                              <ImageIcon size={24} />
+                            </div>
+                            <span className="text-xs font-bold text-slate-700">Subir Fotografía</span>
+                            <span className="text-[10px] text-slate-400 mt-0.5">Formatos JPG, PNG, WEBP (máx 5MB)</span>
+                          </div>
+                        )}
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={handleImageChange}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Checkbox Pop-up Anuncio */}
+                    <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
+                      <div className="flex items-start space-x-3">
+                        <input 
+                          type="checkbox" 
+                          id="edit-esFondoPantalla" 
+                          checked={formData.esFondoPantalla} 
+                          onChange={e => setFormData({...formData, esFondoPantalla: e.target.checked})}
+                          className="w-4 h-4 rounded text-amber-600 border-slate-300 focus:ring-amber-500 mt-0.5 shrink-0 cursor-pointer"
+                        />
+                        <div>
+                          <label htmlFor="edit-esFondoPantalla" className="text-xs font-black text-slate-800 select-none cursor-pointer block">
+                            Anuncio Destacado (Pop-up)
+                          </label>
+                          <p className="text-[11px] text-slate-500 leading-tight mt-0.5">
+                            Se abrirá como ventana emergente a los visitantes al ingresar al portal.
+                          </p>
                         </div>
                       </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-12 text-slate-500">
-                        <ImageIcon size={48} className="mb-4 text-slate-300" />
-                        <span className="font-semibold">Haz clic para subir una foto</span>
-                        <span className="text-xs text-slate-400 mt-1">JPG, PNG (máx 5MB)</span>
+                    </div>
+                  </div>
+
+                  <div className="text-[11px] text-slate-400 bg-amber-50/50 p-3 rounded-xl border border-amber-200/50 leading-relaxed hidden md:block">
+                    💡 <strong>Tip:</strong> Las fotos de alta resolución en formato horizontal lucen mejor en las fichas del Museo y Catálogo de Salones.
+                  </div>
+                </div>
+
+                {/* COLUMNA DERECHA: Campos de Datos con Scroll Independiente */}
+                <div className="w-full md:w-7/12 p-6 overflow-y-auto space-y-5 custom-scrollbar">
+                  
+                  {/* Categoría Temática */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-black uppercase tracking-wider text-slate-600">Categoría *</label>
+                    <select 
+                      value={formData.categoria}
+                      onChange={(e) => setFormData({...formData, categoria: e.target.value})}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all cursor-pointer"
+                    >
+                      {CATEGORIAS_GALERIA.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Título y Fecha */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2 space-y-1">
+                      <label className="text-xs font-black uppercase tracking-wider text-slate-600">
+                        {formData.categoria === 'Museo de Personajes' ? 'Nombre del Personaje *' : 'Título del Elemento *'}
+                      </label>
+                      <input 
+                        type="text" 
+                        required
+                        value={formData.titulo}
+                        onChange={(e) => setFormData({...formData, titulo: e.target.value})}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all"
+                        placeholder={formData.categoria === 'Museo de Personajes' ? 'Ej. C.L. Dr. Roberto Gómez' : 'Ej. Salón Principal de Eventos'}
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-black uppercase tracking-wider text-slate-600">Fecha *</label>
+                      <input 
+                        type="date" 
+                        required
+                        value={formData.fecha}
+                        onChange={(e) => setFormData({...formData, fecha: e.target.value})}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* BLOQUE DINÁMICO 1: MUSEO DE PERSONAJES ILUSTRES */}
+                  {formData.categoria === 'Museo de Personajes' && (
+                    <div className="bg-gradient-to-br from-amber-50 to-amber-100/30 p-4 rounded-2xl border border-amber-300/80 space-y-3">
+                      <div className="flex items-center space-x-2 text-amber-900 border-b border-amber-200/60 pb-2">
+                        <span className="text-base">🏛️</span>
+                        <h4 className="text-xs font-black uppercase tracking-wider">Ficha Notarial de Personaje Ilustre</h4>
                       </div>
-                    )}
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      onChange={handleImageChange}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-black uppercase text-slate-600 mb-1">Rango / Distinción</label>
+                          <select
+                            value={formData.tipoPersonaje}
+                            onChange={(e) => setFormData({...formData, tipoPersonaje: e.target.value as any})}
+                            className="w-full bg-white border border-amber-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 cursor-pointer"
+                          >
+                            <option value="presidente">👑 Presidente Histórico</option>
+                            <option value="directiva">👥 Junta Directiva</option>
+                            <option value="relevante">⭐ Personaje Relevante</option>
+                            <option value="fundador">🏛️ Socio Fundador</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-black uppercase text-slate-600 mb-1">Periodo de Servicio</label>
+                          <input
+                            type="text"
+                            value={formData.periodoServicio}
+                            onChange={(e) => setFormData({...formData, periodoServicio: e.target.value})}
+                            placeholder="Ej. 1952 - 1953"
+                            className="w-full bg-white border border-amber-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800"
+                          />
+                        </div>
+
+                        <div className="sm:col-span-2">
+                          <label className="block text-[10px] font-black uppercase text-slate-600 mb-1">Cargo Oficial</label>
+                          <input
+                            type="text"
+                            value={formData.puestoCargo}
+                            onChange={(e) => setFormData({...formData, puestoCargo: e.target.value})}
+                            placeholder="Ej. Presidente Fundador Honorario / Gobernador de Distrito"
+                            className="w-full bg-white border border-amber-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800"
+                          />
+                        </div>
+
+                        <div className="sm:col-span-2">
+                          <label className="block text-[10px] font-black uppercase text-slate-600 mb-1">Logros y Legado Destacado (un logro por línea)</label>
+                          <textarea
+                            rows={2}
+                            value={formData.logrosDestacadosText}
+                            onChange={(e) => setFormData({...formData, logrosDestacadosText: e.target.value})}
+                            placeholder="Lideró la construcción del ala médica&#10;Impulsó el programa de becas infantiles"
+                            className="w-full bg-white border border-amber-200 rounded-xl px-2.5 py-1.5 text-xs font-medium text-slate-800 resize-none"
+                          />
+                        </div>
+
+                        <div className="sm:col-span-2">
+                          <label className="block text-[10px] font-black uppercase text-slate-600 mb-1">Cita u Oración Leonística</label>
+                          <input
+                            type="text"
+                            value={formData.citaHonorifica}
+                            onChange={(e) => setFormData({...formData, citaHonorifica: e.target.value})}
+                            placeholder='Ej. "Nosotros servimos con el corazón a nuestra comunidad."'
+                            className="w-full bg-white border border-amber-200 rounded-xl px-2.5 py-1.5 text-xs font-medium text-slate-800 italic"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* BLOQUE DINÁMICO 2: RENTAS Y SALONES */}
+                  {formData.categoria === 'Rentas & Salones del Club' && (
+                    <div className="bg-gradient-to-br from-amber-50 to-amber-100/40 p-4 rounded-2xl border border-amber-300/80 space-y-3">
+                      <div className="flex items-center space-x-2 text-amber-900 border-b border-amber-200/60 pb-2">
+                        <Building2 size={16} />
+                        <h4 className="text-xs font-black uppercase tracking-wider">Ficha del Espacio en Alquiler</h4>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-black uppercase text-slate-600 mb-1">Tipo de Espacio</label>
+                          <select
+                            value={formData.tipoEspacio}
+                            onChange={(e) => setFormData({...formData, tipoEspacio: e.target.value as any})}
+                            className="w-full bg-white border border-amber-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 cursor-pointer"
+                          >
+                            <option value="salon">🎉 Salón de Eventos</option>
+                            <option value="parqueo">🚗 Parqueo Seguro</option>
+                            <option value="oficina">💼 Oficina / Módulo</option>
+                            <option value="otro">🏛️ Otro Espacio</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-black uppercase text-slate-600 mb-1">Capacidad</label>
+                          <input
+                            type="text"
+                            value={formData.capacidadPersonas}
+                            onChange={(e) => setFormData({...formData, capacidadPersonas: e.target.value})}
+                            placeholder="Ej. Hasta 250 personas"
+                            className="w-full bg-white border border-amber-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-black uppercase text-slate-600 mb-1">Superficie / Dimensiones</label>
+                          <input
+                            type="text"
+                            value={formData.dimensionesArea}
+                            onChange={(e) => setFormData({...formData, dimensionesArea: e.target.value})}
+                            placeholder="Ej. 220 m²"
+                            className="w-full bg-white border border-amber-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-black uppercase text-slate-600 mb-1">Tarifa Referencial</label>
+                          <input
+                            type="text"
+                            value={formData.tarifaReferencial}
+                            onChange={(e) => setFormData({...formData, tarifaReferencial: e.target.value})}
+                            placeholder="Ej. Q 1,500 por evento"
+                            className="w-full bg-white border border-amber-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-black uppercase text-slate-600 mb-1">Horarios & Disponibilidad</label>
+                          <input
+                            type="text"
+                            value={formData.disponibilidadHorario}
+                            onChange={(e) => setFormData({...formData, disponibilidadHorario: e.target.value})}
+                            placeholder="Ej. Lunes a Domingo"
+                            className="w-full bg-white border border-amber-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-black uppercase text-slate-600 mb-1">WhatsApp de Contacto</label>
+                          <input
+                            type="text"
+                            value={formData.telefonoContacto}
+                            onChange={(e) => setFormData({...formData, telefonoContacto: e.target.value})}
+                            placeholder="Ej. 50277612345"
+                            className="w-full bg-white border border-amber-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800"
+                          />
+                        </div>
+
+                        <div className="sm:col-span-2">
+                          <label className="block text-[10px] font-black uppercase text-slate-600 mb-1">Amenidades Incluidas (una por línea)</label>
+                          <textarea
+                            rows={2}
+                            value={formData.amenidadesText}
+                            onChange={(e) => setFormData({...formData, amenidadesText: e.target.value})}
+                            placeholder="Mesas y sillas&#10;Equipo de sonido&#10;Parqueo interno"
+                            className="w-full bg-white border border-amber-200 rounded-xl px-2.5 py-1.5 text-xs font-medium text-slate-800 resize-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Descripción / Biografía */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-black uppercase tracking-wider text-slate-600">
+                      {formData.categoria === 'Museo de Personajes' ? 'Biografía y Trayectoria *' : 'Descripción Detallada *'}
+                    </label>
+                    <textarea 
+                      rows={3}
+                      required
+                      value={formData.descripcion}
+                      onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all resize-none custom-scrollbar"
+                      placeholder="Escribe aquí la reseña..."
                     />
                   </div>
-                </div>
 
-                <div className="space-y-1">
-                  <label className="text-sm font-bold text-slate-700">Título / Nombre del Espacio *</label>
-                  <input 
-                    type="text" 
-                    required
-                    value={formData.titulo}
-                    onChange={(e) => setFormData({...formData, titulo: e.target.value})}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-medium"
-                    placeholder="Ej. Salón Principal de Eventos 'La Cueva'"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-sm font-bold text-slate-700">Fecha del Registro / Foto *</label>
-                  <input 
-                    type="date" 
-                    required
-                    value={formData.fecha}
-                    onChange={(e) => setFormData({...formData, fecha: e.target.value})}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-medium"
-                  />
-                </div>
-
-                <div className="md:col-span-2 space-y-1">
-                  <label className="text-sm font-bold text-slate-700">Categoría Temática *</label>
-                  <select 
-                    value={formData.categoria}
-                    onChange={(e) => setFormData({...formData, categoria: e.target.value})}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-medium cursor-pointer"
-                  >
-                    {CATEGORIAS_GALERIA.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* BLOQUE DE CONFIGURACIÓN: RENTAS, SALONES, PARQUEO Y OFICINAS */}
-                {formData.categoria === 'Rentas & Salones del Club' && (
-                  <div className="md:col-span-2 bg-gradient-to-br from-amber-50/90 to-amber-100/40 p-5 rounded-2xl border-2 border-amber-300/80 space-y-4">
-                    <h4 className="text-xs font-black text-amber-900 uppercase tracking-widest flex items-center space-x-2">
-                      <Building2 size={16} className="text-amber-700" />
-                      <span>🏰 Ficha Técnica del Espacio en Alquiler</span>
-                    </h4>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">Tipo de Instalación</label>
-                        <select
-                          value={formData.tipoEspacio}
-                          onChange={(e) => setFormData({...formData, tipoEspacio: e.target.value as any})}
-                          className="w-full bg-white border border-amber-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 cursor-pointer"
-                        >
-                          <option value="salon">🎉 Salón de Eventos Sociales / Corporativos</option>
-                          <option value="parqueo">🚗 Parqueo / Estacionamiento Seguro</option>
-                          <option value="oficina">💼 Oficina / Módulo Comercial</option>
-                          <option value="otro">🏛️ Otro Espacio Institucional</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">Capacidad Estimada</label>
-                        <input
-                          type="text"
-                          value={formData.capacidadPersonas}
-                          onChange={(e) => setFormData({...formData, capacidadPersonas: e.target.value})}
-                          placeholder="Ej. Hasta 250 personas / 18 vehículos"
-                          className="w-full bg-white border border-amber-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">Dimensiones / Superficie</label>
-                        <input
-                          type="text"
-                          value={formData.dimensionesArea}
-                          onChange={(e) => setFormData({...formData, dimensionesArea: e.target.value})}
-                          placeholder="Ej. 220 m² / 2 niveles"
-                          className="w-full bg-white border border-amber-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">Tarifa / Precio Referencial</label>
-                        <input
-                          type="text"
-                          value={formData.tarifaReferencial}
-                          onChange={(e) => setFormData({...formData, tarifaReferencial: e.target.value})}
-                          placeholder="Ej. Q 1,500 por evento / Cotización personalizada"
-                          className="w-full bg-white border border-amber-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">Horarios & Disponibilidad</label>
-                        <input
-                          type="text"
-                          value={formData.disponibilidadHorario}
-                          onChange={(e) => setFormData({...formData, disponibilidadHorario: e.target.value})}
-                          placeholder="Ej. Lunes a Domingo / Diurno y Nocturno"
-                          className="w-full bg-white border border-amber-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">Teléfono / WhatsApp de Contacto</label>
-                        <input
-                          type="text"
-                          value={formData.telefonoContacto}
-                          onChange={(e) => setFormData({...formData, telefonoContacto: e.target.value})}
-                          placeholder="Ej. 50277612345"
-                          className="w-full bg-white border border-amber-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
-                        />
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <label className="block text-xs font-bold text-slate-700 mb-1">Amenidades y Servicios Incluidos (una por línea)</label>
-                        <textarea
-                          rows={3}
-                          value={formData.amenidadesText}
-                          onChange={(e) => setFormData({...formData, amenidadesText: e.target.value})}
-                          placeholder="Mesas y sillas incluidas&#10;Equipo de sonido e iluminación&#10;Sanitarios para damas y caballeros&#10;Área de cocina / preparación de banquetes&#10;Parqueo interno seguro"
-                          className="w-full bg-white border border-amber-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 resize-none"
-                        />
-                      </div>
+                  {/* Contexto Premium (Opcional) */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black uppercase tracking-wider text-slate-600">
+                        Contexto Premium / Reseña Extendida
+                      </label>
+                      <span className="text-[10px] bg-yellow-100 text-yellow-800 font-bold px-2 py-0.5 rounded-md uppercase">
+                        Opcional
+                      </span>
                     </div>
-                  </div>
-                )}
-
-                {formData.categoria === 'Museo de Personajes' && (
-                  <div className="md:col-span-2 bg-amber-50/70 p-5 rounded-2xl border border-amber-200 space-y-4">
-                    <h4 className="text-xs font-black text-amber-900 uppercase tracking-widest flex items-center">
-                      🏛️ Ficha de Personaje Ilustre / Directiva
-                    </h4>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">Tipo de Personaje / Elemento</label>
-                        <select
-                          value={formData.tipoPersonaje}
-                          onChange={(e) => setFormData({...formData, tipoPersonaje: e.target.value as any})}
-                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
-                        >
-                          <option value="presidente">👑 Presidente Histórico</option>
-                          <option value="directiva">👥 Junta Directiva</option>
-                          <option value="relevante">⭐ Personaje Relevante</option>
-                          <option value="fundador">🏛️ Socio Fundador</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">Periodo de Servicio (Año / Rango)</label>
-                        <input
-                          type="text"
-                          value={formData.periodoServicio}
-                          onChange={(e) => setFormData({...formData, periodoServicio: e.target.value})}
-                          placeholder="Ej. 1952 - 1953"
-                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
-                        />
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <label className="block text-xs font-bold text-slate-700 mb-1">Puesto / Cargo Oficial</label>
-                        <input
-                          type="text"
-                          value={formData.puestoCargo}
-                          onChange={(e) => setFormData({...formData, puestoCargo: e.target.value})}
-                          placeholder="Ej. Presidente Fundador Honorario / Secretario de Directiva"
-                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
-                        />
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <label className="block text-xs font-bold text-slate-700 mb-1">Logros y Legado Destacados (un logro por línea)</label>
-                        <textarea
-                          rows={3}
-                          value={formData.logrosDestacadosText}
-                          onChange={(e) => setFormData({...formData, logrosDestacadosText: e.target.value})}
-                          placeholder="Escribe cada logro en una línea distinta..."
-                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 resize-none"
-                        />
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <label className="block text-xs font-bold text-slate-700 mb-1">Cita u Oración Honorífica</label>
-                        <input
-                          type="text"
-                          value={formData.citaHonorifica}
-                          onChange={(e) => setFormData({...formData, citaHonorifica: e.target.value})}
-                          placeholder='Ej. "El servicio a los desvalidos es nuestra razón de ser."'
-                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 italic"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="md:col-span-2 space-y-1">
-                  <label className="text-sm font-bold text-slate-700">Descripción Detallada *</label>
-                  <textarea 
-                    rows={3}
-                    value={formData.descripcion}
-                    onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-medium resize-none custom-scrollbar"
-                    placeholder="Descripción o detalles del salón/foto..."
-                  />
-                </div>
-
-                <div className="md:col-span-2 space-y-1">
-                  <label className="text-sm font-bold text-slate-700 flex items-center">
-                    Contexto Premium / Reseña Adicional
-                    <span className="ml-2 text-[10px] bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-md uppercase tracking-wider">Opcional</span>
-                  </label>
-                  <p className="text-xs text-slate-500 mb-2">Información que se revela en la ficha ampliada o reverso de foto.</p>
-                  <textarea 
-                    rows={3}
-                    value={formData.contextoPremium}
-                    onChange={(e) => setFormData({...formData, contextoPremium: e.target.value})}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:bg-white transition-all font-medium resize-none custom-scrollbar"
-                    placeholder="Escribe aquí notas adicionales, restricciones o detalles históricos..."
-                  />
-                </div>
-                
-                <div className="md:col-span-2 pt-2">
-                  <div className="flex items-start space-x-3 bg-slate-50/50 p-4 rounded-2xl border border-slate-150 text-left">
-                    <input 
-                      type="checkbox" 
-                      id="edit-esFondoPantalla" 
-                      checked={formData.esFondoPantalla} 
-                      onChange={e => setFormData({...formData, esFondoPantalla: e.target.checked})}
-                      className="w-5 h-5 rounded text-blue-900 border-slate-300 focus:ring-blue-900 mt-0.5 shrink-0 cursor-pointer"
+                    <textarea 
+                      rows={2}
+                      value={formData.contextoPremium}
+                      onChange={(e) => setFormData({...formData, contextoPremium: e.target.value})}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:bg-white transition-all resize-none custom-scrollbar"
+                      placeholder="Información adicional visible al girar la tarjeta..."
                     />
-                    <div>
-                      <label htmlFor="edit-esFondoPantalla" className="text-sm font-bold text-slate-700 select-none cursor-pointer block">Establecer como Anuncio Destacado (Pop-up)</label>
-                      <p className="text-xs text-slate-500 font-medium mt-0.5">Esta imagen se abrirá automáticamente en pantalla completa para los visitantes al entrar al sitio web.</p>
-                    </div>
                   </div>
+
                 </div>
               </div>
 
-              <div className="pt-6 border-t border-slate-100 flex justify-end space-x-3">
+              {/* Footer Fijo con Botones */}
+              <div className="px-6 sm:px-8 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between flex-shrink-0">
                 <button 
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-6 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl font-bold text-xs text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
                   disabled={isUploading}
                 >
                   Cancelar
                 </button>
+                
                 <button 
                   type="submit"
                   disabled={isUploading}
-                  className="flex items-center px-8 py-3 bg-blue-900 hover:bg-blue-800 text-white rounded-xl font-bold transition-all shadow-md disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
+                  className="flex items-center px-7 py-2.5 bg-gradient-to-r from-blue-950 to-blue-900 hover:from-blue-900 hover:to-blue-800 text-white rounded-xl font-black text-xs transition-all shadow-md shadow-blue-950/20 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {isUploading ? (
                     <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                       Guardando...
                     </>
                   ) : (
                     <>
-                      <Save size={20} className="mr-2" />
-                      {editingItem ? 'Guardar Cambios' : 'Publicar Espacio / Foto'}
+                      <Save size={16} className="mr-1.5" />
+                      {editingItem ? 'Guardar Cambios' : 'Publicar'}
                     </>
                   )}
                 </button>
               </div>
+
             </form>
           </div>
         </div>
