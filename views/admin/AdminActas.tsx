@@ -2149,24 +2149,68 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
             )}
           </div>
 
-          {/* AI Processing Overlay */}
+          {/* Modal Secretaría Virtual - Procesamiento Protocolario */}
           {isPolishingWithAI && (
-            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-              <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-purple-100 text-center space-y-4 animate-in zoom-in-95 duration-200">
-                <div className="w-16 h-16 bg-gradient-to-tr from-purple-700 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-purple-500/30 text-white relative">
-                  <Sparkles size={28} className="animate-spin text-amber-300" style={{ animationDuration: '3s' }} />
+            <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+              <div className="bg-white rounded-[2.5rem] p-6 sm:p-9 max-w-md w-full shadow-2xl border-2 border-amber-300/80 text-center space-y-5 animate-in zoom-in-95 duration-200 relative overflow-hidden">
+                
+                {/* Franja superior tricolor leonística */}
+                <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-blue-900 via-amber-400 to-blue-900"></div>
+
+                {/* Emblema Oficial con Animación */}
+                <div className="relative mx-auto w-24 h-24 flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full bg-amber-400/20 animate-ping" style={{ animationDuration: '2.5s' }}></div>
+                  <div className="absolute inset-1 rounded-full bg-gradient-to-tr from-blue-900 to-blue-800 p-1 shadow-lg shadow-blue-900/30 flex items-center justify-center">
+                    <img 
+                      src="/images/logo.png" 
+                      alt="Lions Club Logo" 
+                      className="w-16 h-16 object-contain drop-shadow-md transform hover:scale-105 transition-transform" 
+                    />
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 bg-amber-400 text-blue-950 p-1.5 rounded-full shadow-md border-2 border-white animate-bounce">
+                    <Sparkles size={14} className="text-blue-950" />
+                  </div>
                 </div>
+
+                {/* Títulos y Jerarquía */}
                 <div>
-                  <h4 className="text-lg font-black text-slate-800">
-                    Perfeccionando con Gemini IA
+                  <span className="inline-block px-3 py-1 bg-amber-100/80 text-blue-950 text-[10px] font-black uppercase tracking-widest rounded-full mb-2 border border-amber-300/60">
+                    Asistente de Protocolo Notarial
+                  </span>
+                  <h4 className="text-xl font-black text-blue-950 tracking-tight">
+                    Secretaría Virtual
                   </h4>
-                  <p className="text-xs text-slate-500 font-medium mt-1.5 leading-relaxed">
-                    Corrigiendo ortografía y gramática, formalizando la redacción del debate con solemnidad Leonística y estructurando resoluciones...
+                  <p className="text-xs text-slate-500 font-semibold mt-1">
+                    Club de Leones Quetzaltenango • Distrito B-4
                   </p>
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-gradient-to-r from-purple-600 via-indigo-600 to-amber-400 h-full rounded-full animate-pulse w-full"></div>
+
+                {/* Descripción de Acciones en Ejecución */}
+                <div className="bg-slate-50 border border-slate-200/70 rounded-2xl p-4 text-left space-y-2">
+                  <div className="flex items-center space-x-2 text-xs font-bold text-slate-700">
+                    <CheckCircle2 size={15} className="text-amber-500 flex-shrink-0 animate-pulse" />
+                    <span>Revisando ortografía, gramática y sintaxis</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-xs font-bold text-slate-700">
+                    <CheckCircle2 size={15} className="text-amber-500 flex-shrink-0 animate-pulse" />
+                    <span>Estandarizando menciones C.L. y solemnidad</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-xs font-bold text-slate-700">
+                    <CheckCircle2 size={15} className="text-amber-500 flex-shrink-0 animate-pulse" />
+                    <span>Estructurando redacción de debates y acuerdos</span>
+                  </div>
                 </div>
+
+                {/* Barra de Progreso Leonística */}
+                <div className="space-y-1.5">
+                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden p-0.5 border border-slate-200">
+                    <div className="bg-gradient-to-r from-blue-900 via-amber-400 to-blue-900 h-full rounded-full animate-pulse w-full"></div>
+                  </div>
+                  <p className="text-[11px] font-black text-amber-700 uppercase tracking-wider animate-pulse">
+                    « Nosotros Servimos • We Serve »
+                  </p>
+                </div>
+
               </div>
             </div>
           )}
