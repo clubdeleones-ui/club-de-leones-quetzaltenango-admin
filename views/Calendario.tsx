@@ -770,48 +770,72 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                 </div>
             ) : (
                 /* Custom Monthly Grid Calendar View */
-                <div className="space-y-6">
-                    <div className="bg-white p-4 md:p-8 rounded-[2.5rem] shadow-xl border border-slate-100 relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500" />
+                <div className="space-y-8">
+                    <div className="bg-white p-4 sm:p-6 md:p-8 rounded-[2.5rem] shadow-xl border border-slate-150 relative overflow-hidden text-left">
+                        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-amber-500 via-yellow-400 to-blue-900" />
 
-                        {/* Calendar Header */}
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-                            <div>
-                                <h3 className="font-extrabold text-2xl text-slate-800">Calendario de Actividades y Salón</h3>
-                                <p className="text-xs text-slate-500 mt-1">
-                                  Visualiza ocupación de salón, actividades externas y fechas apartadas en tiempo real.
+                        {/* Calendar Top Controls & Header */}
+                        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5 mb-6 pt-2">
+                            <div className="space-y-1">
+                                <div className="inline-flex items-center space-x-2 px-3 py-1 bg-amber-50 border border-amber-200/80 rounded-full text-amber-900 text-xs font-black">
+                                    <CalendarCheck size={14} className="text-amber-600" />
+                                    <span>Programación Oficial & Ocupación de Sede</span>
+                                </div>
+                                <h3 className="font-black text-2xl sm:text-3xl text-slate-900 tracking-tight">
+                                    Calendario de Actividades & Salón
+                                </h3>
+                                <p className="text-xs sm:text-sm text-slate-500 font-medium">
+                                    Consulta en tiempo real eventos comunitarios, sesiones solemnes y disponibilidad de salones.
                                 </p>
                             </div>
-                            <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end">
-                                <button
-                                    type="button"
-                                    onClick={() => handleOpenActividadModal()}
-                                    className="px-4 py-2.5 bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-950 hover:from-blue-800 hover:to-indigo-800 text-white text-xs font-black rounded-2xl shadow-md transition-all active:scale-95 flex items-center space-x-1.5 cursor-pointer"
-                                >
-                                    <Plus size={15} />
-                                    <span>Programar Actividad</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => handleOpenReserveModal()}
-                                    className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-black rounded-2xl shadow-md transition-all active:scale-95 flex items-center space-x-1.5 cursor-pointer"
-                                >
-                                    <Building size={14} />
-                                    <span>Apartar Salón</span>
-                                </button>
-                                <div className="flex items-center space-x-1.5 bg-slate-50 p-1.5 rounded-2xl border border-slate-150">
+
+                            {/* Action Buttons & Month Navigation */}
+                            <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-between lg:justify-end">
+                                <div className="flex items-center gap-2">
                                     <button
+                                        type="button"
+                                        onClick={() => handleOpenActividadModal()}
+                                        className="px-4 py-2.5 bg-gradient-to-r from-blue-900 via-blue-950 to-indigo-950 hover:from-blue-800 hover:to-indigo-900 text-white text-xs font-black rounded-2xl shadow-md transition-all active:scale-95 flex items-center space-x-1.5 cursor-pointer"
+                                    >
+                                        <Plus size={15} />
+                                        <span>Programar Actividad</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleOpenReserveModal()}
+                                        className="px-4 py-2.5 bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 hover:from-amber-500 hover:to-amber-600 text-white text-xs font-black rounded-2xl shadow-md transition-all active:scale-95 flex items-center space-x-1.5 cursor-pointer"
+                                    >
+                                        <Building size={14} className="text-amber-200" />
+                                        <span>Apartar Salón</span>
+                                    </button>
+                                </div>
+
+                                {/* Month Navigation Box */}
+                                <div className="flex items-center space-x-1 bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200 shadow-inner">
+                                    <button
+                                        type="button"
                                         onClick={handlePrevMonth}
-                                        className="p-2 hover:bg-white hover:text-blue-900 rounded-xl transition-all shadow-sm active:scale-90"
+                                        className="p-2 hover:bg-white hover:text-blue-900 text-slate-700 rounded-xl transition-all shadow-xs active:scale-90 cursor-pointer"
+                                        title="Mes Anterior"
                                     >
                                         <ChevronLeft size={16} />
                                     </button>
-                                    <span className="text-xs sm:text-sm font-black text-slate-800 px-3 min-w-[110px] text-center select-none uppercase tracking-wide">
-                                        {monthNames[month]} {year}
-                                    </span>
                                     <button
+                                        type="button"
+                                        onClick={() => {
+                                            setCurrentDate(new Date());
+                                            setSelectedDate(new Date());
+                                        }}
+                                        className="text-xs font-black text-slate-800 px-3 py-1 hover:bg-white rounded-lg transition-colors cursor-pointer select-none uppercase tracking-wide min-w-[130px] text-center"
+                                        title="Clic para volver a Hoy"
+                                    >
+                                        {monthNames[month]} {year}
+                                    </button>
+                                    <button
+                                        type="button"
                                         onClick={handleNextMonth}
-                                        className="p-2 hover:bg-white hover:text-blue-900 rounded-xl transition-all shadow-sm active:scale-90"
+                                        className="p-2 hover:bg-white hover:text-blue-900 text-slate-700 rounded-xl transition-all shadow-xs active:scale-90 cursor-pointer"
+                                        title="Mes Siguiente"
                                     >
                                         <ChevronRight size={16} />
                                     </button>
@@ -819,21 +843,32 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                             </div>
                         </div>
 
-                        {/* Visual Legend */}
-                        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-slate-50/70 rounded-2xl border border-slate-150 text-[10px] font-extrabold text-slate-600">
-                            <span className="text-slate-400 uppercase tracking-widest mr-1">Simbología:</span>
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-900 text-white">🏛️ En Salón</span>
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-900 text-white">📍 Exterior</span>
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500 text-white">⏳ Salón Apartado</span>
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-600 text-white">✅ Salón Reservado</span>
+                        {/* Luxury Visual Legend */}
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-6 p-3.5 bg-slate-50/90 rounded-2xl border border-slate-200 text-xs font-bold text-slate-700">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">
+                                Identificadores:
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-100 text-purple-950 border border-purple-200 shadow-2xs font-extrabold">
+                                🏛️ Actividad en Salón
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-100 text-blue-950 border border-blue-200 shadow-2xs font-extrabold">
+                                📍 Actividad Exterior
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-950 border border-emerald-200 shadow-2xs font-extrabold">
+                                🟢 Salón Confirmado
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-100 text-amber-950 border border-amber-200 shadow-2xs font-extrabold">
+                                ⏳ Salón Apartado
+                            </span>
                         </div>
 
-                        {/* Calendar Grid */}
-                        <div className="grid grid-cols-7 gap-1 md:gap-2 mb-4">
+                        {/* Calendar Grid Container */}
+                        <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2">
                             {/* Days of week */}
-                            {["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"].map((dName, idx) => (
-                                <div key={idx} className="text-center py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                    {dName}
+                            {["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"].map((dName, idx) => (
+                                <div key={idx} className="text-center py-2.5 text-[11px] font-black text-slate-500 uppercase tracking-widest bg-slate-50 rounded-xl border border-slate-100">
+                                    <span className="hidden md:inline">{dName}</span>
+                                    <span className="md:hidden">{dName.slice(0, 3)}</span>
                                 </div>
                             ))}
 
@@ -841,7 +876,7 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                             {Array.from({ length: firstDayIndex }).map((_, idx) => {
                                 const dNum = prevTotalDays - firstDayIndex + idx + 1;
                                 return (
-                                    <div key={`prev-${idx}`} className="bg-slate-50/40 border border-slate-100 rounded-2xl p-2 md:p-3 min-h-[70px] md:min-h-[90px] text-left opacity-30 select-none">
+                                    <div key={`prev-${idx}`} className="bg-slate-50/40 border border-slate-150/60 rounded-2xl p-2 min-h-[90px] sm:min-h-[115px] md:min-h-[135px] text-left opacity-30 select-none">
                                         <span className="text-xs font-bold text-slate-400">{dNum}</span>
                                     </div>
                                 );
@@ -854,98 +889,162 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                 const isSelected = selectedDate && selectedDate.getDate() === dNum && selectedDate.getMonth() === month && selectedDate.getFullYear() === year;
                                 const dayActivities = getActivitiesForDay(dNum);
                                 const dayReservations = getSalonReservationsForDay(dNum);
-                                const hasOccupancy = dayActivities.length > 0 || dayReservations.length > 0;
+                                const totalEventsCount = dayActivities.length + dayReservations.length;
+                                const hasOccupancy = totalEventsCount > 0;
+
+                                // Combine items for unified presentation
+                                const allDayItems: Array<{ type: 'reservation' | 'activity'; data: any }> = [
+                                    ...dayReservations.map(res => ({ type: 'reservation' as const, data: res })),
+                                    ...dayActivities.map(act => ({ type: 'activity' as const, data: act }))
+                                ];
 
                                 return (
                                     <button
                                         key={`curr-${idx}`}
                                         onClick={() => {
                                             setSelectedDate(new Date(year, month, dNum));
+                                        }}
+                                        onDoubleClick={() => {
+                                            setSelectedDate(new Date(year, month, dNum));
                                             setIsDayAvailabilityModalOpen(true);
                                         }}
-                                        className={`border rounded-2xl p-1.5 md:p-2.5 min-h-[85px] md:min-h-[105px] text-left transition-all flex flex-col justify-between hover:border-blue-900/50 hover:shadow-md cursor-pointer w-full ${
+                                        className={`group relative border rounded-2xl p-2 sm:p-2.5 min-h-[95px] sm:min-h-[120px] md:min-h-[140px] text-left transition-all flex flex-col justify-between hover:shadow-lg cursor-pointer w-full overflow-hidden ${
                                             isSelected 
-                                                ? 'bg-blue-900/5 border-blue-900 shadow-md shadow-blue-900/5' 
+                                                ? 'bg-blue-50/40 border-blue-600 ring-2 ring-blue-600/30 shadow-md' 
                                                 : isToday
-                                                    ? 'bg-yellow-50/50 border-yellow-500/50'
-                                                    : 'bg-white border-slate-150'
+                                                    ? 'bg-amber-50/30 border-amber-400/80 shadow-xs'
+                                                    : hasOccupancy
+                                                        ? 'bg-white hover:bg-slate-50/80 border-slate-200'
+                                                        : 'bg-white hover:bg-slate-50/50 border-slate-150'
                                         }`}
                                     >
-                                        <div className="flex justify-between items-center w-full">
-                                            <span className={`text-xs md:text-sm font-black ${
-                                                isSelected 
-                                                    ? 'text-blue-900' 
-                                                    : isToday
-                                                        ? 'text-yellow-600'
-                                                        : 'text-slate-800'
-                                            }`}>
-                                                {dNum}
-                                            </span>
-                                            {isToday && (
-                                                <span className="w-2 h-2 bg-yellow-500 rounded-full shrink-0" title="Hoy" />
+                                        {/* Day Cell Header */}
+                                        <div className="flex justify-between items-center w-full mb-1">
+                                            <div className="flex items-center space-x-1.5">
+                                                <span className={`text-xs sm:text-sm font-black transition-colors ${
+                                                    isSelected 
+                                                        ? 'text-blue-950 font-black' 
+                                                        : isToday
+                                                            ? 'text-amber-800 font-black'
+                                                            : 'text-slate-800'
+                                                }`}>
+                                                    {dNum}
+                                                </span>
+                                                {isToday && (
+                                                    <span className="bg-amber-500 text-slate-950 text-[9px] font-black px-1.5 py-0.2 rounded-md shadow-2xs uppercase tracking-tighter">
+                                                        Hoy
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* Badge count when there are 2 or more activities */}
+                                            {totalEventsCount >= 2 && (
+                                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200 shadow-2xs">
+                                                    {totalEventsCount} ev.
+                                                </span>
                                             )}
                                         </div>
                                         
-                                        {/* Activity and Reservation Indicators (Señalamiento Fuerte) */}
+                                        {/* Events Area (Luxury Pills / Micro-Cards) */}
                                         {hasOccupancy ? (
-                                            <div className="w-full space-y-1 mt-1">
-                                                {/* Desktop/Tablet Labels */}
-                                                <div className="hidden sm:block space-y-1">
-                                                    {/* Salon Reservations */}
-                                                    {dayReservations.map((res, rIdx) => (
-                                                        <div 
-                                                            key={`res-${rIdx}`} 
-                                                            className={`text-[8.5px] font-black truncate px-1 py-0.5 rounded border leading-none text-left flex items-center gap-0.5 shadow-2xs ${
-                                                                res.estado === 'Aprobada'
-                                                                    ? 'bg-emerald-600 text-white border-emerald-700'
-                                                                    : 'bg-amber-500 text-white border-amber-600 animate-pulse'
-                                                            }`}
-                                                            title={`Salón ${res.estado}: ${res.salonNombreSolicitante || 'Reserva'} (${res.salonHoraInicio || ''}-${res.salonHoraFin || ''})`}
-                                                        >
-                                                            <span>{res.estado === 'Aprobada' ? '🟢' : '⏳'}</span>
-                                                            <span className="truncate">{res.estado === 'Aprobada' ? 'Salón Reservado' : 'Apartado (Socio)'}</span>
-                                                        </div>
-                                                    ))}
+                                            <div className="w-full space-y-1.5 flex-1 flex flex-col justify-start">
+                                                
+                                                {/* Desktop / Tablet View */}
+                                                <div className="hidden sm:flex flex-col space-y-1 flex-1">
+                                                    {/* Render up to 2 top items cleanly */}
+                                                    {allDayItems.slice(0, 2).map((item, itemIdx) => {
+                                                        if (item.type === 'reservation') {
+                                                            const res = item.data;
+                                                            const isAprobada = res.estado === 'Aprobada';
+                                                            return (
+                                                                <div 
+                                                                    key={`res-${itemIdx}`} 
+                                                                    className={`px-1.5 py-1 rounded-lg border-l-[3px] border-y border-r text-[10px] font-extrabold flex items-center gap-1 shadow-2xs transition-all ${
+                                                                        isAprobada
+                                                                            ? 'bg-emerald-50 text-emerald-950 border-emerald-600 border-y-emerald-200 border-r-emerald-200'
+                                                                            : 'bg-amber-50 text-amber-950 border-amber-500 border-y-amber-200 border-r-amber-200 animate-pulse'
+                                                                    }`}
+                                                                    title={`Salón ${res.estado}: ${res.nombre || 'Reserva'} (${res.salonHoraInicio || ''} - ${res.salonHoraFin || ''})`}
+                                                                >
+                                                                    <span className="shrink-0">{isAprobada ? '🟢' : '⏳'}</span>
+                                                                    <span className="truncate leading-tight">
+                                                                        {isAprobada ? 'Salón Reservado' : 'Salón Apartado'}
+                                                                    </span>
+                                                                </div>
+                                                            );
+                                                        } else {
+                                                            const act = item.data;
+                                                            const enSalon = isActividadEnSalon(act);
+                                                            
+                                                            // Extraer hora si está disponible
+                                                            let horaStr = '';
+                                                            try {
+                                                                const parts = act.fecha.split(' ');
+                                                                if (parts.length > 1) horaStr = parts[1].slice(0, 5);
+                                                            } catch {}
 
-                                                    {/* Activities */}
-                                                    {dayActivities.slice(0, 2).map((act, actIdx) => {
-                                                        const enSalon = isActividadEnSalon(act);
-                                                        return (
-                                                            <div 
-                                                                key={`act-${actIdx}`} 
-                                                                className={`text-[8.5px] font-black truncate px-1 py-0.5 rounded border leading-none text-left flex items-center gap-0.5 shadow-2xs ${
-                                                                    enSalon
-                                                                        ? 'bg-purple-900 text-white border-purple-950'
-                                                                        : 'bg-blue-900 text-white border-blue-950'
-                                                                }`}
-                                                                title={`${act.titulo} (${enSalon ? 'En Salón' : 'Exterior'})`}
-                                                            >
-                                                                <span>{enSalon ? '🏛️' : '📍'}</span>
-                                                                <span className="truncate">{act.titulo}</span>
-                                                            </div>
-                                                        );
+                                                            return (
+                                                                <div 
+                                                                    key={`act-${itemIdx}`} 
+                                                                    className={`px-1.5 py-1 rounded-lg border-l-[3px] border-y border-r text-[10px] font-extrabold flex items-center gap-1 shadow-2xs group/pill transition-all ${
+                                                                        enSalon
+                                                                            ? 'bg-purple-50 hover:bg-purple-100/80 text-purple-950 border-purple-700 border-y-purple-200 border-r-purple-200'
+                                                                            : 'bg-blue-50 hover:bg-blue-100/80 text-blue-950 border-blue-700 border-y-blue-200 border-r-blue-200'
+                                                                    }`}
+                                                                    title={`${act.titulo} - ${act.lugar || 'Club de Leones'}`}
+                                                                >
+                                                                    <span className="shrink-0 text-[10px]">{enSalon ? '🏛️' : '📍'}</span>
+                                                                    {horaStr && (
+                                                                        <span className="font-mono text-[9px] opacity-75 shrink-0">{horaStr}</span>
+                                                                    )}
+                                                                    <span className="truncate leading-tight">{act.titulo}</span>
+                                                                </div>
+                                                            );
+                                                        }
                                                     })}
 
-                                                    {dayActivities.length + dayReservations.length > 3 && (
-                                                        <div className="text-[8px] font-black text-slate-500 pl-0.5">
-                                                            +{dayActivities.length + dayReservations.length - 3} más
+                                                    {/* +X More Indicator */}
+                                                    {totalEventsCount > 2 && (
+                                                        <div 
+                                                            className="mt-auto pt-0.5"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedDate(new Date(year, month, dNum));
+                                                                setIsDayAvailabilityModalOpen(true);
+                                                            }}
+                                                        >
+                                                            <div className="bg-gradient-to-r from-amber-100 via-yellow-100 to-amber-200 hover:from-amber-200 hover:to-yellow-200 text-amber-950 font-black text-[9px] px-1.5 py-0.5 rounded-md border border-amber-300 shadow-2xs flex items-center justify-center space-x-1 cursor-pointer transition-transform active:scale-95">
+                                                                <Sparkles size={10} className="text-amber-700" />
+                                                                <span>+{totalEventsCount - 2} actividades más</span>
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </div>
 
-                                                {/* Mobile Indicator Dots with High-Visibility Colors */}
-                                                <div className="sm:hidden flex justify-center gap-1 flex-wrap pt-1">
-                                                    {dayReservations.map((res, rIdx) => (
-                                                        <span key={`res-m-${rIdx}`} className={`w-2.5 h-2.5 rounded-full shadow-2xs ${res.estado === 'Aprobada' ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
+                                                {/* Mobile Indicators */}
+                                                <div className="sm:hidden flex flex-col space-y-1 mt-auto">
+                                                    {allDayItems.slice(0, 2).map((item, mIdx) => (
+                                                        <div 
+                                                            key={`m-${mIdx}`} 
+                                                            className={`text-[8.5px] font-black px-1 py-0.5 rounded truncate border leading-none ${
+                                                                item.type === 'reservation'
+                                                                    ? item.data.estado === 'Aprobada' ? 'bg-emerald-100 text-emerald-950 border-emerald-300' : 'bg-amber-100 text-amber-950 border-amber-300'
+                                                                    : isActividadEnSalon(item.data) ? 'bg-purple-100 text-purple-950 border-purple-300' : 'bg-blue-100 text-blue-950 border-blue-300'
+                                                            }`}
+                                                        >
+                                                            {item.type === 'reservation' ? 'Salón' : item.data.titulo}
+                                                        </div>
                                                     ))}
-                                                    {dayActivities.map((act, actIdx) => (
-                                                        <span key={`act-m-${actIdx}`} className={`w-2.5 h-2.5 rounded-full shadow-2xs ${isActividadEnSalon(act) ? 'bg-purple-700' : 'bg-blue-700'}`} />
-                                                    ))}
+                                                    {totalEventsCount > 2 && (
+                                                        <span className="text-[8px] font-black text-amber-800 bg-amber-100 rounded px-1 text-center">
+                                                            +{totalEventsCount - 2} más
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div className="hidden sm:block text-[8px] font-bold text-slate-300 group-hover:text-slate-400 transition-colors mt-auto">
-                                                Disponible
+                                            <div className="hidden sm:flex items-center text-[9px] font-bold text-slate-300 group-hover:text-slate-500 transition-colors mt-auto pt-2">
+                                                <span>Libre</span>
                                             </div>
                                         )}
                                     </button>
@@ -956,7 +1055,7 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                             {Array.from({ length: 42 - (firstDayIndex + totalDays) }).map((_, idx) => {
                                 const dNum = idx + 1;
                                 return (
-                                    <div key={`next-${idx}`} className="bg-slate-50/40 border border-slate-100 rounded-2xl p-2 md:p-3 min-h-[70px] md:min-h-[90px] text-left opacity-30 select-none">
+                                    <div key={`next-${idx}`} className="bg-slate-50/40 border border-slate-150/60 rounded-2xl p-2 min-h-[90px] sm:min-h-[115px] md:min-h-[135px] text-left opacity-30 select-none">
                                         <span className="text-xs font-bold text-slate-400">{dNum}</span>
                                     </div>
                                 );
@@ -964,114 +1063,229 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                         </div>
                     </div>
 
-                    {/* Activities List for Selected Day */}
+                    {/* Rich Selected Day Detail Agenda View */}
                     {selectedDate && (
-                        <div className="space-y-4 text-left animate-in fade-in slide-in-from-top-2 duration-300">
-                            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                                <h4 className="font-extrabold text-lg text-slate-800 flex items-center gap-2">
-                                    <CalendarIcon className="text-blue-900" size={20} />
-                                    <span>Actividades para el {selectedDate.getDate()} de {monthNames[selectedDate.getMonth()]}</span>
-                                </h4>
-                                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 bg-slate-100 px-3 py-1 rounded-full">
-                                    {getActivitiesForDay(selectedDate.getDate()).length} {getActivitiesForDay(selectedDate.getDate()).length === 1 ? 'actividad' : 'actividades'}
-                                </span>
+                        <div className="space-y-6 text-left animate-in fade-in duration-300">
+                            
+                            {/* Selected Day Header Card */}
+                            <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 text-white rounded-[2rem] p-6 sm:p-8 shadow-xl border border-blue-500/30 relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                                <div className="space-y-1 relative z-10">
+                                    <div className="inline-flex items-center space-x-2 bg-amber-400/20 text-amber-300 border border-amber-400/40 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider">
+                                        <CalendarIcon size={13} />
+                                        <span>Agenda Seleccionada</span>
+                                    </div>
+                                    <h4 className="font-black text-2xl sm:text-3xl text-white tracking-tight">
+                                        {selectedDate.getDate()} de {monthNames[selectedDate.getMonth()]} de {selectedDate.getFullYear()}
+                                    </h4>
+                                    <p className="text-xs sm:text-sm text-slate-300 font-medium">
+                                        {getActivitiesForDay(selectedDate.getDate()).length} {getActivitiesForDay(selectedDate.getDate()).length === 1 ? 'actividad programada' : 'actividades programadas'} • {getSalonReservationsForDay(selectedDate.getDate()).length} {getSalonReservationsForDay(selectedDate.getDate()).length === 1 ? 'reserva de salón' : 'reservas de salón'}
+                                    </p>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-2 relative z-10">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleOpenActividadModal(selectedDate.getDate())}
+                                        className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-black rounded-xl transition-all cursor-pointer flex items-center space-x-1.5"
+                                    >
+                                        <Plus size={14} />
+                                        <span>Añadir Actividad</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleOpenReserveModal(selectedDate.getDate())}
+                                        className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black rounded-xl transition-all shadow-md cursor-pointer flex items-center space-x-1.5"
+                                    >
+                                        <Building size={14} />
+                                        <span>Apartar Salón</span>
+                                    </button>
+                                </div>
                             </div>
 
-                            {getActivitiesForDay(selectedDate.getDate()).length === 0 ? (
-                                <div className="bg-slate-50/50 border border-slate-150 rounded-3xl p-12 text-center text-slate-450 font-bold italic">
-                                    No hay actividades programadas para este día.
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {getActivitiesForDay(selectedDate.getDate()).map(act => {
-                                        const dateObj = new Date(act.fecha.replace(' ', 'T'));
-                                        const timeStr = !isNaN(dateObj.getTime()) 
-                                            ? dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                            : '';
-                                            
-                                        return (
-                                            <div key={act.id} className="bg-white rounded-3xl border border-slate-150 shadow-lg p-6 flex flex-col justify-between hover:shadow-xl transition-all space-y-4">
-                                                <div className="space-y-3">
-                                                    <div className="flex flex-wrap gap-2 items-center justify-between">
-                                                        <span className="text-[9px] bg-blue-50 text-blue-900 border border-blue-150 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                                                            {act.publica ? 'Pública' : 'Privada'}
-                                                        </span>
-                                                        {timeStr && (
-                                                            <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
-                                                                <Clock size={12} />
-                                                                {timeStr}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    
-                                                    <h5 className="font-extrabold text-lg text-slate-800 leading-snug">{act.titulo}</h5>
-                                                    <p className="text-xs text-slate-500 font-bold flex items-center gap-1.5">
-                                                        <MapPin size={13} className="text-blue-900" />
-                                                        <span>{act.lugar}</span>
-                                                    </p>
-                                                    {act.vestimenta && (
-                                                        <p className="text-xs text-slate-500 font-bold flex items-center gap-1.5">
-                                                            <Shirt size={13} className="text-indigo-600" />
-                                                            <span>Vestimenta: <span className="text-indigo-900 font-extrabold capitalize">{act.vestimenta}</span></span>
-                                                        </p>
-                                                    )}
-                                                    <p className="text-slate-600 text-xs leading-relaxed font-medium line-clamp-3">{act.descripcion}</p>
-                                                </div>
+                            {/* Detailed List for the Day */}
+                            {(() => {
+                                const dayActivities = getActivitiesForDay(selectedDate.getDate());
+                                const dayReservations = getSalonReservationsForDay(selectedDate.getDate());
 
-                                                <div className="space-y-2 pt-3 border-t border-slate-100">
-                                                    {/* Cost info */}
-                                                    {((act.costoSocio !== undefined && act.costoSocio > 0) || (act.costoInvitado !== undefined && act.costoInvitado > 0)) && (
-                                                        <div className="flex flex-wrap gap-1.5 mb-2">
-                                                            <span className="text-[9px] bg-slate-50 text-slate-500 border border-slate-200 px-2 py-0.5 rounded font-bold">
-                                                                Socio: {act.costoSocio ? `Q${act.costoSocio.toFixed(2)}` : 'Gratis'}
-                                                            </span>
-                                                            <span className="text-[9px] bg-slate-50 text-slate-500 border border-slate-200 px-2 py-0.5 rounded font-bold">
-                                                                Invitado: {act.costoInvitado ? `Q${act.costoInvitado.toFixed(2)}` : 'Gratis'}
-                                                            </span>
+                                if (dayActivities.length === 0 && dayReservations.length === 0) {
+                                    return (
+                                        <div className="bg-white border-2 border-dashed border-slate-200 rounded-[2rem] p-12 text-center space-y-3 shadow-xs">
+                                            <CalendarCheck size={40} className="mx-auto text-slate-300" />
+                                            <h5 className="font-extrabold text-slate-700 text-base">No hay actividades ni reservas para esta fecha</h5>
+                                            <p className="text-xs text-slate-400 font-medium max-w-md mx-auto">
+                                                Las instalaciones del salón se encuentran completamente disponibles. Puedes programar una actividad del club o solicitar el salón.
+                                            </p>
+                                        </div>
+                                    );
+                                }
+
+                                return (
+                                    <div className="space-y-6">
+                                        
+                                        {/* Reservations Section if any */}
+                                        {dayReservations.length > 0 && (
+                                            <div className="space-y-3">
+                                                <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center space-x-1.5">
+                                                    <Building size={14} className="text-amber-600" />
+                                                    <span>Ocupación de Instalaciones del Salón ({dayReservations.length})</span>
+                                                </h5>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    {dayReservations.map((res, idx) => (
+                                                        <div 
+                                                            key={`res-card-${idx}`}
+                                                            className={`p-5 rounded-2xl border shadow-xs space-y-2.5 ${
+                                                                res.estado === 'Aprobada'
+                                                                    ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
+                                                                    : 'bg-amber-50/70 border-amber-200 text-amber-950'
+                                                            }`}
+                                                        >
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-xs font-black flex items-center gap-1.5">
+                                                                    {res.estado === 'Aprobada' ? '🟢 Salón Reservado (Confirmado)' : '⏳ Salón Apartado (En Revisión)'}
+                                                                </span>
+                                                                <span className="text-[10px] uppercase font-black px-2.5 py-0.5 rounded-full bg-white/80 border border-slate-200/50 shadow-2xs">
+                                                                    {res.salonEsSocio ? 'Socio' : 'Público'}
+                                                                </span>
+                                                            </div>
+                                                            <div className="text-xs space-y-1 font-medium text-slate-700">
+                                                                <div><strong className="text-slate-900">Evento:</strong> {res.nombre || 'Alquiler de Instalaciones'}</div>
+                                                                <div><strong className="text-slate-900">Horario:</strong> {res.salonHoraInicio || '00:00'} a {res.salonHoraFin || '00:00'}</div>
+                                                                <div><strong className="text-slate-900">Responsable:</strong> {res.salonNombreSolicitante || res.usuarioCreador || 'Socio Solicitante'}</div>
+                                                            </div>
                                                         </div>
-                                                    )}
-
-                                                    <div className="flex gap-2">
-                                                        {act.conBotonAsistencia && (
-                                                            <button
-                                                                onClick={() => {
-                                                                    setSelectedActForRsvp(act);
-                                                                    setIsRsvpModalOpen(true);
-                                                                }}
-                                                                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold py-2 px-3 rounded-xl transition-all shadow-sm text-xs flex items-center justify-center gap-1 cursor-pointer"
-                                                            >
-                                                                <Check size={12} />
-                                                                <span>Asistir</span>
-                                                            </button>
-                                                        )}
-                                                        {act.conBotonVoluntariado !== false && (
-                                                            <button
-                                                                onClick={() => {
-                                                                    setSelectedActForVol(act);
-                                                                    setIsVolModalOpen(true);
-                                                                }}
-                                                                className="flex-1 bg-blue-900 hover:bg-blue-800 text-white font-extrabold py-2 px-3 rounded-xl transition-all shadow-sm text-xs flex items-center justify-center gap-1 cursor-pointer"
-                                                            >
-                                                                <UserPlus size={12} />
-                                                                <span>Voluntario</span>
-                                                            </button>
-                                                        )}
-                                                        {act.conBotonDonacion && (
-                                                            <button
-                                                                onClick={() => handleDonateClick(act)}
-                                                                className="flex-1 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-extrabold py-2 px-3 rounded-xl transition-all shadow-sm text-xs flex items-center justify-center gap-1 cursor-pointer"
-                                                            >
-                                                                <Heart size={12} className="fill-current" />
-                                                                <span>Donar</span>
-                                                            </button>
-                                                        )}
-                                                    </div>
+                                                    ))}
                                                 </div>
                                             </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                                        )}
+
+                                        {/* Activities Grid */}
+                                        {dayActivities.length > 0 && (
+                                            <div className="space-y-3">
+                                                <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center space-x-1.5">
+                                                    <Sparkles size={14} className="text-blue-900" />
+                                                    <span>Actividades Programadas ({dayActivities.length})</span>
+                                                </h5>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    {dayActivities.map(act => {
+                                                        const dateObj = new Date(act.fecha.replace(' ', 'T'));
+                                                        const timeStr = !isNaN(dateObj.getTime()) 
+                                                            ? dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                            : '';
+                                                        const enSalon = isActividadEnSalon(act);
+                                                            
+                                                        return (
+                                                            <div key={act.id} className="bg-white rounded-[2rem] border border-slate-200 shadow-md hover:shadow-xl transition-all p-6 flex flex-col justify-between space-y-4">
+                                                                <div className="space-y-3">
+                                                                    <div className="flex flex-wrap gap-2 items-center justify-between">
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            <span className="text-[10px] bg-blue-50 text-blue-900 border border-blue-200 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider">
+                                                                                {act.publica ? 'Pública' : 'Socios'}
+                                                                            </span>
+                                                                            <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider ${
+                                                                                enSalon ? 'bg-purple-100 text-purple-900' : 'bg-blue-100 text-blue-900'
+                                                                            }`}>
+                                                                                {enSalon ? '🏛️ En Salón' : '📍 Exterior'}
+                                                                            </span>
+                                                                        </div>
+                                                                        {timeStr && (
+                                                                            <span className="text-xs text-slate-600 font-extrabold flex items-center gap-1">
+                                                                                <Clock size={13} className="text-amber-600" />
+                                                                                {timeStr}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    
+                                                                    <h5 className="font-black text-xl text-slate-900 leading-snug">{act.titulo}</h5>
+                                                                    
+                                                                    <p className="text-xs text-slate-600 font-bold flex items-center gap-1.5">
+                                                                        <MapPin size={14} className="text-blue-900 shrink-0" />
+                                                                        <span className="truncate">{act.lugar}</span>
+                                                                    </p>
+
+                                                                    {act.vestimenta && (
+                                                                        <p className="text-xs text-slate-600 font-bold flex items-center gap-1.5">
+                                                                            <Shirt size={14} className="text-indigo-600 shrink-0" />
+                                                                            <span>Vestimenta: <span className="text-indigo-950 font-extrabold capitalize">{act.vestimenta}</span></span>
+                                                                        </p>
+                                                                    )}
+                                                                    
+                                                                    <p className="text-slate-600 text-xs leading-relaxed font-medium line-clamp-3 bg-slate-50 p-3 rounded-xl border border-slate-150">
+                                                                        {act.descripcion}
+                                                                    </p>
+                                                                </div>
+
+                                                                <div className="space-y-3 pt-3 border-t border-slate-100">
+                                                                    {/* Cost info */}
+                                                                    {((act.costoSocio !== undefined && act.costoSocio > 0) || (act.costoInvitado !== undefined && act.costoInvitado > 0)) && (
+                                                                        <div className="flex flex-wrap gap-1.5">
+                                                                            <span className="text-[10px] bg-slate-50 text-slate-700 border border-slate-200 px-2 py-0.5 rounded-lg font-extrabold">
+                                                                                Socio: {act.costoSocio ? `Q${act.costoSocio.toFixed(2)}` : 'Gratis'}
+                                                                            </span>
+                                                                            <span className="text-[10px] bg-slate-50 text-slate-700 border border-slate-200 px-2 py-0.5 rounded-lg font-extrabold">
+                                                                                Invitado: {act.costoInvitado ? `Q${act.costoInvitado.toFixed(2)}` : 'Gratis'}
+                                                                            </span>
+                                                                        </div>
+                                                                    )}
+
+                                                                    <div className="flex flex-wrap gap-2">
+                                                                        {/* Compartir */}
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setSharingActividad(act)}
+                                                                            className="flex-1 py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 font-extrabold text-xs rounded-xl transition-all shadow-xs flex items-center justify-center space-x-1.5 cursor-pointer"
+                                                                        >
+                                                                            <MessageCircle size={14} className="text-emerald-600" />
+                                                                            <span>Compartir</span>
+                                                                        </button>
+
+                                                                        {act.conBotonAsistencia && (
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    setSelectedActForRsvp(act);
+                                                                                    setIsRsvpModalOpen(true);
+                                                                                }}
+                                                                                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 px-3 rounded-xl transition-all shadow-sm text-xs flex items-center justify-center gap-1 cursor-pointer"
+                                                                            >
+                                                                                <Check size={14} />
+                                                                                <span>RSVP</span>
+                                                                            </button>
+                                                                        )}
+
+                                                                        {act.conBotonVoluntariado !== false && (
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    setSelectedActForVol(act);
+                                                                                    setIsVolModalOpen(true);
+                                                                                }}
+                                                                                className="flex-1 bg-blue-900 hover:bg-blue-800 text-white font-black py-2.5 px-3 rounded-xl transition-all shadow-sm text-xs flex items-center justify-center gap-1 cursor-pointer"
+                                                                            >
+                                                                                <UserPlus size={14} />
+                                                                                <span>Voluntario</span>
+                                                                            </button>
+                                                                        )}
+
+                                                                        {act.conBotonDonacion && (
+                                                                            <button
+                                                                                onClick={() => handleDonateClick(act)}
+                                                                                className="flex-1 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-black py-2.5 px-3 rounded-xl transition-all shadow-sm text-xs flex items-center justify-center gap-1 cursor-pointer"
+                                                                            >
+                                                                                <Heart size={14} className="fill-current" />
+                                                                                <span>Donar</span>
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
                         </div>
                     )}
                 </div>
