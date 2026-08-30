@@ -257,6 +257,8 @@ export interface Solicitud {
   salonPlazasParqueo?: number;
   salonDuracion?: '4_horas' | '8_horas';
   salonAsistentes?: number;
+  salonNombreActividad?: string;
+  salonMotivoEvento?: string;
   salonCompromisoLimpieza?: 'dejar_limpio' | 'pagar_limpieza';
   salonExoneracion?: boolean;
   salonMotivoExoneracion?: string;

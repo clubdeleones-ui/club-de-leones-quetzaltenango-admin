@@ -286,6 +286,8 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
         const nuevaSolicitud: Solicitud = {
             id: trackingCodeId,
             nombre: `Reserva Socio - ${reserveNombre.trim()}`,
+            salonNombreActividad: reserveNombre.trim(),
+            salonMotivoEvento: reserveNombre.trim(),
             tipo: 'salon',
             estado: 'Pendiente',
             faseTracking: 'recibido',
@@ -308,7 +310,7 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
             await firebaseService.saveSolicitud(nuevaSolicitud);
             setIsReserveModalOpen(false);
             setReserveNombre('');
-            showAlert("¡Salón Apartado con Éxito!", `La fecha (${reserveDateStr}) ha sido apartada inmediatamente en el calendario. El espacio queda apartado a la espera de la confirmación de Secretaría.`);
+            showAlert("¡Salón Apartado con Éxito!", `La actividad "${reserveNombre.trim()}" para la fecha (${reserveDateStr}) ha sido apartada inmediatamente en el calendario.`);
         } catch (err) {
             console.error("Error al apartar el salón:", err);
             showAlert("Error", "No se pudo apartar el salón. Por favor intenta de nuevo.");
@@ -1355,7 +1357,8 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center">
+                                    <Sparkles size={13} className="mr-1 text-amber-600" />
                                     Nombre de la Actividad / Evento *
                                 </label>
                                 <input
@@ -1364,7 +1367,7 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                     value={reserveNombre}
                                     onChange={(e) => setReserveNombre(e.target.value)}
                                     placeholder="Ej. Sesión Ordinaria de Comisión / Evento Familiar Socio"
-                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none font-semibold text-slate-800"
+                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none font-semibold text-slate-800 bg-white shadow-2xs"
                                 />
                             </div>
 

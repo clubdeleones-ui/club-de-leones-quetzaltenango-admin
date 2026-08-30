@@ -369,6 +369,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   // Form State para Alquiler de Salón y Parqueo (Wizard)
   const [salonWizardStep, setSalonWizardStep] = useState<1 | 2 | 3 | 4>(1);
   const [salonNombreSolicitante, setSalonNombreSolicitante] = useState('');
+  const [salonNombreActividad, setSalonNombreActividad] = useState('');
   const [salonInstitucion, setSalonInstitucion] = useState('');
   const [salonTelefonoDigitos, setSalonTelefonoDigitos] = useState('');
   const [salonEmail, setSalonEmail] = useState('');
@@ -786,6 +787,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     if (activeTab === 'salon') {
       if (
         !salonNombreSolicitante.trim() || 
+        !salonNombreActividad.trim() ||
         !salonTelefonoDigitos.trim() || 
         !salonEmail.trim() || 
         !salonDia || 
@@ -793,7 +795,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
         !salonHoraFin || 
         !salonAsistentes
       ) {
-        setSaveError("Por favor, complete todos los campos obligatorios.");
+        setSaveError("Por favor, complete todos los campos obligatorios, incluyendo el nombre de la actividad.");
         return;
       }
       if (salonTelefonoDigitos.trim().length !== 8) {
@@ -814,16 +816,18 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
         return;
       }
 
-      let solNombre = 'Alquiler - Salón de Eventos';
-      if (salonTipoAlquiler === 'parqueo') solNombre = 'Alquiler - Parqueo Completo';
-      else if (salonTipoAlquiler === 'parqueo_plazas') solNombre = `Alquiler - Parqueo (${salonPlazasParqueo || 1} Plazas)`;
-      else if (salonTipoAlquiler === 'ambos') solNombre = 'Alquiler - Salón y Parqueo Completo';
+      let solNombre = `Alquiler Salón - ${salonNombreActividad.trim()}`;
+      if (salonTipoAlquiler === 'parqueo') solNombre = `Alquiler Parqueo - ${salonNombreActividad.trim()}`;
+      else if (salonTipoAlquiler === 'parqueo_plazas') solNombre = `Alquiler Parqueo (${salonPlazasParqueo || 1} Plazas) - ${salonNombreActividad.trim()}`;
+      else if (salonTipoAlquiler === 'ambos') solNombre = `Alquiler Salón y Parqueo - ${salonNombreActividad.trim()}`;
 
       nuevaSolicitud = {
         id: trackingCodeId,
         nombre: solNombre,
         nombreSolicitante: salonNombreSolicitante.trim(),
         salonNombreSolicitante: salonNombreSolicitante.trim(),
+        salonNombreActividad: salonNombreActividad.trim(),
+        salonMotivoEvento: salonNombreActividad.trim(),
         tipo: 'salon',
         estado: 'Pendiente',
         faseTracking: 'recibido',
@@ -999,6 +1003,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       setSalonDia('');
       setSalonHoraInicio('');
       setSalonHoraFin('');
+      setSalonNombreActividad('');
       setSalonTipoAlquiler('salon');
       setSalonAsistentes('');
       setSalonCompromisoLimpieza('dejar_limpio');
@@ -2077,6 +2082,10 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
 
     // Step 3 Validation
     const validateStep3 = () => {
+      if (!salonNombreActividad.trim()) {
+        setSaveError("Ingresa el nombre o motivo de la actividad / evento.");
+        return false;
+      }
       if (!salonDia) {
         setSaveError("Selecciona la fecha del evento.");
         return false;
@@ -2703,11 +2712,27 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
             <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 flex items-start space-x-3 text-amber-900">
               <Clock className="flex-shrink-0 mt-0.5 text-amber-600" size={18} />
               <div className="space-y-1">
-                <p className="font-extrabold text-xs sm:text-sm text-amber-950">Paso 3: Horarios, Fecha y Asistentes</p>
+                <p className="font-extrabold text-xs sm:text-sm text-amber-950">Paso 3: Actividad, Horarios y Fecha</p>
                 <p className="text-xs text-slate-650 font-medium leading-relaxed">
-                  Establece la fecha del evento, el rango de horas requerido y la cantidad de asistentes estimada.
+                  Indica el nombre de la actividad, la fecha requerida, el rango de horas y los asistentes estimados.
                 </p>
               </div>
+            </div>
+
+            {/* Nombre de la Actividad / Evento */}
+            <div>
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center">
+                <Sparkles size={13} className="mr-1 text-amber-600" />
+                Nombre de la Actividad / Evento *
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="Ej: Seminario de Capacitación / Conferencia Médica / Evento Familiar"
+                value={salonNombreActividad}
+                onChange={(e) => setSalonNombreActividad(e.target.value)}
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none text-xs sm:text-sm font-semibold text-slate-800 bg-white shadow-2xs"
+              />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -2943,6 +2968,13 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
               </div>
               
               <div className="space-y-1.5 text-xs text-white/80">
+                {salonNombreActividad && (
+                  <div className="flex justify-between pb-1 mb-1 border-b border-white/10">
+                    <span className="text-amber-200 font-bold">Actividad / Evento:</span>
+                    <span className="font-extrabold text-white text-right max-w-[220px] truncate">{salonNombreActividad}</span>
+                  </div>
+                )}
+
                 <div className="flex justify-between">
                   <span>Instalación ({
                     salonTipoAlquiler === 'salon' ? `Salón ${salonDuracion === '8_horas' ? '8 Horas' : '4 Horas'}` :
