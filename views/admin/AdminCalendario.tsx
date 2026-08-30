@@ -311,9 +311,65 @@ export const AdminCalendario: React.FC = () => {
     }
   };
 
+  const [modoProgramacionFechas, setModoProgramacionFechas] = useState<'unico' | 'multiples'>('unico');
+  const [fechasMultiples, setFechasMultiples] = useState<string[]>([]);
+  const [rangoInicio, setRangoInicio] = useState('');
+  const [rangoFin, setRangoFin] = useState('');
+  const [rangoHora, setRangoHora] = useState('09:00');
+
+  const handleGenerarRangoFechas = () => {
+    if (!rangoInicio || !rangoFin) {
+      showAlert("Por favor ingresa la fecha inicial y fecha final del rango.", "error");
+      return;
+    }
+    const start = new Date(rangoInicio + 'T12:00:00');
+    const end = new Date(rangoFin + 'T12:00:00');
+    if (start > end) {
+      showAlert("La fecha de inicio no puede ser posterior a la fecha final.", "error");
+      return;
+    }
+    const list: string[] = [];
+    const curr = new Date(start);
+    while (curr <= end && list.length < 31) {
+      const y = curr.getFullYear();
+      const m = String(curr.getMonth() + 1).padStart(2, '0');
+      const d = String(curr.getDate()).padStart(2, '0');
+      list.push(`${y}-${m}-${d}T${rangoHora || '09:00'}`);
+      curr.setDate(curr.getDate() + 1);
+    }
+    setFechasMultiples(list);
+  };
+
+  const handleAddFechaPersonalizada = () => {
+    const last = fechasMultiples[fechasMultiples.length - 1] || newActividad.fecha || new Date().toISOString().slice(0, 16);
+    const lastDate = new Date(last);
+    lastDate.setDate(lastDate.getDate() + 1);
+    const y = lastDate.getFullYear();
+    const m = String(lastDate.getMonth() + 1).padStart(2, '0');
+    const d = String(lastDate.getDate()).padStart(2, '0');
+    const h = String(lastDate.getHours()).padStart(2, '0');
+    const min = String(lastDate.getMinutes()).padStart(2, '0');
+    setFechasMultiples([...fechasMultiples, `${y}-${m}-${d}T${h}:${min}`]);
+  };
+
+  const handleRemoveFechaPersonalizada = (index: number) => {
+    if (fechasMultiples.length <= 1) return;
+    setFechasMultiples(fechasMultiples.filter((_, i) => i !== index));
+  };
+
   const handleAddActividad = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newActividad.titulo || !newActividad.fecha || !newActividad.lugar) return;
+    if (!newActividad.titulo || !newActividad.lugar) return;
+
+    const datesToSchedule = modoProgramacionFechas === 'multiples' 
+      ? fechasMultiples.filter(f => Boolean(f.trim())) 
+      : [newActividad.fecha];
+
+    if (datesToSchedule.length === 0 || !datesToSchedule[0]) {
+      showAlert("Por favor ingresa al menos una fecha para la actividad", "error");
+      return;
+    }
+
     setIsSavingActividad(true);
     try {
       let finalImageUrl = newActividad.imagen;
@@ -322,30 +378,47 @@ export const AdminCalendario: React.FC = () => {
         finalImageUrl = await firebaseService.uploadGaleriaImage(compressedBase64, 'actividad');
       }
 
-      const created: Actividad = {
-        id: `ev-${Date.now()}`,
-        titulo: newActividad.titulo,
-        descripcion: newActividad.descripcion,
-        fecha: newActividad.fecha.replace('T', ' '),
-        lugar: newActividad.lugar,
-        imagen: finalImageUrl || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800',
-        publica: newActividad.publica,
-        conBotonDonacion: newActividad.conBotonDonacion,
-        donacionUrl: newActividad.conBotonDonacion ? (newActividad.donacionUrl || '#/donar') : '',
-        conBotonVoluntariado: newActividad.conBotonVoluntariado,
-        conBotonAsistencia: newActividad.conBotonAsistencia,
-        costoSocio: newActividad.costoSocio ? parseFloat(newActividad.costoSocio) : 0,
-        costoInvitado: newActividad.costoInvitado ? parseFloat(newActividad.costoInvitado) : 0,
-        vestimenta: newActividad.vestimenta || 'libre'
-      };
+      const baseId = `ev-${Date.now()}`;
+      const isMultiple = datesToSchedule.length > 1;
+      const createdList: Actividad[] = [];
 
-      await firebaseService.saveActividad(created);
-      setActividades([created, ...actividades]);
+      for (let i = 0; i < datesToSchedule.length; i++) {
+        const currentFecha = datesToSchedule[i];
+        const actId = isMultiple ? `${baseId}-${i + 1}` : baseId;
+
+        const created: Actividad = {
+          id: actId,
+          titulo: newActividad.titulo,
+          descripcion: newActividad.descripcion,
+          fecha: currentFecha.replace('T', ' '),
+          lugar: newActividad.lugar,
+          imagen: finalImageUrl || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800',
+          publica: newActividad.publica,
+          conBotonDonacion: newActividad.conBotonDonacion,
+          donacionUrl: newActividad.conBotonDonacion ? (newActividad.donacionUrl || '#/donar') : '',
+          conBotonVoluntariado: newActividad.conBotonVoluntariado,
+          conBotonAsistencia: newActividad.conBotonAsistencia,
+          costoSocio: newActividad.costoSocio ? parseFloat(newActividad.costoSocio) : 0,
+          costoInvitado: newActividad.costoInvitado ? parseFloat(newActividad.costoInvitado) : 0,
+          vestimenta: newActividad.vestimenta || 'libre'
+        };
+
+        await firebaseService.saveActividad(created);
+        createdList.push(created);
+      }
+
+      setActividades([...createdList, ...actividades]);
       setNewActividad({ titulo: '', descripcion: '', fecha: '', lugar: '', publica: true, conBotonDonacion: false, donacionUrl: '', conBotonVoluntariado: true, conBotonAsistencia: false, costoSocio: '', costoInvitado: '', vestimenta: 'libre', imagen: '' });
       setNewActividadImageFile(null);
       setNewActividadImagePreview(null);
+      setModoProgramacionFechas('unico');
       setShowAddActividad(false);
-      showAlert("Actividad programada exitosamente", "success");
+      
+      if (isMultiple) {
+        showAlert(`Se programaron exitosamente los ${datesToSchedule.length} días de actividad`, "success");
+      } else {
+        showAlert("Actividad programada exitosamente", "success");
+      }
     } catch (err: any) {
       console.error("Error saving new activity in Firestore:", err);
       showAlert(err.message || "Error al guardar la actividad", "error");
@@ -1054,28 +1127,171 @@ export const AdminCalendario: React.FC = () => {
                   className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all resize-none text-sm leading-relaxed"
                 />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Fecha y Hora</label>
-                  <input 
-                    type="datetime-local" 
-                    required 
-                    value={newActividad.fecha} 
-                    onChange={e => setNewActividad({...newActividad, fecha: e.target.value})}
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm"
-                  />
+              {/* Modalidad de Programación de Fechas */}
+              <div className="space-y-3 p-4 bg-slate-50 border border-slate-200/80 rounded-2xl">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center">
+                    <Calendar size={14} className="mr-1.5 text-blue-900" />
+                    Programación de Fechas *
+                  </label>
+                  <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-900">
+                    {modoProgramacionFechas === 'unico' ? '1 Día' : `${fechasMultiples.length} Días Seleccionados`}
+                  </span>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Ubicación / Lugar</label>
-                  <input 
-                    type="text" 
-                    required 
-                    value={newActividad.lugar} 
-                    onChange={e => setNewActividad({...newActividad, lugar: e.target.value})}
-                    placeholder="Ej. Parque Central Xela"
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm"
-                  />
+
+                {/* Tabs Modo de Fechas */}
+                <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-200/70 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setModoProgramacionFechas('unico')}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
+                      modoProgramacionFechas === 'unico'
+                        ? 'bg-white text-blue-950 shadow-xs font-black'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Calendar size={14} />
+                    <span>Día Único</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModoProgramacionFechas('multiples');
+                      if (fechasMultiples.length === 0) {
+                        setFechasMultiples([newActividad.fecha || new Date().toISOString().slice(0, 16)]);
+                      }
+                    }}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
+                      modoProgramacionFechas === 'multiples'
+                        ? 'bg-blue-900 text-white shadow-xs font-black'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Sparkles size={14} className="text-amber-300" />
+                    <span>Múltiples Días / Rango</span>
+                  </button>
                 </div>
+
+                {/* Modo: Día Único */}
+                {modoProgramacionFechas === 'unico' ? (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                      Fecha y Hora *
+                    </label>
+                    <input 
+                      type="datetime-local" 
+                      required 
+                      value={newActividad.fecha} 
+                      onChange={e => setNewActividad({...newActividad, fecha: e.target.value})}
+                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs sm:text-sm font-bold text-slate-800 bg-white"
+                    />
+                  </div>
+                ) : (
+                  /* Modo: Múltiples Días */
+                  <div className="space-y-3.5 pt-1">
+                    {/* Generador de Rango */}
+                    <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl space-y-2.5">
+                      <span className="text-[11px] font-black text-blue-950 uppercase tracking-wider block">
+                        ⚡ Generar Rango de Días Consecutivos (Ej. Convención / Jornada)
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Desde Día</label>
+                          <input 
+                            type="date"
+                            value={rangoInicio}
+                            onChange={e => setRangoInicio(e.target.value)}
+                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Hasta Día</label>
+                          <input 
+                            type="date"
+                            value={rangoFin}
+                            onChange={e => setRangoFin(e.target.value)}
+                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Hora Inicio</label>
+                          <input 
+                            type="time"
+                            value={rangoHora}
+                            onChange={e => setRangoHora(e.target.value)}
+                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
+                          />
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleGenerarRangoFechas}
+                        className="w-full py-1.5 bg-blue-900 hover:bg-blue-950 text-white rounded-lg text-xs font-black shadow-xs transition-colors flex items-center justify-center space-x-1.5 cursor-pointer"
+                      >
+                        <span>Aplicar Rango al Calendario</span>
+                      </button>
+                    </div>
+
+                    {/* Lista de Días Individuales */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[11px] font-black text-slate-700 uppercase">
+                          Lista de Fechas Programadas ({fechasMultiples.length}):
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleAddFechaPersonalizada}
+                          className="text-xs font-bold text-blue-900 hover:text-blue-950 flex items-center space-x-1 cursor-pointer"
+                        >
+                          <span>+ Añadir Fecha</span>
+                        </button>
+                      </div>
+
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                        {fechasMultiples.map((fechaItem, idx) => (
+                          <div key={idx} className="flex items-center space-x-2 bg-white p-2 border border-slate-200 rounded-xl shadow-2xs">
+                            <span className="text-[11px] font-black text-slate-400 w-12 flex-shrink-0">
+                              Día {idx + 1}:
+                            </span>
+                            <input
+                              type="datetime-local"
+                              required
+                              value={fechaItem}
+                              onChange={e => {
+                                const updated = [...fechasMultiples];
+                                updated[idx] = e.target.value;
+                                setFechasMultiples(updated);
+                              }}
+                              className="flex-1 px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
+                            />
+                            {fechasMultiples.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveFechaPersonalizada(idx)}
+                                className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
+                                title="Eliminar este día"
+                              >
+                                <X size={14} />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Ubicación / Lugar</label>
+                <input 
+                  type="text" 
+                  required 
+                  value={newActividad.lugar} 
+                  onChange={e => setNewActividad({...newActividad, lugar: e.target.value})}
+                  placeholder="Ej. Parque Central Xela"
+                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm"
+                />
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Imagen / Afiche de la Actividad</label>
