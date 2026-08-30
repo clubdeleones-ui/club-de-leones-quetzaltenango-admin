@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Calendar as CalendarIcon, ExternalLink, Info, Loader2, MapPin, Clock, Heart, Share2, Check, Copy, Search, Filter, UserPlus, X as XIcon, ChevronLeft, ChevronRight, Shirt, Plus, Building, Home, Lock, AlertCircle, CheckCircle2, Upload, CalendarPlus, Sparkles, DollarSign, Users, MessageCircle, Send, Eye, CalendarCheck, CheckCheck, Compass, Globe } from 'lucide-react';
+import { Calendar as CalendarIcon, ExternalLink, Info, Loader2, MapPin, Clock, Heart, Share2, Check, Copy, Search, Filter, UserPlus, X as XIcon, ChevronLeft, ChevronRight, Shirt, Plus, Building, Home, Lock, AlertCircle, CheckCircle2, Upload, CalendarPlus, Sparkles, DollarSign, Users, MessageCircle, Send, Eye, CalendarCheck, CheckCheck, Compass, Globe, Edit3, Trash2, ShieldCheck } from 'lucide-react';
 import { googleService } from '../services/googleService';
 import { firebaseService } from '../services/firebaseService';
 import { useClubData } from '../context/ClubDataContext';
@@ -148,8 +148,9 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
     const { user, solicitudes } = useClubData();
     const { showAlert } = useModal();
     const isSocio = Boolean(user && user.rol !== 'DONANTE' && user.rol !== 'GUEST');
+    const isAdministrative = Boolean(user && ['ADMIN', 'SUPERADMIN', 'PRESIDENTE', 'SECRETARIO', 'TESORERO', 'SECRETARIA'].includes(user.rol as string));
 
-    // Socio Salon Reservation Modal States
+    // Socio Salon Reservation Modal States (Creación)
     const [isReserveModalOpen, setIsReserveModalOpen] = useState(false);
     const [reserveDateStr, setReserveDateStr] = useState('');
     const [reserveNombre, setReserveNombre] = useState('');
@@ -158,6 +159,25 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
     const [reserveCompromisoLimpieza, setReserveCompromisoLimpieza] = useState<'dejar_limpio' | 'pagar_limpieza'>('dejar_limpio');
     const [isSavingReservation, setIsSavingReservation] = useState(false);
     const [isDayAvailabilityModalOpen, setIsDayAvailabilityModalOpen] = useState(false);
+
+    // Salon Reservation Modal States (Edición / Modificación)
+    const [editingReservation, setEditingReservation] = useState<Solicitud | null>(null);
+    const [editReserveNombre, setEditReserveNombre] = useState('');
+    const [editReserveDateStr, setEditReserveDateStr] = useState('');
+    const [editReserveHoraInicio, setEditReserveHoraInicio] = useState('09:00');
+    const [editReserveHoraFin, setEditReserveHoraFin] = useState('13:00');
+    const [editReserveCompromisoLimpieza, setEditReserveCompromisoLimpieza] = useState<'dejar_limpio' | 'pagar_limpieza'>('dejar_limpio');
+    const [editReserveEstado, setEditReserveEstado] = useState<'Pendiente' | 'Aprobada' | 'Rechazada'>('Pendiente');
+    const [isEditReserveModalOpen, setIsEditReserveModalOpen] = useState(false);
+    const [isUpdatingReservation, setIsUpdatingReservation] = useState(false);
+
+    const canEditReservation = (sol: Solicitud) => {
+        if (!user) return false;
+        if (isAdministrative) return true;
+        if (sol.usuarioCreador && sol.usuarioCreador.includes(user.correo)) return true;
+        if (sol.salonEmail && sol.salonEmail.toLowerCase() === user.correo.toLowerCase()) return true;
+        return isSocio;
+    };
 
     // Socio Activity Scheduling Modal States
     const [isActividadModalOpen, setIsActividadModalOpen] = useState(false);
@@ -392,6 +412,71 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
             showAlert("Error", "No se pudo apartar el salón. Por favor intenta de nuevo.");
         } finally {
             setIsSavingReservation(false);
+        }
+    };
+
+    const handleOpenEditReservation = (sol: Solicitud) => {
+        setEditingReservation(sol);
+        const extractedName = sol.salonNombreActividad || sol.nombre.replace(/^Reserva Socio - /i, '').replace(/^Alquiler Salón - /i, '').replace(/^Alquiler - /i, '');
+        setEditReserveNombre(extractedName);
+        setEditReserveDateStr(sol.salonDia || '');
+        setEditReserveHoraInicio(sol.salonHoraInicio || '09:00');
+        setEditReserveHoraFin(sol.salonHoraFin || '13:00');
+        setEditReserveCompromisoLimpieza(sol.salonCompromisoLimpieza || 'dejar_limpio');
+        setEditReserveEstado((sol.estado as any) || 'Pendiente');
+        setIsEditReserveModalOpen(true);
+    };
+
+    const handleUpdateReservation = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingReservation || !editReserveDateStr || !editReserveNombre.trim()) {
+            showAlert("Campos Requeridos", "Por favor completa la fecha y el nombre de la actividad.");
+            return;
+        }
+        setIsUpdatingReservation(true);
+        try {
+            const isSocioRes = editingReservation.salonEsSocio;
+            const baseNombrePrefix = isSocioRes ? 'Reserva Socio - ' : 'Alquiler Salón - ';
+            const updatedSolicitud: Solicitud = {
+                ...editingReservation,
+                nombre: `${baseNombrePrefix}${editReserveNombre.trim()}`,
+                salonNombreActividad: editReserveNombre.trim(),
+                salonMotivoEvento: editReserveNombre.trim(),
+                salonDia: editReserveDateStr,
+                salonHoraInicio: editReserveHoraInicio,
+                salonHoraFin: editReserveHoraFin,
+                salonCompromisoLimpieza: editReserveCompromisoLimpieza,
+                salonCostoTotal: editReserveCompromisoLimpieza === 'pagar_limpieza'
+                    ? (isSocioRes ? 300 : (editingReservation.salonCostoTotal || 300))
+                    : (isSocioRes ? 0 : (editingReservation.salonCostoTotal || 0)),
+                estado: isAdministrative ? editReserveEstado : editingReservation.estado
+            };
+
+            await firebaseService.saveSolicitud(updatedSolicitud);
+            setIsEditReserveModalOpen(false);
+            setEditingReservation(null);
+            showAlert("¡Apartado Actualizado!", `La fecha u horarios de "${editReserveNombre.trim()}" han sido modificados al ${editReserveDateStr} (${editReserveHoraInicio} - ${editReserveHoraFin}).`);
+        } catch (err) {
+            console.error("Error al actualizar la reserva:", err);
+            showAlert("Error al Actualizar", "No se pudo actualizar el apartado del salón. Por favor intenta de nuevo.");
+        } finally {
+            setIsUpdatingReservation(false);
+        }
+    };
+
+    const handleDeleteReservation = async (solId: string) => {
+        if (!confirm("¿Estás seguro de que deseas cancelar y eliminar este apartado del salón del calendario?")) return;
+        setIsUpdatingReservation(true);
+        try {
+            await firebaseService.deleteSolicitud(solId);
+            setIsEditReserveModalOpen(false);
+            setEditingReservation(null);
+            showAlert("Apartado Cancelado", "El apartado ha sido retirado del calendario satisfactoriamente.");
+        } catch (err) {
+            console.error("Error deleting reservation:", err);
+            showAlert("Error", "No se pudo cancelar el apartado.");
+        } finally {
+            setIsUpdatingReservation(false);
         }
     };
 
@@ -1212,25 +1297,42 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                                     {dayReservations.map((res, idx) => (
                                                         <div 
                                                             key={`res-card-${idx}`}
-                                                            className={`p-5 rounded-2xl border shadow-xs space-y-2.5 ${
+                                                            className={`p-5 rounded-2xl border shadow-xs space-y-2.5 flex flex-col justify-between ${
                                                                 res.estado === 'Aprobada'
                                                                     ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
                                                                     : 'bg-amber-50/70 border-amber-200 text-amber-950'
                                                             }`}
                                                         >
-                                                            <div className="flex items-center justify-between">
-                                                                <span className="text-xs font-black flex items-center gap-1.5">
-                                                                    {res.estado === 'Aprobada' ? '🟢 Salón Reservado (Confirmado)' : '⏳ Salón Apartado (En Revisión)'}
-                                                                </span>
-                                                                <span className="text-[10px] uppercase font-black px-2.5 py-0.5 rounded-full bg-white/80 border border-slate-200/50 shadow-2xs">
-                                                                    {res.salonEsSocio ? 'Socio' : 'Público'}
-                                                                </span>
+                                                            <div className="space-y-2.5">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-xs font-black flex items-center gap-1.5">
+                                                                        {res.estado === 'Aprobada' ? '🟢 Salón Reservado (Confirmado)' : '⏳ Salón Apartado (En Revisión)'}
+                                                                    </span>
+                                                                    <span className="text-[10px] uppercase font-black px-2.5 py-0.5 rounded-full bg-white/80 border border-slate-200/50 shadow-2xs">
+                                                                        {res.salonEsSocio ? 'Socio' : 'Público'}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="text-xs space-y-1 font-medium text-slate-700">
+                                                                    <div><strong className="text-slate-900">Actividad / Evento:</strong> {res.salonNombreActividad || res.nombre || 'Alquiler de Instalaciones'}</div>
+                                                                    <div><strong className="text-slate-900">Fecha:</strong> {res.salonDia}</div>
+                                                                    <div><strong className="text-slate-900">Horario:</strong> {res.salonHoraInicio || '00:00'} a {res.salonHoraFin || '00:00'}</div>
+                                                                    <div><strong className="text-slate-900">Responsable:</strong> {res.salonNombreSolicitante || res.usuarioCreador || 'Socio Solicitante'}</div>
+                                                                </div>
                                                             </div>
-                                                            <div className="text-xs space-y-1 font-medium text-slate-700">
-                                                                <div><strong className="text-slate-900">Evento:</strong> {res.nombre || 'Alquiler de Instalaciones'}</div>
-                                                                <div><strong className="text-slate-900">Horario:</strong> {res.salonHoraInicio || '00:00'} a {res.salonHoraFin || '00:00'}</div>
-                                                                <div><strong className="text-slate-900">Responsable:</strong> {res.salonNombreSolicitante || res.usuarioCreador || 'Socio Solicitante'}</div>
-                                                            </div>
+
+                                                            {canEditReservation(res) && (
+                                                                <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-2">
+                                                                    <span className="text-[10px] text-slate-400 font-bold">Código: {res.id}</span>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleOpenEditReservation(res)}
+                                                                        className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black rounded-xl shadow-xs transition-all flex items-center space-x-1.5 cursor-pointer"
+                                                                    >
+                                                                        <Edit3 size={13} />
+                                                                        <span>Editar Fecha / Horario</span>
+                                                                    </button>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>
@@ -1513,6 +1615,162 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                 </div>
             )}
 
+            {/* Edit Salon Reservation Modal */}
+            {isEditReserveModalOpen && editingReservation && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl max-w-lg w-full p-6 md:p-8 space-y-6 shadow-2xl border border-slate-100 relative text-left">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsEditReserveModalOpen(false);
+                                setEditingReservation(null);
+                            }}
+                            className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 p-2 rounded-xl"
+                        >
+                            <XIcon size={20} />
+                        </button>
+
+                        <div className="space-y-2">
+                            <div className="inline-flex items-center space-x-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-amber-900 text-xs font-extrabold">
+                                <Edit3 size={14} className="text-amber-600" />
+                                <span>Modificar Apartado de Salón</span>
+                            </div>
+                            <h3 className="text-xl font-black text-slate-900">Editar Fecha y Horario del Apartado</h3>
+                            <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                                Puedes reprogramar la fecha, modificar el rango de horas, cambiar el nombre de la actividad o cancelar el apartado.
+                            </p>
+                        </div>
+
+                        <form onSubmit={handleUpdateReservation} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center">
+                                    <CalendarIcon size={13} className="mr-1 text-slate-400" />
+                                    Nueva Fecha del Evento *
+                                </label>
+                                <input
+                                    type="date"
+                                    required
+                                    value={editReserveDateStr}
+                                    onChange={(e) => setEditReserveDateStr(e.target.value)}
+                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none font-bold text-slate-800 bg-white focus:ring-2 focus:ring-amber-500"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center">
+                                    <Sparkles size={13} className="mr-1 text-amber-600" />
+                                    Nombre de la Actividad / Evento *
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={editReserveNombre}
+                                    onChange={(e) => setEditReserveNombre(e.target.value)}
+                                    placeholder="Ej. Sesión Ordinaria / Capacitación / Evento Familiar"
+                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none font-semibold text-slate-800 bg-white shadow-2xs"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center">
+                                        <Clock size={13} className="mr-1 text-slate-400" />
+                                        Hora Inicio *
+                                    </label>
+                                    <input
+                                        type="time"
+                                        required
+                                        value={editReserveHoraInicio}
+                                        onChange={(e) => setEditReserveHoraInicio(e.target.value)}
+                                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none font-bold text-slate-800 bg-white focus:ring-2 focus:ring-amber-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center">
+                                        <Clock size={13} className="mr-1 text-slate-400" />
+                                        Hora Fin *
+                                    </label>
+                                    <input
+                                        type="time"
+                                        required
+                                        value={editReserveHoraFin}
+                                        onChange={(e) => setEditReserveHoraFin(e.target.value)}
+                                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none font-bold text-slate-800 bg-white focus:ring-2 focus:ring-amber-500"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                                    Compromiso de Limpieza
+                                </label>
+                                <select
+                                    value={editReserveCompromisoLimpieza}
+                                    onChange={(e) => setEditReserveCompromisoLimpieza(e.target.value as any)}
+                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none font-semibold text-slate-800 bg-white cursor-pointer"
+                                >
+                                    <option value="dejar_limpio">Dejar limpio después del evento (Sin costo adicional)</option>
+                                    <option value="pagar_limpieza">Pagar servicio de limpieza (+ Q. 300.00)</option>
+                                </select>
+                            </div>
+
+                            {/* Admin Status Controls if Administrative */}
+                            {isAdministrative && (
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                                        Estado de la Reserva (Gestión Directiva)
+                                    </label>
+                                    <select
+                                        value={editReserveEstado}
+                                        onChange={(e) => setEditReserveEstado(e.target.value as any)}
+                                        className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none font-bold text-slate-800 bg-amber-50/50 cursor-pointer"
+                                    >
+                                        <option value="Pendiente">⏳ Pendiente (Apartado en revisión)</option>
+                                        <option value="Aprobada">🟢 Aprobada (Confirmado formalmente)</option>
+                                        <option value="Rechazada">🔴 Rechazada / Cancelada</option>
+                                    </select>
+                                </div>
+                            )}
+
+                            <div className="pt-4 flex flex-col-reverse sm:flex-row justify-between items-center gap-3 border-t border-slate-100">
+                                <button
+                                    type="button"
+                                    onClick={() => handleDeleteReservation(editingReservation.id)}
+                                    className="w-full sm:w-auto px-4 py-2.5 text-rose-600 hover:bg-rose-50 rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+                                >
+                                    <Trash2 size={14} />
+                                    <span>Cancelar / Eliminar Apartado</span>
+                                </button>
+
+                                <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsEditReserveModalOpen(false);
+                                            setEditingReservation(null);
+                                        }}
+                                        className="px-4 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 text-xs"
+                                    >
+                                        Cerrar
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isUpdatingReservation}
+                                        className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 font-black rounded-xl shadow-md text-xs transition-all flex items-center justify-center space-x-2 cursor-pointer"
+                                    >
+                                        {isUpdatingReservation ? (
+                                            <span>Guardando...</span>
+                                        ) : (
+                                            <span>Guardar Modificaciones</span>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             {/* Day Availability & Details Modal */}
             {isDayAvailabilityModalOpen && selectedDate && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
@@ -1557,7 +1815,7 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                                 {dayReservations.map((res, idx) => (
                                                     <div 
                                                         key={idx}
-                                                        className={`p-3.5 rounded-2xl border text-xs space-y-1.5 ${
+                                                        className={`p-3.5 rounded-2xl border text-xs space-y-2 ${
                                                             res.estado === 'Aprobada'
                                                                 ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
                                                                 : 'bg-amber-50/80 border-amber-200 text-amber-950'
@@ -1572,10 +1830,25 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                                             </span>
                                                         </div>
                                                         <div className="text-[11px] font-semibold text-slate-700">
-                                                            <div><strong>Evento:</strong> {res.nombre || 'Reserva de Instalaciones'}</div>
+                                                            <div><strong>Actividad / Evento:</strong> {res.salonNombreActividad || res.nombre || 'Reserva de Instalaciones'}</div>
                                                             <div><strong>Horario:</strong> {res.salonHoraInicio || '00:00'} - {res.salonHoraFin || '00:00'}</div>
                                                             <div><strong>Solicitante:</strong> {res.salonNombreSolicitante || res.usuarioCreador || 'Anónimo'}</div>
                                                         </div>
+                                                        {canEditReservation(res) && (
+                                                            <div className="pt-2 border-t border-slate-200/60 flex justify-end">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setIsDayAvailabilityModalOpen(false);
+                                                                        handleOpenEditReservation(res);
+                                                                    }}
+                                                                    className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-slate-950 text-[11px] font-black rounded-lg shadow-xs transition-all flex items-center space-x-1 cursor-pointer"
+                                                                >
+                                                                    <Edit3 size={12} />
+                                                                    <span>Editar Fecha / Horario</span>
+                                                                </button>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>

@@ -385,6 +385,17 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   const [salonMotivoExoneracion, setSalonMotivoExoneracion] = useState('');
   const [salonRequisitosAceptados, setSalonRequisitosAceptados] = useState(false);
 
+  // Edit Salon Request States
+  const [editingSalonSolicitud, setEditingSalonSolicitud] = useState<Solicitud | null>(null);
+  const [editSalonDia, setEditSalonDia] = useState('');
+  const [editSalonNombreActividad, setEditSalonNombreActividad] = useState('');
+  const [editSalonHoraInicio, setEditSalonHoraInicio] = useState('09:00');
+  const [editSalonHoraFin, setEditSalonHoraFin] = useState('13:00');
+  const [editSalonCompromisoLimpieza, setEditSalonCompromisoLimpieza] = useState<'dejar_limpio' | 'pagar_limpieza'>('dejar_limpio');
+  const [editSalonAsistentes, setEditSalonAsistentes] = useState('30');
+  const [isEditSalonModalOpen, setIsEditSalonModalOpen] = useState(false);
+  const [isUpdatingSalon, setIsUpdatingSalon] = useState(false);
+
   // Tab View Mode (embedded in accordion: 'form' | 'list' | 'tracking')
   const [tabViewMode, setTabViewMode] = useState<{ [key: string]: 'form' | 'list' | 'tracking' }>({});
 
@@ -1060,6 +1071,58 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     }
   };
 
+  const handleOpenEditSalonSolicitud = (sol: Solicitud) => {
+    setEditingSalonSolicitud(sol);
+    const extractedName = sol.salonNombreActividad || sol.nombre.replace(/^Reserva Socio - /i, '').replace(/^Alquiler Salón - /i, '').replace(/^Alquiler - /i, '');
+    setEditSalonNombreActividad(extractedName);
+    setEditSalonDia(sol.salonDia || '');
+    setEditSalonHoraInicio(sol.salonHoraInicio || '09:00');
+    setEditSalonHoraFin(sol.salonHoraFin || '13:00');
+    setEditSalonCompromisoLimpieza(sol.salonCompromisoLimpieza || 'dejar_limpio');
+    setEditSalonAsistentes(String(sol.salonAsistentes || '30'));
+    setIsEditSalonModalOpen(true);
+  };
+
+  const handleSaveEditSalonSolicitud = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSalonSolicitud || !editSalonDia || !editSalonNombreActividad.trim()) {
+      alert("Por favor complete la fecha y el nombre de la actividad.");
+      return;
+    }
+    setIsUpdatingSalon(true);
+    try {
+      const isSocioRes = editingSalonSolicitud.salonEsSocio;
+      const baseNombrePrefix = isSocioRes ? 'Reserva Socio - ' : 'Alquiler Salón - ';
+      const updated: Solicitud = {
+        ...editingSalonSolicitud,
+        nombre: `${baseNombrePrefix}${editSalonNombreActividad.trim()}`,
+        salonNombreActividad: editSalonNombreActividad.trim(),
+        salonMotivoEvento: editSalonNombreActividad.trim(),
+        salonDia: editSalonDia,
+        salonHoraInicio: editSalonHoraInicio,
+        salonHoraFin: editSalonHoraFin,
+        salonAsistentes: parseInt(editSalonAsistentes) || editingSalonSolicitud.salonAsistentes,
+        salonCompromisoLimpieza: editSalonCompromisoLimpieza,
+        salonCostoTotal: editSalonCompromisoLimpieza === 'pagar_limpieza'
+          ? (isSocioRes ? 300 : (editingSalonSolicitud.salonCostoTotal || 300))
+          : (isSocioRes ? 0 : (editingSalonSolicitud.salonCostoTotal || 0))
+      };
+
+      await firebaseService.saveSolicitud(updated);
+      const newList = solicitudes.map(s => s.id === updated.id ? updated : s);
+      setSolicitudes(newList);
+      safeSetItem('club_leones_solicitudes', JSON.stringify(newList));
+      setIsEditSalonModalOpen(false);
+      setEditingSalonSolicitud(null);
+      alert("La fecha y datos del apartado han sido modificados exitosamente.");
+    } catch (err) {
+      console.error("Error updating salon request:", err);
+      alert("Error al actualizar la solicitud de salón.");
+    } finally {
+      setIsUpdatingSalon(false);
+    }
+  };
+
   interface TabConfig {
     id: 'abiertas' | 'sillas' | 'internas' | 'cartas' | 'agenda' | 'salon';
     title: string;
@@ -1622,7 +1685,17 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                   <span className="truncate max-w-[130px]" title={sol.usuarioCreador}>Por: {sol.usuarioCreador || 'Público'}</span>
                   
                   {(isAdministrative || (user && sol.usuarioCreador?.includes(user.correo))) && (
-                    <div className="flex items-center space-x-1 flex-shrink-0 mt-2 sm:mt-0">
+                    <div className="flex items-center space-x-1.5 flex-shrink-0 mt-2 sm:mt-0">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditSalonSolicitud(sol)}
+                        className="bg-amber-100 hover:bg-amber-200 text-amber-900 px-2 py-1 rounded-lg border border-amber-300 transition-colors flex items-center space-x-1 text-[11px] font-extrabold cursor-pointer"
+                        title="Modificar Fecha y Horario del Apartado"
+                      >
+                        <Edit3 size={12} />
+                        <span>Editar Fecha</span>
+                      </button>
+
                       {isAdministrative && sol.estado === 'Pendiente' && (
                         <>
                           <button
@@ -4645,6 +4718,148 @@ Club de Leones de Quetzaltenango`;
                 {(activeTab === 'abiertas' || activeTab === 'internas') && renderGeneralForm()}
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE EDICIÓN DE APARTADO DE SALÓN */}
+      {isEditSalonModalOpen && editingSalonSolicitud && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 md:p-8 space-y-6 shadow-2xl border border-slate-100 relative text-left">
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditSalonModalOpen(false);
+                setEditingSalonSolicitud(null);
+              }}
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 p-2 rounded-xl"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="space-y-2">
+              <div className="inline-flex items-center space-x-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-amber-900 text-xs font-extrabold">
+                <Edit3 size={14} className="text-amber-600" />
+                <span>Modificar Apartado de Salón</span>
+              </div>
+              <h3 className="text-xl font-black text-slate-900">Editar Fecha y Horario del Salón</h3>
+              <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                Reprograma la fecha del evento, actualiza el rango de horario o modifica los datos de la actividad.
+              </p>
+            </div>
+
+            <form onSubmit={handleSaveEditSalonSolicitud} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center">
+                  <Calendar size={13} className="mr-1 text-slate-400" />
+                  Nueva Fecha del Evento *
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={editSalonDia}
+                  onChange={(e) => setEditSalonDia(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none font-bold text-slate-800 bg-white focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center">
+                  <Sparkles size={13} className="mr-1 text-amber-600" />
+                  Nombre de la Actividad / Evento *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editSalonNombreActividad}
+                  onChange={(e) => setEditSalonNombreActividad(e.target.value)}
+                  placeholder="Ej. Sesión Ordinaria / Capacitación / Evento Familiar"
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none font-semibold text-slate-800 bg-white shadow-2xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center">
+                    <Clock size={13} className="mr-1 text-slate-400" />
+                    Hora Inicio *
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={editSalonHoraInicio}
+                    onChange={(e) => setEditSalonHoraInicio(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none font-bold text-slate-800 bg-white focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5 flex items-center">
+                    <Clock size={13} className="mr-1 text-slate-400" />
+                    Hora Fin *
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={editSalonHoraFin}
+                    onChange={(e) => setEditSalonHoraFin(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none font-bold text-slate-800 bg-white focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                    Asistentes Estimados
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="80"
+                    value={editSalonAsistentes}
+                    onChange={(e) => setEditSalonAsistentes(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none font-bold text-slate-800 bg-white focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                    Compromiso de Limpieza
+                  </label>
+                  <select
+                    value={editSalonCompromisoLimpieza}
+                    onChange={(e) => setEditSalonCompromisoLimpieza(e.target.value as any)}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl outline-none font-semibold text-slate-800 bg-white cursor-pointer"
+                  >
+                    <option value="dejar_limpio">Dejar limpio (Q0.00)</option>
+                    <option value="pagar_limpieza">Servicio (+Q300.00)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-4 flex justify-end space-x-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditSalonModalOpen(false);
+                    setEditingSalonSolicitud(null);
+                  }}
+                  className="px-4 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 text-xs cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingSalon}
+                  className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 font-black rounded-xl shadow-md text-xs transition-all flex items-center justify-center space-x-2 cursor-pointer"
+                >
+                  {isUpdatingSalon ? (
+                    <span>Guardando...</span>
+                  ) : (
+                    <span>Guardar Modificaciones</span>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
