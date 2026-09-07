@@ -49,7 +49,8 @@ import {
   CheckSquare,
   Square,
   CreditCard,
-  ExternalLink
+  ExternalLink,
+  Edit3
 } from 'lucide-react';
 import { recurrenteService, RecurrenteItem } from '../services/recurrenteService';
 import { generateCartaOficialPDF, formatFechaCarta } from '../utils/pdfGenerator';
