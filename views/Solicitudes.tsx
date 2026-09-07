@@ -279,6 +279,19 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   const [createdSolicitudId, setCreatedSolicitudId] = useState('');
+  const [createdSolicitudData, setCreatedSolicitudData] = useState<{
+    nombreActividad: string;
+    nombreSolicitante: string;
+    dia: string;
+    horaInicio: string;
+    horaFin: string;
+    tipoAlquiler: string;
+    duracion?: string;
+    asistentes?: number;
+    plazasParqueo?: number;
+    costoTotal: number;
+    esSocio: boolean;
+  } | null>(null);
   const [trackingCode, setTrackingCode] = useState('');
   const [searchedSolicitud, setSearchedSolicitud] = useState<Solicitud | null>(null);
   const [trackingError, setTrackingError] = useState('');
@@ -985,6 +998,21 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       safeSetItem('club_leones_solicitudes', JSON.stringify(updatedList));
 
       setCreatedSolicitudId(nuevaSolicitud.id);
+      if (nuevaSolicitud.tipo === 'salon') {
+        setCreatedSolicitudData({
+          nombreActividad: salonNombreActividad.trim(),
+          nombreSolicitante: salonNombreSolicitante.trim(),
+          dia: salonDia,
+          horaInicio: salonHoraInicio,
+          horaFin: salonHoraFin,
+          tipoAlquiler: nuevaSolicitud.salonTipoAlquiler || salonTipoAlquiler,
+          duracion: salonDuracion,
+          asistentes: nuevaSolicitud.salonAsistentes,
+          plazasParqueo: salonPlazasParqueo,
+          costoTotal: salonCostoTotal,
+          esSocio: isSocio
+        });
+      }
       setSaveSuccess(true);
 
       // Reset document states
@@ -2071,6 +2099,19 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
               safeSetItem('club_leones_solicitudes', JSON.stringify(updatedList));
 
               setCreatedSolicitudId(nuevaSolicitud.id);
+              setCreatedSolicitudData({
+                nombreActividad: salonNombreActividad.trim(),
+                nombreSolicitante: (user ? user.nombre : salonNombreSolicitante).trim(),
+                dia: salonDia,
+                horaInicio: salonHoraInicio,
+                horaFin: salonHoraFin,
+                tipoAlquiler: salonTipoAlquiler,
+                duracion: salonDuracion,
+                asistentes: asistentesNum,
+                plazasParqueo: salonPlazasParqueo,
+                costoTotal: salonCostoTotal,
+                esSocio: isSocio
+              });
               setSaveSuccess(true);
 
               // Redireccionar inmediatamente a la pasarela de Recurrente GT
@@ -2092,6 +2133,19 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
 
       setCreatedSolicitudId(nuevaSolicitud.id);
       setCreatedSolicitudCheckoutUrl(nuevaSolicitud.recurrenteCheckoutUrl || '');
+      setCreatedSolicitudData({
+        nombreActividad: salonNombreActividad.trim(),
+        nombreSolicitante: (user ? user.nombre : salonNombreSolicitante).trim(),
+        dia: salonDia,
+        horaInicio: salonHoraInicio,
+        horaFin: salonHoraFin,
+        tipoAlquiler: salonTipoAlquiler,
+        duracion: salonDuracion,
+        asistentes: asistentesNum,
+        plazasParqueo: salonPlazasParqueo,
+        costoTotal: salonCostoTotal,
+        esSocio: isSocio
+      });
       setSaveSuccess(true);
 
       // Limpiar estados
@@ -3746,6 +3800,26 @@ Club de Leones de Quetzaltenango`;
     );
   };
 
+  const salonTipoLabel = (t: string) => {
+    switch (t) {
+      case 'salon': return 'Solo Salón de Eventos';
+      case 'salon_plazas': return 'Salón + Parqueo por Plazas';
+      case 'parqueo': return 'Solo Parqueo Completo';
+      case 'parqueo_plazas': return 'Parqueo por Plazas';
+      case 'ambos': return 'Salón y Parqueo Completo';
+      default: return t;
+    }
+  };
+
+  const formatHora12 = (h: string) => {
+    if (!h) return '';
+    const [hh, mm] = h.split(':').map(Number);
+    if (isNaN(hh)) return h;
+    const period = hh >= 12 ? 'PM' : 'AM';
+    const hours = hh % 12 === 0 ? 12 : hh % 12;
+    return `${hours}:${String(mm ?? 0).padStart(2, '0')} ${period}`;
+  };
+
   const renderSuccessBlock = () => (
     <div className="text-center py-8 space-y-6 animate-in zoom-in-95 duration-300">
       <div className="bg-emerald-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto text-emerald-600 border-4 border-emerald-100 shadow-sm">
@@ -3757,6 +3831,76 @@ Club de Leones de Quetzaltenango`;
           Tu solicitud ha sido enviada directamente a la Presidencia del Club. Guarda el siguiente código único para consultar su estado en tiempo real:
         </p>
       </div>
+
+      {createdSolicitudData && (
+        <div className="max-w-md mx-auto bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-xl text-left animate-in slide-in-from-bottom-3 duration-300">
+          <div className="bg-gradient-to-r from-amber-500 to-amber-400 px-5 py-3.5 flex items-center space-x-2.5">
+            <Sparkles size={18} className="text-slate-950" />
+            <span className="text-slate-950 font-black text-sm tracking-wide uppercase">Resumen de la Reservación</span>
+          </div>
+          <div className="p-5 space-y-4">
+            <div>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nombre de la Actividad</span>
+              <h4 className="text-lg font-black text-slate-900 leading-snug mt-0.5 break-words">{createdSolicitudData.nombreActividad}</h4>
+            </div>
+            <div className="h-px bg-slate-100" />
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-xs">
+              <div>
+                <span className="text-slate-400 font-bold flex items-center"><User size={12} className="mr-1 flex-shrink-0" />Solicitante</span>
+                <span className="block font-extrabold text-slate-800 mt-0.5 truncate">{createdSolicitudData.nombreSolicitante}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 font-bold flex items-center"><Calendar size={12} className="mr-1 flex-shrink-0" />Fecha</span>
+                <span className="block font-extrabold text-slate-800 mt-0.5">{formatDisplayDate(createdSolicitudData.dia)}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 font-bold flex items-center"><Clock size={12} className="mr-1 flex-shrink-0" />Horario</span>
+                <span className="block font-extrabold text-slate-800 mt-0.5">{formatHora12(createdSolicitudData.horaInicio)} - {formatHora12(createdSolicitudData.horaFin)}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 font-bold flex items-center"><Building size={12} className="mr-1 flex-shrink-0" />Modalidad</span>
+                <span className="block font-extrabold text-slate-800 mt-0.5 leading-tight">{salonTipoLabel(createdSolicitudData.tipoAlquiler)}</span>
+              </div>
+              {createdSolicitudData.duracion && (
+                <div>
+                  <span className="text-slate-400 font-bold flex items-center"><Clock size={12} className="mr-1 flex-shrink-0" />Duración</span>
+                  <span className="block font-extrabold text-slate-800 mt-0.5">{createdSolicitudData.duracion === '8_horas' ? '8 horas' : '4 horas'}</span>
+                </div>
+              )}
+              {createdSolicitudData.asistentes !== undefined && (
+                <div>
+                  <span className="text-slate-400 font-bold flex items-center"><Users size={12} className="mr-1 flex-shrink-0" />Asistentes</span>
+                  <span className="block font-extrabold text-slate-800 mt-0.5">{createdSolicitudData.asistentes}</span>
+                </div>
+              )}
+              {(createdSolicitudData.tipoAlquiler === 'parqueo_plazas' || createdSolicitudData.tipoAlquiler === 'salon_plazas') && createdSolicitudData.plazasParqueo !== undefined && (
+                <div>
+                  <span className="text-slate-400 font-bold flex items-center"><Car size={12} className="mr-1 flex-shrink-0" />Plazas de Parqueo</span>
+                  <span className="block font-extrabold text-slate-800 mt-0.5">{createdSolicitudData.plazasParqueo}</span>
+                </div>
+              )}
+            </div>
+            <div className="h-px bg-slate-100" />
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center space-x-2">
+                {createdSolicitudData.esSocio && (
+                  <span className="text-[10px] font-black text-blue-900 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-lg uppercase tracking-wide">Socio</span>
+                )}
+                {createdSolicitudData.costoTotal === 0 && (
+                  <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg uppercase tracking-wide">Exonerado</span>
+                )}
+                {createdSolicitudData.costoTotal > 0 && (
+                  <span className="text-[10px] font-black text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg uppercase tracking-wide">Por Pagar</span>
+                )}
+              </div>
+              <div className="flex items-baseline shrink-0">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1.5">Total</span>
+                <span className="text-2xl font-black text-blue-900">Q {createdSolicitudData.costoTotal.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
       {createdSolicitudId && (
         <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 max-w-md mx-auto flex items-center justify-between shadow-inner">
@@ -3810,6 +3954,7 @@ Club de Leones de Quetzaltenango`;
           onClick={() => {
             setSaveSuccess(false);
             setCreatedSolicitudId('');
+            setCreatedSolicitudData(null);
             setSalonWizardStep(1);
           }}
           className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-extrabold rounded-xl text-xs shadow-md transition-all active:scale-[0.98] cursor-pointer"
