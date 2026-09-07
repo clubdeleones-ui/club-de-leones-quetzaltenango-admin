@@ -1608,11 +1608,17 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                   {/* Info details */}
                   <div className="space-y-1">
                     <h3 className="font-extrabold text-base text-slate-900 leading-snug break-words">
-                      Reservación: {sol.salonDia}
+                      {sol.salonNombreActividad || 'Reservación de Salón / Parqueo'}
                     </h3>
-                    <div className="flex items-center text-xs font-semibold text-slate-400">
-                      <Clock size={12} className="mr-1 text-slate-400 flex-shrink-0" />
-                      <span>{sol.salonHoraInicio} - {sol.salonHoraFin}</span>
+                    <div className="flex items-center text-xs font-semibold text-slate-400 flex-wrap gap-x-3 gap-y-1">
+                      <span className="flex items-center">
+                        <Calendar size={12} className="mr-1 text-amber-600 flex-shrink-0" />
+                        <span>{sol.salonDia}</span>
+                      </span>
+                      <span className="flex items-center">
+                        <Clock size={12} className="mr-1 text-slate-400 flex-shrink-0" />
+                        <span>{sol.salonHoraInicio} - {sol.salonHoraFin}</span>
+                      </span>
                     </div>
                   </div>
 
@@ -4511,6 +4517,9 @@ Club de Leones de Quetzaltenango`;
                   ? `${searchedSolicitud.salonNombreSolicitante || searchedSolicitud.nombre} (${searchedSolicitud.salonInstitucion})`
                   : (searchedSolicitud.nombreBeneficiario || searchedSolicitud.salonNombreSolicitante || searchedSolicitud.agendaSocioNombre || searchedSolicitud.nombre)}
               </span>
+              {searchedSolicitud.salonNombreActividad && (
+                <span className="text-[11px] font-extrabold text-amber-700 block mt-1">Actividad: {searchedSolicitud.salonNombreActividad}</span>
+              )}
             </div>
             <div>
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Código Único</span>
