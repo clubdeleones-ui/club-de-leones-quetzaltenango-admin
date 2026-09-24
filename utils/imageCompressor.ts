@@ -43,24 +43,13 @@ export const compressImageFile = (
 
         const ctx = canvas.getContext('2d');
         if (!ctx) {
-          // If canvas context is not available, resolve with the original read result
           resolve(event.target?.result as string);
           return;
         }
 
-        const isPngOrWebp = file.type === 'image/png' || 
-                            file.type === 'image/webp' || 
-                            file.name?.toLowerCase().endsWith('.png') || 
-                            file.name?.toLowerCase().endsWith('.webp') ||
-                            removeBlackBackground;
-
-        ctx.clearRect(0, 0, width, height);
-
-        if (!isPngOrWebp && !removeBlackBackground) {
-          // Default white background fill for JPEGs so transparent fallback is white, not black
-          ctx.fillStyle = '#FFFFFF';
-          ctx.fillRect(0, 0, width, height);
-        }
+        // Fill with white background so transparent PNGs/WebPs don't turn black when converted to JPEG
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, width, height);
 
         // Draw the image on the canvas with the new dimensions
         ctx.drawImage(img, 0, 0, width, height);
@@ -80,18 +69,57 @@ export const compressImageFile = (
           ctx.putImageData(imgData, 0, 0);
         }
 
-        // Convert the canvas to data URL preserving PNG transparency when applicable
+        // Firestore strictly enforces a maximum of 1,048,487 bytes per property or document.
+        // We set our safety threshold to 400,000 chars (~300 KB), guaranteeing it will NEVER exceed Firestore limit.
+        const MAX_SAFE_LENGTH = 400000;
+
         try {
-          if (isPngOrWebp || removeBlackBackground) {
-            const compressedDataUrl = canvas.toDataURL('image/png');
-            resolve(compressedDataUrl);
-          } else {
-            const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-            resolve(compressedDataUrl);
+          let currentQuality = quality;
+          let currentCanvas = canvas;
+          let currentWidth = width;
+          let currentHeight = height;
+
+          // Always encode photos as JPEG (or webp if black background removed) to ensure lossy compression
+          let outputType = removeBlackBackground ? 'image/webp' : 'image/jpeg';
+          let dataUrl = currentCanvas.toDataURL(outputType, currentQuality);
+
+          // If webp is not supported or yielded a PNG fallback, switch to JPEG
+          if (dataUrl.startsWith('data:image/png') && !removeBlackBackground) {
+            dataUrl = currentCanvas.toDataURL('image/jpeg', currentQuality);
           }
+
+          // Dynamic downscale loop: if the output is somehow too large, step down quality and resolution
+          let iterations = 0;
+          while (dataUrl.length > MAX_SAFE_LENGTH && iterations < 5) {
+            iterations++;
+            if (currentQuality > 0.4) {
+              currentQuality = Math.max(0.35, currentQuality - 0.15);
+            } else {
+              // Scale down dimensions by 25%
+              currentWidth = Math.round(currentWidth * 0.75);
+              currentHeight = Math.round(currentHeight * 0.75);
+              const scaledCanvas = document.createElement('canvas');
+              scaledCanvas.width = currentWidth;
+              scaledCanvas.height = currentHeight;
+              const sCtx = scaledCanvas.getContext('2d');
+              if (sCtx) {
+                sCtx.fillStyle = '#FFFFFF';
+                sCtx.fillRect(0, 0, currentWidth, currentHeight);
+                sCtx.drawImage(currentCanvas, 0, 0, currentWidth, currentHeight);
+                currentCanvas = scaledCanvas;
+              }
+            }
+            dataUrl = currentCanvas.toDataURL('image/jpeg', currentQuality);
+          }
+
+          resolve(dataUrl);
         } catch (err) {
-          // Fallback if canvas.toDataURL fails
-          resolve(event.target?.result as string);
+          // If canvas compression fails, try a low-quality basic jpeg
+          try {
+            resolve(canvas.toDataURL('image/jpeg', 0.5));
+          } catch {
+            resolve(event.target?.result as string);
+          }
         }
       };
 
@@ -99,7 +127,6 @@ export const compressImageFile = (
         reject(new Error("Failed to load image for compression: " + err.toString()));
       };
 
-      // Set the image src to the read data URL
       img.src = event.target?.result as string;
     };
 

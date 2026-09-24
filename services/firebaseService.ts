@@ -17,12 +17,18 @@ import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda, Acta, HitoHistorico, SolicitudVoluntario, ReunionAgenda, TareaComision, Asistencia, BienInventario, CategoriaInventario, ConvencionConfig, ConvencionRegistro, RegistroParticipacion, RequerimientoActividad, NeveraProducto, NeveraConsumo, NeveraSaldoSocio, NeveraCuentaAbono } from "../types";
 import { MOCK_NEVERA_CATALOG } from "../constants";
 
+// In-memory flag to avoid repeated 402 / quota-exceeded requests when Storage billing is disabled
+let isStorageQuotaExceeded = false;
+
 export const firebaseService = {
   // Upload candidate photo to Firebase Storage (Supports Base64 data_url format)
   uploadCandidatePhoto: async (base64Data: string, candidateId: string): Promise<string> => {
     try {
       // Si la imagen ya es una URL o no es base64, se devuelve tal cual
       if (!base64Data.startsWith('data:image')) {
+        return base64Data;
+      }
+      if (isStorageQuotaExceeded) {
         return base64Data;
       }
       
@@ -32,12 +38,12 @@ export const firebaseService = {
       await uploadString(storageRef, base64Data, 'data_url');
       const downloadURL = await getDownloadURL(storageRef);
       return downloadURL;
-    } catch (error) {
-      console.warn("Storage no disponible o sin permisos para candidato, usando imagen optimizada:", error);
-      if (base64Data.length < 500000) {
-        return base64Data;
+    } catch (error: any) {
+      if (error?.code === 'storage/quota-exceeded' || error?.status === 402 || error?.message?.includes('402') || error?.message?.includes('quota')) {
+        isStorageQuotaExceeded = true;
       }
-      throw new Error("No se pudo subir la fotografía a Firebase Storage. Intente de nuevo.");
+      console.warn("Storage no disponible o sin permisos para candidato, usando imagen optimizada:", error);
+      return base64Data;
     }
   },
 
@@ -192,6 +198,9 @@ export const firebaseService = {
       if (!base64Data.startsWith('data:image')) {
         return base64Data;
       }
+      if (isStorageQuotaExceeded) {
+        return base64Data;
+      }
       const match = base64Data.match(/^data:([^;]+);base64,/);
       const contentType = match ? match[1] : 'image/jpeg';
       const uniqueName = `socio_${socioId}_${Date.now()}`;
@@ -199,7 +208,10 @@ export const firebaseService = {
       await uploadString(storageRef, base64Data, 'data_url', { contentType });
       const downloadURL = await getDownloadURL(storageRef);
       return downloadURL;
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.code === 'storage/quota-exceeded' || error?.status === 402 || error?.message?.includes('402') || error?.message?.includes('quota')) {
+        isStorageQuotaExceeded = true;
+      }
       console.warn("Firebase Storage no disponible (cuenta de facturación o cuota). Almacenando fotografía optimizada directamente en Firestore:", error);
       // Almacenamos el base64 comprimido directamente para que el socio nunca pierda su foto de perfil actualizada
       return base64Data;
@@ -623,11 +635,17 @@ export const firebaseService = {
       if (!base64Data.startsWith('data:image')) {
         return base64Data;
       }
+      if (isStorageQuotaExceeded) {
+        return base64Data;
+      }
       const uniqueName = `${filePrefix}_${Date.now()}`;
       const storageRef = ref(storage, `galeria/${uniqueName}`);
       await uploadString(storageRef, base64Data, 'data_url');
       return await getDownloadURL(storageRef);
     } catch (error: any) {
+      if (error?.code === 'storage/quota-exceeded' || error?.status === 402 || error?.message?.includes('402') || error?.message?.includes('quota')) {
+        isStorageQuotaExceeded = true;
+      }
       console.warn("Firebase Storage no disponible para galería, utilizando almacenamiento directo optimizado:", error);
       return base64Data;
     }
