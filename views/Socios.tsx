@@ -16,6 +16,7 @@ import {
   Briefcase
 } from 'lucide-react';
 import { formatDisplayDate } from '../utils/dateSpanishFormatter';
+import { getSafeAvatarUrl, handleAvatarError } from '../utils/imageFallback';
 
 interface SociosProps {
   user?: Socio | null;
@@ -118,15 +119,16 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
                 <div className="relative">
                   {/* Anillo de color según jerarquía */}
                   <img 
-                    src={socio.foto || `https://picsum.photos/seed/${socio.nombre}/200/200`} 
+                    src={getSafeAvatarUrl(socio.foto, socio.nombre)} 
                     className={`w-24 h-24 rounded-full object-cover border-4 border-white shadow-xl group-hover:scale-105 transition-all duration-500 cursor-zoom-in ${
                       socio.rol === 'SUPER_ADMIN' || socio.rol === 'TESORERO' || socio.rol === 'SECRETARIO'
                         ? 'ring-4 ring-amber-400/80 ring-offset-2'
                         : 'ring-4 ring-blue-900/60 ring-offset-2'
                     }`} 
                     alt={socio.nombre}
+                    onError={(e) => handleAvatarError(e, socio.nombre)}
                     onClick={() => setSelectedPhoto({
-                      url: socio.foto || `https://picsum.photos/seed/${socio.nombre}/200/200`,
+                      url: getSafeAvatarUrl(socio.foto, socio.nombre),
                       title: socio.nombre
                     })}
                   />
@@ -296,6 +298,7 @@ const Socios: React.FC<SociosProps> = ({ user }) => {
             <img 
               src={selectedPhoto.url} 
               alt={selectedPhoto.title} 
+              onError={(e) => handleAvatarError(e, selectedPhoto.title)}
               className="max-w-full max-h-[80vh] rounded-2xl object-contain shadow-2xl border border-white/10"
               onClick={(e) => e.stopPropagation()}
             />

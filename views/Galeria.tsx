@@ -6,6 +6,7 @@ import { MOCK_GALERIA } from '../constants';
 import { formatDisplayDate } from '../utils/dateSpanishFormatter';
 import { MuseoPersonajes } from './MuseoPersonajes';
 import { RentasSalonesSection } from '../components/RentasSalonesSection';
+import { getSafeGalleryUrl, handleImageError, DEFAULT_GALLERY_FALLBACK } from '../utils/imageFallback';
 
 const Galeria: React.FC = () => {
   const [items, setItems] = useState<GaleriaItem[]>([]);
@@ -188,8 +189,9 @@ const Galeria: React.FC = () => {
                           >
                             <div className="relative h-56 overflow-hidden flex-shrink-0 bg-slate-100">
                               <img
-                                src={item.url}
+                                src={getSafeGalleryUrl(item.url)}
                                 alt={item.titulo}
+                                onError={(e) => handleImageError(e, DEFAULT_GALLERY_FALLBACK)}
                                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                               />
                               <div className="absolute top-4 right-4 bg-blue-900/90 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center shadow-lg">

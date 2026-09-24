@@ -33,6 +33,7 @@ import { firebaseService } from '../services/firebaseService';
 import { useClubData } from '../context/ClubDataContext';
 import { Actividad, GaleriaItem } from '../types';
 import { MOCK_ACTIVIDADES } from '../constants';
+import { getSafeActivityUrl, handleImageError, DEFAULT_ACTIVITY_FALLBACK, DEFAULT_GALLERY_FALLBACK } from '../utils/imageFallback';
 import { InscripcionVoluntarioModal } from '../components/InscripcionVoluntarioModal';
 import { formatDisplayDate } from '../utils/dateSpanishFormatter';
 
@@ -331,7 +332,7 @@ const Home: React.FC = () => {
                 <div className="relative flex-shrink-0">
                   <div className="absolute inset-0 bg-yellow-400/25 rounded-full blur-md group-hover:blur-lg transition-all" />
                   <img 
-                    src="images/logo.png" 
+                    src="/images/logo.png" 
                     className="w-16 h-16 bg-white p-1.5 rounded-full relative z-10 border border-yellow-400/40 shadow-inner group-hover:scale-105 transition-transform duration-500" 
                     alt="Logo Club de Leones Quetzaltenango" 
                   />
@@ -573,7 +574,8 @@ const Home: React.FC = () => {
                   {/* Poster Image */}
                   <div className="relative aspect-video w-full overflow-hidden bg-slate-100 border-b border-slate-150">
                     <img 
-                      src={act.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800'} 
+                      src={getSafeActivityUrl(act.imagen)} 
+                      onError={(e) => handleImageError(e, DEFAULT_ACTIVITY_FALLBACK)}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                       alt={act.titulo}
                     />
@@ -672,8 +674,9 @@ const Home: React.FC = () => {
             <div className="w-full flex flex-col items-center">
               <div className="relative w-full max-h-[82vh] flex justify-center items-center">
                 <img 
-                  src={activeFondo.url} 
+                  src={getSafeGalleryUrl(activeFondo.url)} 
                   alt={activeFondo.titulo} 
+                  onError={(e) => handleImageError(e, DEFAULT_GALLERY_FALLBACK)}
                   className="max-w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl border-4 border-white/10"
                 />
               </div>

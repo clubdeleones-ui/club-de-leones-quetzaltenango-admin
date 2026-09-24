@@ -50,6 +50,7 @@ const UserSessionSync: React.FC<UserSessionSyncProps> = ({ auth, onUpdateUser })
   const { socios } = useClubData();
 
   const isPlaceholderPhoto = (url?: string) => !url || url.startsWith('https://picsum.photos');
+  const isBrokenStorage = (url?: string) => !!url && url.includes('firebasestorage.googleapis.com');
 
   useEffect(() => {
     if (auth.isAuthenticated && auth.user && socios.length > 0) {
@@ -59,10 +60,24 @@ const UserSessionSync: React.FC<UserSessionSyncProps> = ({ auth, onUpdateUser })
         s => s.id === currentId || (currentCorreo && s.correo && s.correo.toLowerCase() === currentCorreo.toLowerCase())
       );
       if (matchingSocio) {
-        // Nunca degradar la foto real de la sesión a un placeholder de ejemplo
-        if (isPlaceholderPhoto(matchingSocio.foto) && !isPlaceholderPhoto(auth.user.foto)) {
+        // Nunca degradar la foto real de la sesión a un placeholder o a una URL rota de storage
+        if ((isPlaceholderPhoto(matchingSocio.foto) || isBrokenStorage(matchingSocio.foto)) && 
+            !isPlaceholderPhoto(auth.user.foto) && !isBrokenStorage(auth.user.foto)) {
           return;
         }
+
+        // Si la sesión local tiene una foto recién actualizada (data:image) y Firestore aún no la refleja, no sobreescribir
+        if (auth.user.foto?.startsWith('data:image') && matchingSocio.foto !== auth.user.foto) {
+          return;
+        }
+
+        // Si la sesión local tiene fecha de edición más reciente, no sobreescribir
+        if (auth.user.fechaEdicion && matchingSocio.fechaEdicion) {
+          if (new Date(auth.user.fechaEdicion).getTime() > new Date(matchingSocio.fechaEdicion).getTime()) {
+            return;
+          }
+        }
+
         if (JSON.stringify(matchingSocio) !== JSON.stringify(auth.user)) {
           onUpdateUser(matchingSocio);
         }

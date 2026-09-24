@@ -120,7 +120,26 @@ const KEYS = {
 function getLocalData<T>(key: string, fallback: T): T {
   try {
     const local = localStorage.getItem(key);
-    return local ? JSON.parse(local) : fallback;
+    if (!local) return fallback;
+    const parsed = JSON.parse(local);
+    // Sanitize any broken Firebase Storage URLs that were cached previously
+    if (Array.isArray(parsed)) {
+      return parsed.map((item: any) => {
+        if (!item || typeof item !== 'object') return item;
+        const copy = { ...item };
+        if (typeof copy.foto === 'string' && copy.foto.includes('firebasestorage.googleapis.com')) {
+          delete copy.foto;
+        }
+        if (typeof copy.imagen === 'string' && copy.imagen.includes('firebasestorage.googleapis.com')) {
+          delete copy.imagen;
+        }
+        if (typeof copy.imagenUrl === 'string' && copy.imagenUrl.includes('firebasestorage.googleapis.com')) {
+          delete copy.imagenUrl;
+        }
+        return copy;
+      }) as unknown as T;
+    }
+    return parsed;
   } catch (e) {
     console.error(`Error loading local cache for ${key}:`, e);
     return fallback;
@@ -307,26 +326,9 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     };
 
-    // Migración única: subir a Storage las fotos de socios que quedaron embebidas como Base64
-    const migrateBase64Photos = async () => {
-      const MIGRATION_KEY = 'club_leones_socios_photos_migrated_v1';
-      if (localStorage.getItem(MIGRATION_KEY) !== 'true') {
-        try {
-          const fixed = await firebaseService.migrateSociosBase64Photos();
-          if (fixed > 0) {
-            console.log(`Migradas ${fixed} fotos base64 de socios a Firebase Storage.`);
-          }
-          safeSetItem(MIGRATION_KEY, 'true');
-        } catch (err) {
-          console.error("Error running base64 photo migration:", err);
-        }
-      }
-    };
-
     const initData = async () => {
       // await cleanPaymentsMigration();
       await performInitialSync();
-      await migrateBase64Photos();
     };
 
     initData();

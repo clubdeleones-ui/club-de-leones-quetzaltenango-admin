@@ -41,6 +41,7 @@ import { firebaseService } from '../services/firebaseService';
 import { useModal } from '../context/ModalContext';
 import { useToast } from '../context/ToastContext';
 import { RequerimientosActividades } from './RequerimientosActividades';
+import { getSafeAvatarUrl, handleAvatarError } from '../utils/imageFallback';
 
 const PUESTOS_PREDEFINIDOS = [
   'Presidente',
@@ -301,10 +302,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
         )}
         <div className="flex items-center space-x-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex-shrink-0">
           <img 
-            src={user.foto || `https://picsum.photos/seed/${user.id}/100/100`} 
+            src={getSafeAvatarUrl(user.foto, user.nombre)} 
             className="w-12 h-12 rounded-full border-2 border-yellow-500 object-cover cursor-zoom-in" 
             alt="Avatar"
-            onClick={() => setSelectedPhoto({ url: user.foto, title: user.nombre })}
+            onError={(e) => handleAvatarError(e, user.nombre)}
+            onClick={() => setSelectedPhoto({ url: getSafeAvatarUrl(user.foto, user.nombre), title: user.nombre })}
           />
           <div>
             <p className="font-bold text-sm leading-tight text-slate-800">{user.nombre}</p>
@@ -670,12 +672,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
               <div className="absolute -top-12 left-1/2 transform -translate-x-1/2">
                 <div className="relative">
                   <img 
-                    src={user.foto || `https://picsum.photos/seed/${user.id}/100/100`} 
+                    src={getSafeAvatarUrl(user.foto, user.nombre)} 
                     className={`w-24 h-24 rounded-full object-cover border-4 border-white shadow-xl group-hover:scale-105 transition-all duration-500 cursor-zoom-in ring-4 ring-offset-2 ${
                       userIsInactive ? 'ring-slate-400' : userIsDirectiva ? 'ring-amber-400' : 'ring-blue-900'
                     }`} 
                     alt={user.nombre}
-                    onClick={() => setSelectedPhoto({ url: user.foto, title: user.nombre })}
+                    onError={(e) => handleAvatarError(e, user.nombre)}
+                    onClick={() => setSelectedPhoto({ url: getSafeAvatarUrl(user.foto, user.nombre), title: user.nombre })}
                   />
                   <div className="absolute bottom-0 right-0 bg-blue-950 text-amber-400 p-1.5 rounded-full border-2 border-white shadow-md">
                     <Award size={14} />
@@ -828,8 +831,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
               <div className="flex flex-col items-center space-y-3">
                 <div className="relative group">
                   <img
-                    src={editFoto || 'https://picsum.photos/seed/placeholder/200/200'}
+                    src={getSafeAvatarUrl(editFoto, user.nombre)}
                     alt="Vista previa"
+                    onError={(e) => handleAvatarError(e, user.nombre)}
                     className="w-28 h-28 rounded-full object-cover border-4 border-slate-100 shadow-md"
                   />
                   {isSavingSocio ? (

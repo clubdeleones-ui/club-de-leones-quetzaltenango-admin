@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { AuthState, UserRole } from '../types';
 import { googleService } from '../services/googleService';
+import { getSafeAvatarUrl, handleAvatarError } from '../utils/imageFallback';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -282,8 +283,9 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
                         className="flex items-center space-x-1.5 focus:outline-none hover:bg-blue-800/50 p-1 rounded-2xl transition-all duration-300 border border-transparent hover:border-blue-750"
                       >
                         <img
-                          src={auth.user?.foto || 'https://picsum.photos/seed/' + auth.user?.id + '/100/100'}
-                          alt={auth.user?.nombre}
+                          src={getSafeAvatarUrl(auth.user?.foto, auth.user?.nombre)}
+                          alt={auth.user?.nombre || 'Usuario'}
+                          onError={(e) => handleAvatarError(e, auth.user?.nombre)}
                           className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-slate-300/30"
                         />
                         <ChevronDown size={14} className={`text-slate-300 transition-transform duration-300 ${isUserDropdownOpen ? 'rotate-180' : ''}`} />
@@ -481,8 +483,9 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
                     {/* Profile card mobile */}
                     <div className="flex items-center space-x-4 px-4 py-3 bg-blue-850/40 rounded-2xl border border-blue-850/70">
                       <img 
-                        src={auth.user?.foto || 'https://picsum.photos/seed/' + auth.user?.id + '/100/100'} 
-                        alt={auth.user?.nombre} 
+                        src={getSafeAvatarUrl(auth.user?.foto, auth.user?.nombre)} 
+                        alt={auth.user?.nombre || 'Usuario'} 
+                        onError={(e) => handleAvatarError(e, auth.user?.nombre)}
                         className="w-12 h-12 rounded-xl object-cover border border-blue-800"
                       />
                       <div className="min-w-0 flex-grow">

@@ -186,7 +186,7 @@ export const firebaseService = {
     }
   },
 
-  // Upload socio photo to Firebase Storage
+  // Upload socio photo with resilient Base64 direct persistence when Storage is unavailable
   uploadSocioPhoto: async (base64Data: string, socioId: string): Promise<string> => {
     try {
       if (!base64Data.startsWith('data:image')) {
@@ -200,19 +200,13 @@ export const firebaseService = {
       const downloadURL = await getDownloadURL(storageRef);
       return downloadURL;
     } catch (error) {
-      console.warn("Storage no disponible o sin permisos para socio, utilizando imagen optimizada directa:", error);
-      // Si Firebase Storage falla (por ejemplo permisos 403 o reglas no publicadas),
-      // retornamos el base64 comprimido para que el socio no pierda sus cambios y pueda guardar su perfil sin bloquearse.
-      if (base64Data.length < 500000) {
-        return base64Data;
-      }
-      throw new Error("No se pudo subir la fotografía a Firebase Storage. Intente de nuevo.");
+      console.warn("Firebase Storage no disponible (cuenta de facturación o cuota). Almacenando fotografía optimizada directamente en Firestore:", error);
+      // Almacenamos el base64 comprimido directamente para que el socio nunca pierda su foto de perfil actualizada
+      return base64Data;
     }
   },
 
   // Save or update an active member in Firestore
-  // NOTA: Se usa merge para NUNCA sobrescribir campos existentes (como `foto`)
-  // cuando el objeto recibido está incompleto o proviene de datos desactualizados.
   saveSocio: async (socio: Socio): Promise<Socio> => {
     try {
       let finalFoto = socio.foto;
@@ -223,10 +217,8 @@ export const firebaseService = {
       const docRef = doc(db, "socios", socio.id);
       const cleanData = JSON.parse(JSON.stringify(socioToSave));
 
-      // Si la foto es un placeholder de ejemplo (picsum) o está vacía,
-      // se omite del payload para NO pisar la foto real guardada (merge preserva el valor existente).
-      const isPlaceholderFoto = !cleanData.foto || String(cleanData.foto).startsWith('https://picsum.photos');
-      if (isPlaceholderFoto) {
+      // Si no se proporcionó foto en el objeto, no pisar la existente en Firestore
+      if (cleanData.foto === undefined || cleanData.foto === null) {
         delete cleanData.foto;
       }
 
@@ -272,26 +264,8 @@ export const firebaseService = {
   // Migración única: convierte fotos de socios que quedaron como Base64 en Firestore
   // a URLs de Firebase Storage (repara el problema de datos/anch storage no persistible).
   migrateSociosBase64Photos: async (): Promise<number> => {
-    let fixed = 0;
-    try {
-      const snapshot = await getDocs(collection(db, "socios"));
-      for (const docSnap of snapshot.docs) {
-        const data = docSnap.data() as Socio;
-        if (data.foto && data.foto.startsWith('data:')) {
-          try {
-            const url = await firebaseService.uploadSocioPhoto(data.foto, data.id);
-            await setDoc(doc(db, "socios", data.id), { foto: url }, { merge: true });
-            fixed++;
-          } catch (err) {
-            console.error(`Error migrando foto base64 del socio ${data.id}:`, err);
-          }
-        }
-      }
-      return fixed;
-    } catch (error) {
-      console.error("Error migrating base64 socio photos:", error);
-      return fixed;
-    }
+    // Firebase Storage has billing closed (HTTP 402). Keep photos in Firestore as Base64.
+    return 0;
   },
 
   // Save a new request (solicitud)
@@ -654,11 +628,8 @@ export const firebaseService = {
       await uploadString(storageRef, base64Data, 'data_url');
       return await getDownloadURL(storageRef);
     } catch (error: any) {
-      console.error("Error al subir foto de galeria a Firebase Storage:", error);
-      if (error.status === 404 || error.code === 'storage/unknown') {
-        throw new Error("No se pudo subir la imagen a Firebase Storage. Por favor, asegúrate de activar y configurar Firebase Storage en tu consola de Firebase (proyecto 'parqueo-cueva').");
-      }
-      throw new Error(`Error de subida de imagen: ${error.message || error}`);
+      console.warn("Firebase Storage no disponible para galería, utilizando almacenamiento directo optimizado:", error);
+      return base64Data;
     }
   },
 
@@ -1299,8 +1270,8 @@ export const firebaseService = {
       await uploadString(storageRef, base64Data, 'data_url');
       return await getDownloadURL(storageRef);
     } catch (error: any) {
-      console.error("Error al subir comprobante a Firebase Storage:", error);
-      throw new Error(`Error al subir la imagen a Storage: ${error.message || error}`);
+      console.warn("Firebase Storage no disponible para comprobante, utilizando almacenamiento directo optimizado:", error);
+      return base64Data;
     }
   },
 
@@ -1315,8 +1286,8 @@ export const firebaseService = {
       await uploadString(storageRef, dataUrl, 'data_url');
       return await getDownloadURL(storageRef);
     } catch (error: any) {
-      console.error("Error al subir documento de solicitud a Storage:", error);
-      throw new Error("No se pudo subir el documento adjunto a Firebase Storage. Intente de nuevo.");
+      console.warn("Firebase Storage no disponible para documento adjunto, utilizando almacenamiento directo optimizado:", error);
+      return dataUrl;
     }
   },
 

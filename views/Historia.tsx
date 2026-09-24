@@ -3,6 +3,7 @@ import { Clock, MapPin, Search, ChevronDown, X, Play } from 'lucide-react';
 import { HitoHistorico } from '../types';
 import { firebaseService } from '../services/firebaseService';
 import { formatDisplayDate } from '../utils/dateSpanishFormatter';
+import { getSafeGalleryUrl, handleImageError, DEFAULT_GALLERY_FALLBACK } from '../utils/imageFallback';
 
 export const Historia: React.FC = () => {
   const [hitos, setHitos] = useState<HitoHistorico[]>([]);
@@ -191,8 +192,9 @@ export const Historia: React.FC = () => {
                       >
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10"></div>
                         <img 
-                          src={hito.imagenUrl} 
+                          src={getSafeGalleryUrl(hito.imagenUrl)} 
                           alt={hito.titulo} 
+                          onError={(e) => handleImageError(e, DEFAULT_GALLERY_FALLBACK)}
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-115"
                         />
                         
@@ -284,8 +286,9 @@ export const Historia: React.FC = () => {
             onClick={e => e.stopPropagation()}
           >
             <img 
-              src={zoomImage} 
+              src={zoomImage || ''} 
               alt="Hito Histórico" 
+              onError={(e) => handleImageError(e, DEFAULT_GALLERY_FALLBACK)}
               className="w-full h-full object-contain max-h-[85vh] mx-auto bg-slate-900/40"
             />
           </div>

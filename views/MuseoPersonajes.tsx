@@ -18,6 +18,7 @@ import {
   Filter
 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
+import { handleImageError, DEFAULT_GALLERY_FALLBACK } from '../utils/imageFallback';
 
 interface MuseoPersonajesProps {
   items: GaleriaItem[];
@@ -235,6 +236,7 @@ export const MuseoPersonajes: React.FC<MuseoPersonajesProps> = ({ items }) => {
                   <img
                     src={personaje.url}
                     alt={personaje.titulo}
+                    onError={(e) => handleImageError(e, DEFAULT_GALLERY_FALLBACK)}
                     className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-110"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent"></div>
@@ -339,6 +341,7 @@ export const MuseoPersonajes: React.FC<MuseoPersonajesProps> = ({ items }) => {
               <img
                 src={selectedPersonaje.url}
                 alt={selectedPersonaje.titulo}
+                onError={(e) => handleImageError(e, DEFAULT_GALLERY_FALLBACK)}
                 className="w-full h-full object-cover object-top"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent"></div>
@@ -429,6 +432,7 @@ export const MuseoPersonajes: React.FC<MuseoPersonajesProps> = ({ items }) => {
                         <img 
                           src={fotoUrl} 
                           alt={`Registro ${idx + 1}`} 
+                          onError={(e) => handleImageError(e, DEFAULT_GALLERY_FALLBACK)}
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
                         />
                       </div>

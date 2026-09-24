@@ -9,6 +9,7 @@ import { Actividad, Solicitud } from '../types';
 import { InscripcionVoluntarioModal } from '../components/InscripcionVoluntarioModal';
 import { ConfirmarParticipacionModal } from '../components/ConfirmarParticipacionModal';
 import { compressImageFile, validateImageFile } from '../utils/imageCompressor';
+import { getSafeActivityUrl, handleImageError, DEFAULT_ACTIVITY_FALLBACK } from '../utils/imageFallback';
 
 interface CalendarioProps {
     accessToken?: string;
@@ -777,10 +778,11 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                             {/* Poster / Image Header */}
                                             <div 
                                                 className="relative aspect-video w-full overflow-hidden rounded-t-[2.5rem] bg-slate-100 border-b border-slate-150 cursor-zoom-in"
-                                                onClick={() => setZoomedImage(act.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800')}
+                                                onClick={() => setZoomedImage(getSafeActivityUrl(act.imagen))}
                                             >
                                                 <img 
-                                                    src={act.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800'} 
+                                                    src={getSafeActivityUrl(act.imagen)} 
+                                                    onError={(e) => handleImageError(e, DEFAULT_ACTIVITY_FALLBACK)}
                                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                                                     alt={act.titulo}
                                                 />
@@ -2415,8 +2417,9 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                         {/* Activity Card Preview */}
                         <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center space-x-4">
                             <img
-                                src={sharingActividad.imagen || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=400'}
+                                src={getSafeActivityUrl(sharingActividad.imagen)}
                                 alt="Afiche"
+                                onError={(e) => handleImageError(e, DEFAULT_ACTIVITY_FALLBACK)}
                                 className="w-16 h-16 rounded-2xl object-cover border border-slate-200 shadow-sm shrink-0"
                             />
                             <div className="space-y-1 overflow-hidden">
@@ -2568,6 +2571,7 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                     </button>
                     <img 
                         src={zoomedImage} 
+                        onError={(e) => handleImageError(e, DEFAULT_ACTIVITY_FALLBACK)}
                         className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200" 
                         alt="Zoomed Actividad" 
                     />
