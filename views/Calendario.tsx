@@ -303,7 +303,7 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
         try {
             let finalImageUrl = newActividad.imagen;
             if (newActividadImageFile) {
-                const compressedBase64 = await compressImageFile(newActividadImageFile, 1200, 1200, 0.8);
+                const compressedBase64 = await compressImageFile(newActividadImageFile, 800, 800, 0.7);
                 finalImageUrl = await firebaseService.uploadGaleriaImage(compressedBase64, 'actividad');
             }
 

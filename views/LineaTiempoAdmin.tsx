@@ -4,6 +4,7 @@ import { HitoHistorico } from '../types';
 import { firebaseService } from '../services/firebaseService';
 import { compressImageFile, validateImageFile } from '../utils/imageCompressor';
 import { useModal } from '../context/ModalContext';
+import { getSafeGalleryUrl, handleImageError, DEFAULT_GALLERY_FALLBACK } from '../utils/imageFallback';
 
 export const LineaTiempoAdmin: React.FC = () => {
   const { showAlert, showConfirm } = useModal();
@@ -161,15 +162,9 @@ export const LineaTiempoAdmin: React.FC = () => {
       }
 
       if (imageFile) {
-        // Compress to 1200 max size and 0.8 quality
-        const compressedBase64 = await compressImageFile(imageFile, 1200, 1200, 0.8);
-        // Use 'hito' as the prefix to write to the root of the galeria folder (avoids storage rules subfolder issues)
+        // Compress to 800x800 and 0.7 quality to ensure fast loading and safe Firestore size (~35-50KB)
+        const compressedBase64 = await compressImageFile(imageFile, 800, 800, 0.7);
         finalImageUrl = await firebaseService.uploadGaleriaImage(compressedBase64, 'hito');
-        
-        // If upload fallback returned the huge base64 data URL, throw an error to prevent Firestore document size limit issues
-        if (finalImageUrl.startsWith('data:image')) {
-          throw new Error('La subida de imagen falló. Por favor, verifica las reglas de almacenamiento de Firebase.');
-        }
       }
 
       const hitoId = editingItem ? editingItem.id : undefined;
@@ -274,7 +269,12 @@ export const LineaTiempoAdmin: React.FC = () => {
                 <div className="h-48 bg-slate-100 relative overflow-hidden">
                   {item.imagenUrl ? (
                     <>
-                      <img src={item.imagenUrl} alt={item.titulo} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <img 
+                        src={getSafeGalleryUrl(item.imagenUrl)} 
+                        alt={item.titulo} 
+                        onError={(e) => handleImageError(e, DEFAULT_GALLERY_FALLBACK)}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                      />
                       {item.videoUrl && (
                         <div className="absolute inset-0 bg-slate-900/30 flex items-center justify-center">
                           <div className="w-12 h-12 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110">

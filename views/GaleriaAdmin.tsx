@@ -203,7 +203,7 @@ export const GaleriaAdmin: React.FC = () => {
 
       // Upload main image if selected
       if (imageFile) {
-        const compressedBase64 = await compressImageFile(imageFile, 1200, 1200, 0.8);
+        const compressedBase64 = await compressImageFile(imageFile, 800, 800, 0.7);
         finalUrl = await firebaseService.uploadGaleriaImage(compressedBase64, 'gal');
       }
 
@@ -211,7 +211,7 @@ export const GaleriaAdmin: React.FC = () => {
       const uploadedExtraUrls: string[] = [...(formData.fotos || [])];
       for (const extraFile of extraImageFiles) {
         try {
-          const compressed = await compressImageFile(extraFile, 1200, 1200, 0.8);
+          const compressed = await compressImageFile(extraFile, 800, 800, 0.7);
           const uploadedUrl = await firebaseService.uploadGaleriaImage(compressed, 'gal_extra');
           if (uploadedUrl) {
             uploadedExtraUrls.push(uploadedUrl);
