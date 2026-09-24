@@ -39,6 +39,7 @@ export interface Socio {
   fechaIngreso: string;
   telefono?: string;
   estatus?: string;
+  activo?: boolean;
   fechaFin?: string;
   club?: string;
   qrToken?: string;

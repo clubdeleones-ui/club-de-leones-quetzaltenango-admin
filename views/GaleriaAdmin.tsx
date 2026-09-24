@@ -160,7 +160,7 @@ export const GaleriaAdmin: React.FC = () => {
 
   const handleExtraImagesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const filesArray = Array.from(e.target.files);
+      const filesArray = Array.from(e.target.files) as File[];
       const validFiles: File[] = [];
       const newPreviews: string[] = [];
 

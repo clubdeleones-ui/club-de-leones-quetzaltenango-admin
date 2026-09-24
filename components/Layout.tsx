@@ -354,7 +354,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
 
             {/* Mobile menu button */}
             {!isEvaluationView && (
-              <div className="md:hidden flex items-center">
+              <div className="lg:hidden flex items-center">
                 <button
                   onClick={() => setIsOpen(!isOpen)}
                   className="inline-flex items-center justify-center p-2.5 rounded-xl hover:bg-blue-800 focus:outline-none transition-colors border border-transparent hover:border-blue-750"
@@ -368,7 +368,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
 
         {/* Mobile Navigation Drawer */}
         {!isEvaluationView && isOpen && (
-          <div className="md:hidden bg-blue-900 border-t border-blue-800 px-4 py-5 space-y-4 animate-in slide-in-from-top duration-300">
+          <div className="lg:hidden bg-blue-900 border-t border-blue-800 px-4 py-5 space-y-4 animate-in slide-in-from-top duration-300">
             {/* Segmented Tab Control */}
             <div className="bg-blue-950/60 p-1.5 rounded-2xl flex border border-blue-800/40">
               <button

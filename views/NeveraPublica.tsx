@@ -77,7 +77,7 @@ export const NeveraPublica: React.FC = () => {
   }, [productos, activeCategory]);
 
   const cartItemsList = useMemo(() => {
-    return Object.entries(cart)
+    return (Object.entries(cart) as [string, number][])
       .filter(([_, qty]) => qty > 0)
       .map(([id, qty]) => {
         const prod = productos.find(p => p.id === id);

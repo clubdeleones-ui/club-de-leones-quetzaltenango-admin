@@ -85,14 +85,6 @@ export const FichaEvaluacion: React.FC = () => {
         const all = await firebaseService.getProposals();
         const pending = all.filter(p => p.estado === 'Pendiente');
         setAllProposals(pending);
-
-        const isMobile = window.innerWidth < 768 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
-        const fromNavigation = location.state?.fromNavigation;
-
-        if (isMobile && !fromNavigation && pending.length > 0 && id !== pending[0].id) {
-          navigate(`/ficha-evaluacion/${pending[0].id}`, { replace: true, state: { fromNavigation: true } });
-          return;
-        }
       } catch (err) {
         console.error("Error fetching proposal or all:", err);
         setErrorType('network');

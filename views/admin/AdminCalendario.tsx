@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  Plus, Calendar, Search, Filter, Edit, Trash2, Gift, Building, X, Loader2, Users, Check, Upload, ChevronLeft, ChevronRight, Phone, Printer
+  Plus, Calendar, Search, Filter, Edit, Trash2, Gift, Building, X, Loader2, Users, Check, Upload, ChevronLeft, ChevronRight, Phone, Printer, Sparkles
 } from 'lucide-react';
 import { Actividad, SolicitudVoluntario, RegistroParticipacion } from '../../types';
 import { firebaseService } from '../../services/firebaseService';

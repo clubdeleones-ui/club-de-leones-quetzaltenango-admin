@@ -1153,7 +1153,7 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   };
 
   interface TabConfig {
-    id: 'abiertas' | 'sillas' | 'internas' | 'cartas' | 'agenda' | 'salon';
+    id: 'abiertas' | 'sillas' | 'internas' | 'cartas' | 'agenda' | 'salon' | 'archivo';
     title: string;
     subtitle: string;
     description: string;
@@ -4418,7 +4418,7 @@ Club de Leones de Quetzaltenango`;
                     required
                     placeholder="Nombre Completo *"
                     value={resp.nombre}
-                    onChange={(e) => handleResponsableChange(index, 'nombre', e.target.value)}
+                    onChange={(e) => handleUpdateResponsable(index, 'nombre', e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none text-xs font-semibold"
                   />
                 </div>
@@ -4434,7 +4434,7 @@ Club de Leones de Quetzaltenango`;
                     onChange={(e) => {
                       const val = e.target.value.replace(/\D/g, '');
                       if (val.length <= 8) {
-                        handleResponsableChange(index, 'telefono', val);
+                        handleUpdateResponsable(index, 'telefono', val);
                       }
                     }}
                     className="w-full px-3 py-2 outline-none text-xs text-slate-800 font-semibold"

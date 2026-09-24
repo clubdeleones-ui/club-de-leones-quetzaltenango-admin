@@ -509,8 +509,8 @@ export default function Convencion() {
           const checkoutResponse = await recurrenteService.createCheckout({
             items: checkoutItems,
             userEmail: form.email.trim(),
-            successUrl: `${currentUrl}#pre-inscripcion?pago=exitoso&id=${nuevoRegistro.id}`,
-            cancelUrl: `${currentUrl}#pre-inscripcion?pago=cancelado`,
+            successUrl: `${currentUrl}#/convencion?pago=exitoso&id=${nuevoRegistro.id}`,
+            cancelUrl: `${currentUrl}#/convencion?pago=cancelado`,
             metadata: {
               registroId: nuevoRegistro.id,
               nombre: form.nombre,

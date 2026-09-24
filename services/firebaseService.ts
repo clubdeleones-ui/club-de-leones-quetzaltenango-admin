@@ -154,6 +154,22 @@ export const firebaseService = {
     }
   },
 
+  // Fetch a member by ID
+  getSocioById: async (id: string): Promise<Socio | null> => {
+    return firebaseService.getSocioByIdOrEmail(id);
+  },
+
+  // Update socio document fields
+  updateSocio: async (id: string, data: Partial<Socio>): Promise<void> => {
+    try {
+      const docRef = doc(db, "socios", id);
+      await updateDoc(docRef, data as any);
+    } catch (error) {
+      console.error("Error updating socio in Firestore:", error);
+      throw error;
+    }
+  },
+
   // Fetch active members (socios) from Firestore
   getSocios: async (): Promise<Socio[]> => {
     try {

@@ -18,7 +18,7 @@ export const telegramService = {
     }
 
     try {
-      const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+      const url = `https://api.telegram.org/bot${token}/sendMessage`;
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -40,6 +40,43 @@ export const telegramService = {
       return true;
     } catch (error) {
       console.error("Excepción en telegramService.sendMessage:", error);
+      return false;
+    }
+  },
+
+  /**
+   * Envía una notificación general (como solicitudes del Programa FUTURO o avisos del club).
+   */
+  notifyGeneral: async (
+    text: string, 
+    botToken?: string, 
+    chatId?: string
+  ): Promise<boolean> => {
+    const token = botToken || (import.meta as any).env?.VITE_TELEGRAM_BOT_TOKEN || DEFAULT_TELEGRAM_BOT_TOKEN;
+    const targetChat = chatId || (import.meta as any).env?.VITE_TELEGRAM_CHAT_ID;
+
+    if (!token || !targetChat) {
+      console.warn("Telegram Bot Token o Chat ID no configurados para notificación general.");
+      return false;
+    }
+
+    try {
+      const url = `https://api.telegram.org/bot${token}/sendMessage`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: targetChat,
+          text: text,
+          parse_mode: 'Markdown',
+          disable_web_page_preview: true
+        })
+      });
+
+      const data = await response.json();
+      return !!data.ok;
+    } catch (err) {
+      console.error("Error al enviar notificación general de Telegram:", err);
       return false;
     }
   },

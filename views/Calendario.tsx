@@ -2035,7 +2035,7 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                                 : 'text-slate-600 hover:text-slate-900'
                                         }`}
                                     >
-                                        <Calendar size={14} />
+                                        <CalendarIcon size={14} />
                                         <span>Día Único</span>
                                     </button>
                                     <button
