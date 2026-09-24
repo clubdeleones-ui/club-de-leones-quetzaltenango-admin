@@ -1268,13 +1268,19 @@ export const firebaseService = {
       if (!base64Data.startsWith('data:image')) {
         return base64Data;
       }
+      if (isStorageQuotaExceeded) {
+        return base64Data;
+      }
       const uniqueName = `sede_convencion_${Date.now()}`;
       const storageRef = ref(storage, `galeria/${uniqueName}`);
       await uploadString(storageRef, base64Data, 'data_url');
       return await getDownloadURL(storageRef);
     } catch (error: any) {
-      console.error("Error al subir foto de convención a Firebase Storage:", error);
-      throw new Error(`Error de subida de imagen: ${error.message || error}`);
+      if (error?.code === 'storage/quota-exceeded' || error?.status === 402 || error?.message?.includes('402') || error?.message?.includes('quota')) {
+        isStorageQuotaExceeded = true;
+      }
+      console.warn("Firebase Storage no disponible para convención, utilizando almacenamiento directo optimizado:", error);
+      return base64Data;
     }
   },
 
@@ -1283,11 +1289,17 @@ export const firebaseService = {
       if (!base64Data.startsWith('data:image')) {
         return base64Data;
       }
+      if (isStorageQuotaExceeded) {
+        return base64Data;
+      }
       const uniqueName = `recibo_${socioId}_${Date.now()}`;
       const storageRef = ref(storage, `recibos_pagos/${uniqueName}`);
       await uploadString(storageRef, base64Data, 'data_url');
       return await getDownloadURL(storageRef);
     } catch (error: any) {
+      if (error?.code === 'storage/quota-exceeded' || error?.status === 402 || error?.message?.includes('402') || error?.message?.includes('quota')) {
+        isStorageQuotaExceeded = true;
+      }
       console.warn("Firebase Storage no disponible para comprobante, utilizando almacenamiento directo optimizado:", error);
       return base64Data;
     }
@@ -1298,12 +1310,18 @@ export const firebaseService = {
       if (!dataUrl.startsWith('data:')) {
         return dataUrl;
       }
+      if (isStorageQuotaExceeded) {
+        return dataUrl;
+      }
       const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
       const uniqueName = `doc_${Date.now()}_${safeName}`;
       const storageRef = ref(storage, `solicitudes_documentos/${uniqueName}`);
       await uploadString(storageRef, dataUrl, 'data_url');
       return await getDownloadURL(storageRef);
     } catch (error: any) {
+      if (error?.code === 'storage/quota-exceeded' || error?.status === 402 || error?.message?.includes('402') || error?.message?.includes('quota')) {
+        isStorageQuotaExceeded = true;
+      }
       console.warn("Firebase Storage no disponible para documento adjunto, utilizando almacenamiento directo optimizado:", error);
       return dataUrl;
     }

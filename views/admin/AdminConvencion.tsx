@@ -235,13 +235,13 @@ export function AdminConvencion() {
 
       // Upload new sede image if selected
       if (imageFile) {
-        const compressedBase64 = await compressImageFile(imageFile, 1200, 1200, 0.8);
+        const compressedBase64 = await compressImageFile(imageFile, 800, 800, 0.7);
         finalUrl = await firebaseService.uploadConvencionImage(compressedBase64);
       }
 
       // Upload new header background image if selected
       if (headerBgFile) {
-        const compressedHeaderBase64 = await compressImageFile(headerBgFile, 1920, 1080, 0.85);
+        const compressedHeaderBase64 = await compressImageFile(headerBgFile, 1000, 600, 0.7);
         finalHeaderBgUrl = await firebaseService.uploadConvencionImage(compressedHeaderBase64);
       }
 
@@ -525,7 +525,7 @@ export function AdminConvencion() {
       let finalLogoUrl = alianzaForm.logoUrl;
 
       if (alianzaLogoFile) {
-        let compressedBase64 = await compressImageFile(alianzaLogoFile, 600, 600, 0.85, removeBlackBg);
+        let compressedBase64 = await compressImageFile(alianzaLogoFile, 500, 500, 0.7, removeBlackBg);
         if (removeBlackBg) {
           compressedBase64 = await removeDarkBackgroundFromDataUrl(compressedBase64, 35);
         }
