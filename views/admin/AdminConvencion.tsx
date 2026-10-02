@@ -130,8 +130,14 @@ export function AdminConvencion() {
       try {
         const dbConfig = await firebaseService.getConvencionConfig();
         if (!isMounted) return;
+        const isLegacyAlianzas = !dbConfig.alianzas || 
+          dbConfig.alianzas.length < 10 || 
+          dbConfig.alianzas.some(a => a.name === 'Lluvia de Ideas Editorial' || a.id === 'alianza-1');
+        const finalAlianzas = isLegacyAlianzas ? DEFAULT_ALIANZAS : dbConfig.alianzas;
+
         setConfig({
           ...dbConfig,
+          alianzas: finalAlianzas,
           inscripcionesAbiertas: dbConfig.inscripcionesAbiertas !== undefined ? dbConfig.inscripcionesAbiertas : true,
           fotoSedeEtiqueta: dbConfig.fotoSedeEtiqueta || 'Sede Oficial',
           fotoSedeDescripcion: dbConfig.fotoSedeDescripcion || 'Teatro Municipal de Quetzaltenango',

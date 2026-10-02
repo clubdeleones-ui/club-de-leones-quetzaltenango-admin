@@ -345,9 +345,9 @@ export default function Convencion() {
 
   // Derivar la lista de aliados garantizando que siempre se muestren los 15 logos oficiales
   const displayAlianzas = useMemo(() => {
-    if (config.alianzas && config.alianzas.length > 0) {
-      const hasLogos = config.alianzas.some(a => !!a.logoUrl);
-      if (hasLogos) return config.alianzas;
+    if (config.alianzas && config.alianzas.length >= 10) {
+      const isLegacy = config.alianzas.some(a => a.name === 'Lluvia de Ideas Editorial' || a.id === 'alianza-1');
+      if (!isLegacy) return config.alianzas;
     }
     return ALIANZAS_CONVENCION;
   }, [config.alianzas]);
@@ -443,11 +443,25 @@ export default function Convencion() {
       try {
         const dbConfig = await firebaseService.getConvencionConfig();
         if (dbConfig) {
+          const isLegacy = !dbConfig.alianzas || 
+            dbConfig.alianzas.length < 10 || 
+            dbConfig.alianzas.some(a => a.name === 'Lluvia de Ideas Editorial' || a.id === 'alianza-1');
+
+          const finalAlianzas = isLegacy ? ALIANZAS_CONVENCION : dbConfig.alianzas;
+
           setConfig(prev => ({
             ...prev,
             ...dbConfig,
+            alianzas: finalAlianzas,
             inscripcionesAbiertas: dbConfig.inscripcionesAbiertas !== undefined ? dbConfig.inscripcionesAbiertas : true
           }));
+
+          if (isLegacy) {
+            firebaseService.saveConvencionConfig({
+              ...dbConfig,
+              alianzas: ALIANZAS_CONVENCION
+            }).catch(err => console.warn("Auto-sincronización de alianzas:", err));
+          }
         }
       } catch (error) {
         console.error("Error al cargar configuración de convención:", error);
