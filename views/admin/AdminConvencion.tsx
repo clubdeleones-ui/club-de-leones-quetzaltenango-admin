@@ -35,6 +35,7 @@ import { firebaseService } from '../../services/firebaseService';
 import { telegramService } from '../../services/telegramService';
 import { compressImageFile, validateImageFile, removeDarkBackgroundFromDataUrl } from '../../utils/imageCompressor';
 import { ConvencionConfig, ConvencionRegistro, ConvencionActividad, ConvencionExperiencia, ConvencionAlianza } from '../../types';
+import { ALIANZAS_CONVENCION } from '../Convencion';
 
 // Map of icons for selection
 const ICON_OPTIONS = [
@@ -47,16 +48,7 @@ const ICON_OPTIONS = [
   { name: 'Users', label: 'Usuarios/Hermandad', Icon: Users }
 ];
 
-const DEFAULT_ALIANZAS: ConvencionAlianza[] = [
-  { id: 'alianza-1', name: 'Lions Clubs International', category: 'Organización Mundial', icon: '🦁', badge: 'Oficial' },
-  { id: 'alianza-2', name: 'Distrito D3 Guatemala', category: 'Gobernación Distrital', icon: '🏛️', badge: 'Anfitrión' },
-  { id: 'alianza-3', name: 'Colina Country Club', category: 'Sede Oficial', icon: '🏰', badge: 'Complejo' },
-  { id: 'alianza-4', name: 'Municipalidad de Quetzaltenango', category: 'Cultura Altense', icon: '🇬🇹', badge: 'Gobierno' },
-  { id: 'alianza-5', name: 'INGUAT', category: 'Turismo Guatemala', icon: '🌄', badge: 'Institucional' },
-  { id: 'alianza-6', name: 'Club de Leones Quetzaltenango', category: 'Comité Organizador', icon: '👑', badge: 'Anfitriones' },
-  { id: 'alianza-7', name: 'Leo Club International', category: 'Liderazgo Juvenil', icon: '⭐', badge: 'Juventud' },
-  { id: 'alianza-8', name: 'Cámara de Comercio Xela', category: 'Desarrollo Regional', icon: '🤝', badge: 'Aliado' }
-];
+const DEFAULT_ALIANZAS: ConvencionAlianza[] = ALIANZAS_CONVENCION;
 
 export function AdminConvencion() {
   const { confirm } = useConfirm();

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import { 
   MapPin, 
@@ -156,15 +157,127 @@ const CARGO_OPTIONS = [
   { value: 'Otro', label: 'Otro Cargo', icon: '🔷' },
 ];
 
-const ALIANZAS_CONVENCION = [
-  { id: 'alianza-1', name: 'Lions Clubs International', category: 'Organización Mundial', icon: '🦁', badge: 'Oficial' },
-  { id: 'alianza-2', name: 'Distrito D3 Guatemala', category: 'Gobernación Distrital', icon: '🏛️', badge: 'Anfitrión' },
-  { id: 'alianza-3', name: 'Colina Country Club', category: 'Sede Oficial', icon: '🏰', badge: 'Complejo' },
-  { id: 'alianza-4', name: 'Municipalidad de Quetzaltenango', category: 'Cultura Altense', icon: '🇬🇹', badge: 'Gobierno' },
-  { id: 'alianza-5', name: 'INGUAT', category: 'Turismo Guatemala', icon: '🌄', badge: 'Institucional' },
-  { id: 'alianza-6', name: 'Club de Leones Quetzaltenango', category: 'Comité Organizador', icon: '👑', badge: 'Anfitriones' },
-  { id: 'alianza-7', name: 'Leo Club International', category: 'Liderazgo Juvenil', icon: '⭐', badge: 'Juventud' },
-  { id: 'alianza-8', name: 'Cámara de Comercio Xela', category: 'Desarrollo Regional', icon: '🤝', badge: 'Aliado' }
+export const ALIANZAS_CONVENCION = [
+  { 
+    id: 'pat-1', 
+    name: 'LXIV Convención Nacional 2026', 
+    category: 'Identidad Oficial', 
+    badge: 'Evento Oficial', 
+    logoUrl: 'images/patrocinadores/logo-convencion.png', 
+    icon: '🏛️' 
+  },
+  { 
+    id: 'pat-2', 
+    name: 'Club de Leones Quetzaltenango', 
+    category: 'Club Anfitrión Fundador', 
+    badge: 'Sede Oficial', 
+    logoUrl: 'images/patrocinadores/logo-horizontal.jpg', 
+    icon: '🦁' 
+  },
+  { 
+    id: 'pat-3', 
+    name: 'Tigo Guatemala', 
+    category: 'Telecomunicaciones & Red', 
+    badge: 'Patrocinador', 
+    logoUrl: 'images/patrocinadores/tigo.jpeg', 
+    icon: '📱' 
+  },
+  { 
+    id: 'pat-4', 
+    name: "McDonald's Guatemala", 
+    category: 'Franquicias & Alimentación', 
+    badge: 'Patrocinador', 
+    logoUrl: 'images/patrocinadores/mc.jpeg', 
+    icon: '🍔' 
+  },
+  { 
+    id: 'pat-5', 
+    name: 'Ron Botran', 
+    category: 'Tradición Licorera de Origen', 
+    badge: 'Patrocinador', 
+    logoUrl: 'images/patrocinadores/botran.png', 
+    icon: '🥃' 
+  },
+  { 
+    id: 'pat-6', 
+    name: 'Red Bull', 
+    category: 'Energía & Bebidas', 
+    badge: 'Patrocinador', 
+    logoUrl: 'images/patrocinadores/red-bull.png', 
+    icon: '⚡' 
+  },
+  { 
+    id: 'pat-7', 
+    name: 'cbc Guatemala', 
+    category: 'Bebidas & Distribución Global', 
+    badge: 'Patrocinador', 
+    logoUrl: 'images/patrocinadores/cbc.png', 
+    icon: '🥤' 
+  },
+  { 
+    id: 'pat-8', 
+    name: 'Bosha Company', 
+    category: 'Textiles & Soluciones de Marca', 
+    badge: 'Patrocinador', 
+    logoUrl: 'images/patrocinadores/bosha.png', 
+    icon: '👔' 
+  },
+  { 
+    id: 'pat-9', 
+    name: 'Cervecería de Occidente - Cebada', 
+    category: 'Bebidas de Tradición Altense', 
+    badge: 'Patrocinador', 
+    logoUrl: 'images/patrocinadores/cebada.jpg', 
+    icon: '🌾' 
+  },
+  { 
+    id: 'pat-10', 
+    name: 'Mary Kay Guatemala', 
+    category: 'Belleza & Cuidado Personal', 
+    badge: 'Patrocinador', 
+    logoUrl: 'images/patrocinadores/mary-kay.png', 
+    icon: '✨' 
+  },
+  { 
+    id: 'pat-11', 
+    name: 'iCopy Soluciones Digitales', 
+    category: 'Tecnología & Diseño Gráfico', 
+    badge: 'Patrocinador', 
+    logoUrl: 'images/patrocinadores/icopy.jpg', 
+    icon: '🖨️' 
+  },
+  { 
+    id: 'pat-12', 
+    name: 'Metro Supermercados', 
+    category: 'Comercio & Retail Regional', 
+    badge: 'Patrocinador', 
+    logoUrl: 'images/patrocinadores/metro.png', 
+    icon: '🛒' 
+  },
+  { 
+    id: 'pat-13', 
+    name: 'Lácteos Yes', 
+    category: 'Nutrición & Productos Lácteos', 
+    badge: 'Patrocinador', 
+    logoUrl: 'images/patrocinadores/yes.jpeg', 
+    icon: '🥛' 
+  },
+  { 
+    id: 'pat-14', 
+    name: 'Seguros La Estrella', 
+    category: 'Protección & Finanzas', 
+    badge: 'Patrocinador', 
+    logoUrl: 'images/patrocinadores/strella.png', 
+    icon: '⭐' 
+  },
+  { 
+    id: 'pat-15', 
+    name: 'Licda. Olga Figueroa', 
+    category: 'Asesoría Profesional & Jurídica', 
+    badge: 'Patrocinador', 
+    logoUrl: 'images/patrocinadores/olga-figueroa.jpeg', 
+    icon: '⚖️' 
+  }
 ];
 
 export default function Convencion() {
@@ -213,11 +326,31 @@ export default function Convencion() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
 
+  const [searchParams] = useSearchParams();
+  const [paymentSuccessData, setPaymentSuccessData] = useState<{
+    id: string;
+    nombre: string;
+    club: string;
+    paquete: string;
+    monto: number;
+    metodo: 'recurrente' | 'transferencia';
+    estadoPago: string;
+  } | null>(null);
+
   // Custom dropdown states
   const [openDropdown, setOpenDropdown] = useState<'cargo' | 'zona' | 'club' | null>(null);
   const cargoRef = useRef<HTMLDivElement>(null);
   const zonaRef = useRef<HTMLDivElement>(null);
   const clubRef = useRef<HTMLDivElement>(null);
+
+  // Derivar la lista de aliados garantizando que siempre se muestren los 15 logos oficiales
+  const displayAlianzas = useMemo(() => {
+    if (config.alianzas && config.alianzas.length > 0) {
+      const hasLogos = config.alianzas.some(a => !!a.logoUrl);
+      if (hasLogos) return config.alianzas;
+    }
+    return ALIANZAS_CONVENCION;
+  }, [config.alianzas]);
 
   const scrollToPreInscripcion = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -241,6 +374,68 @@ export default function Convencion() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Procesar retorno de pasarela Recurrente GT (?pago=exitoso&id=...)
+  useEffect(() => {
+    const handleUrlStatus = async () => {
+      const getParam = (name: string): string | null => {
+        const fromRouter = searchParams.get(name);
+        if (fromRouter) return fromRouter;
+        const fromSearch = new URLSearchParams(window.location.search).get(name);
+        if (fromSearch) return fromSearch;
+        if (window.location.hash.includes('?')) {
+          const hashQuery = window.location.hash.split('?')[1];
+          return new URLSearchParams(hashQuery).get(name);
+        }
+        return null;
+      };
+
+      const pago = getParam('pago');
+      const regId = getParam('id');
+
+      if (pago === 'exitoso' && regId) {
+        try {
+          const reg = await firebaseService.getConvencionRegistroById(regId);
+          if (reg) {
+            if (reg.estadoPago !== 'Pagado') {
+              reg.estadoPago = 'Pagado';
+              await firebaseService.saveConvencionRegistro(reg);
+            }
+            setForm({
+              nombre: reg.nombre,
+              email: reg.email,
+              telefono: reg.telefono,
+              club: reg.club,
+              cargo: reg.cargo,
+              distrito: reg.distrito
+            });
+            setPaymentSuccessData({
+              id: reg.id,
+              nombre: reg.nombre,
+              club: reg.club,
+              paquete: reg.paquete || 'Inscripción Convención',
+              monto: reg.montoPagar || 650,
+              metodo: 'recurrente',
+              estadoPago: 'Pagado'
+            });
+            setIsSubmitted(true);
+            showToast("¡Pago completado con éxito! Tu inscripción oficial a la Convención está confirmada.", "success");
+            
+            setTimeout(() => {
+              const el = document.getElementById('pre-inscripcion');
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }, 400);
+          }
+        } catch (err) {
+          console.error("Error al procesar retorno de pago:", err);
+        }
+      } else if (pago === 'cancelado') {
+        showToast("El proceso de pago con tarjeta fue cancelado. Puedes volver a intentarlo o seleccionar transferencia bancaria.", "info");
+      }
+    };
+
+    handleUrlStatus();
+  }, [searchParams]);
 
   // Load config from Firestore on mount
   useEffect(() => {
@@ -367,6 +562,11 @@ export default function Convencion() {
         showToast("Por favor completa todos los campos requeridos del Paso 1.", "error");
         return;
       }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(form.email.trim())) {
+        showToast("Por favor ingresa un correo electrónico válido.", "error");
+        return;
+      }
       if (telefonoDigitos.length !== 8) {
         showToast("El número de teléfono debe tener exactamente 8 dígitos.", "error");
         return;
@@ -383,6 +583,13 @@ export default function Convencion() {
           showToast("Por favor escribe el nombre de tu club.", "error");
           return;
         }
+      }
+    }
+
+    if (step === 4) {
+      if (!telegramConfirmed) {
+        showToast("Por favor marca la casilla indicando que leíste las instrucciones del Bot de Telegram.", "warning");
+        return;
       }
     }
 
@@ -409,6 +616,7 @@ export default function Convencion() {
     setIncludeCultural(false);
     setIncludeFamiliar(false);
     setTelegramConfirmed(false);
+    setPaymentSuccessData(null);
     setWizardStep(1);
     setIsSubmitted(false);
   };
@@ -527,11 +735,26 @@ export default function Convencion() {
           }
         } catch (payErr: any) {
           console.error("Error al conectar con la pasarela de pagos Recurrente GT:", payErr);
-          showToast(`Tu pre-registro fue guardado con éxito. ${payErr?.message || 'No se pudo generar el enlace directo de pago.'} Un comisionado revisará tu registro y se pondrá en contacto contigo para completar el pago.`, "info");
+          showToast(`Tu pre-registro fue guardado con éxito. ${payErr?.message || 'No se pudo generar el enlace directo de pago.'} Puedes realizar tu pago por transferencia bancaria.`, "info");
         }
       }
 
+      setPaymentSuccessData({
+        id: nuevoRegistro.id,
+        nombre: nuevoRegistro.nombre,
+        club: finalClub,
+        paquete: paqueteNombre,
+        monto: montoTotal,
+        metodo: metodo,
+        estadoPago: 'Pendiente'
+      });
       setIsSubmitted(true);
+      showToast(
+        metodo === 'transferencia' 
+          ? "¡Pre-registro guardado con éxito! Por favor realiza tu depósito o transferencia bancaria para asegurar tu cupo." 
+          : "¡Pre-registro guardado con éxito!", 
+        "success"
+      );
     } catch (error) {
       console.error("Error al registrar participante:", error);
       showToast("Hubo un problema al registrar tus datos. Por favor inténtalo de nuevo.", "error");
@@ -679,17 +902,20 @@ export default function Convencion() {
             <div className="pointer-events-none absolute inset-y-0 right-0 w-12 sm:w-36 bg-gradient-to-l from-white to-transparent z-20" />
 
             {/* Scrolling Marquee Container with Square Slides and Text Below */}
-            <div className="animate-marquee flex items-start space-x-4 sm:space-x-8 py-2 sm:py-3">
+            <div 
+              className="animate-marquee flex items-start space-x-4 sm:space-x-8 py-2 sm:py-4"
+              style={{ animationDuration: '45s' }}
+            >
               {[
-                ...((config.alianzas && config.alianzas.length > 0) ? config.alianzas : ALIANZAS_CONVENCION),
-                ...((config.alianzas && config.alianzas.length > 0) ? config.alianzas : ALIANZAS_CONVENCION)
+                ...displayAlianzas,
+                ...displayAlianzas
               ].map((aliado, index) => (
                 <div 
-                  key={index}
+                  key={`${aliado.id}-${index}`}
                   className="flex flex-col items-center group shrink-0 cursor-pointer"
                 >
-                  {/* Square Logo Slide Box — Fondo Blanco con Sombra Elegante */}
-                  <div className="w-28 h-28 sm:w-44 sm:h-44 aspect-square rounded-2xl sm:rounded-3xl bg-slate-50 border-2 border-slate-200 group-hover:border-blue-900 shadow-md flex items-center justify-center p-3 sm:p-5 relative overflow-hidden transition-all duration-300 transform group-hover:-translate-y-1.5 group-hover:shadow-xl">
+                  {/* Square Logo Slide Box — Fondo Blanco Cristalino con Sombra Elegante */}
+                  <div className="w-28 h-28 sm:w-44 sm:h-44 aspect-square rounded-2xl sm:rounded-3xl bg-white border-2 border-slate-100 group-hover:border-blue-900 shadow-sm group-hover:shadow-xl flex items-center justify-center p-3 sm:p-5 relative overflow-hidden transition-all duration-300 transform group-hover:-translate-y-1.5">
                     {/* Badge Label */}
                     {aliado.badge && (
                       <span className="absolute top-2 right-2 text-[8px] sm:text-[10px] font-black uppercase tracking-wider text-blue-955 bg-yellow-400 border border-yellow-500/50 px-2 sm:px-2.5 py-0.5 rounded-full shadow-sm z-10">
@@ -702,7 +928,19 @@ export default function Convencion() {
                       <img 
                         src={aliado.logoUrl} 
                         alt={aliado.name}
+                        loading="lazy"
                         className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          target.style.display = 'none';
+                          const parent = target.parentElement;
+                          if (parent && !parent.querySelector('.sponsor-fallback-icon')) {
+                            const iconEl = document.createElement('span');
+                            iconEl.className = 'sponsor-fallback-icon text-3xl sm:text-5xl group-hover:scale-110 transition-transform duration-300';
+                            iconEl.textContent = aliado.icon || '🤝';
+                            parent.appendChild(iconEl);
+                          }
+                        }}
                       />
                     ) : (
                       <span className="text-3xl sm:text-5xl group-hover:scale-110 transition-transform duration-300">
@@ -1742,20 +1980,83 @@ export default function Convencion() {
 
                 </div>
               ) : (
-                <div className="text-center py-12 space-y-6 animate-in fade-in zoom-in duration-300">
-                  <div className="w-20 h-20 bg-yellow-500 text-blue-955 rounded-full flex items-center justify-center mx-auto shadow-xl shadow-yellow-500/20">
-                    <CheckCircle2 size={44} />
+                <div className="text-center py-10 sm:py-14 space-y-6 sm:space-y-8 animate-in fade-in zoom-in duration-300 max-w-2xl mx-auto">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-tr from-yellow-500 to-amber-400 text-blue-955 rounded-3xl flex items-center justify-center mx-auto shadow-2xl shadow-yellow-500/30 ring-8 ring-yellow-400/20">
+                    <CheckCircle2 size={48} className="stroke-[2.5]" />
                   </div>
-                  <h3 className="text-3xl font-black text-white tracking-tight">¡Pre-inscripción Confirmada!</h3>
-                  <p className="text-slate-200 text-base max-w-lg mx-auto leading-relaxed">
-                    ¡Bienvenido, Compañero León <strong className="text-yellow-400 font-extrabold">{form.nombre}</strong>! Tu pre-inscripción a la Convención ha sido registrada con éxito. Recibirás tu credencial digital y las alertas de notificaciones oficiales en Telegram.
-                  </p>
-                  <div className="pt-6">
+                  
+                  <div className="space-y-2">
+                    <span className="inline-flex items-center space-x-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider">
+                      <ShieldCheck size={14} />
+                      <span>{paymentSuccessData?.metodo === 'recurrente' || paymentSuccessData?.estadoPago === 'Pagado' ? 'Inscripción y Pago Confirmados' : 'Pre-inscripción Registrada'}</span>
+                    </span>
+                    <h3 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
+                      ¡Bienvenido a la LXIV Convención!
+                    </h3>
+                    <p className="text-slate-200 text-sm sm:text-base leading-relaxed">
+                      Compañero León <strong className="text-yellow-400 font-extrabold">{form.nombre}</strong> ({form.club === 'Otro Club' ? customClub : form.club}), tus datos han sido registrados exitosamente.
+                    </p>
+                  </div>
+
+                  {/* Resumen del Registro */}
+                  <div className="bg-blue-955/80 border border-white/15 rounded-2xl p-5 sm:p-6 text-left space-y-3.5 shadow-xl">
+                    <div className="flex justify-between items-center border-b border-white/10 pb-3">
+                      <div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-yellow-400 block">ID de Pre-registro</span>
+                        <span className="text-xs font-mono font-bold text-white">{paymentSuccessData?.id || 'Generado'}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block">Total del Paquete</span>
+                        <span className="text-lg font-black text-yellow-300">Q. {(paymentSuccessData?.monto || montoTotal).toLocaleString()}.00</span>
+                      </div>
+                    </div>
+
+                    <div className="text-xs text-slate-300 space-y-1">
+                      <p>• <strong>Paquete:</strong> {paymentSuccessData?.paquete || 'Inscripción Convención Nacional'}</p>
+                      <p>• <strong>Estado de Pago:</strong> {paymentSuccessData?.metodo === 'recurrente' || paymentSuccessData?.estadoPago === 'Pagado' ? (
+                        <span className="text-emerald-400 font-bold">Pagado en línea con Tarjeta (Recurrente GT)</span>
+                      ) : (
+                        <span className="text-amber-300 font-bold">Pendiente de depósito / transferencia bancaria</span>
+                      )}</p>
+                    </div>
+
+                    {/* Si seleccionó transferencia, mostrar cuenta de Banrural */}
+                    {paymentSuccessData?.metodo === 'transferencia' && (
+                      <div className="bg-amber-500/10 border border-amber-400/40 rounded-xl p-4 mt-3 space-y-2">
+                        <div className="flex items-center space-x-2 text-amber-300 font-black text-xs">
+                          <Building2 size={16} />
+                          <span>Datos para Depósito o Transferencia Bancaria:</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-200">
+                          <div><span className="text-slate-400">Banco:</span> <strong>Banrural</strong></div>
+                          <div><span className="text-slate-400">Tipo:</span> <strong>Monetaria</strong></div>
+                          <div><span className="text-slate-400">No. Cuenta:</span> <strong className="text-yellow-400 font-mono text-xs">3827008588</strong></div>
+                          <div><span className="text-slate-400">A Nombre:</span> <strong>Club de Leones de Quetzaltenango</strong></div>
+                        </div>
+                        <p className="text-[10px] text-slate-300 pt-1 border-t border-white/10">
+                          Al realizar tu pago, envía tu boleta o comprobante a la Comisión Organizadora indicando tu nombre y club.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Acciones: Telegram Bot y Registrar a otro */}
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                    <a
+                      href="https://t.me/ClubLeonesXelaBot"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400 text-white font-extrabold px-6 py-3.5 rounded-2xl text-xs transition-all shadow-lg active:scale-95"
+                    >
+                      <Send size={15} />
+                      <span>Abrir Bot de Telegram (@ClubLeonesXelaBot)</span>
+                    </a>
+                    
                     <button 
                       onClick={handleResetForm}
-                      className="text-xs font-extrabold uppercase tracking-wider text-yellow-400 hover:text-yellow-300 border border-yellow-500/30 px-5 py-2.5 rounded-xl bg-yellow-500/10 transition-colors cursor-pointer"
+                      className="w-full sm:w-auto text-xs font-extrabold uppercase tracking-wider text-yellow-300 hover:text-yellow-200 border border-yellow-500/30 px-6 py-3.5 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
                     >
-                      Registrar a otro socio
+                      Registrar a otro participante
                     </button>
                   </div>
                 </div>

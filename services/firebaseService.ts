@@ -1263,6 +1263,20 @@ export const firebaseService = {
     }
   },
 
+  getConvencionRegistroById: async (id: string): Promise<ConvencionRegistro | null> => {
+    try {
+      const docRef = doc(db, "convencion_registros", id);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return docSnap.data() as ConvencionRegistro;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching convencion registration by id from Firestore:", error);
+      return null;
+    }
+  },
+
   uploadConvencionImage: async (base64Data: string): Promise<string> => {
     try {
       if (!base64Data.startsWith('data:image')) {
