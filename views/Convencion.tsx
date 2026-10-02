@@ -929,14 +929,7 @@ export default function Convencion() {
                   className="flex flex-col items-center group shrink-0 cursor-pointer"
                 >
                   {/* Square Logo Slide Box — Fondo Blanco Cristalino con Sombra Elegante */}
-                  <div className="w-28 h-28 sm:w-44 sm:h-44 aspect-square rounded-2xl sm:rounded-3xl bg-white border-2 border-slate-100 group-hover:border-blue-900 shadow-sm group-hover:shadow-xl flex items-center justify-center p-3 sm:p-5 relative overflow-hidden transition-all duration-300 transform group-hover:-translate-y-1.5">
-                    {/* Badge Label */}
-                    {aliado.badge && (
-                      <span className="absolute top-2 right-2 text-[8px] sm:text-[10px] font-black uppercase tracking-wider text-blue-955 bg-yellow-400 border border-yellow-500/50 px-2 sm:px-2.5 py-0.5 rounded-full shadow-sm z-10">
-                        {aliado.badge}
-                      </span>
-                    )}
-
+                  <div className="w-28 h-28 sm:w-44 sm:h-44 aspect-square rounded-2xl sm:rounded-3xl bg-white border-2 border-slate-100 group-hover:border-blue-900 shadow-sm group-hover:shadow-xl flex items-center justify-center p-3.5 sm:p-6 relative overflow-hidden transition-all duration-300 transform group-hover:-translate-y-1.5">
                     {/* Image or Icon */}
                     {aliado.logoUrl ? (
                       <img 

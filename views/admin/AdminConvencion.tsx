@@ -1247,11 +1247,6 @@ export function AdminConvencion() {
 
                         {/* Square Box Display — Fondo Blanco */}
                         <div className="w-28 h-28 aspect-square rounded-2xl bg-white border-2 border-slate-200 flex items-center justify-center p-3 relative overflow-hidden my-2 shadow-sm">
-                          {aliado.badge && (
-                            <span className="absolute top-1.5 left-1.5 text-[8px] font-black uppercase text-blue-955 bg-yellow-400 border border-yellow-500/50 px-2 py-0.5 rounded-full shadow-sm">
-                              {aliado.badge}
-                            </span>
-                          )}
                           {aliado.logoUrl ? (
                             <img 
                               src={aliado.logoUrl} 
