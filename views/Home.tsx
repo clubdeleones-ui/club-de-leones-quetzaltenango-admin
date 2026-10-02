@@ -33,7 +33,7 @@ import { firebaseService } from '../services/firebaseService';
 import { useClubData } from '../context/ClubDataContext';
 import { Actividad, GaleriaItem } from '../types';
 import { MOCK_ACTIVIDADES } from '../constants';
-import { getSafeActivityUrl, handleImageError, DEFAULT_ACTIVITY_FALLBACK, DEFAULT_GALLERY_FALLBACK } from '../utils/imageFallback';
+import { getSafeActivityUrl, getSafeGalleryUrl, handleImageError, DEFAULT_ACTIVITY_FALLBACK, DEFAULT_GALLERY_FALLBACK } from '../utils/imageFallback';
 import { InscripcionVoluntarioModal } from '../components/InscripcionVoluntarioModal';
 import { formatDisplayDate } from '../utils/dateSpanishFormatter';
 

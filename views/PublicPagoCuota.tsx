@@ -3,8 +3,9 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Search, DollarSign, Calendar, CreditCard, Image, Upload, X, Check, Building, AlertCircle, Sparkles, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
 import { recurrenteService } from '../services/recurrenteService';
-import { Socio } from '../types';
+import { Socio, PagoCuota } from '../types';
 import { useToast } from '../context/ToastContext';
+import { validateImageFile, compressImageFile } from '../utils/imageCompressor';
 
 export const PublicPagoCuota: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -40,163 +41,6 @@ export const PublicPagoCuota: React.FC = () => {
 
   const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
   const currentYear = new Date().getFullYear();
-
-
-  // Load active members from Firestore
-  useEffect(() => {
-    const fetchSocios = async () => {
-      try {
-        const list = await firebaseService.getSocios();
-        // Filter out deleted/inactive or non-regular roles if needed, but we keep all registered for general payment
-        const activeList = list.filter(s => s.activo !== false);
-        setSocios(activeList);
-
-        // Check if socioId is provided in URL params
-        const socioIdParam = searchParams.get('socioId');
-        if (socioIdParam) {
-          const found = activeList.find(s => s.id === socioIdParam);
-          if (found) {
-            setSelectedSocio(found);
-            setSearchQuery(found.nombre);
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching members:', err);
-        showToast('Error al cargar la lista de socios', 'error');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSocios();
-  }, [searchParams]);
-
-  // Handle return callback from Recurrente payment gateway
-  useEffect(() => {
-    const status = searchParams.get('status');
-    const checkoutId = searchParams.get('checkout_id');
-    const socioId = searchParams.get('socioId');
-    const tipoCuota = searchParams.get('tipoCuota') as any;
-    const periodo = searchParams.get('periodo');
-    const monto = searchParams.get('monto');
-
-    if (status === 'success' && checkoutId && socioId) {
-      processRecurrenteReturn(checkoutId, socioId, tipoCuota || 'ordinaria', periodo || '', Number(monto) || 125);
-    } else if (status === 'cancel') {
-      showToast('Pago en Recurrente cancelado por el usuario.', 'info');
-    }
-  }, [searchParams]);
-
-  const processRecurrenteReturn = async (
-    checkoutId: string,
-    socioId: string,
-    tipoCuota: 'ordinaria' | 'inscripcion' | 'extraordinaria' | 'donacion',
-    periodo: string,
-    monto: number
-  ) => {
-    setProcessingRecurrenteReturn(true);
-    try {
-      // Verify payment status with Recurrente API
-      const checkout = await recurrenteService.getCheckoutStatus(checkoutId);
-      
-      const targetSocio = await firebaseService.getSocioById(socioId);
-      if (!targetSocio) {
-        showToast('Socio no encontrado para procesar el pago.', 'error');
-        return;
-      }
-
-      // Check if already recorded
-      const alreadyRecorded = targetSocio.historialPagos?.some(p => p.numeroReferencia === checkoutId);
-      if (alreadyRecorded) {
-        setSelectedSocio(targetSocio);
-        setSearchQuery(targetSocio.nombre);
-        setSuccess(true);
-        showToast('El pago ya había sido registrado en la plataforma.', 'info');
-        return;
-      }
-
-      const nuevoPago = {
-        id: `pago-rec-${Date.now()}`,
-        fechaPago: new Date().toISOString().split('T')[0],
-        monto: monto,
-        periodo: periodo || 'Aportación',
-        tipoPeriodo: 'Mensual' as const,
-        metodo: 'Tarjeta' as const,
-        bancoReferencia: 'Recurrente GT',
-        numeroReferencia: checkoutId,
-        tipoCuota: tipoCuota,
-        descripcion: `Pago en línea procesado con tarjeta vía Recurrente GT. ID: ${checkoutId}`,
-        comprobanteUrl: `https://app.recurrente.com/checkout-session/${checkoutId}`
-      };
-
-      const updatedHistorial = [nuevoPago, ...(targetSocio.historialPagos || [])];
-      await firebaseService.updateSocio(targetSocio.id, { historialPagos: updatedHistorial });
-
-      setSelectedSocio(targetSocio);
-      setSearchQuery(targetSocio.nombre);
-      setSuccess(true);
-      showToast('¡Pago con tarjeta procesado y registrado con éxito!', 'success');
-    } catch (err: any) {
-      console.error('Error procesando retorno de Recurrente:', err);
-      showToast('Error al verificar el pago con Recurrente: ' + err.message, 'error');
-    } finally {
-      setProcessingRecurrenteReturn(false);
-    }
-  };
-
-  // Adjust amount and periods according to selections
-
-  useEffect(() => {
-    if (formState.tipoCuota === 'inscripcion') {
-      setFormState(prev => ({ ...prev, monto: 750 }));
-    } else if (formState.tipoCuota === 'ordinaria') {
-      const base = 125;
-      let calculated = base;
-      if (formState.tipoPeriodo === 'Trimestral') calculated = base * 3;
-      else if (formState.tipoPeriodo === 'Semestral') calculated = base * 6;
-      else if (formState.tipoPeriodo === 'Anual') calculated = base * 12;
-      setFormState(prev => ({ ...prev, monto: calculated }));
-    }
-  }, [formState.tipoCuota, formState.tipoPeriodo]);
-
-  // Search filter for dropdown
-  const filteredSocios = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    return socios
-      .filter(s => s.nombre.toLowerCase().includes(searchQuery.toLowerCase()))
-      .slice(0, 1); // Only show 1 result to save vertical space
-  }, [socios, searchQuery]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormState(prev => ({
-          ...prev,
-          comprobanteBase64: reader.result as string
-        }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSocioSelect = (socio: Socio) => {
-    setSelectedSocio(socio);
-    setSearchQuery(socio.nombre);
-    setShowSearchDropdown(false);
-  };
-
-  // Synchronize month/year to the first unpaid month when socio is selected
-  useEffect(() => {
-    if (selectedSocio) {
-      const nextUnpaid = getNextUnpaidMonth(selectedSocio);
-      setFormState(prev => ({
-        ...prev,
-        mes: nextUnpaid.month,
-        año: nextUnpaid.year
-      }));
-    }
-  }, [selectedSocio]);
 
   const getEndMonthAndYear = (startMonthName: string, startYear: number, monthsToAdd: number) => {
     const startIndex = months.indexOf(startMonthName);
@@ -380,6 +224,186 @@ export const PublicPagoCuota: React.FC = () => {
     }
     return { month: 'Enero', year: new Date().getFullYear() };
   };
+
+  // Load active members from Firestore
+  useEffect(() => {
+    const fetchSocios = async () => {
+      try {
+        const list = await firebaseService.getSocios();
+        // Filter out deleted/inactive or non-regular roles if needed, but we keep all registered for general payment
+        const activeList = list.filter(s => s.activo !== false);
+        setSocios(activeList);
+
+        // Check if socioId is provided in URL params
+        const socioIdParam = searchParams.get('socioId');
+        if (socioIdParam) {
+          const found = activeList.find(s => s.id === socioIdParam);
+          if (found) {
+            setSelectedSocio(found);
+            setSearchQuery(found.nombre);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching members:', err);
+        showToast('Error al cargar la lista de socios', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSocios();
+  }, [searchParams]);
+
+  // Handle return callback from Recurrente payment gateway
+  useEffect(() => {
+    const status = searchParams.get('status');
+    const checkoutId = searchParams.get('checkout_id');
+    const socioId = searchParams.get('socioId');
+    const tipoCuota = searchParams.get('tipoCuota') as any;
+    const periodo = searchParams.get('periodo');
+    const monto = searchParams.get('monto');
+
+    if (status === 'success' && checkoutId && socioId) {
+      processRecurrenteReturn(checkoutId, socioId, tipoCuota || 'ordinaria', periodo || '', Number(monto) || 125);
+    } else if (status === 'cancel') {
+      showToast('Pago en Recurrente cancelado por el usuario.', 'info');
+    }
+  }, [searchParams]);
+
+  const processRecurrenteReturn = async (
+    checkoutId: string,
+    socioId: string,
+    tipoCuota: 'ordinaria' | 'inscripcion' | 'extraordinaria' | 'donacion',
+    periodo: string,
+    monto: number
+  ) => {
+    setProcessingRecurrenteReturn(true);
+    try {
+      // Verify payment status with Recurrente API
+      await recurrenteService.getCheckoutStatus(checkoutId);
+      
+      const targetSocio = await firebaseService.getSocioById(socioId);
+      if (!targetSocio) {
+        showToast('Socio no encontrado para procesar el pago.', 'error');
+        return;
+      }
+
+      // Check if already recorded
+      const alreadyRecorded = targetSocio.historialPagos?.some(p => p.numeroReferencia === checkoutId);
+      if (alreadyRecorded) {
+        setSelectedSocio(targetSocio);
+        setSearchQuery(targetSocio.nombre);
+        setSuccess(true);
+        showToast('El pago ya había sido registrado en la plataforma.', 'info');
+        return;
+      }
+
+      const nuevoPago: PagoCuota = {
+        id: `pago-rec-${Date.now()}`,
+        fechaPago: new Date().toISOString().split('T')[0],
+        monto: monto,
+        periodo: periodo || 'Aportación',
+        tipoPeriodo: 'Mensual' as const,
+        metodo: 'Tarjeta' as const,
+        bancoReferencia: 'Recurrente GT',
+        numeroReferencia: checkoutId,
+        tipoCuota: tipoCuota,
+        descripcion: `Pago en línea procesado con tarjeta vía Recurrente GT. ID: ${checkoutId}`,
+        comprobanteUrl: `https://app.recurrente.com/checkout-session/${checkoutId}`
+      };
+
+      const updatedHistorial = [nuevoPago, ...(targetSocio.historialPagos || [])];
+      
+      // Recalcular estado de cuotas y monto pendiente de forma consistente
+      const tempSocio = { ...targetSocio, historialPagos: updatedHistorial };
+      const unpaid = getSocioUnpaidMonths(tempSocio);
+      const unpaidCount = unpaid.length;
+      const amountDue = unpaidCount * 125;
+      const newStatus = unpaidCount === 0 ? 'Al día' : (unpaidCount > 3 ? 'En mora' : 'Pendiente');
+
+      const updatedSocio: Socio = {
+        ...targetSocio,
+        estadoCuotas: newStatus as any,
+        montoPendiente: amountDue,
+        fechaUltimoPago: nuevoPago.fechaPago,
+        historialPagos: updatedHistorial
+      };
+
+      await firebaseService.saveSocio(updatedSocio);
+
+      setSelectedSocio(updatedSocio);
+      setSocios(prev => prev.map(s => s.id === updatedSocio.id ? updatedSocio : s));
+      setSearchQuery(updatedSocio.nombre);
+      setSuccess(true);
+      showToast('¡Pago con tarjeta procesado y registrado con éxito!', 'success');
+    } catch (err: any) {
+      console.error('Error procesando retorno de Recurrente:', err);
+      showToast('Error al verificar el pago con Recurrente: ' + err.message, 'error');
+    } finally {
+      setProcessingRecurrenteReturn(false);
+    }
+  };
+
+  // Adjust amount and periods according to selections
+
+  useEffect(() => {
+    if (formState.tipoCuota === 'inscripcion') {
+      setFormState(prev => ({ ...prev, monto: 750 }));
+    } else if (formState.tipoCuota === 'ordinaria') {
+      const base = 125;
+      let calculated = base;
+      if (formState.tipoPeriodo === 'Trimestral') calculated = base * 3;
+      else if (formState.tipoPeriodo === 'Semestral') calculated = base * 6;
+      else if (formState.tipoPeriodo === 'Anual') calculated = base * 12;
+      setFormState(prev => ({ ...prev, monto: calculated }));
+    }
+  }, [formState.tipoCuota, formState.tipoPeriodo]);
+
+  // Search filter for dropdown
+  const filteredSocios = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    return socios
+      .filter(s => s.nombre.toLowerCase().includes(searchQuery.toLowerCase()))
+      .slice(0, 8); // Permitir hasta 8 resultados para evitar truncar socios con nombres o apellidos similares
+  }, [socios, searchQuery]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const validation = validateImageFile(file);
+      if (!validation.valid) {
+        showToast(validation.error || 'Archivo de imagen no válido.', 'error');
+        return;
+      }
+      try {
+        const compressed = await compressImageFile(file, 1000, 1000, 0.7);
+        setFormState(prev => ({
+          ...prev,
+          comprobanteBase64: compressed
+        }));
+      } catch (err) {
+        console.error('Error comprimiendo comprobante:', err);
+        showToast('No se pudo comprimir la imagen del comprobante.', 'error');
+      }
+    }
+  };
+
+  const handleSocioSelect = (socio: Socio) => {
+    setSelectedSocio(socio);
+    setSearchQuery(socio.nombre);
+    setShowSearchDropdown(false);
+  };
+
+  // Synchronize month/year to the first unpaid month when socio is selected
+  useEffect(() => {
+    if (selectedSocio) {
+      const nextUnpaid = getNextUnpaidMonth(selectedSocio);
+      setFormState(prev => ({
+        ...prev,
+        mes: nextUnpaid.month,
+        año: nextUnpaid.year
+      }));
+    }
+  }, [selectedSocio]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

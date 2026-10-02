@@ -1,3 +1,5 @@
+import type React from 'react';
+
 /**
  * Utility functions for safe image handling, avatar generation, and fallback handling
  */

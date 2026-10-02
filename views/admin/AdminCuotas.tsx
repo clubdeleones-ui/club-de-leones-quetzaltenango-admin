@@ -11,6 +11,7 @@ import { generateReciboPagoPDF } from '../../utils/pdfGenerator';
 import { useToast } from '../../context/ToastContext';
 import { useConfirm } from '../../components/ConfirmProvider';
 import { formatDisplayDate } from '../../utils/dateSpanishFormatter';
+import { validateImageFile, compressImageFile } from '../../utils/imageCompressor';
 
 export const AdminCuotas: React.FC = () => {
   const { socios: dbSocios } = useClubData();
@@ -1848,17 +1849,24 @@ export const AdminCuotas: React.FC = () => {
                         <input 
                           type="file"
                           accept="image/*"
-                          onChange={(e) => {
+                          onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (file) {
-                              const reader = new FileReader();
-                              reader.onloadend = () => {
+                              const validation = validateImageFile(file);
+                              if (!validation.valid) {
+                                showToast(validation.error || 'Archivo de imagen inválido', 'error');
+                                return;
+                              }
+                              try {
+                                const compressed = await compressImageFile(file, 1000, 1000, 0.7);
                                 setRegistrarPagoData(prev => ({
                                   ...prev,
-                                  comprobanteBase64: reader.result as string
+                                  comprobanteBase64: compressed
                                 }));
-                              };
-                              reader.readAsDataURL(file);
+                              } catch (err) {
+                                console.error('Error comprimiendo comprobante:', err);
+                                showToast('No se pudo comprimir la imagen del comprobante.', 'error');
+                              }
                             }
                           }}
                           className="hidden"
