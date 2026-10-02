@@ -162,7 +162,7 @@ export const ALIANZAS_CONVENCION = [
     id: 'pat-1', 
     name: 'LXIV Convención Nacional 2026', 
     category: 'Identidad Oficial', 
-    badge: 'Evento Oficial', 
+    badge: '', 
     logoUrl: 'images/patrocinadores/logo-convencion.png', 
     icon: '🏛️' 
   },
@@ -170,7 +170,7 @@ export const ALIANZAS_CONVENCION = [
     id: 'pat-2', 
     name: 'Club de Leones Quetzaltenango', 
     category: 'Club Anfitrión Fundador', 
-    badge: 'Sede Oficial', 
+    badge: '', 
     logoUrl: 'images/patrocinadores/logo-horizontal.jpg', 
     icon: '🦁' 
   },
@@ -178,7 +178,7 @@ export const ALIANZAS_CONVENCION = [
     id: 'pat-3', 
     name: 'Tigo Guatemala', 
     category: 'Telecomunicaciones & Red', 
-    badge: 'Patrocinador', 
+    badge: '', 
     logoUrl: 'images/patrocinadores/tigo.jpeg', 
     icon: '📱' 
   },
@@ -186,7 +186,7 @@ export const ALIANZAS_CONVENCION = [
     id: 'pat-4', 
     name: "McDonald's Guatemala", 
     category: 'Franquicias & Alimentación', 
-    badge: 'Patrocinador', 
+    badge: '', 
     logoUrl: 'images/patrocinadores/mc.jpeg', 
     icon: '🍔' 
   },
@@ -194,7 +194,7 @@ export const ALIANZAS_CONVENCION = [
     id: 'pat-5', 
     name: 'Ron Botran', 
     category: 'Tradición Licorera de Origen', 
-    badge: 'Patrocinador', 
+    badge: '', 
     logoUrl: 'images/patrocinadores/botran.png', 
     icon: '🥃' 
   },
@@ -202,7 +202,7 @@ export const ALIANZAS_CONVENCION = [
     id: 'pat-6', 
     name: 'Red Bull', 
     category: 'Energía & Bebidas', 
-    badge: 'Patrocinador', 
+    badge: '', 
     logoUrl: 'images/patrocinadores/red-bull.png', 
     icon: '⚡' 
   },
@@ -210,7 +210,7 @@ export const ALIANZAS_CONVENCION = [
     id: 'pat-7', 
     name: 'cbc Guatemala', 
     category: 'Bebidas & Distribución Global', 
-    badge: 'Patrocinador', 
+    badge: '', 
     logoUrl: 'images/patrocinadores/cbc.png', 
     icon: '🥤' 
   },
@@ -218,7 +218,7 @@ export const ALIANZAS_CONVENCION = [
     id: 'pat-8', 
     name: 'Bosha Company', 
     category: 'Textiles & Soluciones de Marca', 
-    badge: 'Patrocinador', 
+    badge: '', 
     logoUrl: 'images/patrocinadores/bosha.png', 
     icon: '👔' 
   },
@@ -226,7 +226,7 @@ export const ALIANZAS_CONVENCION = [
     id: 'pat-9', 
     name: 'Cervecería de Occidente - Cebada', 
     category: 'Bebidas de Tradición Altense', 
-    badge: 'Patrocinador', 
+    badge: '', 
     logoUrl: 'images/patrocinadores/cebada.jpg', 
     icon: '🌾' 
   },
@@ -234,7 +234,7 @@ export const ALIANZAS_CONVENCION = [
     id: 'pat-10', 
     name: 'Mary Kay Guatemala', 
     category: 'Belleza & Cuidado Personal', 
-    badge: 'Patrocinador', 
+    badge: '', 
     logoUrl: 'images/patrocinadores/mary-kay.png', 
     icon: '✨' 
   },
@@ -242,7 +242,7 @@ export const ALIANZAS_CONVENCION = [
     id: 'pat-11', 
     name: 'iCopy Soluciones Digitales', 
     category: 'Tecnología & Diseño Gráfico', 
-    badge: 'Patrocinador', 
+    badge: '', 
     logoUrl: 'images/patrocinadores/icopy.jpg', 
     icon: '🖨️' 
   },
@@ -250,7 +250,7 @@ export const ALIANZAS_CONVENCION = [
     id: 'pat-12', 
     name: 'Metro Supermercados', 
     category: 'Comercio & Retail Regional', 
-    badge: 'Patrocinador', 
+    badge: '', 
     logoUrl: 'images/patrocinadores/metro.png', 
     icon: '🛒' 
   },
@@ -258,7 +258,7 @@ export const ALIANZAS_CONVENCION = [
     id: 'pat-13', 
     name: 'Lácteos Yes', 
     category: 'Nutrición & Productos Lácteos', 
-    badge: 'Patrocinador', 
+    badge: '', 
     logoUrl: 'images/patrocinadores/yes.jpeg', 
     icon: '🥛' 
   },
@@ -266,7 +266,7 @@ export const ALIANZAS_CONVENCION = [
     id: 'pat-14', 
     name: 'Seguros La Estrella', 
     category: 'Protección & Finanzas', 
-    badge: 'Patrocinador', 
+    badge: '', 
     logoUrl: 'images/patrocinadores/strella.png', 
     icon: '⭐' 
   },
@@ -274,7 +274,7 @@ export const ALIANZAS_CONVENCION = [
     id: 'pat-15', 
     name: 'Licda. Olga Figueroa', 
     category: 'Asesoría Profesional & Jurídica', 
-    badge: 'Patrocinador', 
+    badge: '', 
     logoUrl: 'images/patrocinadores/olga-figueroa.jpeg', 
     icon: '⚖️' 
   }
