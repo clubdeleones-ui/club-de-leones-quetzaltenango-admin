@@ -30,8 +30,16 @@ import {
   Send,
   Handshake,
   Wand2,
-  CreditCard
+  CreditCard,
+  Phone,
+  MessageCircle,
+  QrCode,
+  Share2,
+  Copy,
+  ExternalLink,
+  Check
 } from 'lucide-react';
+import QRCode from 'qrcode';
 import { firebaseService } from '../../services/firebaseService';
 import { telegramService } from '../../services/telegramService';
 import { compressImageFile, validateImageFile, removeDarkBackgroundFromDataUrl } from '../../utils/imageCompressor';
@@ -124,6 +132,89 @@ export function AdminConvencion() {
   });
   const [alianzaLogoFile, setAlianzaLogoFile] = useState<File | null>(null);
   const [alianzaLogoPreview, setAlianzaLogoPreview] = useState<string>('');
+
+  // Modal de Entrada QR Oficial
+  const [qrModalRegistro, setQrModalRegistro] = useState<ConvencionRegistro | null>(null);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
+  const [isCopiedQr, setIsCopiedQr] = useState(false);
+
+  const getCleanPhone = (phone?: string) => {
+    const digits = (phone || '').replace(/\D/g, '');
+    if (digits.length === 8) return `502${digits}`;
+    if (digits.startsWith('502') && digits.length === 11) return digits;
+    return digits;
+  };
+
+  const getWhatsAppMessage = (reg: ConvencionRegistro) => {
+    const isPagado = reg.estadoPago === 'Pagado';
+    if (isPagado) {
+      return `¡Hola Compañero(a) León ${reg.nombre}! 🦁 Le saluda el Comité Organizador de la LXXIV Convención Nacional Club de Leones Quetzaltenango 2026-2027.
+
+Le confirmamos que su inscripción oficial está VALIDADA Y CONFIRMADA (Pagado) ✅.
+
+📌 Folio Oficial: ${reg.id}
+🏛️ Club: ${reg.club}
+🏷️ Paquete: ${reg.paquete || 'General'}
+💰 Monto: Q.${(reg.montoPagar || 0).toLocaleString()}.00
+
+Su entrada y código QR de acceso oficial han sido generados exitosamente. ¡Nos vemos en Xela para rugir juntos con fuerza y hermandad!`;
+    } else {
+      return `¡Hola Compañero(a) León ${reg.nombre}! 🦁 Le saluda el Comité Organizador de la LXXIV Convención Nacional Club de Leones Quetzaltenango 2026-2027.
+
+Hemos recibido su pre-registro oficial con los siguientes datos:
+📌 Folio Oficial: ${reg.id}
+🏛️ Club: ${reg.club}
+🏷️ Paquete: ${reg.paquete || 'General'}
+💰 Total a Pagar: Q.${(reg.montoPagar || 0).toLocaleString()}.00
+⏳ Estado actual: ${reg.estadoPago || 'Pendiente de Pago'}
+
+Quedamos a su entera disposición para apoyarle con su depósito o transferencia bancaria (Banrural) o pasarela de tarjeta para emitir su entrada QR oficial. ¿En qué podemos servirle?`;
+    }
+  };
+
+  const handleOpenQrModal = async (reg: ConvencionRegistro) => {
+    setQrModalRegistro(reg);
+    setIsCopiedQr(false);
+    try {
+      const qrPayload = JSON.stringify({
+        evento: "LXXIV Convención Nacional Club de Leones",
+        sede: "Quetzaltenango 2026-2027",
+        folio: reg.id,
+        participante: reg.nombre,
+        club: reg.club,
+        paquete: reg.paquete || 'General',
+        monto: reg.montoPagar || 0,
+        estado: reg.estadoPago || 'Pendiente',
+        fecha: reg.fechaRegistro
+      });
+      const dataUrl = await QRCode.toDataURL(qrPayload, {
+        width: 320,
+        margin: 2,
+        color: {
+          dark: '#0c1a38',
+          light: '#ffffff'
+        }
+      });
+      setQrCodeDataUrl(dataUrl);
+    } catch (err) {
+      console.error("Error al generar código QR:", err);
+    }
+  };
+
+  const handleCopyTicketDetails = () => {
+    if (!qrModalRegistro) return;
+    const text = `🎟️ ENTRADA OFICIAL • LXXIV CONVENCIÓN NACIONAL CLUB DE LEONES
+Folio: ${qrModalRegistro.id}
+Participante: ${qrModalRegistro.nombre}
+Club: ${qrModalRegistro.club} (${qrModalRegistro.cargo} • ${qrModalRegistro.distrito})
+Paquete: ${qrModalRegistro.paquete || 'General'}
+Total: Q.${(qrModalRegistro.montoPagar || 0).toLocaleString()}.00
+Estado: ${qrModalRegistro.estadoPago || 'Pendiente'}
+Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString('es-GT')}`;
+    navigator.clipboard.writeText(text);
+    setIsCopiedQr(true);
+    setTimeout(() => setIsCopiedQr(false), 2500);
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -1531,95 +1622,128 @@ export function AdminConvencion() {
             </div>
 
             {filteredRegistros.length > 0 ? (
-              <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm bg-white">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm text-slate-600 border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-100 font-extrabold text-slate-800 uppercase tracking-wider text-[10px]">
-                        <th className="px-5 py-3.5">Socio / DPI</th>
-                        <th className="px-5 py-3.5">Contacto</th>
-                        <th className="px-5 py-3.5">Club / Cargo</th>
-                        <th className="px-5 py-3.5">Paquete & Monto</th>
-                        <th className="px-5 py-3.5">Estado de Pago</th>
-                        <th className="px-5 py-3.5">Fecha</th>
-                        <th className="px-4 py-3.5 text-right">Acción</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 font-medium">
-                      {filteredRegistros.map((reg) => {
-                        const isPagado = reg.estadoPago === 'Pagado';
-                        const isCheckout = reg.estadoPago === 'Checkout_Creado';
-                        return (
-                          <tr key={reg.id} className="hover:bg-slate-50/70 transition-colors">
-                            <td className="px-5 py-4">
-                              <div className="flex flex-col">
-                                <span className="text-slate-900 font-bold">{reg.nombre}</span>
-                                {reg.dpi ? (
-                                  <span className="text-[11px] text-slate-500 font-mono mt-0.5">DPI: {reg.dpi}</span>
-                                ) : (
-                                  <span className="text-[10px] text-slate-400 italic">Sin DPI</span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-5 py-4 text-xs">
-                              <div className="flex flex-col space-y-0.5">
-                                <span className="text-slate-700 font-medium">{reg.email}</span>
-                                <span className="text-slate-500">{reg.telefono}</span>
-                              </div>
-                            </td>
-                            <td className="px-5 py-4">
-                              <div className="flex flex-col">
-                                <span className="text-slate-800 font-semibold text-xs">{reg.club}</span>
-                                <span className="text-[10px] text-blue-700 font-bold uppercase tracking-wider mt-0.5">{reg.cargo} ({reg.distrito})</span>
-                              </div>
-                            </td>
-                            <td className="px-5 py-4">
-                              <div className="flex flex-col">
-                                <span className="text-xs font-bold text-slate-800">{reg.paquete || 'General'}</span>
-                                <span className="text-xs font-black text-amber-600">Q{(reg.montoPagar || 0).toLocaleString()}</span>
-                              </div>
-                            </td>
-                            <td className="px-5 py-4">
-                              <select
-                                value={reg.estadoPago || 'Pendiente'}
-                                onChange={(e) => handleUpdateEstadoPago(reg.id, e.target.value as any)}
-                                className={`text-[11px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-lg border cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-900/20 ${
-                                  isPagado 
-                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                                    : isCheckout 
-                                      ? 'bg-blue-50 text-blue-700 border-blue-200' 
-                                      : 'bg-amber-50 text-amber-700 border-amber-200'
-                                }`}
-                              >
-                                <option value="Pendiente">⏳ Pendiente</option>
-                                <option value="Checkout_Creado">💳 Link Creado</option>
-                                <option value="Pagado">✅ Pagado</option>
-                              </select>
-                            </td>
-                            <td className="px-5 py-4 text-slate-500 text-xs whitespace-nowrap">
-                              {new Date(reg.fechaRegistro).toLocaleString('es-ES', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </td>
-                            <td className="px-4 py-4 text-right">
-                              <button
-                                onClick={() => handleDeleteRegistro(reg.id, reg.nombre)}
-                                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                                title="Eliminar registro"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+              <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm bg-white divide-y divide-slate-100">
+                {filteredRegistros.map((reg) => {
+                  const isPagado = reg.estadoPago === 'Pagado';
+                  const isCheckout = reg.estadoPago === 'Checkout_Creado';
+                  const cleanPhone = getCleanPhone(reg.telefono);
+                  const whatsappMsg = getWhatsAppMessage(reg);
+
+                  return (
+                    <div 
+                      key={reg.id} 
+                      className="p-4 sm:p-5 hover:bg-slate-50/70 transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-4"
+                    >
+                      {/* Información Principal del Participante */}
+                      <div className="flex-1 min-w-0 space-y-1.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h4 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+                            {reg.nombre}
+                          </h4>
+
+                          {/* Selector de Estado de Pago Interactivo */}
+                          <select
+                            value={reg.estadoPago || 'Pendiente'}
+                            onChange={(e) => handleUpdateEstadoPago(reg.id, e.target.value as any)}
+                            className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-900/20 transition-all ${
+                              isPagado 
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-300' 
+                                : isCheckout 
+                                  ? 'bg-blue-50 text-blue-700 border-blue-300' 
+                                  : 'bg-amber-50 text-amber-700 border-amber-300'
+                            }`}
+                            title="Cambiar estado del registro"
+                          >
+                            <option value="Pendiente">⏳ Pendiente</option>
+                            <option value="Checkout_Creado">💳 Link Creado</option>
+                            <option value="Pagado">✅ Pagado Confirmado</option>
+                          </select>
+
+                          <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
+                            {reg.id}
+                          </span>
+                        </div>
+
+                        {/* Metadatos en línea sin forzar scroll horizontal */}
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 font-medium">
+                          <span className="flex items-center text-slate-800 font-bold">
+                            🦁 {reg.club} <span className="text-slate-400 font-normal ml-1">({reg.cargo} • {reg.distrito})</span>
+                          </span>
+
+                          <span className="text-amber-700 font-bold">
+                            💰 Q{(reg.montoPagar || 0).toLocaleString()} <span className="text-slate-500 font-normal">({reg.paquete || 'General'})</span>
+                          </span>
+
+                          {reg.dpi && (
+                            <span className="text-slate-500 font-mono text-[11px]">
+                              DPI: {reg.dpi}
+                            </span>
+                          )}
+
+                          {reg.email && (
+                            <span className="text-slate-500 text-[11px]">
+                              ✉️ {reg.email}
+                            </span>
+                          )}
+
+                          <span className="text-slate-400 text-[11px]">
+                            📅 {new Date(reg.fechaRegistro).toLocaleDateString('es-GT', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Botones de Acción Rápida (Llamada, WhatsApp, Reenviar QR) */}
+                      <div className="flex items-center flex-wrap sm:flex-nowrap gap-2 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+                        {/* Botón WhatsApp */}
+                        {cleanPhone ? (
+                          <a
+                            href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(whatsappMsg)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center space-x-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                            title="Mandar mensaje de WhatsApp"
+                          >
+                            <MessageCircle size={15} className="text-emerald-600 fill-emerald-100" />
+                            <span>WhatsApp</span>
+                          </a>
+                        ) : null}
+
+                        {/* Botón Llamar */}
+                        {reg.telefono ? (
+                          <a
+                            href={`tel:${reg.telefono}`}
+                            className="inline-flex items-center space-x-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                            title="Hacer llamada telefónica"
+                          >
+                            <Phone size={14} className="text-blue-600" />
+                            <span>Llamar</span>
+                          </a>
+                        ) : null}
+
+                        {/* Botón Reenviar Entrada QR */}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenQrModal(reg)}
+                          className="inline-flex items-center space-x-1.5 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-slate-950 font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm shadow-yellow-500/20 active:scale-95 cursor-pointer"
+                          title="Ver y reenviar entrada QR oficial"
+                        >
+                          <QrCode size={15} />
+                          <span>Entrada QR</span>
+                        </button>
+
+                        {/* Botón Eliminar */}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteRegistro(reg.id, reg.nombre)}
+                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer ml-1"
+                          title="Eliminar pre-registro"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200">
@@ -1977,6 +2101,171 @@ export function AdminConvencion() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: ENTRADA / CREDENCIAL QR OFICIAL ================= */}
+      {qrModalRegistro && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden my-auto animate-in zoom-in-95 duration-200">
+            {/* Header del Modal */}
+            <div className="bg-gradient-to-r from-blue-955 via-blue-900 to-indigo-900 text-white p-5 sm:p-6 flex justify-between items-center relative overflow-hidden">
+              <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 w-32 h-32 bg-yellow-400/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="space-y-1 relative z-10">
+                <span className="text-[10px] font-black uppercase tracking-widest text-yellow-300 bg-yellow-500/20 border border-yellow-400/30 px-3 py-0.5 rounded-full inline-block">
+                  LXXIV Convención Lions 2026-2027
+                </span>
+                <h3 className="text-lg sm:text-xl font-black text-white tracking-tight flex items-center space-x-2">
+                  <QrCode size={20} className="text-yellow-400" />
+                  <span>Entrada Oficial & Credencial QR</span>
+                </h3>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setQrModalRegistro(null)}
+                className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors relative z-10 cursor-pointer"
+                title="Cerrar ventana"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-5 sm:p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+              {/* Tarjeta de Pase Digital */}
+              <div className="bg-gradient-to-b from-slate-900 to-[#09152e] text-white rounded-2xl p-5 border border-yellow-400/40 shadow-xl relative overflow-hidden text-center space-y-4">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Pase de Acceso al Congreso
+                  </span>
+                  <h4 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                    {qrModalRegistro.nombre}
+                  </h4>
+                  <p className="text-xs text-yellow-300 font-bold">
+                    🦁 {qrModalRegistro.club} <span className="text-slate-300 font-medium">({qrModalRegistro.cargo})</span>
+                  </p>
+                </div>
+
+                {/* Código QR Generado */}
+                <div className="bg-white p-3.5 rounded-2xl inline-block mx-auto shadow-2xl ring-4 ring-yellow-400/30">
+                  {qrCodeDataUrl ? (
+                    <img 
+                      src={qrCodeDataUrl} 
+                      alt={`Código QR de ${qrModalRegistro.nombre}`}
+                      className="w-48 h-48 sm:w-56 sm:h-56 mx-auto object-contain"
+                    />
+                  ) : (
+                    <div className="w-48 h-48 sm:w-56 sm:h-56 flex items-center justify-center text-slate-400">
+                      <Loader2 className="w-8 h-8 animate-spin" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Badge de Estado y Folio */}
+                <div className="flex items-center justify-center gap-3 pt-1">
+                  <span className={`inline-flex items-center space-x-1.5 text-xs font-black uppercase tracking-wider px-3.5 py-1.5 rounded-full border shadow-sm ${
+                    qrModalRegistro.estadoPago === 'Pagado'
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
+                      : qrModalRegistro.estadoPago === 'Checkout_Creado'
+                        ? 'bg-blue-500/20 text-blue-300 border-blue-400/40'
+                        : 'bg-amber-500/20 text-amber-300 border-amber-400/40'
+                  }`}>
+                    <span>{qrModalRegistro.estadoPago === 'Pagado' ? '✅ Pago Confirmado' : '⏳ Pendiente de Pago'}</span>
+                  </span>
+
+                  <span className="text-xs font-mono font-bold text-slate-300 bg-white/10 px-3 py-1.5 rounded-full border border-white/15">
+                    ID: {qrModalRegistro.id}
+                  </span>
+                </div>
+
+                {/* Resumen del Paquete */}
+                <div className="text-xs bg-white/5 border border-white/10 rounded-xl p-3 text-left space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Paquete:</span>
+                    <span className="font-bold text-white text-right">{qrModalRegistro.paquete || 'General'}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-white/10 pt-1">
+                    <span className="text-slate-400">Monto Registrado:</span>
+                    <span className="font-black text-yellow-300">Q.{(qrModalRegistro.montoPagar || 0).toLocaleString()}.00</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botones de Envío y Acción */}
+              <div className="space-y-2.5">
+                <p className="text-xs font-black uppercase tracking-wider text-slate-500 text-center">
+                  Opciones para Compartir y Reenviar
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {/* Reenviar por WhatsApp */}
+                  {getCleanPhone(qrModalRegistro.telefono) && (
+                    <a
+                      href={`https://wa.me/${getCleanPhone(qrModalRegistro.telefono)}?text=${encodeURIComponent(getWhatsAppMessage(qrModalRegistro))}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-4 py-3 rounded-2xl text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 text-center cursor-pointer"
+                    >
+                      <MessageCircle size={16} />
+                      <span>Enviar por WhatsApp</span>
+                    </a>
+                  )}
+
+                  {/* Descargar Imagen QR */}
+                  {qrCodeDataUrl && (
+                    <a
+                      href={qrCodeDataUrl}
+                      download={`Entrada_QR_${qrModalRegistro.nombre.replace(/\s+/g, '_')}.png`}
+                      className="flex items-center justify-center space-x-2 bg-slate-900 hover:bg-slate-800 text-white font-extrabold px-4 py-3 rounded-2xl text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 text-center cursor-pointer"
+                    >
+                      <Download size={16} />
+                      <span>Descargar QR (PNG)</span>
+                    </a>
+                  )}
+
+                  {/* Copiar Datos */}
+                  <button
+                    type="button"
+                    onClick={handleCopyTicketDetails}
+                    className="flex items-center justify-center space-x-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold px-4 py-3 rounded-2xl text-xs uppercase tracking-wider transition-all border border-slate-200 cursor-pointer"
+                  >
+                    {isCopiedQr ? (
+                      <>
+                        <Check size={16} className="text-emerald-600" />
+                        <span className="text-emerald-700 font-bold">¡Copiado!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={16} />
+                        <span>Copiar Resumen</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Enviar por Correo */}
+                  {qrModalRegistro.email && (
+                    <a
+                      href={`mailto:${qrModalRegistro.email}?subject=${encodeURIComponent(`Entrada y Confirmación Oficial - LXXIV Convención Club de Leones (${qrModalRegistro.nombre})`)}&body=${encodeURIComponent(getWhatsAppMessage(qrModalRegistro))}`}
+                      className="flex items-center justify-center space-x-2 bg-blue-50 hover:bg-blue-100 text-blue-900 font-extrabold px-4 py-3 rounded-2xl text-xs uppercase tracking-wider transition-all border border-blue-200 cursor-pointer"
+                    >
+                      <Mail size={16} />
+                      <span>Enviar por Correo</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* Botón Cerrar */}
+              <div className="pt-2 border-t border-slate-100 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setQrModalRegistro(null)}
+                  className="w-full sm:w-auto px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase tracking-wider transition-colors cursor-pointer"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
