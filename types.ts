@@ -480,6 +480,7 @@ export interface ConvencionConfig {
   titulo: string;
   lema: string;
   fechaEvento: string;
+  fechaEventoTexto?: string;
   horaEvento: string;
   fotoSede: string;
   fotoSedeEtiqueta?: string;

@@ -56,7 +56,7 @@ export function AdminConvencion() {
   const [activeConfigTab, setActiveConfigTab] = useState<'general' | 'actividades' | 'experiencias' | 'alianzas' | 'difusion'>('general');
   
   // Mass Broadcast State
-  const [broadcastSubject, setBroadcastSubject] = useState('Avances y Boletín Oficial - LXIV Convención Lionística');
+  const [broadcastSubject, setBroadcastSubject] = useState('Avances y Boletín Oficial - LXXIV Convención Lionística');
   const [broadcastBody, setBroadcastBody] = useState('');
   const [broadcastTelegramMsg, setBroadcastTelegramMsg] = useState('');
   const [isBroadcasting, setIsBroadcasting] = useState(false);
@@ -65,6 +65,7 @@ export function AdminConvencion() {
     titulo: '',
     lema: '',
     fechaEvento: '',
+    fechaEventoTexto: '',
     horaEvento: '',
     fotoSede: '',
     fotoSedeEtiqueta: '',
@@ -827,23 +828,42 @@ export function AdminConvencion() {
                     />
                   </div>
 
-                  {/* Fecha Evento */}
+                  {/* Texto Descriptivo de Fecha (Hero) */}
                   <div className="space-y-2">
-                    <label className="text-xs font-extrabold uppercase tracking-wider text-slate-500" htmlFor="fechaEvento">Fecha del Evento</label>
+                    <label className="text-xs font-extrabold uppercase tracking-wider text-slate-500" htmlFor="fechaEventoTexto">
+                      Fechas del Evento (Texto Descriptivo)
+                    </label>
                     <input 
                       type="text" 
+                      id="fechaEventoTexto"
+                      name="fechaEventoTexto"
+                      value={config.fechaEventoTexto || ''}
+                      onChange={handleConfigChange}
+                      placeholder="Ej. Del 19 al 22 de Marzo, 2026"
+                      className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl px-4 py-3 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
+                    />
+                    <span className="text-[11px] text-slate-400 font-medium">Visible en la tarjeta principal y hero</span>
+                  </div>
+
+                  {/* Fecha ISO Cuenta Regresiva */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-extrabold uppercase tracking-wider text-slate-500" htmlFor="fechaEvento">
+                      Fecha Inicio (Para Reloj de Cuenta Regresiva)
+                    </label>
+                    <input 
+                      type="date" 
                       id="fechaEvento"
                       name="fechaEvento"
                       value={config.fechaEvento}
                       onChange={handleConfigChange}
                       required
-                      placeholder="Ej. 24 al 26 de Mayo, 2026"
                       className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl px-4 py-3 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
                     />
+                    <span className="text-[11px] text-slate-400 font-medium">Formato YYYY-MM-DD para calcular días restantes</span>
                   </div>
 
-                  {/* Hora Evento */}
-                  <div className="space-y-2">
+                  {/* Sede Principal */}
+                  <div className="space-y-2 md:col-span-2">
                     <label className="text-xs font-extrabold uppercase tracking-wider text-slate-500" htmlFor="horaEvento">Lugar / Sede Principal</label>
                     <input 
                       type="text" 

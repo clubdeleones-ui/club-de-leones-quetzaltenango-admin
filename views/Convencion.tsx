@@ -160,7 +160,7 @@ const CARGO_OPTIONS = [
 export const ALIANZAS_CONVENCION = [
   { 
     id: 'pat-1', 
-    name: 'LXIV Convención Nacional 2026', 
+    name: 'LXXIV Convención Nacional 2026', 
     category: 'Identidad Oficial', 
     badge: '', 
     logoUrl: 'images/patrocinadores/logo-convencion.png', 
@@ -279,6 +279,66 @@ export const ALIANZAS_CONVENCION = [
     icon: '⚖️' 
   }
 ];
+
+/**
+ * Representación del Número 74 en el Sistema Vigesimal Maya (Base 20)
+ * Nivel 2 (Arriba, Veintenas): 3 puntos ( • • • ) = 3 x 20 = 60
+ * Nivel 1 (Abajo, Unidades): 4 puntos sobre 2 barras (cada barra = 5) = 4 + 10 = 14
+ * Total = 60 + 14 = 74 (Oxk'al Kanlajuj)
+ */
+export const MayaNumeral74: React.FC<{ className?: string }> = ({ className = '' }) => {
+  return (
+    <div 
+      className={`inline-flex items-center gap-2 sm:gap-2.5 px-3 py-1.5 rounded-2xl bg-gradient-to-r from-amber-500/25 via-yellow-500/30 to-amber-500/25 border border-yellow-400/60 shadow-lg shadow-black/30 backdrop-blur-md group hover:border-yellow-300 transition-all ${className}`}
+      title="74 en Sistema Vigesimal Maya: 3 veintenas (60) + 14 unidades = 74 (Oxk'al Kanlajuj)"
+    >
+      <svg
+        viewBox="0 0 54 44"
+        className="w-8 h-6 sm:w-9 sm:h-7 drop-shadow-[0_2px_8px_rgba(234,179,8,0.5)] shrink-0"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <linearGradient id="mayaGoldConv" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FEF08A" />
+            <stop offset="45%" stopColor="#F59E0B" />
+            <stop offset="100%" stopColor="#D97706" />
+          </linearGradient>
+        </defs>
+
+        {/* Nivel Superior: Veintenas (20s) -> 3 puntos = 60 */}
+        <circle cx="17" cy="7" r="3.2" fill="url(#mayaGoldConv)" stroke="#FFFBEB" strokeWidth="0.8" />
+        <circle cx="27" cy="7" r="3.2" fill="url(#mayaGoldConv)" stroke="#FFFBEB" strokeWidth="0.8" />
+        <circle cx="37" cy="7" r="3.2" fill="url(#mayaGoldConv)" stroke="#FFFBEB" strokeWidth="0.8" />
+
+        {/* Divisoria ceremonial sutil */}
+        <line x1="8" y1="16" x2="46" y2="16" stroke="#FEF08A" strokeOpacity="0.45" strokeWidth="0.8" strokeDasharray="1.5 1.5" />
+
+        {/* Nivel Inferior: Unidades (1s) -> 14 (4 puntos + 2 barras) */}
+        <circle cx="12" cy="22.5" r="2.8" fill="url(#mayaGoldConv)" stroke="#FFFBEB" strokeWidth="0.7" />
+        <circle cx="22" cy="22.5" r="2.8" fill="url(#mayaGoldConv)" stroke="#FFFBEB" strokeWidth="0.7" />
+        <circle cx="32" cy="22.5" r="2.8" fill="url(#mayaGoldConv)" stroke="#FFFBEB" strokeWidth="0.7" />
+        <circle cx="42" cy="22.5" r="2.8" fill="url(#mayaGoldConv)" stroke="#FFFBEB" strokeWidth="0.7" />
+
+        {/* Barra 1 (valor 5) */}
+        <rect x="8" y="29.5" width="38" height="4" rx="2" fill="url(#mayaGoldConv)" stroke="#FFFBEB" strokeWidth="0.8" />
+
+        {/* Barra 2 (valor 5) */}
+        <rect x="8" y="37" width="38" height="4" rx="2" fill="url(#mayaGoldConv)" stroke="#FFFBEB" strokeWidth="0.8" />
+      </svg>
+
+      <div className="flex flex-col text-left leading-none">
+        <span className="text-[9px] uppercase tracking-widest text-yellow-300 font-extrabold flex items-center gap-1">
+          <span>Glifo Maya</span>
+          <span className="text-[8px] bg-yellow-400/25 text-yellow-200 px-1 py-0.2 rounded font-mono font-bold">74</span>
+        </span>
+        <span className="text-[10px] sm:text-xs font-black text-white font-serif tracking-tight mt-0.5">
+          Oxk'al Kanlajuj
+        </span>
+      </div>
+    </div>
+  );
+};
 
 export default function Convencion() {
   const { showToast } = useToast();
@@ -826,10 +886,18 @@ export default function Convencion() {
         <div className="absolute -left-24 -bottom-24 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
         
         <div className="max-w-5xl mx-auto relative z-10 space-y-6 sm:space-y-8">
-          {/* Badge & Dates */}
-          <div className="inline-flex items-center space-x-2 bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 px-4 py-2 rounded-full text-xs sm:text-sm font-black uppercase tracking-wider mb-2 backdrop-blur-md shadow-lg shadow-black/20 animate-pulse">
-            <Sparkles size={16} className="text-yellow-400" />
-            <span>LXIV Convención Nacional Lions</span>
+          {/* Badge Conmemorativo: Romano LXXIV + Arábigo 74ª + Glifo Maya Vigesimal */}
+          <div className="flex flex-wrap items-center justify-center gap-3 mb-2">
+            <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-yellow-500/25 via-amber-500/20 to-yellow-500/25 border border-yellow-400/50 text-yellow-300 px-4 py-2 rounded-full text-xs sm:text-sm font-black uppercase tracking-wider backdrop-blur-md shadow-lg shadow-black/30">
+              <Sparkles size={16} className="text-yellow-400 animate-pulse" />
+              <span>LXXIV Convención Nacional Lions</span>
+              <span className="bg-yellow-400 text-blue-955 font-black text-[10px] px-2 py-0.5 rounded-full font-mono">
+                74ª
+              </span>
+            </div>
+
+            {/* Número 74 en Numeración Maya Ceremonial */}
+            <MayaNumeral74 />
           </div>
 
           {/* Main Title */}
@@ -842,15 +910,52 @@ export default function Convencion() {
             "{config.lema || 'Rugiendo con fuerza, sirviendo con amor y uniendo voluntades por nuestra nación'}"
           </p>
 
-          {/* Location & Date Badge */}
-          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 text-xs sm:text-base font-bold text-slate-200">
-            <div className="w-full sm:w-auto flex items-center justify-center space-x-2.5 bg-blue-955/80 border border-white/15 backdrop-blur-md px-5 py-2.5 rounded-2xl shadow-xl hover:border-yellow-500/40 transition-all">
-              <Calendar className="text-yellow-400 shrink-0" size={18} />
-              <span>Del 19 al 22 de Marzo, 2026</span>
-            </div>
-            <div className="w-full sm:w-auto flex items-center justify-center space-x-2.5 bg-blue-955/80 border border-white/15 backdrop-blur-md px-5 py-2.5 rounded-2xl shadow-xl hover:border-yellow-500/40 transition-all">
-              <MapPin className="text-yellow-400 shrink-0" size={18} />
-              <span>Quetzaltenango, Guatemala</span>
+          {/* Glassmorphic Modern Date & Location Card */}
+          <div className="pt-3 max-w-2xl mx-auto">
+            <div className="relative p-1 rounded-3xl bg-gradient-to-r from-yellow-500/40 via-amber-400/20 to-yellow-500/40 shadow-2xl backdrop-blur-xl">
+              <div className="bg-gradient-to-br from-blue-955/95 via-slate-900/95 to-blue-955/95 rounded-[1.4rem] p-4 sm:p-5 border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-left">
+                
+                {/* Fechas del Evento */}
+                <div className="flex items-center space-x-3.5 w-full sm:w-auto">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-yellow-500/25 to-amber-500/10 border border-yellow-400/40 flex flex-col items-center justify-center text-yellow-300 shrink-0 shadow-lg">
+                    <Calendar size={20} className="text-yellow-400" />
+                    <span className="text-[8px] font-black uppercase tracking-tighter text-yellow-200 mt-0.5">2026</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-yellow-400/90 block">
+                      Fecha Oficial
+                    </span>
+                    <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
+                      {config.fechaEventoTexto || 'Del 19 al 22 de Marzo, 2026'}
+                    </h3>
+                    <p className="text-[11px] text-slate-300 font-medium">
+                      Jueves a Domingo • 4 Días de Congreso
+                    </p>
+                  </div>
+                </div>
+
+                {/* Divisor vertical en desktop */}
+                <div className="hidden sm:block w-px h-11 bg-gradient-to-b from-transparent via-white/20 to-transparent" />
+
+                {/* Sede y Ciudad */}
+                <div className="flex items-center space-x-3.5 w-full sm:w-auto border-t sm:border-t-0 border-white/10 pt-3 sm:pt-0">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600/20 to-indigo-600/10 border border-blue-400/40 flex items-center justify-center text-blue-300 shrink-0 shadow-lg">
+                    <MapPin size={22} className="text-yellow-400 animate-bounce" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400 block">
+                      Ciudad Sede
+                    </span>
+                    <h4 className="text-base sm:text-lg font-black text-white tracking-tight">
+                      Quetzaltenango
+                    </h4>
+                    <p className="text-[11px] text-slate-300 font-medium">
+                      Guatemala • Cuna de la Cultura
+                    </p>
+                  </div>
+                </div>
+
+              </div>
             </div>
           </div>
 
@@ -900,7 +1005,7 @@ export default function Convencion() {
                   Respaldos & Alianzas Institucionales
                 </span>
                 <h3 className="text-lg sm:text-2xl font-black text-blue-955 tracking-tight">
-                  Aliados Estratégicos de la LXIV Convención
+                  Aliados Estratégicos de la LXXIV Convención
                 </h3>
               </div>
             </div>
@@ -961,9 +1066,6 @@ export default function Convencion() {
                     <h4 className="text-xs sm:text-base font-extrabold text-blue-955 group-hover:text-blue-700 transition-colors line-clamp-2 leading-tight">
                       {aliado.name}
                     </h4>
-                    <p className="text-[10px] sm:text-xs text-slate-500 font-medium line-clamp-1">
-                      {aliado.category}
-                    </p>
                   </div>
                 </div>
               ))}
@@ -1998,7 +2100,7 @@ export default function Convencion() {
                       <span>{paymentSuccessData?.metodo === 'recurrente' || paymentSuccessData?.estadoPago === 'Pagado' ? 'Inscripción y Pago Confirmados' : 'Pre-inscripción Registrada'}</span>
                     </span>
                     <h3 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-                      ¡Bienvenido a la LXIV Convención!
+                      ¡Bienvenido a la LXXIV Convención!
                     </h3>
                     <p className="text-slate-200 text-sm sm:text-base leading-relaxed">
                       Compañero León <strong className="text-yellow-400 font-extrabold">{form.nombre}</strong> ({form.club === 'Otro Club' ? customClub : form.club}), tus datos han sido registrados exitosamente.
