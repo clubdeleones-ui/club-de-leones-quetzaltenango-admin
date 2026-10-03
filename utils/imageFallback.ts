@@ -13,9 +13,14 @@ export const DEFAULT_GALLERY_FALLBACK = 'https://images.unsplash.com/photo-15418
  * Generates an institutional Lionistic avatar with the person's initials and brand colors (#002B66 / #F59E0B)
  */
 export const getSafeAvatarUrl = (photoUrl?: string, name?: string): string => {
-  if (photoUrl && !photoUrl.includes('firebasestorage.googleapis.com')) {
-    // If it's a valid data URL, local image, or valid remote image, return it
-    if (photoUrl.startsWith('data:image') || photoUrl.startsWith('http') || photoUrl.startsWith('./') || photoUrl.startsWith('/')) {
+  if (photoUrl && typeof photoUrl === 'string' && photoUrl.trim() !== '') {
+    if (
+      photoUrl.startsWith('data:image') || 
+      photoUrl.startsWith('http://') || 
+      photoUrl.startsWith('https://') || 
+      photoUrl.startsWith('./') || 
+      photoUrl.startsWith('/')
+    ) {
       return photoUrl;
     }
   }
@@ -25,20 +30,20 @@ export const getSafeAvatarUrl = (photoUrl?: string, name?: string): string => {
 };
 
 /**
- * Returns a safe URL for activities, avoiding broken storage URLs
+ * Returns a safe URL for activities, avoiding broken or empty URLs
  */
 export const getSafeActivityUrl = (imageUrl?: string): string => {
-  if (imageUrl && !imageUrl.includes('firebasestorage.googleapis.com')) {
+  if (imageUrl && typeof imageUrl === 'string' && imageUrl.trim() !== '') {
     return imageUrl;
   }
   return DEFAULT_ACTIVITY_FALLBACK;
 };
 
 /**
- * Returns a safe URL for gallery items
+ * Returns a safe URL for gallery items, avoiding empty URLs
  */
 export const getSafeGalleryUrl = (imageUrl?: string): string => {
-  if (imageUrl && !imageUrl.includes('firebasestorage.googleapis.com')) {
+  if (imageUrl && typeof imageUrl === 'string' && imageUrl.trim() !== '') {
     return imageUrl;
   }
   return DEFAULT_GALLERY_FALLBACK;

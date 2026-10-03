@@ -121,25 +121,7 @@ function getLocalData<T>(key: string, fallback: T): T {
   try {
     const local = localStorage.getItem(key);
     if (!local) return fallback;
-    const parsed = JSON.parse(local);
-    // Sanitize any broken Firebase Storage URLs that were cached previously
-    if (Array.isArray(parsed)) {
-      return parsed.map((item: any) => {
-        if (!item || typeof item !== 'object') return item;
-        const copy = { ...item };
-        if (typeof copy.foto === 'string' && copy.foto.includes('firebasestorage.googleapis.com')) {
-          delete copy.foto;
-        }
-        if (typeof copy.imagen === 'string' && copy.imagen.includes('firebasestorage.googleapis.com')) {
-          delete copy.imagen;
-        }
-        if (typeof copy.imagenUrl === 'string' && copy.imagenUrl.includes('firebasestorage.googleapis.com')) {
-          delete copy.imagenUrl;
-        }
-        return copy;
-      }) as unknown as T;
-    }
-    return parsed;
+    return JSON.parse(local) as T;
   } catch (e) {
     console.error(`Error loading local cache for ${key}:`, e);
     return fallback;
