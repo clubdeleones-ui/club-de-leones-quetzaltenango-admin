@@ -31,7 +31,8 @@ export const telegramService = {
    */
   sendMessage: async (botToken: string | undefined, chatId: string, text: string): Promise<boolean> => {
     const token = botToken || (import.meta as any).env?.VITE_TELEGRAM_BOT_TOKEN || DEFAULT_TELEGRAM_BOT_TOKEN;
-    if (!token || !chatId) {
+    const targetChat = chatId || (import.meta as any).env?.VITE_TELEGRAM_CHAT_ID || DEFAULT_TELEGRAM_CHAT_ID;
+    if (!token || !targetChat) {
       console.warn("Telegram Bot Token o Chat ID no configurados. Omitiendo envío de Telegram.");
       return false;
     }
@@ -44,7 +45,7 @@ export const telegramService = {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          chat_id: chatId,
+          chat_id: targetChat,
           text: text,
           parse_mode: 'HTML',
           disable_web_page_preview: true

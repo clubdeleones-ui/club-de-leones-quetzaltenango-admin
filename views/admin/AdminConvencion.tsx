@@ -70,6 +70,9 @@ export function AdminConvencion() {
   const [broadcastBody, setBroadcastBody] = useState('');
   const [broadcastTelegramMsg, setBroadcastTelegramMsg] = useState('');
   const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [channelFilter, setChannelFilter] = useState<'todos' | 'telegram_activo' | 'telegram_pendiente' | 'email' | 'pagados' | 'pendientes'>('todos');
+  const [broadcastRecipientFilter, setBroadcastRecipientFilter] = useState<'todos' | 'pagados' | 'pendientes' | 'telegram_activo' | 'email'>('todos');
+  const [customTelegramDestination, setCustomTelegramDestination] = useState<string>('');
 
   const [config, setConfig] = useState<ConvencionConfig>({
     titulo: '',
@@ -769,12 +772,39 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
     }
   };
 
+  // Toggle estado de Telegram directamente desde la lista de pre-registros
+  const handleToggleTelegramStatus = async (id: string, currentStatus: boolean | undefined) => {
+    const newStatus = !currentStatus;
+    try {
+      const reg = registros.find(r => r.id === id);
+      if (!reg) return;
+      const updatedReg = { ...reg, telegramVerificado: newStatus };
+      await firebaseService.saveConvencionRegistro(updatedReg);
+      setRegistros(prev => prev.map(r => r.id === id ? updatedReg : r));
+      setSuccessMsg(newStatus 
+        ? `✅ ${reg.nombre} marcado como ACTIVO en Telegram (recibirá difusión).` 
+        : `ℹ️ ${reg.nombre} marcado como PENDIENTE en Telegram.`);
+      setTimeout(() => setSuccessMsg(''), 4000);
+    } catch (error) {
+      console.error("Error al actualizar estado de Telegram:", error);
+      setErrorMsg("No se pudo actualizar el estado de Telegram del participante.");
+    }
+  };
+
   // Filtered registrations
   const filteredRegistros = registros.filter(r => {
+    // Filtro por canal o estado
+    if (channelFilter === 'telegram_activo' && !r.telegramVerificado) return false;
+    if (channelFilter === 'telegram_pendiente' && !(r.preferenciaNotificacion === 'telegram' && !r.telegramVerificado)) return false;
+    if (channelFilter === 'email' && r.preferenciaNotificacion !== 'email') return false;
+    if (channelFilter === 'pagados' && r.estadoPago !== 'Pagado') return false;
+    if (channelFilter === 'pendientes' && r.estadoPago === 'Pagado') return false;
+
     const term = searchTerm.toLowerCase();
     return (
       (r.nombre || '').toLowerCase().includes(term) ||
       (r.email || '').toLowerCase().includes(term) ||
+      (r.telefono || '').toLowerCase().includes(term) ||
       (r.dpi && r.dpi.toLowerCase().includes(term)) ||
       (r.club || '').toLowerCase().includes(term) ||
       (r.cargo || '').toLowerCase().includes(term) ||
@@ -788,7 +818,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
   const handleExportCSV = () => {
     if (registros.length === 0) return;
     
-    const headers = ["Nombre Completo", "DPI", "Email", "Telefono", "Club", "Cargo", "Zona", "Paquete", "Monto a Pagar (Q)", "Estado de Pago", "Fecha Registro"];
+    const headers = ["Nombre Completo", "DPI", "Email", "Telefono", "Canal Preferido", "Telegram Activo (Bot)", "Club", "Cargo", "Zona", "Paquete", "Monto a Pagar (Q)", "Estado de Pago", "Fecha Registro"];
     const csvRows = [
       headers.join(','),
       ...filteredRegistros.map(r => [
@@ -796,6 +826,8 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
         `"${(r.dpi || '').replace(/"/g, '""')}"`,
         `"${(r.email || '').replace(/"/g, '""')}"`,
         `"${(r.telefono || '').replace(/"/g, '""')}"`,
+        `"${r.preferenciaNotificacion === 'telegram' ? 'Telegram' : 'Correo'}"`,
+        `"${r.telegramVerificado ? 'SÍ (Activo en Bot)' : 'NO'}"`,
         `"${(r.club || '').replace(/"/g, '""')}"`,
         `"${(r.cargo || '').replace(/"/g, '""')}"`,
         `"${(r.distrito || '').replace(/"/g, '""')}"`,
@@ -866,8 +898,21 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
       setErrorMsg("Por favor completa el asunto y el mensaje del correo.");
       return;
     }
-    if (registros.length === 0) {
-      setErrorMsg("No hay participantes pre-inscritos a quiénes enviar el correo.");
+    
+    // Filtrar destinatarios según la opción seleccionada
+    let targetRegistros = registros.filter(r => r.email && r.email.includes('@'));
+    if (broadcastRecipientFilter === 'pagados') {
+      targetRegistros = targetRegistros.filter(r => r.estadoPago === 'Pagado');
+    } else if (broadcastRecipientFilter === 'pendientes') {
+      targetRegistros = targetRegistros.filter(r => r.estadoPago !== 'Pagado');
+    } else if (broadcastRecipientFilter === 'telegram_activo') {
+      targetRegistros = targetRegistros.filter(r => r.telegramVerificado);
+    } else if (broadcastRecipientFilter === 'email') {
+      targetRegistros = targetRegistros.filter(r => r.preferenciaNotificacion === 'email');
+    }
+
+    if (targetRegistros.length === 0) {
+      setErrorMsg("No hay participantes que coincidan con el filtro seleccionado para recibir el correo.");
       return;
     }
 
@@ -876,12 +921,12 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
     setSuccessMsg('');
     try {
       const enviados = await gmailService.sendMassBroadcast(
-        registros,
+        targetRegistros,
         broadcastSubject,
         broadcastBody,
         config.googleScriptUrl
       );
-      setSuccessMsg(`¡Boletín enviado exitosamente a los ${enviados} participantes con correo válido!`);
+      setSuccessMsg(`¡Boletín enviado exitosamente a los ${enviados} participantes seleccionados desde clubdeleonesquetzaltenango@gmail.com!`);
       setBroadcastBody('');
     } catch (err: any) {
       setErrorMsg("Ocurrió un error al enviar la difusión masiva.");
@@ -900,16 +945,17 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
     setErrorMsg('');
     setSuccessMsg('');
     try {
+      const destinationChat = customTelegramDestination.trim() || config.telegramChatId || '';
       const ok = await telegramService.sendMessage(
         config.telegramBotToken || undefined,
-        config.telegramChatId || '',
-        `📢 <b>BOLETÍN OFICIAL DE LA CONVENCIÓN</b>\n\n${broadcastTelegramMsg}`
+        destinationChat,
+        `📢 <b>BOLETÍN OFICIAL DE LA CONVENCIÓN</b>\n\n${broadcastTelegramMsg}\n\n<i>LXXV Convención Nacional • Quetzaltenango 2027</i>`
       );
       if (ok) {
-        setSuccessMsg("¡Anuncio enviado exitosamente al canal/grupo de Telegram!");
+        setSuccessMsg(`¡Anuncio publicado exitosamente en Telegram (${destinationChat || 'Chat Oficial'})!`);
         setBroadcastTelegramMsg('');
       } else {
-        setErrorMsg("No se pudo enviar por Telegram. Verifica que el Chat ID del canal o grupo esté configurado.");
+        setErrorMsg("No se pudo enviar por Telegram. Verifica que el bot tenga acceso al canal/grupo o el Chat ID.");
       }
     } catch (err: any) {
       setErrorMsg("Error al enviar por Telegram.");
@@ -1584,29 +1630,86 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
             {/* Difusión Masiva Sub-Tab */}
             {activeConfigTab === 'difusion' && (
               <div className="space-y-8 max-w-4xl pt-2">
-                <div className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white p-6 rounded-3xl shadow-lg space-y-2">
-                  <h3 className="text-xl font-black flex items-center space-x-2">
-                    <Mail size={22} className="text-yellow-400" />
-                    <span>Módulo de Comunicación Masiva a Pre-Inscritos</span>
-                  </h3>
-                  <p className="text-xs text-blue-100 leading-relaxed">
-                    Envía boletines informativos, actualizaciones del programa y anuncios por correo electrónico y Telegram a la lista oficial de <strong>{registros.length} participantes pre-inscritos</strong>.
-                  </p>
+                <div className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white p-6 rounded-3xl shadow-lg space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-xl font-black flex items-center space-x-2">
+                        <Mail size={22} className="text-yellow-400" />
+                        <span>Módulo de Comunicación Masiva a Pre-Inscritos</span>
+                      </h3>
+                      <p className="text-xs text-blue-100 leading-relaxed mt-1">
+                        Envía boletines informativos por correo electrónico y anuncios oficiales por Telegram a la lista de <strong>{registros.length} participantes pre-inscritos</strong>.
+                      </p>
+                    </div>
+                    <span className="bg-white/10 text-yellow-300 border border-yellow-400/30 text-xs font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider self-start sm:self-auto shrink-0">
+                      LXXV Convención
+                    </span>
+                  </div>
+
+                  {/* Resumen de Audiencias por Canal */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                    <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/15">
+                      <span className="text-[10px] font-black uppercase text-blue-200 block">Audiencia Correo</span>
+                      <span className="text-lg font-black text-white">{registros.filter(r => r.email && r.email.includes('@')).length} Destinatarios</span>
+                      <p className="text-[10px] text-blue-200/80 mt-0.5">Desde clubdeleonesquetzaltenango@gmail.com</p>
+                    </div>
+                    <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/15">
+                      <span className="text-[10px] font-black uppercase text-emerald-300 block flex items-center space-x-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span>Telegram Activos</span>
+                      </span>
+                      <span className="text-lg font-black text-white">{registros.filter(r => r.telegramVerificado).length} Conectados al Bot</span>
+                      <p className="text-[10px] text-emerald-200/80 mt-0.5">Listos para recibir boletines directos</p>
+                    </div>
+                    <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/15">
+                      <span className="text-[10px] font-black uppercase text-amber-300 block">Telegram Pendientes</span>
+                      <span className="text-lg font-black text-white">{registros.filter(r => r.preferenciaNotificacion === 'telegram' && !r.telegramVerificado).length} En Espera</span>
+                      <p className="text-[10px] text-amber-200/80 mt-0.5">Eligieron Telegram pero no verificaron</p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Seccion 1: Difusión por Correo */}
                 <form onSubmit={handleSendMassEmail} className="bg-slate-50 border border-slate-200/80 rounded-3xl p-6 space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-3 gap-2">
                     <h4 className="text-sm font-black text-blue-900 uppercase tracking-wider flex items-center space-x-2">
                       <Mail size={16} className="text-blue-900" />
-                      <span>1. Enviar Boletín por Correo Electrónico ({registros.length} Destinatarios)</span>
+                      <span>1. Enviar Boletín por Correo Electrónico</span>
                     </h4>
                     <span className="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-3 py-1 rounded-full">
-                      Desde clubdeleonesquetzaltenango@gmail.com
+                      Gmail Webhook Activo
                     </span>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-4">
+                    {/* Selector de Segmento / Audiencia */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Selecciona el Grupo de Destinatarios
+                      </label>
+                      <select
+                        value={broadcastRecipientFilter}
+                        onChange={(e) => setBroadcastRecipientFilter(e.target.value as any)}
+                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-900/10 cursor-pointer"
+                      >
+                        <option value="todos">
+                          👥 Todos los inscritos con correo ({registros.filter(r => r.email && r.email.includes('@')).length} personas)
+                        </option>
+                        <option value="pagados">
+                          ✅ Solo inscritos con Pago Confirmado ({registros.filter(r => r.estadoPago === 'Pagado' && r.email).length} personas)
+                        </option>
+                        <option value="pendientes">
+                          ⏳ Solo inscritos Pendientes de Pago ({registros.filter(r => r.estadoPago !== 'Pagado' && r.email).length} personas)
+                        </option>
+                        <option value="telegram_activo">
+                          🟢 Solo inscritos que también tienen Telegram Activo ({registros.filter(r => r.telegramVerificado && r.email).length} personas)
+                        </option>
+                        <option value="email">
+                          ✉️ Solo inscritos con preferencia de Correo ({registros.filter(r => r.preferenciaNotificacion === 'email' && r.email).length} personas)
+                        </option>
+                      </select>
+                    </div>
+
                     <div>
                       <label className="block text-xs font-bold text-slate-600 mb-1">Asunto del Correo</label>
                       <input 
@@ -1614,13 +1717,22 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                         required
                         value={broadcastSubject}
                         onChange={e => setBroadcastSubject(e.target.value)}
-                        placeholder="Ej. Boletín #1: Novedades de Hospedaje y Programa Oficial"
+                        placeholder="Ej. Boletín Oficial #1: Horarios de Plenarias y Hotel Sede"
                         className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-900/10 text-slate-800"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-600 mb-1">Mensaje / Contenido del Comunicado</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-slate-600">Mensaje / Contenido del Comunicado</label>
+                        <button
+                          type="button"
+                          onClick={() => setBroadcastBody("Estimados Compañeros Leones:\n\nNos complace compartir con ustedes las últimas actualizaciones y novedades de la LXXV Convención Nacional que se llevará a cabo en Quetzaltenango.\n\nPor favor recuerden tener a mano su código QR de pre-inscripción y consultar el itinerario en vivo.\n\n¡Los esperamos con entusiasmo y espíritu de servicio!")}
+                          className="text-[10px] text-blue-900 font-bold hover:underline cursor-pointer"
+                        >
+                          + Cargar Texto Sugerido
+                        </button>
+                      </div>
                       <textarea
                         required
                         rows={5}
@@ -1635,17 +1747,17 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                       <button
                         type="submit"
                         disabled={isBroadcasting || registros.length === 0}
-                        className="bg-blue-900 hover:bg-blue-850 text-white font-black px-6 py-3 rounded-xl text-xs uppercase tracking-wider shadow transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
+                        className="bg-blue-900 hover:bg-blue-850 text-white font-black px-6 py-3.5 rounded-xl text-xs uppercase tracking-wider shadow transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
                       >
                         {isBroadcasting ? (
                           <>
                             <Loader2 className="animate-spin" size={16} />
-                            <span>Enviando correos...</span>
+                            <span>Enviando correos vía Google Apps Script...</span>
                           </>
                         ) : (
                           <>
                             <Send size={16} />
-                            <span>Enviar Correo Masivo a {registros.length} Inscritos</span>
+                            <span>Enviar Boletín por Correo</span>
                           </>
                         )}
                       </button>
@@ -1663,7 +1775,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                     <div className="flex items-center space-x-2">
                       <span className="text-[10px] bg-blue-100 text-blue-800 font-extrabold px-3 py-1 rounded-full flex items-center space-x-1">
                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span>Bot Activo: @ConvencionLeonesbot</span>
+                        <span>Bot Oficial: @ConvencionLeonesbot</span>
                       </span>
                       <a
                         href="https://t.me/ConvencionLeonesbot"
@@ -1672,28 +1784,54 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                         className="text-[10px] bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-2.5 py-1 rounded-full transition-colors inline-flex items-center space-x-1"
                       >
                         <ExternalLink size={10} />
-                        <span>Abrir</span>
+                        <span>Abrir Bot</span>
                       </a>
                     </div>
                   </div>
 
-                  <div className="space-y-3">
-                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-slate-600 flex items-center justify-between">
-                      <div>
-                        <span className="font-bold text-slate-800">Canal / Chat ID Destino: </span>
-                        <span className="font-mono text-blue-900 font-bold">{config.telegramChatId || 'No fijado (se enviará al grupo general si está configurado)'}</span>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-slate-700">
+                          Chat ID o Canal Destino en Telegram
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setCustomTelegramDestination('1507920109')}
+                          className="text-[10px] text-blue-900 font-bold hover:underline cursor-pointer"
+                        >
+                          Usar Chat Oficial (1507920109)
+                        </button>
                       </div>
-                      <span className="text-[10px] text-slate-400">Token ID: 8649525379</span>
+                      <input 
+                        type="text"
+                        value={customTelegramDestination}
+                        onChange={(e) => setCustomTelegramDestination(e.target.value)}
+                        placeholder={config.telegramChatId || '1507920109 (Chat o @canal público)'}
+                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-mono font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-900/10"
+                      />
+                      <p className="text-[11px] text-slate-500 mt-1">
+                        Ingresa el Chat ID numérico o el alias del canal público (ej. @convencionleones). Deja en blanco para usar el chat oficial configurado.
+                      </p>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-600 mb-1">Mensaje para Telegram</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-slate-600">Mensaje para Telegram (Soporta HTML)</label>
+                        <button
+                          type="button"
+                          onClick={() => setBroadcastTelegramMsg("🦁 <b>AVISO IMPORTANTE DE LA CONVENCIÓN</b>\n\nEstimados Compañeros Leones, les recordamos que pueden consultar y descargar su <b>Entrada QR Oficial</b> directamente desde nuestra plataforma:\n\n👉 https://clubdeleonesquetzaltenango.org/#/convencion\n\n¡Nos vemos muy pronto en Quetzaltenango!")}
+                          className="text-[10px] text-blue-900 font-bold hover:underline cursor-pointer"
+                        >
+                          + Plantilla con Enlace QR
+                        </button>
+                      </div>
                       <textarea
                         required
                         rows={4}
                         value={broadcastTelegramMsg}
                         onChange={e => setBroadcastTelegramMsg(e.target.value)}
-                        placeholder="Escribe el mensaje o aviso que se publicará en el canal o grupo de Telegram de la Convención..."
+                        placeholder="Escribe el mensaje que se publicará en Telegram... Puedes usar <b>negrita</b> e <i>itálica</i>."
                         className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-900/10 text-slate-800"
                       />
                     </div>
@@ -1702,7 +1840,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                       <button
                         type="submit"
                         disabled={isBroadcasting}
-                        className="bg-indigo-900 hover:bg-indigo-800 text-white font-black px-6 py-3 rounded-xl text-xs uppercase tracking-wider shadow transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
+                        className="bg-indigo-900 hover:bg-indigo-850 text-white font-black px-6 py-3.5 rounded-xl text-xs uppercase tracking-wider shadow transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
                       >
                         {isBroadcasting ? (
                           <>
@@ -1712,7 +1850,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                         ) : (
                           <>
                             <Send size={16} />
-                            <span>Publicar Anuncio por Telegram (@ConvencionLeonesbot)</span>
+                            <span>Publicar Anuncio en Telegram</span>
                           </>
                         )}
                       </button>
@@ -1728,62 +1866,159 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
         {/* ================= PRE-REGISTROS TAB ================= */}
         {activeSubTab === 'registros' && (
           <div className="space-y-6">
-            {/* KPI Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+            {/* KPI Cards: Resumen de Pre-inscritos y Canales */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+              <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Total Pre-inscritos</p>
-                  <p className="text-2xl font-black text-slate-900 mt-1">{registros.length}</p>
+                  <p className="text-xl sm:text-2xl font-black text-slate-900 mt-1">{registros.length}</p>
+                  <span className="text-[10px] text-slate-500 font-medium">Registrados en web</span>
                 </div>
-                <div className="w-12 h-12 bg-blue-50 text-blue-900 rounded-xl flex items-center justify-center font-bold">
-                  <Users size={22} />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-50 text-blue-900 rounded-xl flex items-center justify-center font-bold shrink-0">
+                  <Users size={20} />
                 </div>
               </div>
-              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+
+              <div className="bg-white p-4 sm:p-5 rounded-2xl border border-emerald-100 shadow-sm flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-wider text-emerald-600">Total Recaudado / Confirmado</p>
-                  <p className="text-2xl font-black text-emerald-700 mt-1">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-emerald-600 flex items-center space-x-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Telegram Activos</span>
+                  </p>
+                  <p className="text-xl sm:text-2xl font-black text-emerald-700 mt-1">
+                    {registros.filter(r => r.telegramVerificado).length}
+                  </p>
+                  <span className="text-[10px] text-emerald-600 font-medium">Reciben difusión en bot</span>
+                </div>
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center font-bold shrink-0">
+                  <Send size={18} />
+                </div>
+              </div>
+
+              <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Recaudado / Confirmado</p>
+                  <p className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
                     Q{registros.filter(r => r.estadoPago === 'Pagado').reduce((acc, r) => acc + (r.montoPagar || 0), 0).toLocaleString()}
                   </p>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    {registros.filter(r => r.estadoPago === 'Pagado').length} Acreditados
+                  </span>
                 </div>
-                <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center font-bold">
-                  <CheckCircle size={22} />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-50 text-slate-700 rounded-xl flex items-center justify-center font-bold shrink-0">
+                  <CheckCircle size={20} />
                 </div>
               </div>
-              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+
+              <div className="bg-white p-4 sm:p-5 rounded-2xl border border-amber-100 shadow-sm flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-wider text-amber-500">Pendientes de Pago</p>
-                  <p className="text-2xl font-black text-amber-700 mt-1">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-amber-600">Pendientes de Pago</p>
+                  <p className="text-xl sm:text-2xl font-black text-amber-700 mt-1">
                     {registros.filter(r => r.estadoPago !== 'Pagado').length}
                   </p>
+                  <span className="text-[10px] text-amber-600 font-medium">En seguimiento</span>
                 </div>
-                <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center font-bold">
-                  <Clock size={22} />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center font-bold shrink-0">
+                  <Clock size={20} />
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-              <div className="relative w-full sm:max-w-md">
-                <input 
-                  type="text" 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Buscar por socio, DPI, email, club o estado..."
-                  className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-xl pl-10 pr-4 py-2 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-medium"
-                />
-                <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+            {/* Barra de Búsqueda y Píldoras de Filtro Rápido */}
+            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3.5">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="relative w-full sm:max-w-md">
+                  <input 
+                    type="text" 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Buscar por socio, DPI, email, teléfono o club..."
+                    className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-xl pl-10 pr-4 py-2 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-medium"
+                  />
+                  <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                </div>
+
+                {registros.length > 0 && (
+                  <button
+                    onClick={handleExportCSV}
+                    className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer whitespace-nowrap self-end sm:self-auto"
+                  >
+                    <Download size={14} />
+                    <span>Exportar CSV (Excel)</span>
+                  </button>
+                )}
               </div>
 
-              {registros.length > 0 && (
+              {/* Píldoras de Filtro por Canal y Estado */}
+              <div className="flex items-center space-x-2 overflow-x-auto pb-1 text-xs font-bold">
                 <button
-                  onClick={handleExportCSV}
-                  className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer whitespace-nowrap"
+                  type="button"
+                  onClick={() => setChannelFilter('todos')}
+                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                    channelFilter === 'todos'
+                      ? 'bg-slate-900 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
                 >
-                  <Download size={14} />
-                  <span>Exportar CSV (Excel)</span>
+                  Todos ({registros.length})
                 </button>
-              )}
+                <button
+                  type="button"
+                  onClick={() => setChannelFilter('telegram_activo')}
+                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1.5 ${
+                    channelFilter === 'telegram_activo'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200/60'
+                  }`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  <span>🟢 Telegram Activo ({registros.filter(r => r.telegramVerificado).length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChannelFilter('telegram_pendiente')}
+                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                    channelFilter === 'telegram_pendiente'
+                      ? 'bg-amber-600 text-white shadow-sm'
+                      : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200/60'
+                  }`}
+                >
+                  🟡 Telegram Pendiente ({registros.filter(r => r.preferenciaNotificacion === 'telegram' && !r.telegramVerificado).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChannelFilter('email')}
+                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                    channelFilter === 'email'
+                      ? 'bg-blue-900 text-white shadow-sm'
+                      : 'bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200/60'
+                  }`}
+                >
+                  ✉️ Solo Correo ({registros.filter(r => r.preferenciaNotificacion === 'email').length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChannelFilter('pagados')}
+                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                    channelFilter === 'pagados'
+                      ? 'bg-teal-700 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  ✅ Pagados ({registros.filter(r => r.estadoPago === 'Pagado').length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChannelFilter('pendientes')}
+                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                    channelFilter === 'pendientes'
+                      ? 'bg-rose-700 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  ⏳ Pendientes ({registros.filter(r => r.estadoPago !== 'Pagado').length})
+                </button>
+              </div>
             </div>
 
             {filteredRegistros.length > 0 ? (
@@ -1800,7 +2035,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                       className="p-4 sm:p-5 hover:bg-slate-50/70 transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-4"
                     >
                       {/* Información Principal del Participante */}
-                      <div className="flex-1 min-w-0 space-y-1.5">
+                      <div className="flex-1 min-w-0 space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <h4 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
                             {reg.nombre}
@@ -1823,6 +2058,43 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                             <option value="Checkout_Creado">💳 Link Creado</option>
                             <option value="Pagado">✅ Pagado Confirmado</option>
                           </select>
+
+                          {/* BADGE INTERACTIVO DE ESTADO TELEGRAM / DIFUSIÓN */}
+                          {reg.telegramVerificado ? (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleTelegramStatus(reg.id, true)}
+                              className="inline-flex items-center space-x-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full text-[10px] font-black transition-all cursor-pointer shadow-xs"
+                              title="Está activo en el Bot de Telegram y recibirá mensajes masivos. Clic para cambiar."
+                            >
+                              <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                              </span>
+                              <span>🟢 Bot Telegram Activo (Recibe Difusión)</span>
+                            </button>
+                          ) : reg.preferenciaNotificacion === 'telegram' ? (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleTelegramStatus(reg.id, false)}
+                              className="inline-flex items-center space-x-1 text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-full text-[10px] font-black transition-all cursor-pointer"
+                              title="Eligió Telegram pero aún no confirmó el número en el bot. Clic para marcarlo como Activo."
+                            >
+                              <span>🟡 Telegram (Pendiente en Bot)</span>
+                              <span className="text-[9px] underline ml-1 text-blue-800 font-extrabold">Verificar</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleTelegramStatus(reg.id, false)}
+                              className="inline-flex items-center space-x-1 text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer"
+                              title="Prefiere recibir difusión por Correo. Clic para activar recepción en Telegram."
+                            >
+                              <Mail size={11} className="text-slate-500" />
+                              <span>✉️ Difusión Correo</span>
+                              <span className="text-[9px] text-blue-700 font-extrabold underline ml-1">+Telegram</span>
+                            </button>
+                          )}
 
                           <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
                             {reg.id}
@@ -1851,10 +2123,9 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                             </span>
                           )}
 
-                          {reg.telegramVerificado && (
-                            <span className="inline-flex items-center space-x-1 text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full text-[10px] font-black">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                              <span>Bot Telegram Conectado</span>
+                          {reg.telefono && (
+                            <span className="text-slate-500 text-[11px] font-mono">
+                              📞 {reg.telefono}
                             </span>
                           )}
 
@@ -1864,7 +2135,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                         </div>
                       </div>
 
-                      {/* Botones de Acción Rápida (Llamada, WhatsApp, Reenviar QR) */}
+                      {/* Botones de Acción Rápida (WhatsApp, Llamar, Telegram, Gmail, QR) */}
                       <div className="flex items-center flex-wrap sm:flex-nowrap gap-2 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
                         {/* Botón WhatsApp */}
                         {cleanPhone ? (
@@ -1880,11 +2151,36 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                           </a>
                         ) : null}
 
+                        {/* Botón Telegram Directo */}
+                        {cleanPhone ? (
+                          <a
+                            href={`https://t.me/+502${cleanPhone}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center space-x-1.5 bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                            title="Abrir chat en Telegram"
+                          >
+                            <Send size={13} className="text-sky-600" />
+                            <span>Telegram</span>
+                          </a>
+                        ) : (
+                          <a
+                            href="https://t.me/ConvencionLeonesbot"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center space-x-1.5 bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                            title="Abrir bot oficial"
+                          >
+                            <Send size={13} className="text-sky-600" />
+                            <span>Bot</span>
+                          </a>
+                        )}
+
                         {/* Botón Llamar */}
                         {reg.telefono ? (
                           <a
                             href={`tel:${reg.telefono}`}
-                            className="inline-flex items-center space-x-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                            className="inline-flex items-center space-x-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
                             title="Hacer llamada telefónica"
                           >
                             <Phone size={14} className="text-blue-600" />
