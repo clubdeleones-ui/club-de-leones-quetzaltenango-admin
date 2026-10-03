@@ -198,15 +198,22 @@ export function AdminConvencion() {
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const ok = await gmailService.sendTestEmail('clubdeleonesquetzaltenango@gmail.com', config.googleScriptUrl);
-      if (ok) {
+      const health = await gmailService.checkScriptHealth(config.googleScriptUrl);
+      if (!health.ok) {
+        setErrorMsg(health.message);
+        setShowScriptGuideModal(true);
+        setIsTestingGmail(false);
+        return;
+      }
+      const res = await gmailService.sendTestEmail('clubdeleonesquetzaltenango@gmail.com', config.googleScriptUrl);
+      if (res.ok) {
         setSuccessMsg('¡Correo de prueba enviado con éxito a clubdeleonesquetzaltenango@gmail.com!');
         setTimeout(() => setSuccessMsg(''), 4000);
       } else {
-        setErrorMsg('No se pudo enviar el correo de prueba. Revisa la URL del Webhook de Google Apps Script.');
+        setErrorMsg(res.message || 'No se pudo enviar el correo de prueba.');
       }
-    } catch (e) {
-      setErrorMsg('Error al conectar con el Webhook de Google Apps Script.');
+    } catch (e: any) {
+      setErrorMsg('Error al conectar con el Webhook de Google Apps Script: ' + (e.message || ''));
     } finally {
       setIsTestingGmail(false);
     }

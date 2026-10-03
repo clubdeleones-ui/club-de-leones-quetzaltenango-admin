@@ -409,14 +409,45 @@ Correo Oficial: ${DEFAULT_GMAIL_SENDER}
   },
 
   /**
-   * Envía un correo de prueba para validar el webhook de Google Apps Script
+   * Verifica si el Webhook de Google Apps Script está activo y accesible públicamente sin bloqueo de permisos
    */
-  sendTestEmail: async (toEmail: string, customScriptUrl?: string): Promise<boolean> => {
+  checkScriptHealth: async (customScriptUrl?: string): Promise<{ ok: boolean; message: string }> => {
     const scriptUrl = customScriptUrl || 
       (import.meta as any).env?.VITE_GOOGLE_SCRIPT_URL || 
       DEFAULT_GOOGLE_SCRIPT_URL;
 
-    if (!scriptUrl || !toEmail) return false;
+    if (!scriptUrl) {
+      return { ok: false, message: 'URL del Webhook de Apps Script no configurada.' };
+    }
+
+    try {
+      const res = await fetch(scriptUrl, { method: 'GET' });
+      const text = await res.text();
+      if (text.includes('Necesitas acceso') || text.includes('accounts.google.com') || res.status === 403 || res.status === 401) {
+        return {
+          ok: false,
+          message: 'Permiso denegado por Google: En script.google.com la opción "Quién tiene acceso" debe cambiarse a "Cualquier usuario".'
+        };
+      }
+      return { ok: true, message: 'Webhook de Google Apps Script activo y accesible.' };
+    } catch (e: any) {
+      // Si el navegador bloquea por CORS la redirección a login de Google
+      return {
+        ok: false,
+        message: 'No se pudo conectar con el Webhook de Google Apps Script. Asegúrate de implementar como Aplicación Web con acceso para "Cualquier usuario".'
+      };
+    }
+  },
+
+  /**
+   * Envía un correo de prueba para validar el webhook de Google Apps Script
+   */
+  sendTestEmail: async (toEmail: string, customScriptUrl?: string): Promise<{ ok: boolean; message?: string }> => {
+    const scriptUrl = customScriptUrl || 
+      (import.meta as any).env?.VITE_GOOGLE_SCRIPT_URL || 
+      DEFAULT_GOOGLE_SCRIPT_URL;
+
+    if (!scriptUrl || !toEmail) return { ok: false, message: 'Faltan parámetros de destino.' };
 
     const fechaHora = new Date().toLocaleString('es-GT');
     const asunto = `🧪 Prueba de Conexión Gmail - Club de Leones Quetzaltenango (${fechaHora})`;
@@ -444,10 +475,10 @@ Correo Oficial: ${DEFAULT_GMAIL_SENDER}
           `
         })
       });
-      return true;
-    } catch (e) {
+      return { ok: true };
+    } catch (e: any) {
       console.error("Error en test de Gmail:", e);
-      return false;
+      return { ok: false, message: e.message || 'Error de red' };
     }
   },
 
