@@ -29,7 +29,8 @@ import {
   Mail,
   Send,
   Handshake,
-  Wand2
+  Wand2,
+  CreditCard
 } from 'lucide-react';
 import { firebaseService } from '../../services/firebaseService';
 import { telegramService } from '../../services/telegramService';
@@ -600,11 +601,14 @@ export function AdminConvencion() {
   const filteredRegistros = registros.filter(r => {
     const term = searchTerm.toLowerCase();
     return (
-      r.nombre.toLowerCase().includes(term) ||
-      r.email.toLowerCase().includes(term) ||
-      r.club.toLowerCase().includes(term) ||
-      r.cargo.toLowerCase().includes(term) ||
-      r.distrito.toLowerCase().includes(term)
+      (r.nombre || '').toLowerCase().includes(term) ||
+      (r.email || '').toLowerCase().includes(term) ||
+      (r.dpi && r.dpi.toLowerCase().includes(term)) ||
+      (r.club || '').toLowerCase().includes(term) ||
+      (r.cargo || '').toLowerCase().includes(term) ||
+      (r.distrito || '').toLowerCase().includes(term) ||
+      (r.paquete && r.paquete.toLowerCase().includes(term)) ||
+      (r.estadoPago && r.estadoPago.toLowerCase().includes(term))
     );
   });
 
@@ -612,16 +616,20 @@ export function AdminConvencion() {
   const handleExportCSV = () => {
     if (registros.length === 0) return;
     
-    const headers = ["Nombre Completo", "Email", "Telefono", "Club", "Cargo", "Zona", "Fecha Registro"];
+    const headers = ["Nombre Completo", "DPI", "Email", "Telefono", "Club", "Cargo", "Zona", "Paquete", "Monto a Pagar (Q)", "Estado de Pago", "Fecha Registro"];
     const csvRows = [
       headers.join(','),
       ...filteredRegistros.map(r => [
-        `"${r.nombre.replace(/"/g, '""')}"`,
-        `"${r.email.replace(/"/g, '""')}"`,
-        `"${r.telefono.replace(/"/g, '""')}"`,
-        `"${r.club.replace(/"/g, '""')}"`,
-        `"${r.cargo.replace(/"/g, '""')}"`,
-        `"${r.distrito.replace(/"/g, '""')}"`,
+        `"${(r.nombre || '').replace(/"/g, '""')}"`,
+        `"${(r.dpi || '').replace(/"/g, '""')}"`,
+        `"${(r.email || '').replace(/"/g, '""')}"`,
+        `"${(r.telefono || '').replace(/"/g, '""')}"`,
+        `"${(r.club || '').replace(/"/g, '""')}"`,
+        `"${(r.cargo || '').replace(/"/g, '""')}"`,
+        `"${(r.distrito || '').replace(/"/g, '""')}"`,
+        `"${(r.paquete || '').replace(/"/g, '""')}"`,
+        `"${r.montoPagar || 0}"`,
+        `"${r.estadoPago || 'Pendiente'}"`,
         `"${new Date(r.fechaRegistro).toLocaleString()}"`
       ].join(','))
     ];
@@ -635,6 +643,38 @@ export function AdminConvencion() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleUpdateEstadoPago = async (id: string, nuevoEstado: 'Pendiente' | 'Pagado' | 'Checkout_Creado') => {
+    try {
+      await firebaseService.updateConvencionRegistroStatus(id, nuevoEstado);
+      setRegistros(prev => prev.map(r => r.id === id ? { ...r, estadoPago: nuevoEstado } : r));
+      setSuccessMsg(`Estado de pago actualizado a "${nuevoEstado}".`);
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (error) {
+      console.error("Error al actualizar estado de pago:", error);
+      setErrorMsg("No se pudo actualizar el estado de pago.");
+    }
+  };
+
+  const handleDeleteRegistro = async (id: string, nombre: string) => {
+    const ok = await confirm({
+      title: "Eliminar Pre-registro",
+      message: `¿Estás seguro de eliminar el registro de ${nombre}? Esta acción no se puede deshacer.`,
+      confirmLabel: "Eliminar",
+      danger: true
+    });
+    if (!ok) return;
+
+    try {
+      await firebaseService.deleteConvencionRegistro(id);
+      setRegistros(prev => prev.filter(r => r.id !== id));
+      setSuccessMsg(`Registro de ${nombre} eliminado.`);
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (error) {
+      console.error("Error al eliminar registro:", error);
+      setErrorMsg("No se pudo eliminar el registro en Firestore.");
+    }
   };
 
   const handleSendMassEmail = async (e: React.FormEvent) => {
@@ -1432,22 +1472,57 @@ export function AdminConvencion() {
         {/* ================= PRE-REGISTROS TAB ================= */}
         {activeSubTab === 'registros' && (
           <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div className="relative w-full sm:max-w-xs">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Total Pre-inscritos</p>
+                  <p className="text-2xl font-black text-slate-900 mt-1">{registros.length}</p>
+                </div>
+                <div className="w-12 h-12 bg-blue-50 text-blue-900 rounded-xl flex items-center justify-center font-bold">
+                  <Users size={22} />
+                </div>
+              </div>
+              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-emerald-600">Total Recaudado / Confirmado</p>
+                  <p className="text-2xl font-black text-emerald-700 mt-1">
+                    Q{registros.filter(r => r.estadoPago === 'Pagado').reduce((acc, r) => acc + (r.montoPagar || 0), 0).toLocaleString()}
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center font-bold">
+                  <CheckCircle size={22} />
+                </div>
+              </div>
+              <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-amber-500">Pendientes de Pago</p>
+                  <p className="text-2xl font-black text-amber-700 mt-1">
+                    {registros.filter(r => r.estadoPago !== 'Pagado').length}
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center font-bold">
+                  <Clock size={22} />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+              <div className="relative w-full sm:max-w-md">
                 <input 
                   type="text" 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Buscar socio, email o club..."
-                  className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl pl-10 pr-4 py-2.5 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
+                  placeholder="Buscar por socio, DPI, email, club o estado..."
+                  className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-xl pl-10 pr-4 py-2 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-medium"
                 />
-                <Search className="absolute left-3.5 top-3 text-slate-455" size={16} />
+                <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
               </div>
 
               {registros.length > 0 && (
                 <button
                   onClick={handleExportCSV}
-                  className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md"
+                  className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer whitespace-nowrap"
                 >
                   <Download size={14} />
                   <span>Exportar CSV (Excel)</span>
@@ -1456,58 +1531,101 @@ export function AdminConvencion() {
             </div>
 
             {filteredRegistros.length > 0 ? (
-              <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
+              <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm bg-white">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm text-slate-600 border-collapse">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-100 font-extrabold text-slate-800 uppercase tracking-wider text-[10px]">
-                        <th className="px-6 py-4">Nombre Completo</th>
-                        <th className="px-6 py-4">Contacto</th>
-                        <th className="px-6 py-4">Club de procedencia</th>
-                        <th className="px-6 py-4">Cargo</th>
-                        <th className="px-6 py-4">Zona</th>
-                        <th className="px-6 py-4">Fecha Registro</th>
+                        <th className="px-5 py-3.5">Socio / DPI</th>
+                        <th className="px-5 py-3.5">Contacto</th>
+                        <th className="px-5 py-3.5">Club / Cargo</th>
+                        <th className="px-5 py-3.5">Paquete & Monto</th>
+                        <th className="px-5 py-3.5">Estado de Pago</th>
+                        <th className="px-5 py-3.5">Fecha</th>
+                        <th className="px-4 py-3.5 text-right">Acción</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-105 font-bold">
-                      {filteredRegistros.map((reg) => (
-                        <tr key={reg.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-6 py-4">
-                            <span className="text-slate-850 font-black">{reg.nombre}</span>
-                          </td>
-                          <td className="px-6 py-4 text-xs">
-                            <div className="flex flex-col space-y-0.5">
-                              <span className="text-slate-700">{reg.email}</span>
-                              <span className="text-slate-500">{reg.telefono}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-slate-700">{reg.club}</td>
-                          <td className="px-6 py-4">
-                            <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-md uppercase font-black tracking-wider">
-                              {reg.cargo}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-slate-500 text-xs">{reg.distrito}</td>
-                          <td className="px-6 py-4 text-slate-500 text-xs">
-                            {new Date(reg.fechaRegistro).toLocaleString('es-ES', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </td>
-                        </tr>
-                      ))}
+                    <tbody className="divide-y divide-slate-100 font-medium">
+                      {filteredRegistros.map((reg) => {
+                        const isPagado = reg.estadoPago === 'Pagado';
+                        const isCheckout = reg.estadoPago === 'Checkout_Creado';
+                        return (
+                          <tr key={reg.id} className="hover:bg-slate-50/70 transition-colors">
+                            <td className="px-5 py-4">
+                              <div className="flex flex-col">
+                                <span className="text-slate-900 font-bold">{reg.nombre}</span>
+                                {reg.dpi ? (
+                                  <span className="text-[11px] text-slate-500 font-mono mt-0.5">DPI: {reg.dpi}</span>
+                                ) : (
+                                  <span className="text-[10px] text-slate-400 italic">Sin DPI</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-5 py-4 text-xs">
+                              <div className="flex flex-col space-y-0.5">
+                                <span className="text-slate-700 font-medium">{reg.email}</span>
+                                <span className="text-slate-500">{reg.telefono}</span>
+                              </div>
+                            </td>
+                            <td className="px-5 py-4">
+                              <div className="flex flex-col">
+                                <span className="text-slate-800 font-semibold text-xs">{reg.club}</span>
+                                <span className="text-[10px] text-blue-700 font-bold uppercase tracking-wider mt-0.5">{reg.cargo} ({reg.distrito})</span>
+                              </div>
+                            </td>
+                            <td className="px-5 py-4">
+                              <div className="flex flex-col">
+                                <span className="text-xs font-bold text-slate-800">{reg.paquete || 'General'}</span>
+                                <span className="text-xs font-black text-amber-600">Q{(reg.montoPagar || 0).toLocaleString()}</span>
+                              </div>
+                            </td>
+                            <td className="px-5 py-4">
+                              <select
+                                value={reg.estadoPago || 'Pendiente'}
+                                onChange={(e) => handleUpdateEstadoPago(reg.id, e.target.value as any)}
+                                className={`text-[11px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-lg border cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-900/20 ${
+                                  isPagado 
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                    : isCheckout 
+                                      ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                                }`}
+                              >
+                                <option value="Pendiente">⏳ Pendiente</option>
+                                <option value="Checkout_Creado">💳 Link Creado</option>
+                                <option value="Pagado">✅ Pagado</option>
+                              </select>
+                            </td>
+                            <td className="px-5 py-4 text-slate-500 text-xs whitespace-nowrap">
+                              {new Date(reg.fechaRegistro).toLocaleString('es-ES', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </td>
+                            <td className="px-4 py-4 text-right">
+                              <button
+                                onClick={() => handleDeleteRegistro(reg.id, reg.nombre)}
+                                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                title="Eliminar registro"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
               </div>
             ) : (
-              <div className="text-center py-16 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                <FileText className="w-12 h-12 text-slate-355 mx-auto" />
+              <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200">
+                <FileText className="w-12 h-12 text-slate-300 mx-auto" />
                 <p className="mt-4 text-slate-800 font-extrabold text-base">No hay pre-registros encontrados</p>
-                <p className="text-xs text-slate-550 mt-1">Los socios que se registren en la landing page aparecerán listados aquí.</p>
+                <p className="text-xs text-slate-400 mt-1">Los socios que se registren en la landing page aparecerán listados aquí.</p>
               </div>
             )}
           </div>

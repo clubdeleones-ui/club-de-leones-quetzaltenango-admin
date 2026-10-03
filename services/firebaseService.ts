@@ -1277,6 +1277,26 @@ export const firebaseService = {
     }
   },
 
+  deleteConvencionRegistro: async (id: string): Promise<void> => {
+    try {
+      const docRef = doc(db, "convencion_registros", id);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting convencion registration from Firestore:", error);
+      throw error;
+    }
+  },
+
+  updateConvencionRegistroStatus: async (id: string, estadoPago: 'Pendiente' | 'Pagado' | 'Checkout_Creado'): Promise<void> => {
+    try {
+      const docRef = doc(db, "convencion_registros", id);
+      await updateDoc(docRef, { estadoPago });
+    } catch (error) {
+      console.error("Error updating convencion registration status in Firestore:", error);
+      throw error;
+    }
+  },
+
   uploadConvencionImage: async (base64Data: string): Promise<string> => {
     try {
       if (!base64Data.startsWith('data:image')) {
