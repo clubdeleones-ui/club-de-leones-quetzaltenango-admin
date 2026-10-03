@@ -968,10 +968,10 @@ export default function Convencion() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-800 font-sans antialiased overflow-x-hidden selection:bg-yellow-500 selection:text-blue-955 pb-24 relative">
+    <div className="min-h-screen bg-[#060e1d] text-slate-100 font-sans antialiased overflow-x-hidden selection:bg-yellow-500 selection:text-blue-955 pb-24 relative">
       {/* Dynamic Hero Header Section Block - Floating Royal Banner */}
-      <div className="pt-6 sm:pt-10 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-        <header className="relative w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8 overflow-hidden text-center z-10 rounded-3xl sm:rounded-[2.5rem] bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border-2 border-yellow-500/40 shadow-2xl">
+      <div className="pt-2 sm:pt-8 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8">
+        <header className="relative w-full py-12 sm:py-24 px-3 sm:px-6 lg:px-8 overflow-hidden text-center z-10 rounded-2xl sm:rounded-[2.5rem] bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border sm:border-2 border-yellow-500/40 shadow-2xl">
           {/* Custom Header Background Image with Gradient Overlay */}
           {config.headerBgUrl && (
             <div 
@@ -1142,8 +1142,8 @@ export default function Convencion() {
       </div>
 
       {/* BANNER FLOTANTE: Conoce la Sede Virtualmente (Colina Country Club) */}
-      <section id="instalaciones" className="my-8 sm:my-10 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-10">
-        <div className="bg-gradient-to-r from-[#0c1a38] via-[#09152e] to-[#0c1a38] text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-8 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 border-2 border-yellow-500/40 relative overflow-hidden text-center sm:text-left group">
+      <section id="instalaciones" className="my-6 sm:my-10 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8 scroll-mt-10">
+        <div className="bg-gradient-to-r from-[#0c1a38] via-[#09152e] to-[#0c1a38] text-white rounded-2xl sm:rounded-[2.5rem] p-4.5 sm:p-8 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-5 sm:gap-6 border sm:border-2 border-yellow-500/40 relative overflow-hidden text-center sm:text-left group">
           <div className="space-y-2 max-w-xl relative z-10">
             <span className="bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 text-[10px] font-black px-3.5 py-1 rounded-full uppercase tracking-wider inline-block shadow-sm">
               Conoce la Sede Virtualmente
@@ -1167,8 +1167,8 @@ export default function Convencion() {
       </section>
 
       {/* SECCIÓN 2: Alianzas & Patrocinadores Marquee Block — CRISTAL Y ORO FLOTANTE */}
-      <section className="my-10 sm:my-16 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border-2 border-yellow-500/30 rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-10 shadow-2xl relative overflow-hidden">
+      <section className="my-6 sm:my-16 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8">
+        <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border sm:border-2 border-yellow-500/30 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-10 shadow-2xl relative overflow-hidden">
           {/* Section Header */}
           <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-white/10 pb-4 sm:pb-6 relative z-10 text-center sm:text-left">
             <div className="flex items-center space-x-3.5">
@@ -1250,8 +1250,8 @@ export default function Convencion() {
       </section>
 
       {/* SECCIÓN 3: Ciudad Sede (Quetzaltenango) Block */}
-      <section className="my-10 sm:my-16 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-br from-[#0c1b3b] via-[#09152e] to-[#071126] text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 border border-yellow-500/30 shadow-2xl relative overflow-hidden">
+      <section className="my-6 sm:my-16 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8">
+        <div className="bg-gradient-to-br from-[#0c1b3b] via-[#09152e] to-[#071126] text-white rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-12 border border-yellow-500/30 shadow-2xl relative overflow-hidden">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             <div className="lg:col-span-6 space-y-4 sm:space-y-6">
               <div className="inline-flex items-center space-x-2 bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
@@ -1303,8 +1303,8 @@ export default function Convencion() {
       </section>
 
       {/* SECCIÓN 4: Actividades Culturales y Sociales Block */}
-      <section className="my-10 sm:my-16 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 border border-yellow-500/30 shadow-2xl relative overflow-hidden">
+      <section className="my-6 sm:my-16 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8">
+        <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-12 border border-yellow-500/30 shadow-2xl relative overflow-hidden">
           <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4">
             <div className="inline-flex items-center space-x-2 bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
               <Award size={14} />
@@ -1345,8 +1345,8 @@ export default function Convencion() {
       </section>
 
       {/* SECCIÓN 6: Experiencias Únicas Block */}
-      <section className="my-10 sm:my-16 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border-2 border-yellow-500/30 rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 shadow-2xl relative overflow-hidden">
+      <section className="my-6 sm:my-16 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8">
+        <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border sm:border-2 border-yellow-500/30 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-12 shadow-2xl relative overflow-hidden">
           <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4 mb-10 sm:mb-14">
             <div className="inline-flex items-center space-x-2 bg-yellow-500/15 border border-yellow-500/30 text-yellow-300 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
               <Compass size={14} className="text-yellow-400" />
@@ -1384,8 +1384,8 @@ export default function Convencion() {
       </section>
 
       {/* SECCIÓN 7: Formulario de Pre-registro Digital Guiado (4 Pasos) — GALA & CONVERSIÓN FLOTANTE */}
-      <section id="pre-inscripcion" className="my-10 sm:my-20 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-10">
-        <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 lg:p-14 border-2 border-yellow-500/40 shadow-[0_25px_60px_rgba(0,0,0,0.35)] relative overflow-hidden">
+      <section id="pre-inscripcion" className="my-6 sm:my-20 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8 scroll-mt-10">
+        <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white rounded-2xl sm:rounded-[2.5rem] p-3.5 sm:p-12 lg:p-14 border sm:border-2 border-yellow-500/40 shadow-[0_25px_60px_rgba(0,0,0,0.35)] relative overflow-hidden">
           {/* Acentos de Luz de Fondo */}
           <div className="absolute top-0 right-1/4 w-96 h-96 bg-yellow-500/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2" />
           <div className="absolute bottom-0 left-10 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none translate-y-1/3" />
@@ -1435,15 +1435,15 @@ export default function Convencion() {
                   </div>
 
                   {/* Barra de Progreso por Pasos (Wizard Stepper Dinámico) */}
-                  <div className="mb-12 max-w-3xl mx-auto">
-                    <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-4 sm:p-6 backdrop-blur-md">
-                      <div className="flex items-center justify-between relative px-2 sm:px-6">
+                  <div className="mb-8 sm:mb-12 max-w-3xl mx-auto w-full">
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl sm:rounded-3xl p-3 sm:p-6 backdrop-blur-md">
+                      <div className="flex items-center justify-between relative px-1 sm:px-6">
                         {/* Línea Base Gris */}
-                        <div className="absolute top-5 left-10 right-10 h-1 bg-white/10 -translate-y-1/2 rounded-full z-0" />
+                        <div className="absolute top-4.5 sm:top-5 left-6 sm:left-10 right-6 sm:right-10 h-1 bg-white/10 -translate-y-1/2 rounded-full z-0" />
                         
                         {/* Línea Activa Gradiente */}
                         <div 
-                          className="absolute top-5 left-10 h-1 bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-300 -translate-y-1/2 rounded-full z-0 transition-all duration-500 shadow-[0_0_12px_rgba(234,179,8,0.5)]" 
+                          className="absolute top-4.5 sm:top-5 left-6 sm:left-10 h-1 bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-300 -translate-y-1/2 rounded-full z-0 transition-all duration-500 shadow-[0_0_12px_rgba(234,179,8,0.5)]" 
                           style={{ width: `${((wizardStep - 1) / 3) * 82}%` }}
                         />
 
@@ -1453,11 +1453,11 @@ export default function Convencion() {
                           onClick={() => setWizardStep(1)}
                           className={`relative z-10 flex flex-col items-center group cursor-pointer transition-all ${wizardStep >= 1 ? 'text-yellow-300' : 'text-slate-400'}`}
                         >
-                          <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm transition-all duration-300 shadow-lg ${
-                            wizardStep === 1 ? 'bg-gradient-to-tr from-yellow-500 to-amber-400 text-blue-955 ring-4 ring-yellow-400/40 scale-110 shadow-yellow-500/40' :
+                          <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center font-black text-xs sm:text-sm transition-all duration-300 shadow-lg ${
+                            wizardStep === 1 ? 'bg-gradient-to-tr from-yellow-500 to-amber-400 text-blue-955 ring-2 sm:ring-4 ring-yellow-400/40 scale-105 sm:scale-110 shadow-yellow-500/40' :
                             wizardStep > 1 ? 'bg-emerald-500 text-white shadow-emerald-500/30' : 'bg-[#09152e] border border-white/20 text-slate-300 group-hover:border-yellow-400/50'
                           }`}>
-                            {wizardStep > 1 ? <Check size={20} className="stroke-[3]" /> : '1'}
+                            {wizardStep > 1 ? <Check size={16} className="sm:size-5 stroke-[3]" /> : '1'}
                           </div>
                           <span className="text-[11px] font-black uppercase tracking-wider mt-2.5 hidden sm:inline">1. Datos</span>
                           <span className="text-[9px] font-bold text-slate-400 sm:hidden mt-1">Paso 1</span>
@@ -1470,11 +1470,11 @@ export default function Convencion() {
                           disabled={wizardStep < 1}
                           className={`relative z-10 flex flex-col items-center group cursor-pointer transition-all ${wizardStep >= 2 ? 'text-yellow-300' : 'text-slate-400'}`}
                         >
-                          <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm transition-all duration-300 shadow-lg ${
-                            wizardStep === 2 ? 'bg-gradient-to-tr from-yellow-500 to-amber-400 text-blue-955 ring-4 ring-yellow-400/40 scale-110 shadow-yellow-500/40' :
+                          <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center font-black text-xs sm:text-sm transition-all duration-300 shadow-lg ${
+                            wizardStep === 2 ? 'bg-gradient-to-tr from-yellow-500 to-amber-400 text-blue-955 ring-2 sm:ring-4 ring-yellow-400/40 scale-105 sm:scale-110 shadow-yellow-500/40' :
                             wizardStep > 2 ? 'bg-emerald-500 text-white shadow-emerald-500/30' : 'bg-[#09152e] border border-white/20 text-slate-300 group-hover:border-yellow-400/50'
                           }`}>
-                            {wizardStep > 2 ? <Check size={20} className="stroke-[3]" /> : '2'}
+                            {wizardStep > 2 ? <Check size={16} className="sm:size-5 stroke-[3]" /> : '2'}
                           </div>
                           <span className="text-[11px] font-black uppercase tracking-wider mt-2.5 hidden sm:inline">2. Afiliación</span>
                           <span className="text-[9px] font-bold text-slate-400 sm:hidden mt-1">Paso 2</span>
@@ -1487,11 +1487,11 @@ export default function Convencion() {
                           disabled={wizardStep < 2}
                           className={`relative z-10 flex flex-col items-center group cursor-pointer transition-all ${wizardStep >= 3 ? 'text-yellow-300' : 'text-slate-400'}`}
                         >
-                          <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm transition-all duration-300 shadow-lg ${
-                            wizardStep === 3 ? 'bg-gradient-to-tr from-yellow-500 to-amber-400 text-blue-955 ring-4 ring-yellow-400/40 scale-110 shadow-yellow-500/40' :
+                          <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center font-black text-xs sm:text-sm transition-all duration-300 shadow-lg ${
+                            wizardStep === 3 ? 'bg-gradient-to-tr from-yellow-500 to-amber-400 text-blue-955 ring-2 sm:ring-4 ring-yellow-400/40 scale-105 sm:scale-110 shadow-yellow-500/40' :
                             wizardStep > 3 ? 'bg-emerald-500 text-white shadow-emerald-500/30' : 'bg-[#09152e] border border-white/20 text-slate-300 group-hover:border-yellow-400/50'
                           }`}>
-                            {wizardStep > 3 ? <Check size={20} className="stroke-[3]" /> : '3'}
+                            {wizardStep > 3 ? <Check size={16} className="sm:size-5 stroke-[3]" /> : '3'}
                           </div>
                           <span className="text-[11px] font-black uppercase tracking-wider mt-2.5 hidden sm:inline">3. Telegram</span>
                           <span className="text-[9px] font-bold text-slate-400 sm:hidden mt-1">Paso 3</span>
@@ -1504,8 +1504,8 @@ export default function Convencion() {
                           disabled={wizardStep < 3}
                           className={`relative z-10 flex flex-col items-center group cursor-pointer transition-all ${wizardStep >= 4 ? 'text-yellow-300' : 'text-slate-400'}`}
                         >
-                          <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm transition-all duration-300 shadow-lg ${
-                            wizardStep === 4 ? 'bg-gradient-to-tr from-yellow-500 to-amber-400 text-blue-955 ring-4 ring-yellow-400/40 scale-110 shadow-yellow-500/40' : 'bg-[#09152e] border border-white/20 text-slate-300 group-hover:border-yellow-400/50'
+                          <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center font-black text-xs sm:text-sm transition-all duration-300 shadow-lg ${
+                            wizardStep === 4 ? 'bg-gradient-to-tr from-yellow-500 to-amber-400 text-blue-955 ring-2 sm:ring-4 ring-yellow-400/40 scale-105 sm:scale-110 shadow-yellow-500/40' : 'bg-[#09152e] border border-white/20 text-slate-300 group-hover:border-yellow-400/50'
                           }`}>
                             4
                           </div>
