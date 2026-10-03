@@ -968,7 +968,7 @@ export default function Convencion() {
   };
 
   return (
-    <div className="min-h-screen bg-[#060e1d] text-slate-100 font-sans antialiased overflow-x-hidden selection:bg-yellow-500 selection:text-blue-955 pb-24 relative">
+    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased overflow-x-hidden selection:bg-yellow-500 selection:text-blue-955 pb-24 relative">
       {/* Dynamic Hero Header Section Block - Floating Royal Banner */}
       <div className="pt-2 sm:pt-8 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8">
         <header className="relative w-full py-12 sm:py-24 px-3 sm:px-6 lg:px-8 overflow-hidden text-center z-10 rounded-2xl sm:rounded-[2.5rem] bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border sm:border-2 border-yellow-500/40 shadow-2xl">
@@ -1166,220 +1166,213 @@ export default function Convencion() {
         </div>
       </section>
 
-      {/* SECCIÓN 2: Alianzas & Patrocinadores Marquee Block — CRISTAL Y ORO FLOTANTE */}
-      <section className="my-6 sm:my-16 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border sm:border-2 border-yellow-500/30 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-10 shadow-2xl relative overflow-hidden">
-          {/* Section Header */}
-          <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-white/10 pb-4 sm:pb-6 relative z-10 text-center sm:text-left">
-            <div className="flex items-center space-x-3.5">
-              <div className="p-3 bg-yellow-500/15 rounded-2xl border border-yellow-400/30 text-yellow-400 shrink-0 shadow-sm">
-                <Handshake size={24} className="animate-pulse" />
-              </div>
-              <div>
-                <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-yellow-400/90 block">
-                  Respaldos & Alianzas Institucionales
-                </span>
-                <h3 className="text-xl sm:text-3xl font-black text-white tracking-tight">
-                  Aliados Estratégicos de la LXXIV Convención
-                </h3>
-              </div>
+      {/* SECCIÓN 2: Alianzas & Patrocinadores Marquee Block — FLOTANTE */}
+      <section className="my-8 sm:my-16 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8">
+        <div className="mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+          <div className="flex items-center space-x-3.5">
+            <div className="p-3 bg-blue-900/10 rounded-2xl border border-blue-900/20 text-blue-900 shrink-0 shadow-sm">
+              <Handshake size={24} />
             </div>
-            <p className="text-xs sm:text-sm text-slate-300 max-w-md font-medium">
-              Instituciones y empresas unidas por la fraternidad, la cultura y el liderazgo de servicio en Guatemala.
-            </p>
+            <div>
+              <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-amber-600 block">
+                Respaldos & Alianzas Institucionales
+              </span>
+              <h3 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                Aliados Estratégicos de la LXXIV Convención
+              </h3>
+            </div>
           </div>
+          <p className="text-xs sm:text-sm text-slate-600 max-w-md font-medium">
+            Instituciones y empresas unidas por la fraternidad, la cultura y el liderazgo de servicio en Guatemala.
+          </p>
+        </div>
 
-          {/* Marquee Track with gradient edge masks */}
-          <div className="relative w-full overflow-hidden py-2 sm:py-3">
-            {/* Gradient Masks */}
-            <div className="pointer-events-none absolute inset-y-0 left-0 w-12 sm:w-36 bg-gradient-to-r from-[#0c1a38] to-transparent z-20" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-12 sm:w-36 bg-gradient-to-l from-[#0c1a38] to-transparent z-20" />
+        {/* Contenedor Flotante del Carrusel */}
+        <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border sm:border-2 border-yellow-500/30 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-8 shadow-xl relative overflow-hidden">
+          {/* Gradient Masks */}
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-12 sm:w-36 bg-gradient-to-r from-[#0c1a38] to-transparent z-20" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-12 sm:w-36 bg-gradient-to-l from-[#0c1a38] to-transparent z-20" />
 
-            {/* Scrolling Marquee Container with Square Slides and Clean Text */}
-            <div 
-              className="animate-marquee flex items-start space-x-4 sm:space-x-8 py-2 sm:py-4"
-              style={{ animationDuration: '45s' }}
-            >
-              {[
-                ...displayAlianzas,
-                ...displayAlianzas
-              ].map((aliado, index) => (
-                <div 
-                  key={`${aliado.id}-${index}`}
-                  className="flex flex-col items-center group shrink-0 cursor-pointer"
-                >
-                  {/* Square Logo Slide Box — Fondo Blanco Cristalino con Elevación Hover */}
-                  <div className="w-28 h-28 sm:w-44 sm:h-44 aspect-square rounded-2xl sm:rounded-3xl bg-white border-2 border-slate-100 group-hover:border-yellow-400 shadow-md group-hover:shadow-[0_10px_25px_rgba(234,179,8,0.25)] flex items-center justify-center p-3.5 sm:p-6 relative overflow-hidden transition-all duration-300 transform group-hover:-translate-y-1.5">
-                    {/* Image or Icon */}
-                    {aliado.logoUrl ? (
-                      <img 
-                        src={aliado.logoUrl} 
-                        alt={aliado.name}
-                        loading="lazy"
-                        className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                        onError={(e) => {
-                          const target = e.currentTarget;
-                          target.style.display = 'none';
-                          const parent = target.parentElement;
-                          if (parent && !parent.querySelector('.sponsor-fallback-icon')) {
-                            const iconEl = document.createElement('span');
-                            iconEl.className = 'sponsor-fallback-icon text-3xl sm:text-5xl group-hover:scale-110 transition-transform duration-300';
-                            iconEl.textContent = aliado.icon || '🤝';
-                            parent.appendChild(iconEl);
-                          }
-                        }}
-                      />
-                    ) : (
-                      <span className="text-3xl sm:text-5xl group-hover:scale-110 transition-transform duration-300">
-                        {aliado.icon || '🤝'}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Text Below the Square Slide */}
-                  <div className="mt-2.5 sm:mt-3 text-center space-y-0.5 max-w-[110px] sm:max-w-[176px]">
-                    <h4 className="text-xs sm:text-sm font-extrabold text-slate-200 group-hover:text-yellow-300 transition-colors line-clamp-2 leading-tight">
-                      {aliado.name}
-                    </h4>
-                  </div>
+          {/* Scrolling Marquee Container with Square Slides and Clean Text */}
+          <div 
+            className="animate-marquee flex items-start space-x-4 sm:space-x-8 py-2 sm:py-4"
+            style={{ animationDuration: '45s' }}
+          >
+            {[
+              ...displayAlianzas,
+              ...displayAlianzas
+            ].map((aliado, index) => (
+              <div 
+                key={`${aliado.id}-${index}`}
+                className="flex flex-col items-center group shrink-0 cursor-pointer"
+              >
+                {/* Square Logo Slide Box — Fondo Blanco Cristalino con Elevación Hover */}
+                <div className="w-28 h-28 sm:w-44 sm:h-44 aspect-square rounded-2xl sm:rounded-3xl bg-white border-2 border-slate-100 group-hover:border-yellow-400 shadow-md group-hover:shadow-[0_10px_25px_rgba(234,179,8,0.25)] flex items-center justify-center p-3.5 sm:p-6 relative overflow-hidden transition-all duration-300 transform group-hover:-translate-y-1.5">
+                  {/* Image or Icon */}
+                  {aliado.logoUrl ? (
+                    <img 
+                      src={aliado.logoUrl} 
+                      alt={aliado.name}
+                      loading="lazy"
+                      className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent && !parent.querySelector('.sponsor-fallback-icon')) {
+                          const iconEl = document.createElement('span');
+                          iconEl.className = 'sponsor-fallback-icon text-3xl sm:text-5xl group-hover:scale-110 transition-transform duration-300';
+                          iconEl.textContent = aliado.icon || '🤝';
+                          parent.appendChild(iconEl);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <span className="text-3xl sm:text-5xl group-hover:scale-110 transition-transform duration-300">
+                      {aliado.icon || '🤝'}
+                    </span>
+                  )}
                 </div>
-              ))}
-            </div>
+
+                {/* Text Below the Square Slide */}
+                <div className="mt-2.5 sm:mt-3 text-center space-y-0.5 max-w-[110px] sm:max-w-[176px]">
+                  <h4 className="text-xs sm:text-sm font-extrabold text-slate-200 group-hover:text-yellow-300 transition-colors line-clamp-2 leading-tight">
+                    {aliado.name}
+                  </h4>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* SECCIÓN 3: Ciudad Sede (Quetzaltenango) Block */}
-      <section className="my-6 sm:my-16 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-br from-[#0c1b3b] via-[#09152e] to-[#071126] text-white rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-12 border border-yellow-500/30 shadow-2xl relative overflow-hidden">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-            <div className="lg:col-span-6 space-y-4 sm:space-y-6">
+      {/* SECCIÓN 3: Ciudad Sede (Quetzaltenango) Block — CONTENEDORES FLOTANTES */}
+      <section className="my-8 sm:my-16 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
+          {/* Contenedor Flotante Izquierdo: Información y Atractivos */}
+          <div className="lg:col-span-6 bg-gradient-to-br from-[#0c1b3b] via-[#09152e] to-[#071126] text-white rounded-2xl sm:rounded-[2.5rem] p-6 sm:p-10 border border-yellow-500/30 shadow-xl flex flex-col justify-between space-y-6">
+            <div className="space-y-4">
               <div className="inline-flex items-center space-x-2 bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
                 <MapPin size={14} className="text-yellow-400" />
                 <span>Ciudad Sede Oficial</span>
               </div>
               
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
+              <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight leading-tight">
                 Quetzaltenango: La Cuna de la Cultura y el Escudo Altense
               </h2>
               
               <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
                 Xelajú nos recibe con sus brazos abiertos, sus impresionantes montañas, historia centenaria y el caluroso espíritu león de la región occidental. Prepárate para vivir jornadas inolvidables de liderazgo y fraternidad.
               </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-2">
-                <div className="bg-white/[0.05] border border-white/10 p-5 rounded-2xl shadow-xl hover:border-yellow-500/50 transition-all space-y-1">
-                  <span className="text-xs font-black text-yellow-400 uppercase tracking-wider block">Clima Templado</span>
-                  <p className="text-slate-300 text-xs font-medium">Ideal para noches de gala solemnes y caminatas culturales por el centro histórico.</p>
-                </div>
-                <div className="bg-white/[0.05] border border-white/10 p-5 rounded-2xl shadow-xl hover:border-yellow-500/50 transition-all space-y-1">
-                  <span className="text-xs font-black text-yellow-400 uppercase tracking-wider block">Gastronomía Única</span>
-                  <p className="text-slate-300 text-xs font-medium">Degusta las famosas Shecas calientes, chocolate artesanal y banquetes tradicionales.</p>
-                </div>
-              </div>
             </div>
 
-            <div className="lg:col-span-6">
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl border-2 border-yellow-500/30 group">
-                <img 
-                  src={config.fotoSede || "https://images.unsplash.com/photo-1596436889106-be35e843f974?auto=format&fit=crop&q=80&w=1200"} 
-                  alt="Quetzaltenango Sede"
-                  className="w-full h-72 sm:h-96 object-cover group-hover:scale-105 transition-transform duration-700"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#060e1d]/95 via-[#060e1d]/30 to-transparent flex items-end p-6">
-                  <div className="text-white space-y-1.5">
-                    <span className="bg-yellow-400 text-blue-955 text-[10px] font-black px-3.5 py-1 rounded-full uppercase tracking-wider shadow">
-                      {config.fotoSedeEtiqueta || "Sede Oficial"}
-                    </span>
-                    <p className="text-sm sm:text-base font-bold text-slate-100 pt-1">
-                      {config.fotoSedeDescripcion || "Quetzaltenango, Guatemala — Ciudad de la Estrella de Occidente"}
-                    </p>
-                  </div>
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-2">
+              <div className="bg-white/[0.05] border border-white/10 p-5 rounded-2xl shadow-md hover:border-yellow-500/50 transition-all space-y-1">
+                <span className="text-xs font-black text-yellow-400 uppercase tracking-wider block">Clima Templado</span>
+                <p className="text-slate-300 text-xs font-medium">Ideal para noches de gala solemnes y caminatas culturales por el centro histórico.</p>
+              </div>
+              <div className="bg-white/[0.05] border border-white/10 p-5 rounded-2xl shadow-md hover:border-yellow-500/50 transition-all space-y-1">
+                <span className="text-xs font-black text-yellow-400 uppercase tracking-wider block">Gastronomía Única</span>
+                <p className="text-slate-300 text-xs font-medium">Degusta las famosas Shecas calientes, chocolate artesanal y banquetes tradicionales.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Contenedor Flotante Derecho: Foto de la Sede */}
+          <div className="lg:col-span-6 rounded-2xl sm:rounded-[2.5rem] overflow-hidden shadow-xl border border-yellow-500/30 min-h-[360px] sm:min-h-[440px] relative group">
+            <img 
+              src={config.fotoSede || "https://images.unsplash.com/photo-1596436889106-be35e843f974?auto=format&fit=crop&q=80&w=1200"} 
+              alt="Quetzaltenango Sede"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 absolute inset-0"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#060e1d]/95 via-[#060e1d]/30 to-transparent flex items-end p-6 z-10">
+              <div className="text-white space-y-1.5">
+                <span className="bg-yellow-400 text-blue-955 text-[10px] font-black px-3.5 py-1 rounded-full uppercase tracking-wider shadow">
+                  {config.fotoSedeEtiqueta || "Sede Oficial"}
+                </span>
+                <p className="text-sm sm:text-base font-bold text-slate-100 pt-1">
+                  {config.fotoSedeDescripcion || "Quetzaltenango, Guatemala — Ciudad de la Estrella de Occidente"}
+                </p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* SECCIÓN 4: Actividades Culturales y Sociales Block */}
-      <section className="my-6 sm:my-16 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-12 border border-yellow-500/30 shadow-2xl relative overflow-hidden">
-          <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4">
-            <div className="inline-flex items-center space-x-2 bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
-              <Award size={14} />
-              <span>Agenda de Hermandad & Convivencia</span>
-            </div>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight text-white">
-              Actividades Culturales y Sociales
-            </h2>
-            <p className="text-slate-300 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed font-medium">
-              La convención no es solo trabajo de planificación; también es el espacio ideal para disfrutar del arte, la música en vivo, la hermandad y nuestras tradiciones.
-            </p>
+      {/* SECCIÓN 4: Actividades Culturales y Sociales — CONTENEDORES FLOTANTES */}
+      <section className="my-8 sm:my-16 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8">
+        <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4 mb-8 sm:mb-12">
+          <div className="inline-flex items-center space-x-2 bg-blue-900/10 border border-blue-900/20 text-blue-900 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
+            <Award size={14} />
+            <span>Agenda de Hermandad & Convivencia</span>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mt-10 sm:mt-14">
-            {displayActividades.map((act, index) => {
-              const IconComponent = getIconComponent(act.iconName);
-              return (
-                <div 
-                  key={act.id || index}
-                  className="bg-white/[0.04] border border-white/10 hover:border-yellow-400/60 rounded-3xl p-6 sm:p-8 transition-all duration-300 flex flex-col justify-between group hover:shadow-2xl hover:shadow-yellow-500/10 hover:-translate-y-1"
-                >
-                  <div className="space-y-4">
-                    <div className="w-14 h-14 rounded-2xl bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 flex items-center justify-center group-hover:scale-110 group-hover:bg-yellow-400 group-hover:text-blue-955 transition-all duration-300 shadow-md">
-                      <IconComponent size={26} />
-                    </div>
-                    <h3 className="text-xl font-bold text-white tracking-tight group-hover:text-yellow-300 transition-colors">{act.title}</h3>
-                    <p className="text-slate-300 text-xs sm:text-sm leading-relaxed font-medium">{act.description}</p>
-                  </div>
-                  <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-yellow-400 font-extrabold">
-                    <span>Cronograma Oficial</span>
-                    <span className="bg-yellow-500/20 border border-yellow-500/30 px-3 py-1 rounded-lg text-yellow-300">{act.time}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight text-slate-900">
+            Actividades Culturales y Sociales
+          </h2>
+          <p className="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed font-medium">
+            La convención no es solo trabajo de planificación; también es el espacio ideal para disfrutar del arte, la música en vivo, la hermandad y nuestras tradiciones.
+          </p>
         </div>
-      </section>
 
-      {/* SECCIÓN 6: Experiencias Únicas Block */}
-      <section className="my-6 sm:my-16 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border sm:border-2 border-yellow-500/30 rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-12 shadow-2xl relative overflow-hidden">
-          <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4 mb-10 sm:mb-14">
-            <div className="inline-flex items-center space-x-2 bg-yellow-500/15 border border-yellow-500/30 text-yellow-300 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
-              <Compass size={14} className="text-yellow-400" />
-              <span>Mística Leonística</span>
-            </div>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
-              Experiencias Únicas de la Convención
-            </h2>
-            <p className="text-slate-300 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed font-medium">
-              Vive de cerca los pilares fundamentales que nos guían como Club de Leones a nivel mundial y nacional.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-            {displayExperiencias.map((exp, index) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-8">
+          {displayActividades.map((act, index) => {
+            const IconComponent = getIconComponent(act.iconName);
+            return (
               <div 
-                key={exp.id || index}
-                className="bg-white/[0.04] border border-white/10 hover:border-yellow-400/60 rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-[0_10px_30px_rgba(234,179,8,0.15)] transition-all duration-300 flex flex-col justify-between group hover:-translate-y-1"
+                key={act.id || index}
+                className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border border-yellow-500/30 hover:border-yellow-400 rounded-2xl sm:rounded-3xl p-6 sm:p-8 transition-all duration-300 flex flex-col justify-between group shadow-xl hover:shadow-2xl hover:shadow-yellow-500/15 hover:-translate-y-1.5"
               >
-                <div className="space-y-3 sm:space-y-4">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-yellow-300 bg-yellow-500/20 border border-yellow-500/40 px-3 py-1 rounded-full inline-block">
-                    {exp.badge}
-                  </span>
-                  <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight pt-1 group-hover:text-yellow-300 transition-colors">{exp.title}</h3>
-                  <p className="text-slate-300 text-xs sm:text-sm leading-relaxed font-medium">{exp.desc}</p>
+                <div className="space-y-4">
+                  <div className="w-14 h-14 rounded-2xl bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 flex items-center justify-center group-hover:scale-110 group-hover:bg-yellow-400 group-hover:text-blue-955 transition-all duration-300 shadow-md">
+                    <IconComponent size={26} />
+                  </div>
+                  <h3 className="text-xl font-bold text-white tracking-tight group-hover:text-yellow-300 transition-colors">{act.title}</h3>
+                  <p className="text-slate-300 text-xs sm:text-sm leading-relaxed font-medium">{act.description}</p>
                 </div>
-                <div className="mt-6 pt-4 border-t border-white/10 flex items-center text-yellow-300 font-extrabold text-xs group-hover:text-yellow-200 transition-colors">
-                  <span>Conocer más detalles</span>
-                  <ChevronRight size={14} className="ml-1 transition-transform group-hover:translate-x-1" />
+                <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-yellow-400 font-extrabold">
+                  <span>Cronograma Oficial</span>
+                  <span className="bg-yellow-500/20 border border-yellow-500/30 px-3 py-1 rounded-lg text-yellow-300">{act.time}</span>
                 </div>
               </div>
-            ))}
+            );
+          })}
+        </div>
+      </section>
+
+      {/* SECCIÓN 6: Experiencias Únicas — CONTENEDORES FLOTANTES */}
+      <section className="my-8 sm:my-16 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8">
+        <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4 mb-8 sm:mb-12">
+          <div className="inline-flex items-center space-x-2 bg-blue-900/10 border border-blue-900/20 text-blue-900 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
+            <Compass size={14} className="text-amber-500" />
+            <span>Mística Leonística</span>
           </div>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight">
+            Experiencias Únicas de la Convención
+          </h2>
+          <p className="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed font-medium">
+            Vive de cerca los pilares fundamentales que nos guían como Club de Leones a nivel mundial y nacional.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-8">
+          {displayExperiencias.map((exp, index) => (
+            <div 
+              key={exp.id || index}
+              className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border border-yellow-500/30 hover:border-yellow-400 rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xl hover:shadow-2xl hover:shadow-yellow-500/15 transition-all duration-300 flex flex-col justify-between group hover:-translate-y-1.5"
+            >
+              <div className="space-y-3 sm:space-y-4">
+                <span className="text-[10px] font-black uppercase tracking-widest text-yellow-300 bg-yellow-500/20 border border-yellow-500/40 px-3 py-1 rounded-full inline-block">
+                  {exp.badge}
+                </span>
+                <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight pt-1 group-hover:text-yellow-300 transition-colors">{exp.title}</h3>
+                <p className="text-slate-300 text-xs sm:text-sm leading-relaxed font-medium">{exp.desc}</p>
+              </div>
+              <div className="mt-6 pt-4 border-t border-white/10 flex items-center text-yellow-300 font-extrabold text-xs group-hover:text-yellow-200 transition-colors">
+                <span>Conocer más detalles</span>
+                <ChevronRight size={14} className="ml-1 transition-transform group-hover:translate-x-1" />
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
