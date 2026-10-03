@@ -45,6 +45,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const isEvaluationView = location.pathname.startsWith('/ficha-evaluacion') || location.pathname === '/evaluacion-compartida';
+  const isConvencionRoute = location.pathname === '/convencion';
   const isProtectedRoute = [
     '/dashboard',
     '/admin',
@@ -554,7 +555,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
       </nav>
 
       {/* Main Content Area */}
-      <main className="flex-grow max-w-[1400px] mx-auto w-full px-2.5 sm:px-6 lg:px-8 py-4 sm:py-8 md:py-10">
+      <main className={`flex-grow w-full ${isConvencionRoute ? 'max-w-none px-0 py-0' : 'max-w-[1400px] mx-auto px-2.5 sm:px-6 lg:px-8 py-4 sm:py-8 md:py-10'}`}>
         {children}
       </main>
 
