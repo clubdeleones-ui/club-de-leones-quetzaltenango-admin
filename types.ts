@@ -513,6 +513,7 @@ export interface ConvencionRegistro {
   montoPagar?: number;
   estadoPago?: 'Pendiente' | 'Pagado' | 'Checkout_Creado';
   recurrenteCheckoutUrl?: string;
+  preferenciaNotificacion?: 'telegram' | 'email';
   fechaRegistro: string;
 }
 

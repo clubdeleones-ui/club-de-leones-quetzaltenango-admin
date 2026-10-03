@@ -35,7 +35,8 @@ import {
   Star,
   Flame,
   Zap,
-  Shield
+  Shield,
+  Mail
 } from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
 import { telegramService } from '../services/telegramService';
@@ -450,7 +451,7 @@ export default function Convencion() {
   const culturalCost = includeCultural ? 150 : 0;
   const familiarCost = includeFamiliar ? 450 : 0;
   const montoTotal = baseCost + hotelCost + culturalCost + familiarCost;
-  const [telegramConfirmed, setTelegramConfirmed] = useState(false);
+  const [telegramOption, setTelegramOption] = useState<'telegram' | 'email' | null>(null);
   const [isRedirectingPayment, setIsRedirectingPayment] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -798,8 +799,8 @@ export default function Convencion() {
     }
 
     if (step === 4) {
-      if (!telegramConfirmed) {
-        showToast("Por favor marca la casilla indicando que leíste las instrucciones del Bot de Telegram.", "warning");
+      if (!telegramOption) {
+        showToast("Por favor indícanos si tienes Telegram o si prefieres recibir todo por correo electrónico.", "warning");
         return;
       }
     }
@@ -826,7 +827,7 @@ export default function Convencion() {
     setIncludeHotel(false);
     setIncludeCultural(false);
     setIncludeFamiliar(false);
-    setTelegramConfirmed(false);
+    setTelegramOption(null);
     setPaymentSuccessData(null);
     setWizardStep(1);
     setIsSubmitted(false);
@@ -901,6 +902,7 @@ export default function Convencion() {
         includeHotel,
         includeCultural,
         includeFamiliar,
+        preferenciaNotificacion: telegramOption || 'email',
         montoPagar: montoTotal,
         estadoPago: metodo === 'recurrente' ? 'Checkout_Creado' : 'Pendiente',
         fechaRegistro: new Date().toISOString()
@@ -1845,119 +1847,179 @@ export default function Convencion() {
                     </div>
                   )}
 
-                  {/* CONTENIDO DEL PASO 3: TELEGRAM & NOTIFICACIONES */}
+                  {/* CONTENIDO DEL PASO 3: TELEGRAM & PREFERENCIA DE NOTIFICACIONES */}
                   {wizardStep === 3 && (
                     <div className="space-y-6 max-w-3xl mx-auto animate-in fade-in slide-in-from-right-4 duration-300">
+                      {/* Banner Informativo */}
                       <div className="bg-yellow-500/10 p-4.5 sm:p-5 rounded-2xl border border-yellow-400/30 flex items-center space-x-3.5 backdrop-blur-md">
                         <div className="w-10 h-10 rounded-xl bg-yellow-400/20 flex items-center justify-center text-yellow-300 shrink-0">
                           <MessageSquare size={22} />
                         </div>
                         <div>
-                          <h3 className="text-sm font-black text-white uppercase tracking-wider">Paso 3: Notificaciones y Bot Oficial de Telegram</h3>
-                          <p className="text-xs text-slate-300 font-medium mt-0.5">Suscríbete al Bot oficial para recibir mapas GPS, itinerario en vivo y tu credencial.</p>
+                          <h3 className="text-sm font-black text-white uppercase tracking-wider">Paso 3: Preferencia de Notificaciones & Telegram (Opcional)</h3>
+                          <p className="text-xs text-slate-300 font-medium mt-0.5">Elige cómo prefieres recibir tus credenciales oficiales, itinerario en vivo y novedades del evento.</p>
                         </div>
                       </div>
 
-                      {/* Beneficios de Telegram Card */}
+                      {/* Selector Principal de Preferencias */}
                       <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#071126] p-6 sm:p-8 rounded-3xl border border-cyan-400/30 space-y-6 text-left shadow-2xl relative overflow-hidden">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
-                          <div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-cyan-400 block">Canal Oficial Digital</span>
-                            <h4 className="text-lg sm:text-xl font-black text-white">
-                              ¿Por qué es indispensable estar en el Bot de Telegram?
-                            </h4>
-                          </div>
-                          <span className="bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 text-xs font-black px-3 py-1 rounded-full shrink-0">
-                            100% Gratuito
-                          </span>
+                        <div className="border-b border-white/10 pb-4">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-cyan-400 block">Canal de Comunicación</span>
+                          <h4 className="text-lg sm:text-xl font-black text-white">
+                            ¿Cómo deseas recibir tus avisos y credencial de la Convención?
+                          </h4>
+                          <p className="text-xs text-slate-300 mt-1 font-medium">
+                            Selecciona la opción que más te convenga para asegurar tu comunicación:
+                          </p>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 text-xs">
-                          <div className="bg-white/[0.04] p-4 rounded-2xl border border-white/10 space-y-1.5 hover:border-cyan-400/50 transition-colors">
-                            <span className="text-2xl">⚡</span>
-                            <h5 className="font-extrabold text-white text-xs">Avisos en Tiempo Real</h5>
-                            <p className="text-slate-300 text-[11px] font-medium leading-relaxed">Alertas instantáneas sobre cambios de agenda, salas de plenarias y actividades solemnes.</p>
-                          </div>
-                          <div className="bg-white/[0.04] p-4 rounded-2xl border border-white/10 space-y-1.5 hover:border-cyan-400/50 transition-colors">
-                            <span className="text-2xl">📍</span>
-                            <h5 className="font-extrabold text-white text-xs">Ubicaciones y Mapas GPS</h5>
-                            <p className="text-slate-300 text-[11px] font-medium leading-relaxed">Rutas guiadas a Colina Country Club, Hotel Sede y puntos turísticos de Quetzaltenango.</p>
-                          </div>
-                          <div className="bg-white/[0.04] p-4 rounded-2xl border border-white/10 space-y-1.5 hover:border-cyan-400/50 transition-colors">
-                            <span className="text-2xl">📜</span>
-                            <h5 className="font-extrabold text-white text-xs">Credencial & Programa</h5>
-                            <p className="text-slate-300 text-[11px] font-medium leading-relaxed">Descarga directa de tu credencial digital y folleto oficial de la convención en tu celular.</p>
-                          </div>
-                        </div>
-
-                        {/* Instrucciones de Descarga y Suscripción */}
-                        <div className="space-y-4 pt-2">
-                          <span className="block text-xs font-black uppercase tracking-wider text-yellow-400">
-                            2 Pasos Sencillos para Conectarte:
-                          </span>
-                          
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {/* Descarga App */}
-                            <div className="bg-white/[0.03] p-4.5 rounded-2xl border border-white/10 space-y-3">
-                              <span className="text-xs font-black text-white uppercase tracking-wider block">
-                                1. Instalar la App Telegram si aún no la tienes:
-                              </span>
-                              <div className="flex flex-col gap-2 pt-1">
-                                <a 
-                                  href="https://play.google.com/store/apps/details?id=org.telegram.messenger" 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center justify-center space-x-2 text-xs font-extrabold bg-white/10 hover:bg-yellow-400 hover:text-blue-955 text-white px-4 py-2.5 rounded-xl transition-all border border-white/15"
-                                >
-                                  <span>🤖 Descargar para Android (Google Play)</span>
-                                </a>
-                                <a 
-                                  href="https://apps.apple.com/app/telegram-messenger/id686449807" 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center justify-center space-x-2 text-xs font-extrabold bg-white/10 hover:bg-yellow-400 hover:text-blue-955 text-white px-4 py-2.5 rounded-xl transition-all border border-white/15"
-                                >
-                                  <span>🍎 Descargar para iPhone (App Store)</span>
-                                </a>
-                              </div>
-                            </div>
-
-                            {/* Suscribirse al Bot */}
-                            <div className="bg-white/[0.03] p-4.5 rounded-2xl border border-white/10 space-y-3 flex flex-col justify-between">
-                              <div>
-                                <span className="text-xs font-black text-white uppercase tracking-wider block">
-                                  2. Iniciar el Bot Oficial de la Convención:
-                                </span>
-                                <p className="text-xs text-slate-300 font-medium mt-1.5 leading-relaxed">
-                                  Toca el botón azul a continuación para abrir el chat con el bot y presiona <strong className="text-white">“Iniciar / Start”</strong>:
+                        {/* Opciones Interactivas con Checkboxes / Radio Cards */}
+                        <div className="space-y-3.5">
+                          {/* Opción 1: Tengo instalado Telegram */}
+                          <div 
+                            onClick={() => setTelegramOption('telegram')}
+                            className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer select-none ${
+                              telegramOption === 'telegram'
+                                ? 'bg-cyan-500/15 border-cyan-400 ring-2 ring-cyan-400/30 shadow-lg'
+                                : 'bg-white/[0.03] border-white/10 hover:border-white/25 hover:bg-white/[0.05]'
+                            }`}
+                          >
+                            <label className="flex items-start space-x-3.5 cursor-pointer">
+                              <input 
+                                type="radio" 
+                                name="preferencia_telegram"
+                                checked={telegramOption === 'telegram'}
+                                onChange={() => setTelegramOption('telegram')}
+                                className="mt-1 w-5 h-5 text-cyan-400 bg-slate-900 border-white/30 focus:ring-cyan-400 cursor-pointer shrink-0"
+                              />
+                              <div className="space-y-1 flex-1">
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-black text-white text-sm sm:text-base">
+                                    Sí, tengo instalado Telegram
+                                  </span>
+                                  <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
+                                    Recomendado
+                                  </span>
+                                </div>
+                                <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                                  Deseo unirme al Bot Oficial para recibir mapas GPS, itinerario en vivo, cambios de agenda y mi credencial digital con alertas al instante.
                                 </p>
                               </div>
+                            </label>
+
+                            {/* Botón Desplegable para Unirse al Bot si tiene Telegram marcado */}
+                            {telegramOption === 'telegram' && (
+                              <div className="mt-4 pt-4 border-t border-cyan-400/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                                <p className="text-xs text-cyan-200 font-medium">
+                                  Toca el botón azul para abrir el chat con el bot y presiona <strong className="text-white font-bold">“Iniciar / Start”</strong>:
+                                </p>
+                                <a 
+                                  href="https://t.me/ClubLeonesXelaBot" 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center justify-center space-x-2.5 text-xs font-black bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-600 hover:from-blue-400 hover:to-cyan-400 text-white px-5 py-3.5 rounded-xl transition-all shadow-[0_10px_25px_rgba(6,182,212,0.3)] border border-cyan-300/40 active:scale-95 cursor-pointer shrink-0"
+                                >
+                                  <Send size={16} />
+                                  <span>🤖 Unirme ahora a @ClubLeonesXelaBot</span>
+                                </a>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Opción 2: No tengo Telegram, enviadme al correo */}
+                          <div 
+                            onClick={() => setTelegramOption('email')}
+                            className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer select-none ${
+                              telegramOption === 'email'
+                                ? 'bg-emerald-500/15 border-emerald-400 ring-2 ring-emerald-400/30 shadow-lg'
+                                : 'bg-white/[0.03] border-white/10 hover:border-white/25 hover:bg-white/[0.05]'
+                            }`}
+                          >
+                            <label className="flex items-start space-x-3.5 cursor-pointer">
+                              <input 
+                                type="radio" 
+                                name="preferencia_telegram"
+                                checked={telegramOption === 'email'}
+                                onChange={() => setTelegramOption('email')}
+                                className="mt-1 w-5 h-5 text-emerald-400 bg-slate-900 border-white/30 focus:ring-emerald-400 cursor-pointer shrink-0"
+                              />
+                              <div className="space-y-1 flex-1">
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-black text-white text-sm sm:text-base">
+                                    No tengo instalado Telegram, enviadme al correo
+                                  </span>
+                                </div>
+                                <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                                  Prefiero recibir mis confirmaciones de pago, credencial digital y actualizaciones directamente en mi correo electrónico sin instalar aplicaciones adicionales.
+                                </p>
+                              </div>
+                            </label>
+
+                            {/* Mensaje de Confirmación de Correo si está marcado */}
+                            {telegramOption === 'email' && (
+                              <div className="mt-4 pt-4 border-t border-emerald-400/25 flex items-center space-x-2.5 text-xs text-emerald-300 font-medium animate-in fade-in slide-in-from-top-2 duration-200">
+                                <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+                                <span>
+                                  ¡Entendido! Te enviaremos toda la información y tu entrada oficial a: <strong className="text-white font-bold">{form.email || 'tu correo registrado'}</strong>.
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* SECCIÓN INFORMATIVA DE VENTAJAS Y DESCARGA (Siempre visible abajo) */}
+                        <div className="pt-6 border-t border-white/10 space-y-5">
+                          <div>
+                            <span className="text-xs font-black uppercase tracking-wider text-yellow-400 block">
+                              Ventajas de seguir la Convención en Telegram (Opcional):
+                            </span>
+                            <p className="text-xs text-slate-400 mt-0.5 font-medium">
+                              Si en cualquier momento deseas instalar la aplicación, contarás con estos beneficios adicionales:
+                            </p>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 text-xs">
+                            <div className="bg-white/[0.04] p-4 rounded-2xl border border-white/10 space-y-1.5 hover:border-cyan-400/40 transition-colors">
+                              <span className="text-2xl">⚡</span>
+                              <h5 className="font-extrabold text-white text-xs">Avisos en Tiempo Real</h5>
+                              <p className="text-slate-300 text-[11px] font-medium leading-relaxed">Alertas instantáneas sobre cambios de agenda, salas de plenarias y actividades solemnes.</p>
+                            </div>
+                            <div className="bg-white/[0.04] p-4 rounded-2xl border border-white/10 space-y-1.5 hover:border-cyan-400/40 transition-colors">
+                              <span className="text-2xl">📍</span>
+                              <h5 className="font-extrabold text-white text-xs">Ubicaciones y Mapas GPS</h5>
+                              <p className="text-slate-300 text-[11px] font-medium leading-relaxed">Rutas guiadas a Colina Country Club, Hotel Sede y puntos turísticos de Quetzaltenango.</p>
+                            </div>
+                            <div className="bg-white/[0.04] p-4 rounded-2xl border border-white/10 space-y-1.5 hover:border-cyan-400/40 transition-colors">
+                              <span className="text-2xl">📜</span>
+                              <h5 className="font-extrabold text-white text-xs">Credencial & Programa</h5>
+                              <p className="text-slate-300 text-[11px] font-medium leading-relaxed">Descarga directa de tu credencial digital y folleto oficial de la convención en tu celular.</p>
+                            </div>
+                          </div>
+
+                          {/* Enlaces de Tiendas para Descargar */}
+                          <div className="bg-white/[0.02] p-4 rounded-2xl border border-white/10 space-y-2.5">
+                            <span className="text-xs font-black text-slate-300 uppercase tracking-wider block">
+                              ¿Deseas descargar Telegram en tu teléfono?
+                            </span>
+                            <div className="flex flex-col sm:flex-row gap-2.5">
                               <a 
-                                href="https://t.me/ClubLeonesXelaBot" 
+                                href="https://play.google.com/store/apps/details?id=org.telegram.messenger" 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center space-x-2.5 text-xs font-black bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-600 hover:from-blue-400 hover:to-cyan-400 text-white px-5 py-3.5 rounded-xl transition-all shadow-[0_10px_25px_rgba(6,182,212,0.3)] border border-cyan-300/40 active:scale-95 cursor-pointer"
+                                className="flex-1 inline-flex items-center justify-center space-x-2 text-xs font-extrabold bg-white/10 hover:bg-yellow-400 hover:text-blue-955 text-white px-4 py-2.5 rounded-xl transition-all border border-white/15"
                               >
-                                <Send size={16} />
-                                <span>🤖 Unirme ahora a @ClubLeonesXelaBot</span>
+                                <span>🤖 Descargar para Android (Google Play)</span>
+                              </a>
+                              <a 
+                                href="https://apps.apple.com/app/telegram-messenger/id686449807" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="flex-1 inline-flex items-center justify-center space-x-2 text-xs font-extrabold bg-white/10 hover:bg-yellow-400 hover:text-blue-955 text-white px-4 py-2.5 rounded-xl transition-all border border-white/15"
+                              >
+                                <span>🍎 Descargar para iPhone (App Store)</span>
                               </a>
                             </div>
                           </div>
-                        </div>
-
-                        {/* Checkbox de Confirmación */}
-                        <div className="pt-3 border-t border-white/10">
-                          <label className="flex items-start space-x-3 cursor-pointer select-none group">
-                            <input 
-                              type="checkbox" 
-                              checked={telegramConfirmed}
-                              onChange={e => setTelegramConfirmed(e.target.checked)}
-                              className="mt-1 w-5 h-5 text-yellow-400 rounded border-white/30 focus:ring-yellow-400 cursor-pointer shrink-0"
-                            />
-                            <span className="text-xs text-slate-200 font-medium leading-relaxed group-hover:text-white transition-colors">
-                              He comprendido las instrucciones y/o ya estoy suscrito al Bot Oficial de Telegram para recibir todas las alertas de la LXXIV Convención.
-                            </span>
-                          </label>
                         </div>
                       </div>
 
