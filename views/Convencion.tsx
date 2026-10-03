@@ -38,8 +38,15 @@ import {
   Shield,
   Mail,
   Save,
-  RotateCcw
+  RotateCcw,
+  QrCode,
+  Search,
+  Download,
+  Share2,
+  MessageCircle,
+  X
 } from 'lucide-react';
+import QRCode from 'qrcode';
 import { firebaseService } from '../services/firebaseService';
 import { telegramService } from '../services/telegramService';
 import { recurrenteService } from '../services/recurrenteService';
@@ -598,6 +605,96 @@ export default function Convencion() {
   }, [config.experienciasUnicas]);
 
   const [showStickyBar, setShowStickyBar] = useState(false);
+
+  // Estados para Búsqueda y Visualización de Entrada QR
+  const [isQrSearchModalOpen, setIsQrSearchModalOpen] = useState(false);
+  const [qrSearchQuery, setQrSearchQuery] = useState('');
+  const [isSearchingQr, setIsSearchingQr] = useState(false);
+  const [foundRegistroQr, setFoundRegistroQr] = useState<ConvencionRegistro | null>(null);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
+  const [qrSearchError, setQrSearchError] = useState<string>('');
+
+  const handleSearchQr = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const query = qrSearchQuery.trim().toLowerCase();
+    if (!query) {
+      setQrSearchError("Por favor ingresa tu correo, teléfono o folio de registro.");
+      return;
+    }
+
+    setIsSearchingQr(true);
+    setQrSearchError('');
+    setFoundRegistroQr(null);
+    setQrCodeDataUrl('');
+
+    try {
+      const allRegistros = await firebaseService.getConvencionRegistros();
+      const cleanPhone = query.replace(/\D/g, '');
+
+      const match = allRegistros.find(r => {
+        const emailMatch = r.email && r.email.toLowerCase().trim() === query;
+        const phoneMatch = cleanPhone.length >= 6 && r.telefono && r.telefono.replace(/\D/g, '').includes(cleanPhone);
+        const idMatch = r.id && r.id.toLowerCase() === query;
+        const nombreMatch = query.length >= 4 && r.nombre && r.nombre.toLowerCase().includes(query);
+        return emailMatch || phoneMatch || idMatch || nombreMatch;
+      });
+
+      if (!match) {
+        setQrSearchError("No encontramos ninguna inscripción con esos datos. Revisa el correo o teléfono que utilizaste al registrarte, o llena tu formulario.");
+        return;
+      }
+
+      setFoundRegistroQr(match);
+      const qrPayload = JSON.stringify({
+        evento: "LXXV Convención Nacional Club de Leones",
+        sede: "Quetzaltenango 2027",
+        folio: match.id,
+        participante: match.nombre,
+        club: match.club,
+        paquete: match.paquete || 'General',
+        monto: match.montoPagar || 650,
+        estado: match.estadoPago || 'Pendiente',
+        fecha: match.fechaRegistro
+      });
+
+      const dataUrl = await QRCode.toDataURL(qrPayload, {
+        width: 320,
+        margin: 2,
+        color: {
+          dark: '#0c1a38',
+          light: '#ffffff'
+        }
+      });
+      setQrCodeDataUrl(dataUrl);
+    } catch (err) {
+      console.error("Error al buscar entrada QR:", err);
+      setQrSearchError("Ocurrió un error al buscar tu entrada. Intenta de nuevo.");
+    } finally {
+      setIsSearchingQr(false);
+    }
+  };
+
+  const handleDownloadQr = () => {
+    if (!qrCodeDataUrl || !foundRegistroQr) return;
+    const a = document.createElement('a');
+    a.href = qrCodeDataUrl;
+    a.download = `Entrada_QR_${foundRegistroQr.nombre.replace(/\s+/g, '_')}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const handleShareQrWhatsApp = () => {
+    if (!foundRegistroQr) return;
+    const text = `🦁 *Mi Entrada Oficial - LXXV Convención Nacional Club de Leones (Quetzaltenango 2027)*\n\n` +
+      `👤 *Participante:* ${foundRegistroQr.nombre}\n` +
+      `🏛️ *Club:* ${foundRegistroQr.club} (${foundRegistroQr.cargo})\n` +
+      `🎟️ *Folio:* ${foundRegistroQr.id}\n` +
+      `✨ *Paquete:* ${foundRegistroQr.paquete || 'Inscripción Base'}\n` +
+      `💳 *Estado:* ${foundRegistroQr.estadoPago || 'Pendiente'}\n\n` +
+      `Verifica tu entrada en: https://clubdeleonesquetzaltenango.org/#/convencion`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -1661,6 +1758,18 @@ export default function Convencion() {
                         <span>Emisión Inmediata</span>
                       </span>
                     </div>
+
+                    {/* Botón de Acceso Rápido para Consultar Entrada QR */}
+                    <div className="pt-2 flex justify-center">
+                      <button
+                        type="button"
+                        onClick={() => { setIsQrSearchModalOpen(true); setQrSearchError(''); }}
+                        className="inline-flex items-center space-x-2 bg-gradient-to-r from-yellow-500/20 via-amber-400/25 to-yellow-500/20 hover:from-yellow-400 hover:to-amber-300 hover:text-blue-955 text-yellow-300 border border-yellow-400/40 px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 shadow-md cursor-pointer group"
+                      >
+                        <QrCode size={15} className="group-hover:scale-110 transition-transform text-yellow-400" />
+                        <span>¿Ya te registraste? Encuentra tu Entrada QR Oficial aquí</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Banner de Borrador Restaurado */}
@@ -2135,13 +2244,13 @@ export default function Convencion() {
                                   Toca el botón azul para abrir el chat con el bot y presiona <strong className="text-white font-bold">“Iniciar / Start”</strong>:
                                 </p>
                                 <a 
-                                  href="https://t.me/ClubLeonesXelaBot" 
+                                  href="https://t.me/ConvencionLeonesbot" 
                                   target="_blank" 
                                   rel="noopener noreferrer"
                                   className="inline-flex items-center justify-center space-x-2.5 text-xs font-black bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-600 hover:from-blue-400 hover:to-cyan-400 text-white px-5 py-3.5 rounded-xl transition-all shadow-[0_10px_25px_rgba(6,182,212,0.3)] border border-cyan-300/40 active:scale-95 cursor-pointer shrink-0"
                                 >
                                   <Send size={16} />
-                                  <span>🤖 Unirme ahora a @ClubLeonesXelaBot</span>
+                                  <span>🤖 Unirme ahora a @ConvencionLeonesbot</span>
                                 </a>
                               </div>
                             )}
@@ -2599,13 +2708,13 @@ export default function Convencion() {
                   {/* Acciones: Telegram Bot y Registrar a otro */}
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
                     <a
-                      href="https://t.me/ClubLeonesXelaBot"
+                      href="https://t.me/ConvencionLeonesbot"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400 text-white font-black px-6 py-4 rounded-2xl text-xs uppercase tracking-wider transition-all shadow-xl active:scale-95"
                     >
                       <Send size={16} />
-                      <span>Abrir Bot de Telegram (@ClubLeonesXelaBot)</span>
+                      <span>Abrir Bot de Telegram (@ConvencionLeonesbot)</span>
                     </a>
                     
                     <button 
@@ -2665,6 +2774,181 @@ export default function Convencion() {
             </button>
           </div>
         </aside>
+      )}
+      {/* MODAL INTERACTIVO: ENCONTRAR Y CONSULTAR ENTRADA QR OFICIAL */}
+      {isQrSearchModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
+          <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white rounded-3xl border-2 border-yellow-500/50 shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 my-auto">
+            {/* Header del Modal */}
+            <div className="bg-white/[0.04] border-b border-white/10 p-5 sm:p-6 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-yellow-500/20 text-yellow-300 border border-yellow-400/40 flex items-center justify-center">
+                  <QrCode size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-white leading-tight">
+                    Consulta tu Entrada QR Oficial
+                  </h3>
+                  <p className="text-[11px] text-slate-300 font-medium">LXXV Convención Nacional Club de Leones</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setIsQrSearchModalOpen(false); setFoundRegistroQr(null); setQrSearchQuery(''); }}
+                className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Contenido del Modal */}
+            <div className="p-5 sm:p-6 space-y-5">
+              {!foundRegistroQr ? (
+                /* Formulario de Búsqueda */
+                <form onSubmit={handleSearchQr} className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-black uppercase tracking-wider text-slate-300 block">
+                      Ingresa tu Correo Electrónico o Teléfono:
+                    </label>
+                    <div className="relative">
+                      <input 
+                        type="text" 
+                        required
+                        value={qrSearchQuery}
+                        onChange={e => setQrSearchQuery(e.target.value)}
+                        placeholder="Ej. socio@leones.org o 55554444"
+                        className="w-full bg-[#071126] border border-white/20 focus:border-yellow-400 rounded-2xl pl-11 pr-4 py-3.5 text-white text-sm outline-none focus:ring-4 focus:ring-yellow-400/20 transition-all font-semibold placeholder:text-slate-500"
+                      />
+                      <Search size={18} className="text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      También puedes ingresar tu número de folio o tu nombre registrado.
+                    </p>
+                  </div>
+
+                  {qrSearchError && (
+                    <div className="p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/40 text-xs text-rose-300 font-medium animate-in fade-in">
+                      {qrSearchError}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isSearchingQr}
+                    className="w-full inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-400 hover:from-yellow-400 hover:to-amber-300 text-blue-955 font-black py-4 rounded-2xl text-sm transition-all shadow-lg active:scale-95 cursor-pointer disabled:opacity-50"
+                  >
+                    {isSearchingQr ? (
+                      <span>Buscando tu inscripción...</span>
+                    ) : (
+                      <>
+                        <Search size={16} />
+                        <span>Buscar mi Entrada QR</span>
+                      </>
+                    )}
+                  </button>
+
+                  <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs text-slate-400">
+                    <span>¿No te has inscrito aún?</span>
+                    <button
+                      type="button"
+                      onClick={() => { setIsQrSearchModalOpen(false); scrollToPreInscripcion({ preventDefault: () => {} } as any); }}
+                      className="font-black text-yellow-300 hover:text-white underline cursor-pointer"
+                    >
+                      Pre-inscribirme ahora
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                /* Ficha de Credencial & QR Encontrada */
+                <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                  <div className="bg-white p-5 rounded-2xl text-slate-900 text-center space-y-3 shadow-xl border-4 border-yellow-500/60 relative overflow-hidden">
+                    {/* Header de la Credencial */}
+                    <div className="border-b border-slate-200 pb-2">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-blue-900 block">
+                        LXXV Convención Nacional Club de Leones
+                      </span>
+                      <h4 className="text-lg font-black text-slate-950 uppercase tracking-tight">
+                        {foundRegistroQr.nombre}
+                      </h4>
+                      <p className="text-xs text-slate-600 font-bold">
+                        {foundRegistroQr.club} • {foundRegistroQr.cargo} ({foundRegistroQr.distrito})
+                      </p>
+                    </div>
+
+                    {/* Código QR Generado */}
+                    {qrCodeDataUrl && (
+                      <div className="py-1 flex justify-center">
+                        <img 
+                          src={qrCodeDataUrl} 
+                          alt={`QR Entrada ${foundRegistroQr.nombre}`} 
+                          className="w-48 h-48 sm:w-56 sm:h-56 rounded-xl border-2 border-slate-200 shadow-md"
+                        />
+                      </div>
+                    )}
+
+                    {/* Estado y Folio */}
+                    <div className="border-t border-slate-200 pt-2 flex items-center justify-between text-xs">
+                      <div className="text-left">
+                        <span className="text-[9px] font-bold text-slate-400 block uppercase">Folio Oficial</span>
+                        <span className="font-mono font-black text-slate-800 text-xs">{foundRegistroQr.id}</span>
+                      </div>
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${
+                        foundRegistroQr.estadoPago === 'Pagado'
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : 'bg-amber-100 text-amber-800 border border-amber-300'
+                      }`}>
+                        {foundRegistroQr.estadoPago || 'Pre-registrado'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Botones de Acción */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleDownloadQr}
+                      className="inline-flex items-center justify-center space-x-2 bg-yellow-500 hover:bg-yellow-400 text-blue-955 font-black py-3 rounded-xl text-xs uppercase tracking-wider transition-all shadow cursor-pointer active:scale-95"
+                    >
+                      <Download size={15} />
+                      <span>Descargar QR</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleShareQrWhatsApp}
+                      className="inline-flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3 rounded-xl text-xs uppercase tracking-wider transition-all shadow cursor-pointer active:scale-95"
+                    >
+                      <MessageCircle size={15} />
+                      <span>Enviar a WhatsApp</span>
+                    </button>
+                  </div>
+
+                  <div className="pt-1">
+                    <a
+                      href={`https://t.me/ConvencionLeonesbot?start=qr_${foundRegistroQr.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full inline-flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-500 text-white font-black py-3 rounded-xl text-xs uppercase tracking-wider transition-all shadow cursor-pointer active:scale-95"
+                    >
+                      <Send size={15} />
+                      <span>Abrir en Telegram (@ConvencionLeonesbot)</span>
+                    </a>
+                  </div>
+
+                  <div className="text-center pt-2">
+                    <button
+                      type="button"
+                      onClick={() => { setFoundRegistroQr(null); setQrSearchQuery(''); }}
+                      className="text-xs text-slate-400 hover:text-white underline cursor-pointer"
+                    >
+                      Buscar otra entrada
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

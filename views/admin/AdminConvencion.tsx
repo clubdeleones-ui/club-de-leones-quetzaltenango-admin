@@ -809,7 +809,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
     setSuccessMsg('');
     try {
       const ok = await telegramService.sendMessage(
-        config.telegramBotToken || '',
+        config.telegramBotToken || undefined,
         config.telegramChatId || '',
         `📢 <b>BOLETÍN OFICIAL DE LA CONVENCIÓN</b>\n\n${broadcastTelegramMsg}`
       );
@@ -817,7 +817,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
         setSuccessMsg("¡Anuncio enviado exitosamente al canal/grupo de Telegram!");
         setBroadcastTelegramMsg('');
       } else {
-        setErrorMsg("No se pudo enviar por Telegram. Verifica las credenciales configuradas.");
+        setErrorMsg("No se pudo enviar por Telegram. Verifica que el Chat ID del canal o grupo esté configurado.");
       }
     } catch (err: any) {
       setErrorMsg("Error al enviar por Telegram.");
@@ -1513,14 +1513,37 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
 
                 {/* Seccion 2: Difusión por Telegram */}
                 <form onSubmit={handleSendTelegramBroadcast} className="bg-slate-50 border border-slate-200/80 rounded-3xl p-6 space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-3 gap-2">
                     <h4 className="text-sm font-black text-blue-900 uppercase tracking-wider flex items-center space-x-2">
                       <Send size={16} className="text-blue-900" />
                       <span>2. Publicar Anuncio en Canal / Grupo de Telegram</span>
                     </h4>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-[10px] bg-blue-100 text-blue-800 font-extrabold px-3 py-1 rounded-full flex items-center space-x-1">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span>Bot Activo: @ConvencionLeonesbot</span>
+                      </span>
+                      <a
+                        href="https://t.me/ConvencionLeonesbot"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-2.5 py-1 rounded-full transition-colors inline-flex items-center space-x-1"
+                      >
+                        <ExternalLink size={10} />
+                        <span>Abrir</span>
+                      </a>
+                    </div>
                   </div>
 
                   <div className="space-y-3">
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-slate-600 flex items-center justify-between">
+                      <div>
+                        <span className="font-bold text-slate-800">Canal / Chat ID Destino: </span>
+                        <span className="font-mono text-blue-900 font-bold">{config.telegramChatId || 'No fijado (se enviará al grupo general si está configurado)'}</span>
+                      </div>
+                      <span className="text-[10px] text-slate-400">Token ID: 8649525379</span>
+                    </div>
+
                     <div>
                       <label className="block text-xs font-bold text-slate-600 mb-1">Mensaje para Telegram</label>
                       <textarea
@@ -1528,7 +1551,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                         rows={4}
                         value={broadcastTelegramMsg}
                         onChange={e => setBroadcastTelegramMsg(e.target.value)}
-                        placeholder="Escribe el mensaje o aviso que se publicará en el grupo de Telegram..."
+                        placeholder="Escribe el mensaje o aviso que se publicará en el canal o grupo de Telegram de la Convención..."
                         className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-900/10 text-slate-800"
                       />
                     </div>
@@ -1547,7 +1570,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                         ) : (
                           <>
                             <Send size={16} />
-                            <span>Publicar Anuncio por Telegram</span>
+                            <span>Publicar Anuncio por Telegram (@ConvencionLeonesbot)</span>
                           </>
                         )}
                       </button>

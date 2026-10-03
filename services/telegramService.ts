@@ -2,11 +2,27 @@ import { ConvencionRegistro } from '../types';
 
 export const DEFAULT_GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwN-mwP87KpWN7AFjNL5W6bfi_Cc0h2RtZzufyOo15kHlEW-G_sRB7DSW2P1vJujV3V/exec';
 export const DEFAULT_TELEGRAM_BOT_TOKEN = '8649525379:AAEY1ywJt2rWSA8jQf1akXbD4ndCcqfVIiE';
+export const DEFAULT_TELEGRAM_BOT_USERNAME = 'ConvencionLeonesbot';
+export const DEFAULT_TELEGRAM_BOT_URL = 'https://t.me/ConvencionLeonesbot';
 
 /**
  * Servicio para envío de notificaciones automáticas mediante Telegram Bot API y Google Apps Script Webhook
  */
 export const telegramService = {
+  /**
+   * Obtiene el username oficial del bot configurado.
+   */
+  getBotUsername: (): string => DEFAULT_TELEGRAM_BOT_USERNAME,
+
+  /**
+   * Obtiene el enlace directo al bot en Telegram.
+   */
+  getBotUrl: (startParam?: string): string => {
+    if (startParam) {
+      return `${DEFAULT_TELEGRAM_BOT_URL}?start=${encodeURIComponent(startParam)}`;
+    }
+    return DEFAULT_TELEGRAM_BOT_URL;
+  },
   /**
    * Envía un mensaje en formato HTML a un grupo o chat ID de Telegram usando el bot configurado.
    */
@@ -40,6 +56,59 @@ export const telegramService = {
       return true;
     } catch (error) {
       console.error("Excepción en telegramService.sendMessage:", error);
+      return false;
+    }
+  },
+
+  /**
+   * Envía una imagen o ticket QR a un chat ID de Telegram usando el bot configurado.
+   */
+  sendPhoto: async (
+    botToken: string | undefined, 
+    chatId: string, 
+    photoUrlOrBlob: string | Blob, 
+    caption?: string
+  ): Promise<boolean> => {
+    const token = botToken || (import.meta as any).env?.VITE_TELEGRAM_BOT_TOKEN || DEFAULT_TELEGRAM_BOT_TOKEN;
+    if (!token || !chatId) return false;
+
+    try {
+      if (typeof photoUrlOrBlob === 'string' && photoUrlOrBlob.startsWith('http')) {
+        const url = `https://api.telegram.org/bot${token}/sendPhoto`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: chatId,
+            photo: photoUrlOrBlob,
+            caption: caption || '',
+            parse_mode: 'HTML'
+          })
+        });
+        const data = await res.json();
+        return !!data.ok;
+      } else {
+        const formData = new FormData();
+        formData.append('chat_id', chatId);
+        if (typeof photoUrlOrBlob === 'string') {
+          const blob = await (await fetch(photoUrlOrBlob)).blob();
+          formData.append('photo', blob, 'entrada_qr.png');
+        } else {
+          formData.append('photo', photoUrlOrBlob, 'entrada_qr.png');
+        }
+        if (caption) formData.append('caption', caption);
+        formData.append('parse_mode', 'HTML');
+
+        const url = `https://api.telegram.org/bot${token}/sendPhoto`;
+        const res = await fetch(url, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        return !!data.ok;
+      }
+    } catch (err) {
+      console.error("Error al enviar foto por Telegram:", err);
       return false;
     }
   },
