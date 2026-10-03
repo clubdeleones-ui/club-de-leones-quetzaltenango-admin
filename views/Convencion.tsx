@@ -1141,6 +1141,31 @@ export default function Convencion() {
         </header>
       </div>
 
+      {/* BANNER FLOTANTE: Conoce la Sede Virtualmente (Colina Country Club) */}
+      <section id="instalaciones" className="my-8 sm:my-10 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-10">
+        <div className="bg-gradient-to-r from-[#0c1a38] via-[#09152e] to-[#0c1a38] text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-8 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 border-2 border-yellow-500/40 relative overflow-hidden text-center sm:text-left group">
+          <div className="space-y-2 max-w-xl relative z-10">
+            <span className="bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 text-[10px] font-black px-3.5 py-1 rounded-full uppercase tracking-wider inline-block shadow-sm">
+              Conoce la Sede Virtualmente
+            </span>
+            <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white">¿Quieres explorar todas las instalaciones del evento?</h3>
+            <p className="text-slate-300 text-xs sm:text-sm leading-relaxed font-medium">
+              Visita el sitio oficial de Colina Country Club para descubrir más sobre sus galerías de fotos, salones y ubicación en Quetzaltenango.
+            </p>
+          </div>
+
+          <a 
+            href="https://colinacountryclub.com/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-400 hover:from-yellow-400 hover:to-amber-300 text-blue-955 font-black px-6 py-3.5 rounded-2xl text-xs uppercase tracking-wider transition-all duration-300 shadow-xl shadow-yellow-500/20 active:scale-95 shrink-0 min-h-[48px] cursor-pointer relative z-10"
+          >
+            <span>Visitar Sitio Oficial</span>
+            <ExternalLink size={16} />
+          </a>
+        </div>
+      </section>
+
       {/* SECCIÓN 2: Alianzas & Patrocinadores Marquee Block — CRISTAL Y ORO FLOTANTE */}
       <section className="my-10 sm:my-16 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border-2 border-yellow-500/30 rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-10 shadow-2xl relative overflow-hidden">
@@ -1277,133 +1302,7 @@ export default function Convencion() {
         </div>
       </section>
 
-      {/* SECCIÓN 4: Instalaciones del Evento (Colina Country Club) */}
-      <section id="instalaciones" className="my-10 sm:my-16 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-10">
-        <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border-2 border-yellow-500/30 rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 shadow-2xl space-y-8 sm:space-y-12 relative overflow-hidden">
-          {/* Header */}
-          <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4">
-            <div className="inline-flex items-center space-x-2 bg-yellow-500/15 border border-yellow-500/30 text-yellow-300 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
-              <Building2 size={14} className="text-yellow-400" />
-              <span>Instalaciones del Evento</span>
-            </div>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
-              Colina Country Club
-            </h2>
-            <p className="text-slate-300 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
-              Un exclusivo y prestigioso centro de convenciones en Quetzaltenango (Km 223.5 Carretera CITO 180), diseñado con salones monumentales, vistas panorámicas y jardines de primer nivel.
-            </p>
-          </div>
-
-          {/* Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-            {/* Card 1: Salón Doña Beatriz */}
-            <div className="bg-white/[0.04] rounded-3xl overflow-hidden border border-white/10 hover:border-yellow-400/60 shadow-xl hover:shadow-[0_15px_35px_rgba(234,179,8,0.15)] transition-all duration-300 flex flex-col justify-between group">
-              <div>
-                <div className="relative h-48 sm:h-56 overflow-hidden">
-                  <img 
-                    src="https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1200&q=80" 
-                    alt="Salón Doña Beatriz Colina Country Club"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute top-4 left-4 bg-blue-955/90 border border-white/20 backdrop-blur-md text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow">
-                    Salón Principal
-                  </div>
-                </div>
-                <div className="p-5 sm:p-6 space-y-2 sm:space-y-3">
-                  <h3 className="text-lg sm:text-xl font-extrabold text-white group-hover:text-yellow-300 transition-colors">Salón Doña Beatriz</h3>
-                  <p className="text-slate-300 text-xs sm:text-sm leading-relaxed font-medium">
-                    El salón más grande e imponente de la región. Cuenta con dos balcones, área de bar, gran altura con acústica perfecta y capacidad para plenarias multitudinarias.
-                  </p>
-                </div>
-              </div>
-              <div className="p-5 sm:p-6 pt-0 border-t border-white/10 flex items-center justify-between text-xs text-slate-300 font-extrabold mt-4">
-                <span>Capacidad Auditorio</span>
-                <span className="bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 px-3 py-1 rounded-xl">Hasta 1,000 Personas</span>
-              </div>
-            </div>
-
-            {/* Card 2: Jardines y Áreas al Aire Libre */}
-            <div className="bg-white/[0.04] rounded-3xl overflow-hidden border border-white/10 hover:border-emerald-400/60 shadow-xl hover:shadow-[0_15px_35px_rgba(16,185,129,0.15)] transition-all duration-300 flex flex-col justify-between group">
-              <div>
-                <div className="relative h-48 sm:h-56 overflow-hidden">
-                  <img 
-                    src="https://images.unsplash.com/photo-1588880331179-bc9b93a8cb5e?auto=format&fit=crop&w=1200&q=80" 
-                    alt="Jardines Colina Country Club"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute top-4 left-4 bg-emerald-900/90 border border-white/20 backdrop-blur-md text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow">
-                    Naturaleza & Vista
-                  </div>
-                </div>
-                <div className="p-5 sm:p-6 space-y-2 sm:space-y-3">
-                  <h3 className="text-lg sm:text-xl font-extrabold text-white group-hover:text-emerald-300 transition-colors">Jardines & Áreas Exteriores</h3>
-                  <p className="text-slate-300 text-xs sm:text-sm leading-relaxed font-medium">
-                    Hermosas áreas verdes y jardines campestres del complejo, diseñados para cócteles de bienvenida, actividades de convivencia y momentos de esparcimiento fraterno.
-                  </p>
-                </div>
-              </div>
-              <div className="p-5 sm:p-6 pt-0 border-t border-white/10 flex items-center justify-between text-xs text-slate-300 font-extrabold mt-4">
-                <span>Ambiente</span>
-                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-xl">Cóctel & Exteriores</span>
-              </div>
-            </div>
-
-            {/* Card 3: Capilla & Servicios Gastronómicos */}
-            <div className="bg-white/[0.04] rounded-3xl overflow-hidden border border-white/10 hover:border-amber-400/60 shadow-xl hover:shadow-[0_15px_35px_rgba(245,158,11,0.15)] transition-all duration-300 flex flex-col justify-between group">
-              <div>
-                <div className="relative h-48 sm:h-56 overflow-hidden">
-                  <img 
-                    src="https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=1200&q=80" 
-                    alt="Capilla y Banquetes Colina Country Club"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1200&q=80";
-                    }}
-                  />
-                  <div className="absolute top-4 left-4 bg-amber-900/90 border border-white/20 backdrop-blur-md text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow">
-                    Capilla & Banquetes
-                  </div>
-                </div>
-                <div className="p-5 sm:p-6 space-y-2 sm:space-y-3">
-                  <h3 className="text-lg sm:text-xl font-extrabold text-white group-hover:text-amber-300 transition-colors">Capilla Privada & Alta Cocina</h3>
-                  <p className="text-slate-300 text-xs sm:text-sm leading-relaxed font-medium">
-                    Instalaciones integrales con capilla propia para actos de acción de gracias, además de un equipo culinario experto a cargo de los banquetes solemnes.
-                  </p>
-                </div>
-              </div>
-              <div className="p-5 sm:p-6 pt-0 border-t border-white/10 flex items-center justify-between text-xs text-slate-300 font-extrabold mt-4">
-                <span>Servicios</span>
-                <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-xl">Banquetes & Capilla</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Call to Action to Visit Colina Country Club Website */}
-          <div className="bg-gradient-to-r from-blue-955/90 via-[#0a1733] to-blue-955/90 text-white rounded-3xl sm:rounded-[2rem] p-6 sm:p-8 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6 border border-yellow-500/40 relative overflow-hidden text-center sm:text-left group">
-            <div className="space-y-2 max-w-xl relative z-10">
-              <span className="bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 text-[10px] font-black px-3.5 py-1 rounded-full uppercase tracking-wider inline-block shadow-sm">
-                Conoce la Sede Virtualmente
-              </span>
-              <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white">¿Quieres explorar todas las instalaciones del evento?</h3>
-              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed font-medium">
-                Visita el sitio oficial de Colina Country Club para descubrir más sobre sus galerías de fotos, salones y ubicación en Quetzaltenango.
-              </p>
-            </div>
-
-            <a 
-              href="https://colinacountryclub.com/" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-400 hover:from-yellow-400 hover:to-amber-300 text-blue-955 font-black px-6 py-3.5 rounded-2xl text-xs uppercase tracking-wider transition-all duration-300 shadow-xl shadow-yellow-500/20 active:scale-95 shrink-0 min-h-[48px] cursor-pointer relative z-10"
-            >
-              <span>Visitar Sitio Oficial</span>
-              <ExternalLink size={16} />
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* SECCIÓN 5: Actividades Culturales y Sociales Block */}
+      {/* SECCIÓN 4: Actividades Culturales y Sociales Block */}
       <section className="my-10 sm:my-16 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 border border-yellow-500/30 shadow-2xl relative overflow-hidden">
           <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4">
