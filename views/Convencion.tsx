@@ -413,6 +413,59 @@ export const MayaNumeral74: React.FC<{ className?: string }> = ({ className = ''
   );
 };
 
+/**
+ * Representación del Número 75 en el Sistema Vigesimal Maya (Base 20)
+ * Nivel 2 (Arriba, Veintenas): 3 puntos ( • • • ) = 3 x 20 = 60
+ * Nivel 1 (Abajo, Unidades): 3 barras (cada barra = 5) = 15
+ * Total = 60 + 15 = 75 (Oxk'al Holajuj)
+ */
+export const MayaNumeral75: React.FC<{ className?: string }> = ({ className = '' }) => {
+  return (
+    <div 
+      className={`inline-flex items-center gap-2 sm:gap-2.5 px-3 py-1.5 rounded-2xl bg-gradient-to-r from-amber-500/25 via-yellow-500/30 to-amber-500/25 border border-yellow-400/60 shadow-lg shadow-black/30 backdrop-blur-md group hover:border-yellow-300 transition-all ${className}`}
+      title="75 en Sistema Vigesimal Maya: 3 veintenas (60) + 15 unidades = 75 (Oxk'al Holajuj)"
+    >
+      <svg
+        viewBox="0 0 54 44"
+        className="w-8 h-6 sm:w-9 sm:h-7 drop-shadow-[0_2px_8px_rgba(234,179,8,0.5)] shrink-0"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <linearGradient id="mayaGoldConv75" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FEF08A" />
+            <stop offset="45%" stopColor="#F59E0B" />
+            <stop offset="100%" stopColor="#D97706" />
+          </linearGradient>
+        </defs>
+
+        {/* Nivel Superior: Veintenas (20s) -> 3 puntos = 60 */}
+        <circle cx="17" cy="6" r="3.2" fill="url(#mayaGoldConv75)" stroke="#FFFBEB" strokeWidth="0.8" />
+        <circle cx="27" cy="6" r="3.2" fill="url(#mayaGoldConv75)" stroke="#FFFBEB" strokeWidth="0.8" />
+        <circle cx="37" cy="6" r="3.2" fill="url(#mayaGoldConv75)" stroke="#FFFBEB" strokeWidth="0.8" />
+
+        {/* Divisoria ceremonial sutil */}
+        <line x1="8" y1="13" x2="46" y2="13" stroke="#FEF08A" strokeOpacity="0.45" strokeWidth="0.8" strokeDasharray="1.5 1.5" />
+
+        {/* Nivel Inferior: Unidades (1s) -> 15 (3 barras de 5) */}
+        <rect x="8" y="17.5" width="38" height="4.5" rx="2.2" fill="url(#mayaGoldConv75)" stroke="#FFFBEB" strokeWidth="0.8" />
+        <rect x="8" y="25.5" width="38" height="4.5" rx="2.2" fill="url(#mayaGoldConv75)" stroke="#FFFBEB" strokeWidth="0.8" />
+        <rect x="8" y="33.5" width="38" height="4.5" rx="2.2" fill="url(#mayaGoldConv75)" stroke="#FFFBEB" strokeWidth="0.8" />
+      </svg>
+
+      <div className="flex flex-col text-left leading-none">
+        <span className="text-[9px] uppercase tracking-widest text-yellow-300 font-extrabold flex items-center gap-1">
+          <span>Glifo Maya</span>
+          <span className="text-[8px] bg-yellow-400/25 text-yellow-200 px-1 py-0.2 rounded font-mono font-bold">75</span>
+        </span>
+        <span className="text-[10px] sm:text-xs font-black text-white font-serif tracking-tight mt-0.5">
+          Oxk'al Holajuj
+        </span>
+      </div>
+    </div>
+  );
+};
+
 export default function Convencion() {
   const { showToast } = useToast();
   const [config, setConfig] = useState<ConvencionConfig>({
@@ -1116,7 +1169,7 @@ export default function Convencion() {
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased overflow-x-hidden selection:bg-yellow-500 selection:text-blue-955 pb-24 relative">
       {/* Dynamic Hero Header Section Block - Floating Royal Banner */}
       <div className="pt-2 sm:pt-8 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8">
-        <header className="relative w-full py-12 sm:py-24 px-3 sm:px-6 lg:px-8 overflow-hidden text-center z-10 rounded-2xl sm:rounded-[2.5rem] bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border sm:border-2 border-yellow-500/40 shadow-2xl">
+        <header className="relative w-full py-10 sm:py-16 lg:py-20 px-3 sm:px-6 lg:px-8 overflow-hidden text-center z-10 rounded-2xl sm:rounded-[2.5rem] bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border sm:border-2 border-yellow-500/40 shadow-2xl">
           {/* Custom Header Background Image with Gradient Overlay */}
           {config.headerBgUrl && (
             <div 
@@ -1125,22 +1178,31 @@ export default function Convencion() {
             />
           )}
           <div 
-            className="absolute inset-0 bg-gradient-to-b from-transparent via-[#071024]/80 to-[#060d1d] pointer-events-none"
+            className="absolute inset-0 bg-gradient-to-b from-transparent via-[#071024]/85 to-[#060d1d] pointer-events-none"
           />
 
+          {/* Gran Resplandor Dorado detrás del Logo Central */}
+          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 sm:w-[480px] sm:h-[480px] lg:w-[600px] lg:h-[600px] rounded-full bg-gradient-to-tr from-yellow-500/25 via-amber-400/20 to-blue-500/15 blur-3xl pointer-events-none animate-pulse" />
+
           <div className="max-w-5xl mx-auto relative z-10 space-y-6 sm:space-y-8">
-            {/* Barra Conmemorativa Unificada: Insignia 74 + Glifo Maya + Live Pulse */}
-            <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 mb-2 animate-in fade-in slide-in-from-top-4 duration-500">
+            {/* Barra Conmemorativa Superior Unificada: Insignia 75 + Glifo Maya + 80 Años + Live Status */}
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
               <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-yellow-500/20 via-amber-500/25 to-yellow-500/20 border border-yellow-400/50 text-yellow-300 px-3.5 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-black uppercase tracking-wider backdrop-blur-xl shadow-lg shadow-black/40">
-                <Sparkles size={16} className="text-yellow-400 animate-pulse" />
-                <span>LXXIV Convención Nacional Lions</span>
+                <Sparkles size={15} className="text-yellow-400 animate-pulse" />
+                <span>LXXV Convención Nacional Lions</span>
                 <span className="bg-yellow-400 text-blue-955 font-black text-[10px] px-2 py-0.5 rounded-full font-mono">
-                  74ª
+                  75ª
                 </span>
               </div>
 
-              {/* Número 74 en Numeración Maya Ceremonial */}
-              <MayaNumeral74 />
+              {/* Número 75 en Numeración Maya Ceremonial */}
+              <MayaNumeral75 />
+
+              {/* 80 Años Conmemorativo */}
+              <div className="inline-flex items-center space-x-1.5 bg-gradient-to-r from-blue-900/60 to-indigo-900/60 border border-yellow-500/30 text-yellow-300 px-3.5 py-2 rounded-2xl text-xs font-black uppercase tracking-wider backdrop-blur-md">
+                <Award size={14} className="text-yellow-400" />
+                <span>80 Años • Club Quetzaltenango</span>
+              </div>
 
               {/* Live Status Badge */}
               <div className="hidden sm:inline-flex items-center space-x-2 bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 px-3.5 py-2 rounded-2xl text-xs font-black uppercase tracking-wider backdrop-blur-md">
@@ -1149,19 +1211,41 @@ export default function Convencion() {
               </div>
             </div>
 
+            {/* ELEMENTO CENTRAL PROTAGÓNICO: Logotipo Oficial de la Convención */}
+            <div className="relative py-2 sm:py-4 flex flex-col items-center justify-center">
+              {/* Resplandor áurico circular concéntrico */}
+              <div className="absolute w-52 h-52 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-full bg-yellow-400/20 blur-3xl pointer-events-none" />
+              
+              <div className="relative z-10 transition-all duration-700 hover:scale-[1.03] select-none group cursor-default">
+                <img 
+                  src="/images/logo-convencion.png" 
+                  alt="Logo Oficial LXXV Convención Nacional Distrito D-3 Guatemala - Club de Leones Quetzaltenango 80 Años" 
+                  className="w-56 h-56 xs:w-64 xs:h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 lg:w-[410px] lg:h-[410px] object-contain drop-shadow-[0_25px_60px_rgba(234,179,8,0.5)] filter transition-all duration-500 group-hover:drop-shadow-[0_30px_70px_rgba(234,179,8,0.7)]"
+                  loading="eager"
+                />
+              </div>
+
+              {/* Insignia decorativa sutil bajo el emblema */}
+              <div className="mt-2 inline-flex items-center space-x-2 px-4 py-1 rounded-full bg-yellow-500/10 border border-yellow-400/30 text-yellow-300 text-[11px] font-extrabold uppercase tracking-widest backdrop-blur-md">
+                <Star size={12} className="text-yellow-400 fill-yellow-400" />
+                <span>Emblema Oficial Conmemorativo</span>
+                <Star size={12} className="text-yellow-400 fill-yellow-400" />
+              </div>
+            </div>
+
             {/* Main Title con Kicker Superior */}
             <div className="space-y-2">
               <span className="text-xs sm:text-sm font-extrabold uppercase tracking-[0.3em] text-yellow-400/90 block">
-                Gran Encuentro Anual de Liderazgo y Hermandad
+                Gran Encuentro Anual de Liderazgo, Servicio y Hermandad
               </span>
-              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-tight sm:leading-none bg-gradient-to-r from-white via-amber-100 to-yellow-300 bg-clip-text text-transparent px-2 drop-shadow-[0_10px_35px_rgba(0,0,0,0.8)]">
-                {config.titulo || 'Distrito D3 Guatemala'}
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight sm:leading-none bg-gradient-to-r from-white via-amber-100 to-yellow-300 bg-clip-text text-transparent px-2 drop-shadow-[0_10px_35px_rgba(0,0,0,0.8)]">
+                {config.titulo || 'Distrito D-3 Guatemala'}
               </h1>
             </div>
 
             {/* Lema Oficial con Comillas Decorativas */}
             <div className="relative max-w-3xl mx-auto px-4">
-              <p className="text-slate-200 text-base sm:text-2xl italic font-serif leading-relaxed drop-shadow-md">
+              <p className="text-slate-200 text-sm sm:text-xl italic font-serif leading-relaxed drop-shadow-md">
                 <span className="text-yellow-400 font-serif text-2xl sm:text-3xl mr-1">“</span>
                 {config.lema || 'Rugiendo con fuerza, sirviendo con amor y uniendo voluntades por nuestra nación'}
                 <span className="text-yellow-400 font-serif text-2xl sm:text-3xl ml-1">”</span>
@@ -1177,14 +1261,14 @@ export default function Convencion() {
                   <div className="flex items-center space-x-3.5 w-full sm:w-auto">
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-yellow-500/25 to-amber-500/10 border border-yellow-400/40 flex flex-col items-center justify-center text-yellow-300 shrink-0 shadow-lg">
                       <Calendar size={20} className="text-yellow-400" />
-                      <span className="text-[8px] font-black uppercase tracking-tighter text-yellow-200 mt-0.5">2026</span>
+                      <span className="text-[8px] font-black uppercase tracking-tighter text-yellow-200 mt-0.5">2027</span>
                     </div>
                     <div>
                       <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-yellow-400/90 block">
                         Fecha Oficial Confirmada
                       </span>
                       <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
-                        {config.fechaEventoTexto || 'Del 19 al 22 de Marzo, 2026'}
+                        {config.fechaEventoTexto || 'Del 19 al 22 de Marzo, 2027'}
                       </h3>
                       <p className="text-[11px] text-slate-300 font-medium">
                         Jueves a Domingo • 4 Días de Convención
@@ -1218,7 +1302,7 @@ export default function Convencion() {
             </div>
 
             {/* Reloj de Cuenta Regresiva de Alta Precisión */}
-            <div className="pt-4 max-w-xl mx-auto">
+            <div className="pt-2 max-w-xl mx-auto">
               <div className="inline-flex items-center space-x-2 text-xs font-extrabold uppercase tracking-widest text-yellow-300 bg-yellow-500/10 border border-yellow-500/20 px-3.5 py-1.5 rounded-full mb-4">
                 <Clock size={13} className="text-yellow-400 animate-spin" />
                 <span>La cuenta regresiva ha comenzado:</span>
@@ -1247,7 +1331,7 @@ export default function Convencion() {
             </div>
 
             {/* Action CTAs Principales */}
-            <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
               <button 
                 type="button"
                 onClick={scrollToPreInscripcion}
