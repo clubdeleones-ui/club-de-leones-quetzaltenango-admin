@@ -968,187 +968,182 @@ export default function Convencion() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#060d1d] via-[#09152e] to-[#050b16] text-slate-100 font-sans antialiased overflow-x-hidden selection:bg-yellow-500 selection:text-blue-955 pb-24 relative">
-      {/* Ambient Lighting Background Accents */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-gradient-to-b from-yellow-500/15 via-blue-600/10 to-transparent rounded-full blur-[140px]" />
-        <div className="absolute top-[35%] -left-48 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[160px]" />
-        <div className="absolute top-[60%] -right-48 w-[600px] h-[600px] bg-amber-500/10 rounded-full blur-[160px]" />
-      </div>
-
-      {/* Dynamic Hero Header Section Block - Full Bleed Royal Banner */}
-      <header className="relative w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8 overflow-hidden text-center z-10">
-        {/* Custom Header Background Image with Gradient Overlay */}
-        {config.headerBgUrl && (
+    <div className="min-h-screen bg-slate-100 text-slate-800 font-sans antialiased overflow-x-hidden selection:bg-yellow-500 selection:text-blue-955 pb-24 relative">
+      {/* Dynamic Hero Header Section Block - Floating Royal Banner */}
+      <div className="pt-6 sm:pt-10 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+        <header className="relative w-full py-16 sm:py-24 px-4 sm:px-6 lg:px-8 overflow-hidden text-center z-10 rounded-3xl sm:rounded-[2.5rem] bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border-2 border-yellow-500/40 shadow-2xl">
+          {/* Custom Header Background Image with Gradient Overlay */}
+          {config.headerBgUrl && (
+            <div 
+              className="absolute inset-0 bg-cover bg-center pointer-events-none transition-all duration-700 opacity-20 scale-105"
+              style={{ backgroundImage: `url("${config.headerBgUrl}")` }}
+            />
+          )}
           <div 
-            className="absolute inset-0 bg-cover bg-center pointer-events-none transition-all duration-700 opacity-20 scale-105"
-            style={{ backgroundImage: `url("${config.headerBgUrl}")` }}
+            className="absolute inset-0 bg-gradient-to-b from-transparent via-[#071024]/80 to-[#060d1d] pointer-events-none"
           />
-        )}
-        <div 
-          className="absolute inset-0 bg-gradient-to-b from-transparent via-[#071024]/80 to-[#060d1d] pointer-events-none"
-        />
 
-        <div className="max-w-5xl mx-auto relative z-10 space-y-6 sm:space-y-8">
-          {/* Barra Conmemorativa Unificada: Insignia 74 + Glifo Maya + Live Pulse */}
-          <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 mb-2 animate-in fade-in slide-in-from-top-4 duration-500">
-            <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-yellow-500/20 via-amber-500/25 to-yellow-500/20 border border-yellow-400/50 text-yellow-300 px-3.5 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-black uppercase tracking-wider backdrop-blur-xl shadow-lg shadow-black/40">
-              <Sparkles size={16} className="text-yellow-400 animate-pulse" />
-              <span>LXXIV Convención Nacional Lions</span>
-              <span className="bg-yellow-400 text-blue-955 font-black text-[10px] px-2 py-0.5 rounded-full font-mono">
-                74ª
+          <div className="max-w-5xl mx-auto relative z-10 space-y-6 sm:space-y-8">
+            {/* Barra Conmemorativa Unificada: Insignia 74 + Glifo Maya + Live Pulse */}
+            <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 mb-2 animate-in fade-in slide-in-from-top-4 duration-500">
+              <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-yellow-500/20 via-amber-500/25 to-yellow-500/20 border border-yellow-400/50 text-yellow-300 px-3.5 sm:px-4 py-2 rounded-2xl text-xs sm:text-sm font-black uppercase tracking-wider backdrop-blur-xl shadow-lg shadow-black/40">
+                <Sparkles size={16} className="text-yellow-400 animate-pulse" />
+                <span>LXXIV Convención Nacional Lions</span>
+                <span className="bg-yellow-400 text-blue-955 font-black text-[10px] px-2 py-0.5 rounded-full font-mono">
+                  74ª
+                </span>
+              </div>
+
+              {/* Número 74 en Numeración Maya Ceremonial */}
+              <MayaNumeral74 />
+
+              {/* Live Status Badge */}
+              <div className="hidden sm:inline-flex items-center space-x-2 bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 px-3.5 py-2 rounded-2xl text-xs font-black uppercase tracking-wider backdrop-blur-md">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span>Inscripciones Habilitadas</span>
+              </div>
+            </div>
+
+            {/* Main Title con Kicker Superior */}
+            <div className="space-y-2">
+              <span className="text-xs sm:text-sm font-extrabold uppercase tracking-[0.3em] text-yellow-400/90 block">
+                Gran Encuentro Anual de Liderazgo y Hermandad
               </span>
+              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-tight sm:leading-none bg-gradient-to-r from-white via-amber-100 to-yellow-300 bg-clip-text text-transparent px-2 drop-shadow-[0_10px_35px_rgba(0,0,0,0.8)]">
+                {config.titulo || 'Distrito D3 Guatemala'}
+              </h1>
             </div>
 
-            {/* Número 74 en Numeración Maya Ceremonial */}
-            <MayaNumeral74 />
-
-            {/* Live Status Badge */}
-            <div className="hidden sm:inline-flex items-center space-x-2 bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 px-3.5 py-2 rounded-2xl text-xs font-black uppercase tracking-wider backdrop-blur-md">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-              <span>Inscripciones Habilitadas</span>
+            {/* Lema Oficial con Comillas Decorativas */}
+            <div className="relative max-w-3xl mx-auto px-4">
+              <p className="text-slate-200 text-base sm:text-2xl italic font-serif leading-relaxed drop-shadow-md">
+                <span className="text-yellow-400 font-serif text-2xl sm:text-3xl mr-1">“</span>
+                {config.lema || 'Rugiendo con fuerza, sirviendo con amor y uniendo voluntades por nuestra nación'}
+                <span className="text-yellow-400 font-serif text-2xl sm:text-3xl ml-1">”</span>
+              </p>
             </div>
-          </div>
 
-          {/* Main Title con Kicker Superior */}
-          <div className="space-y-2">
-            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-[0.3em] text-yellow-400/90 block">
-              Gran Encuentro Anual de Liderazgo y Hermandad
-            </span>
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-tight sm:leading-none bg-gradient-to-r from-white via-amber-100 to-yellow-300 bg-clip-text text-transparent px-2 drop-shadow-[0_10px_35px_rgba(0,0,0,0.8)]">
-              {config.titulo || 'Distrito D3 Guatemala'}
-            </h1>
-          </div>
-
-          {/* Lema Oficial con Comillas Decorativas */}
-          <div className="relative max-w-3xl mx-auto px-4">
-            <p className="text-slate-200 text-base sm:text-2xl italic font-serif leading-relaxed drop-shadow-md">
-              <span className="text-yellow-400 font-serif text-2xl sm:text-3xl mr-1">“</span>
-              {config.lema || 'Rugiendo con fuerza, sirviendo con amor y uniendo voluntades por nuestra nación'}
-              <span className="text-yellow-400 font-serif text-2xl sm:text-3xl ml-1">”</span>
-            </p>
-          </div>
-
-          {/* Glassmorphic Modern Date & Location Card con Resplandor */}
-          <div className="pt-2 max-w-2xl mx-auto">
-            <div className="relative p-0.5 rounded-3xl bg-gradient-to-r from-yellow-500/50 via-amber-400/30 to-yellow-500/50 shadow-[0_15px_40px_rgba(0,0,0,0.6)] backdrop-blur-2xl group hover:border-yellow-400/70 transition-all duration-300">
-              <div className="bg-gradient-to-br from-[#0c1a38]/95 via-[#081226]/95 to-[#0c1a38]/95 rounded-[1.4rem] p-4 sm:p-5 border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-left">
-                
-                {/* Fechas del Evento */}
-                <div className="flex items-center space-x-3.5 w-full sm:w-auto">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-yellow-500/25 to-amber-500/10 border border-yellow-400/40 flex flex-col items-center justify-center text-yellow-300 shrink-0 shadow-lg">
-                    <Calendar size={20} className="text-yellow-400" />
-                    <span className="text-[8px] font-black uppercase tracking-tighter text-yellow-200 mt-0.5">2026</span>
+            {/* Glassmorphic Modern Date & Location Card con Resplandor */}
+            <div className="pt-2 max-w-2xl mx-auto">
+              <div className="relative p-0.5 rounded-3xl bg-gradient-to-r from-yellow-500/50 via-amber-400/30 to-yellow-500/50 shadow-[0_15px_40px_rgba(0,0,0,0.6)] backdrop-blur-2xl group hover:border-yellow-400/70 transition-all duration-300">
+                <div className="bg-gradient-to-br from-[#0c1a38]/95 via-[#081226]/95 to-[#0c1a38]/95 rounded-[1.4rem] p-4 sm:p-5 border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-left">
+                  
+                  {/* Fechas del Evento */}
+                  <div className="flex items-center space-x-3.5 w-full sm:w-auto">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-yellow-500/25 to-amber-500/10 border border-yellow-400/40 flex flex-col items-center justify-center text-yellow-300 shrink-0 shadow-lg">
+                      <Calendar size={20} className="text-yellow-400" />
+                      <span className="text-[8px] font-black uppercase tracking-tighter text-yellow-200 mt-0.5">2026</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-yellow-400/90 block">
+                        Fecha Oficial Confirmada
+                      </span>
+                      <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
+                        {config.fechaEventoTexto || 'Del 19 al 22 de Marzo, 2026'}
+                      </h3>
+                      <p className="text-[11px] text-slate-300 font-medium">
+                        Jueves a Domingo • 4 Días de Convención
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-yellow-400/90 block">
-                      Fecha Oficial Confirmada
-                    </span>
-                    <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
-                      {config.fechaEventoTexto || 'Del 19 al 22 de Marzo, 2026'}
-                    </h3>
-                    <p className="text-[11px] text-slate-300 font-medium">
-                      Jueves a Domingo • 4 Días de Convención
-                    </p>
+
+                  {/* Divisor vertical en desktop */}
+                  <div className="hidden sm:block w-px h-11 bg-gradient-to-b from-transparent via-white/20 to-transparent" />
+
+                  {/* Sede y Ciudad */}
+                  <div className="flex items-center space-x-3.5 w-full sm:w-auto border-t sm:border-t-0 border-white/10 pt-3 sm:pt-0">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600/20 to-indigo-600/10 border border-blue-400/40 flex items-center justify-center text-blue-300 shrink-0 shadow-lg">
+                      <MapPin size={22} className="text-yellow-400 animate-bounce" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400 block">
+                        Ciudad Sede
+                      </span>
+                      <h4 className="text-base sm:text-lg font-black text-white tracking-tight">
+                        Quetzaltenango
+                      </h4>
+                      <p className="text-[11px] text-slate-300 font-medium">
+                        Colina Country Club • Guatemala
+                      </p>
+                    </div>
                   </div>
+
                 </div>
+              </div>
+            </div>
 
-                {/* Divisor vertical en desktop */}
-                <div className="hidden sm:block w-px h-11 bg-gradient-to-b from-transparent via-white/20 to-transparent" />
+            {/* Reloj de Cuenta Regresiva de Alta Precisión */}
+            <div className="pt-4 max-w-xl mx-auto">
+              <div className="inline-flex items-center space-x-2 text-xs font-extrabold uppercase tracking-widest text-yellow-300 bg-yellow-500/10 border border-yellow-500/20 px-3.5 py-1.5 rounded-full mb-4">
+                <Clock size={13} className="text-yellow-400 animate-spin" />
+                <span>La cuenta regresiva ha comenzado:</span>
+              </div>
 
-                {/* Sede y Ciudad */}
-                <div className="flex items-center space-x-3.5 w-full sm:w-auto border-t sm:border-t-0 border-white/10 pt-3 sm:pt-0">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600/20 to-indigo-600/10 border border-blue-400/40 flex items-center justify-center text-blue-300 shrink-0 shadow-lg">
-                    <MapPin size={22} className="text-yellow-400 animate-bounce" />
-                  </div>
-                  <div>
-                    <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400 block">
-                      Ciudad Sede
+              <div className="grid grid-cols-4 gap-2.5 sm:gap-4">
+                {[
+                  { label: 'Días', value: countdown.days },
+                  { label: 'Horas', value: countdown.hours },
+                  { label: 'Minutos', value: countdown.minutes },
+                  { label: 'Segundos', value: countdown.seconds }
+                ].map((item, idx) => (
+                  <div 
+                    key={idx} 
+                    className="relative p-3 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-yellow-400/30 shadow-[0_10px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl group hover:border-yellow-400/80 hover:scale-105 transition-all duration-300"
+                  >
+                    <span className="text-2xl sm:text-4xl lg:text-5xl font-black font-mono text-yellow-300 tracking-tight group-hover:text-yellow-200 transition-colors drop-shadow-[0_2px_10px_rgba(234,179,8,0.4)]">
+                      {String(item.value).padStart(2, '0')}
                     </span>
-                    <h4 className="text-base sm:text-lg font-black text-white tracking-tight">
-                      Quetzaltenango
-                    </h4>
-                    <p className="text-[11px] text-slate-300 font-medium">
-                      Colina Country Club • Guatemala
-                    </p>
+                    <span className="text-[9px] sm:text-[11px] font-black uppercase text-slate-300 mt-1 sm:mt-2 tracking-widest block">
+                      {item.label}
+                    </span>
                   </div>
-                </div>
+                ))}
+              </div>
+            </div>
 
+            {/* Action CTAs Principales */}
+            <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+              <button 
+                type="button"
+                onClick={scrollToPreInscripcion}
+                className="w-full sm:w-auto inline-flex items-center justify-center space-x-3 bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-400 hover:from-yellow-400 hover:to-amber-300 text-blue-955 font-black px-8 py-4 sm:py-4.5 rounded-2xl text-base sm:text-lg transition-all duration-300 shadow-[0_10px_35px_rgba(245,158,11,0.4)] hover:shadow-[0_15px_45px_rgba(245,158,11,0.6)] transform hover:-translate-y-1 active:scale-95 min-h-[56px] cursor-pointer group"
+              >
+                <Zap size={20} className="fill-blue-955 group-hover:scale-110 transition-transform" />
+                <span>{config.inscripcionesAbiertas ? 'Pre-regístrate Aquí y Asegura tu Cupo' : 'Ver Inscripciones'}</span>
+                <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
+              </button>
+
+              <a 
+                href="#instalaciones"
+                className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-white/10 hover:bg-white/15 text-white font-extrabold px-6 py-4 rounded-2xl text-sm transition-all border border-white/20 hover:border-yellow-400/50 backdrop-blur-md cursor-pointer"
+              >
+                <Compass size={17} className="text-yellow-400" />
+                <span>Explorar Sede & Programa</span>
+              </a>
+            </div>
+
+            {/* Social Proof & Garantías */}
+            <div className="pt-2 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-semibold text-slate-300">
+              <div className="flex items-center space-x-1.5">
+                <CheckCircle2 size={14} className="text-emerald-400" />
+                <span>Organización Oficial Distrito D3</span>
+              </div>
+              <div className="flex items-center space-x-1.5">
+                <CheckCircle2 size={14} className="text-emerald-400" />
+                <span>Pago en Cuotas con Tarjeta</span>
+              </div>
+              <div className="flex items-center space-x-1.5">
+                <CheckCircle2 size={14} className="text-emerald-400" />
+                <span>Cupos Limitados por Aforo Oficial</span>
               </div>
             </div>
           </div>
+        </header>
+      </div>
 
-          {/* Reloj de Cuenta Regresiva de Alta Precisión */}
-          <div className="pt-4 max-w-xl mx-auto">
-            <div className="inline-flex items-center space-x-2 text-xs font-extrabold uppercase tracking-widest text-yellow-300 bg-yellow-500/10 border border-yellow-500/20 px-3.5 py-1.5 rounded-full mb-4">
-              <Clock size={13} className="text-yellow-400 animate-spin" />
-              <span>La cuenta regresiva ha comenzado:</span>
-            </div>
-
-            <div className="grid grid-cols-4 gap-2.5 sm:gap-4">
-              {[
-                { label: 'Días', value: countdown.days },
-                { label: 'Horas', value: countdown.hours },
-                { label: 'Minutos', value: countdown.minutes },
-                { label: 'Segundos', value: countdown.seconds }
-              ].map((item, idx) => (
-                <div 
-                  key={idx} 
-                  className="relative p-3 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-white/[0.08] to-white/[0.02] border border-yellow-400/30 shadow-[0_10px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl group hover:border-yellow-400/80 hover:scale-105 transition-all duration-300"
-                >
-                  <span className="text-2xl sm:text-4xl lg:text-5xl font-black font-mono text-yellow-300 tracking-tight group-hover:text-yellow-200 transition-colors drop-shadow-[0_2px_10px_rgba(234,179,8,0.4)]">
-                    {String(item.value).padStart(2, '0')}
-                  </span>
-                  <span className="text-[9px] sm:text-[11px] font-black uppercase text-slate-300 mt-1 sm:mt-2 tracking-widest block">
-                    {item.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Action CTAs Principales */}
-          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
-            <button 
-              type="button"
-              onClick={scrollToPreInscripcion}
-              className="w-full sm:w-auto inline-flex items-center justify-center space-x-3 bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-400 hover:from-yellow-400 hover:to-amber-300 text-blue-955 font-black px-8 py-4 sm:py-4.5 rounded-2xl text-base sm:text-lg transition-all duration-300 shadow-[0_10px_35px_rgba(245,158,11,0.4)] hover:shadow-[0_15px_45px_rgba(245,158,11,0.6)] transform hover:-translate-y-1 active:scale-95 min-h-[56px] cursor-pointer group"
-            >
-              <Zap size={20} className="fill-blue-955 group-hover:scale-110 transition-transform" />
-              <span>{config.inscripcionesAbiertas ? 'Pre-regístrate Aquí y Asegura tu Cupo' : 'Ver Inscripciones'}</span>
-              <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
-            </button>
-
-            <a 
-              href="#instalaciones"
-              className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-white/10 hover:bg-white/15 text-white font-extrabold px-6 py-4 rounded-2xl text-sm transition-all border border-white/20 hover:border-yellow-400/50 backdrop-blur-md cursor-pointer"
-            >
-              <Compass size={17} className="text-yellow-400" />
-              <span>Explorar Sede & Programa</span>
-            </a>
-          </div>
-
-          {/* Social Proof & Garantías */}
-          <div className="pt-2 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-semibold text-slate-300">
-            <div className="flex items-center space-x-1.5">
-              <CheckCircle2 size={14} className="text-emerald-400" />
-              <span>Organización Oficial Distrito D3</span>
-            </div>
-            <div className="flex items-center space-x-1.5">
-              <CheckCircle2 size={14} className="text-emerald-400" />
-              <span>Pago en Cuotas con Tarjeta</span>
-            </div>
-            <div className="flex items-center space-x-1.5">
-              <CheckCircle2 size={14} className="text-emerald-400" />
-              <span>Cupos Limitados por Aforo Oficial</span>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* SECCIÓN 2: Alianzas & Patrocinadores Marquee Block — CRISTAL Y ORO */}
+      {/* SECCIÓN 2: Alianzas & Patrocinadores Marquee Block — CRISTAL Y ORO FLOTANTE */}
       <section className="my-10 sm:my-16 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-b from-white/[0.05] via-white/[0.02] to-white/[0.04] border border-white/15 rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-10 shadow-2xl backdrop-blur-xl relative overflow-hidden">
+        <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border-2 border-yellow-500/30 rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-10 shadow-2xl relative overflow-hidden">
           {/* Section Header */}
           <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-white/10 pb-4 sm:pb-6 relative z-10 text-center sm:text-left">
             <div className="flex items-center space-x-3.5">
@@ -1172,8 +1167,8 @@ export default function Convencion() {
           {/* Marquee Track with gradient edge masks */}
           <div className="relative w-full overflow-hidden py-2 sm:py-3">
             {/* Gradient Masks */}
-            <div className="pointer-events-none absolute inset-y-0 left-0 w-12 sm:w-36 bg-gradient-to-r from-[#071125] to-transparent z-20" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-12 sm:w-36 bg-gradient-to-l from-[#071125] to-transparent z-20" />
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-12 sm:w-36 bg-gradient-to-r from-[#0c1a38] to-transparent z-20" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-12 sm:w-36 bg-gradient-to-l from-[#0c1a38] to-transparent z-20" />
 
             {/* Scrolling Marquee Container with Square Slides and Clean Text */}
             <div 
@@ -1284,7 +1279,7 @@ export default function Convencion() {
 
       {/* SECCIÓN 4: Instalaciones del Evento (Colina Country Club) */}
       <section id="instalaciones" className="my-10 sm:my-16 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-10">
-        <div className="bg-gradient-to-b from-white/[0.05] via-white/[0.02] to-white/[0.04] border border-white/15 rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 shadow-2xl backdrop-blur-xl space-y-8 sm:space-y-12">
+        <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border-2 border-yellow-500/30 rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 shadow-2xl space-y-8 sm:space-y-12 relative overflow-hidden">
           {/* Header */}
           <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4">
             <div className="inline-flex items-center space-x-2 bg-yellow-500/15 border border-yellow-500/30 text-yellow-300 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
@@ -1452,7 +1447,7 @@ export default function Convencion() {
 
       {/* SECCIÓN 6: Experiencias Únicas Block */}
       <section className="my-10 sm:my-16 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-b from-white/[0.05] via-white/[0.02] to-white/[0.04] text-white border border-white/15 rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 shadow-2xl backdrop-blur-xl relative">
+        <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border-2 border-yellow-500/30 rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 shadow-2xl relative overflow-hidden">
           <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4 mb-10 sm:mb-14">
             <div className="inline-flex items-center space-x-2 bg-yellow-500/15 border border-yellow-500/30 text-yellow-300 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
               <Compass size={14} className="text-yellow-400" />
@@ -1489,9 +1484,9 @@ export default function Convencion() {
         </div>
       </section>
 
-      {/* SECCIÓN 7: Formulario de Pre-registro Digital Guiado (4 Pasos) — GALA & CONVERSIÓN */}
+      {/* SECCIÓN 7: Formulario de Pre-registro Digital Guiado (4 Pasos) — GALA & CONVERSIÓN FLOTANTE */}
       <section id="pre-inscripcion" className="my-10 sm:my-20 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-10">
-        <div className="bg-gradient-to-b from-white/[0.06] via-white/[0.02] to-white/[0.05] text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 lg:p-14 border border-yellow-500/30 shadow-[0_25px_60px_rgba(0,0,0,0.7)] backdrop-blur-2xl relative overflow-hidden">
+        <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-12 lg:p-14 border-2 border-yellow-500/40 shadow-[0_25px_60px_rgba(0,0,0,0.35)] relative overflow-hidden">
           {/* Acentos de Luz de Fondo */}
           <div className="absolute top-0 right-1/4 w-96 h-96 bg-yellow-500/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2" />
           <div className="absolute bottom-0 left-10 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none translate-y-1/3" />
