@@ -524,6 +524,14 @@ export default function Convencion() {
     }
   };
 
+  const scrollToInstalaciones = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const element = document.getElementById('instalaciones');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -1113,13 +1121,14 @@ export default function Convencion() {
                 <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </button>
 
-              <a 
-                href="#instalaciones"
+              <button 
+                type="button"
+                onClick={scrollToInstalaciones}
                 className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-white/10 hover:bg-white/15 text-white font-extrabold px-6 py-4 rounded-2xl text-sm transition-all border border-white/20 hover:border-yellow-400/50 backdrop-blur-md cursor-pointer"
               >
                 <Compass size={17} className="text-yellow-400" />
                 <span>Explorar Sede & Programa</span>
-              </a>
+              </button>
             </div>
 
             {/* Social Proof & Garantías */}

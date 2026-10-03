@@ -1123,7 +1123,7 @@ export const firebaseService = {
         fotoSede: "https://images.unsplash.com/photo-1590001155093-a3c66ab0c3ff?auto=format&fit=crop&w=800&q=80",
         fotoSedeEtiqueta: "Sede Oficial",
         fotoSedeDescripcion: "Teatro Municipal de Quetzaltenango",
-        inscripcionesAbiertas: false,
+        inscripcionesAbiertas: true,
         actividadesCulturales: [
           {
             id: "act_1",
@@ -1178,7 +1178,7 @@ export const firebaseService = {
         fotoSede: "https://images.unsplash.com/photo-1590001155093-a3c66ab0c3ff?auto=format&fit=crop&w=800&q=80",
         fotoSedeEtiqueta: "Sede Oficial",
         fotoSedeDescripcion: "Teatro Municipal de Quetzaltenango",
-        inscripcionesAbiertas: false,
+        inscripcionesAbiertas: true,
         actividadesCulturales: [
           {
             id: "act_1",
