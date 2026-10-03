@@ -1608,10 +1608,12 @@ export default function Convencion() {
 
       {/* SECCIÓN 7: Formulario de Pre-registro Digital Guiado (4 Pasos) — GALA & CONVERSIÓN FLOTANTE */}
       <section id="pre-inscripcion" className="my-6 sm:my-20 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8 scroll-mt-10">
-        <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white rounded-2xl sm:rounded-[2.5rem] p-3.5 sm:p-12 lg:p-14 border sm:border-2 border-yellow-500/40 shadow-[0_25px_60px_rgba(0,0,0,0.35)] relative overflow-hidden">
-          {/* Acentos de Luz de Fondo */}
-          <div className="absolute top-0 right-1/4 w-96 h-96 bg-yellow-500/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2" />
-          <div className="absolute bottom-0 left-10 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none translate-y-1/3" />
+        <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white rounded-2xl sm:rounded-[2.5rem] p-3.5 sm:p-12 lg:p-14 border sm:border-2 border-yellow-500/40 shadow-[0_25px_60px_rgba(0,0,0,0.35)] relative">
+          {/* Acentos de Luz de Fondo encapsulados para no recortar menús desplegables */}
+          <div className="absolute inset-0 rounded-2xl sm:rounded-[2.5rem] overflow-hidden pointer-events-none z-0">
+            <div className="absolute top-0 right-1/4 w-96 h-96 bg-yellow-500/10 rounded-full blur-3xl -translate-y-1/2" />
+            <div className="absolute bottom-0 left-10 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl translate-y-1/3" />
+          </div>
 
           <div className="relative z-10">
             
@@ -1872,7 +1874,7 @@ export default function Convencion() {
                             <ChevronDown size={18} className={`text-yellow-400 transition-transform duration-200 shrink-0 ml-2 ${openDropdown === 'cargo' ? 'rotate-180' : ''}`} />
                           </button>
                           {openDropdown === 'cargo' && (
-                            <div className="absolute z-[100] mt-2 w-full rounded-2xl border-2 border-yellow-500/60 bg-[#06152d] shadow-[0_20px_50px_rgba(0,0,0,0.95)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="absolute z-[150] mt-2 w-full rounded-2xl border-2 border-yellow-500/60 bg-[#06152d] shadow-[0_25px_60px_rgba(0,0,0,0.95)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-60 sm:max-h-72 overflow-y-auto no-scrollbar">
                               {CARGO_OPTIONS.map((opt) => (
                                 <button
                                   key={opt.value}
