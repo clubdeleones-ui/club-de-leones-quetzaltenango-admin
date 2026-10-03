@@ -42,6 +42,7 @@ import {
 import QRCode from 'qrcode';
 import { firebaseService } from '../../services/firebaseService';
 import { telegramService } from '../../services/telegramService';
+import { gmailService, TipoCorreoConvencion, DEFAULT_GMAIL_SENDER, DEFAULT_GOOGLE_SCRIPT_URL } from '../../services/gmailService';
 import { compressImageFile, validateImageFile, removeDarkBackgroundFromDataUrl } from '../../utils/imageCompressor';
 import { ConvencionConfig, ConvencionRegistro, ConvencionActividad, ConvencionExperiencia, ConvencionAlianza } from '../../types';
 import { ALIANZAS_CONVENCION } from '../Convencion';
@@ -137,6 +138,79 @@ export function AdminConvencion() {
   const [qrModalRegistro, setQrModalRegistro] = useState<ConvencionRegistro | null>(null);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const [isCopiedQr, setIsCopiedQr] = useState(false);
+
+  // Modal de Envío por Gmail
+  const [emailModalRegistro, setEmailModalRegistro] = useState<ConvencionRegistro | null>(null);
+  const [emailTipo, setEmailTipo] = useState<TipoCorreoConvencion>('pago_confirmado');
+  const [emailSubject, setEmailSubject] = useState<string>('');
+  const [emailBody, setEmailBody] = useState<string>('');
+  const [isSendingEmail, setIsSendingEmail] = useState<boolean>(false);
+  const [isTestingGmail, setIsTestingGmail] = useState<boolean>(false);
+  const [showScriptGuideModal, setShowScriptGuideModal] = useState<boolean>(false);
+  const [isCopiedScriptCode, setIsCopiedScriptCode] = useState<boolean>(false);
+
+  const handleOpenEmailModal = (reg: ConvencionRegistro, tipo: TipoCorreoConvencion = 'pago_confirmado') => {
+    setEmailModalRegistro(reg);
+    setEmailTipo(tipo);
+    const tmpl = gmailService.generateTemplate(tipo, reg);
+    setEmailSubject(tmpl.asunto);
+    setEmailBody(tmpl.cuerpoTexto);
+  };
+
+  const handleEmailTipoChange = (nuevoTipo: TipoCorreoConvencion) => {
+    setEmailTipo(nuevoTipo);
+    if (emailModalRegistro) {
+      const tmpl = gmailService.generateTemplate(nuevoTipo, emailModalRegistro);
+      setEmailSubject(tmpl.asunto);
+      setEmailBody(tmpl.cuerpoTexto);
+    }
+  };
+
+  const handleSendSingleEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!emailModalRegistro) return;
+    setIsSendingEmail(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const ok = await gmailService.sendRegistrationEmail(
+        emailModalRegistro,
+        emailTipo,
+        { customSubject: emailSubject, customBody: emailBody },
+        config.googleScriptUrl
+      );
+      if (ok) {
+        setSuccessMsg(`¡Correo enviado con éxito a ${emailModalRegistro.email}!`);
+        setEmailModalRegistro(null);
+        setTimeout(() => setSuccessMsg(''), 4000);
+      } else {
+        setErrorMsg(`No se pudo enviar el correo a ${emailModalRegistro.email}.`);
+      }
+    } catch (err) {
+      setErrorMsg("Ocurrió un error al enviar el correo.");
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  const handleTestGmailConnection = async () => {
+    setIsTestingGmail(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const ok = await gmailService.sendTestEmail('clubdeleonesquetzaltenango@gmail.com', config.googleScriptUrl);
+      if (ok) {
+        setSuccessMsg('¡Correo de prueba enviado con éxito a clubdeleonesquetzaltenango@gmail.com!');
+        setTimeout(() => setSuccessMsg(''), 4000);
+      } else {
+        setErrorMsg('No se pudo enviar el correo de prueba. Revisa la URL del Webhook de Google Apps Script.');
+      }
+    } catch (e) {
+      setErrorMsg('Error al conectar con el Webhook de Google Apps Script.');
+    } finally {
+      setIsTestingGmail(false);
+    }
+  };
 
   const getCleanPhone = (phone?: string) => {
     const digits = (phone || '').replace(/\D/g, '');
@@ -739,9 +813,20 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
   const handleUpdateEstadoPago = async (id: string, nuevoEstado: 'Pendiente' | 'Pagado' | 'Checkout_Creado') => {
     try {
       await firebaseService.updateConvencionRegistroStatus(id, nuevoEstado);
+      const targetReg = registros.find(r => r.id === id);
       setRegistros(prev => prev.map(r => r.id === id ? { ...r, estadoPago: nuevoEstado } : r));
-      setSuccessMsg(`Estado de pago actualizado a "${nuevoEstado}".`);
-      setTimeout(() => setSuccessMsg(''), 3000);
+
+      if (nuevoEstado === 'Pagado' && targetReg && targetReg.email) {
+        // Enviar automáticamente correo de confirmación de pago con entrada QR oficial
+        const updatedReg = { ...targetReg, estadoPago: nuevoEstado };
+        gmailService.sendRegistrationEmail(updatedReg, 'pago_confirmado', undefined, config.googleScriptUrl).catch(e => {
+          console.warn("No se pudo enviar correo automático de pago:", e);
+        });
+        setSuccessMsg(`Estado actualizado a "Pagado" y confirmación con Entrada QR enviada a ${targetReg.email}.`);
+      } else {
+        setSuccessMsg(`Estado de pago actualizado a "${nuevoEstado}".`);
+      }
+      setTimeout(() => setSuccessMsg(''), 4000);
     } catch (error) {
       console.error("Error al actualizar estado de pago:", error);
       setErrorMsg("No se pudo actualizar el estado de pago.");
@@ -783,13 +868,13 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const enviados = await telegramService.sendBroadcastEmail(
+      const enviados = await gmailService.sendMassBroadcast(
         registros,
         broadcastSubject,
         broadcastBody,
         config.googleScriptUrl
       );
-      setSuccessMsg(`¡Boletín enviado exitosamente a los ${registros.length} participantes pre-inscritos!`);
+      setSuccessMsg(`¡Boletín enviado exitosamente a los ${enviados} participantes con correo válido!`);
       setBroadcastBody('');
     } catch (err: any) {
       setErrorMsg("Ocurrió un error al enviar la difusión masiva.");
@@ -1175,23 +1260,73 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                     </div>
                   </div>
 
-                  {/* Plantilla de Correo de Confirmación */}
-                  <div className="md:col-span-2 space-y-2 pt-2">
-                    <label className="text-xs font-extrabold uppercase tracking-wider text-blue-900 block" htmlFor="mensajeBienvenidaEmail">
-                      Texto del Correo Electrónico de Confirmación
-                    </label>
-                    <textarea
-                      id="mensajeBienvenidaEmail"
-                      name="mensajeBienvenidaEmail"
-                      rows={3}
-                      value={config.mensajeBienvenidaEmail || '¡Bienvenido, Compañero León! Tu pre-inscripción a la Convención ha sido confirmada con éxito. A partir de este momento recibirás información oportuna de primera mano sobre los avances, actividades y beneficios tempranos por tu confirmación.'}
-                      onChange={handleConfigChange}
-                      placeholder="Escribe el cuerpo del correo que se enviará automáticamente..."
-                      className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl p-4 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
-                    />
-                    <p className="text-[10px] text-slate-400">
-                      Este texto será enviado automáticamente desde clubdeleonesquetzaltenango@gmail.com al correo del socio al pre-inscribirse.
-                    </p>
+                  {/* Configuración de Gmail & Webhook de Google Apps Script */}
+                  <div className="md:col-span-2 bg-slate-50 border border-slate-200/80 rounded-2xl p-5 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
+                      <div>
+                        <h4 className="text-xs font-black uppercase tracking-wider text-blue-900 flex items-center space-x-2">
+                          <Mail size={16} className="text-rose-600" />
+                          <span>Automatización de Correos con Gmail</span>
+                        </h4>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Envíos automáticos desde <strong>clubdeleonesquetzaltenango@gmail.com</strong> al pre-inscribirse o confirmar pago.
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={handleTestGmailConnection}
+                          disabled={isTestingGmail}
+                          className="bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center space-x-1.5 disabled:opacity-50 cursor-pointer shadow-sm"
+                        >
+                          {isTestingGmail ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} className="text-rose-600" />}
+                          <span>Probar Envío</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowScriptGuideModal(true)}
+                          className="bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center space-x-1 cursor-pointer"
+                        >
+                          <span>Guía Apps Script</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs font-bold text-slate-700 block mb-1" htmlFor="googleScriptUrl">
+                          URL del Webhook de Google Apps Script (GmailApp)
+                        </label>
+                        <input
+                          id="googleScriptUrl"
+                          name="googleScriptUrl"
+                          type="url"
+                          value={config.googleScriptUrl || ''}
+                          onChange={handleConfigChange}
+                          placeholder={DEFAULT_GOOGLE_SCRIPT_URL}
+                          className="w-full bg-white border border-slate-200 focus:border-blue-900 rounded-xl px-4 py-2.5 text-slate-800 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          Deja en blanco para usar la URL oficial por defecto desplegada en el proyecto.
+                        </p>
+                      </div>
+
+                      {/* Plantilla de Correo de Pre-Inscripción */}
+                      <div>
+                        <label className="text-xs font-bold text-slate-700 block mb-1" htmlFor="mensajeBienvenidaEmail">
+                          Texto del Correo de Pre-Inscripción (Bienvenida)
+                        </label>
+                        <textarea
+                          id="mensajeBienvenidaEmail"
+                          name="mensajeBienvenidaEmail"
+                          rows={2}
+                          value={config.mensajeBienvenidaEmail || '¡Bienvenido, Compañero León! Tu pre-inscripción a la Convención ha sido confirmada con éxito. A partir de este momento recibirás información oportuna de primera mano sobre los avances, actividades y beneficios tempranos por tu confirmación.'}
+                          onChange={handleConfigChange}
+                          placeholder="Escribe el cuerpo del correo que se enviará automáticamente..."
+                          className="w-full bg-white border border-slate-200 focus:border-blue-900 rounded-xl p-3.5 text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                 </div>
@@ -1743,6 +1878,19 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                           </a>
                         ) : null}
 
+                        {/* Botón Gmail */}
+                        {reg.email && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEmailModal(reg, reg.estadoPago === 'Pagado' ? 'pago_confirmado' : 'recordatorio_pago')}
+                            className="inline-flex items-center space-x-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                            title="Enviar correo informativo vía Gmail"
+                          >
+                            <Mail size={14} className="text-rose-600" />
+                            <span>Gmail</span>
+                          </button>
+                        )}
+
                         {/* Botón Reenviar Entrada QR */}
                         <button
                           type="button"
@@ -2265,15 +2413,20 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                     )}
                   </button>
 
-                  {/* Enviar por Correo */}
+                  {/* Enviar por Gmail */}
                   {qrModalRegistro.email && (
-                    <a
-                      href={`mailto:${qrModalRegistro.email}?subject=${encodeURIComponent(`Entrada y Confirmación Oficial - LXXIV Convención Club de Leones (${qrModalRegistro.nombre})`)}&body=${encodeURIComponent(getWhatsAppMessage(qrModalRegistro))}`}
-                      className="flex items-center justify-center space-x-2 bg-blue-50 hover:bg-blue-100 text-blue-900 font-extrabold px-4 py-3 rounded-2xl text-xs uppercase tracking-wider transition-all border border-blue-200 cursor-pointer"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const target = qrModalRegistro;
+                        setQrModalRegistro(null);
+                        handleOpenEmailModal(target, target.estadoPago === 'Pagado' ? 'pago_confirmado' : 'pre_registro');
+                      }}
+                      className="flex items-center justify-center space-x-2 bg-rose-50 hover:bg-rose-100 text-rose-900 font-extrabold px-4 py-3 rounded-2xl text-xs uppercase tracking-wider transition-all border border-rose-200 cursor-pointer shadow-sm active:scale-95"
                     >
-                      <Mail size={16} />
-                      <span>Enviar por Correo</span>
-                    </a>
+                      <Mail size={16} className="text-rose-600" />
+                      <span>Enviar Entrada por Gmail</span>
+                    </button>
                   )}
                 </div>
               </div>
@@ -2288,6 +2441,306 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                   Cerrar
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Envío de Correo por Gmail */}
+      {emailModalRegistro && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 overflow-hidden">
+            {/* Header del Modal */}
+            <div className="bg-gradient-to-r from-blue-900 via-indigo-950 to-blue-950 text-white p-5 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-600/30 border border-rose-400/40 flex items-center justify-center text-white">
+                  <Mail size={20} className="text-rose-300" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white leading-tight">
+                    Enviar Correo vía Gmail
+                  </h3>
+                  <p className="text-[11px] text-blue-200">
+                    Desde: <strong className="text-yellow-300">{DEFAULT_GMAIL_SENDER}</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEmailModalRegistro(null)}
+                className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Formulario */}
+            <form onSubmit={handleSendSingleEmail} className="p-6 space-y-4">
+              {/* Info Destinatario */}
+              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <div>
+                  <span className="text-slate-400 font-semibold">Destinatario: </span>
+                  <span className="font-extrabold text-slate-800">{emailModalRegistro.nombre}</span>
+                  <div className="text-slate-500 font-mono text-[11px]">{emailModalRegistro.email}</div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                    emailModalRegistro.estadoPago === 'Pagado'
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                      : 'bg-amber-100 text-amber-800 border border-amber-300'
+                  }`}>
+                    {emailModalRegistro.estadoPago || 'Pendiente'}
+                  </span>
+                  <span className="font-mono text-slate-400 text-[10px]">Folio: {emailModalRegistro.id}</span>
+                </div>
+              </div>
+
+              {/* Selector de Tipo de Correo */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Plantilla del Correo Informativo
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleEmailTipoChange('pago_confirmado')}
+                    className={`p-2.5 rounded-xl border text-left text-[11px] font-bold transition-all cursor-pointer ${
+                      emailTipo === 'pago_confirmado'
+                        ? 'bg-emerald-50 border-emerald-400 text-emerald-900 ring-2 ring-emerald-300'
+                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    🎟️ Entrada QR & Pago
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleEmailTipoChange('pre_registro')}
+                    className={`p-2.5 rounded-xl border text-left text-[11px] font-bold transition-all cursor-pointer ${
+                      emailTipo === 'pre_registro'
+                        ? 'bg-blue-50 border-blue-400 text-blue-900 ring-2 ring-blue-300'
+                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    🦁 Pre-Inscripción
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleEmailTipoChange('recordatorio_pago')}
+                    className={`p-2.5 rounded-xl border text-left text-[11px] font-bold transition-all cursor-pointer ${
+                      emailTipo === 'recordatorio_pago'
+                        ? 'bg-amber-50 border-amber-400 text-amber-900 ring-2 ring-amber-300'
+                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    ⏳ Recordar Pago
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleEmailTipoChange('info_sedes_hospedaje')}
+                    className={`p-2.5 rounded-xl border text-left text-[11px] font-bold transition-all cursor-pointer ${
+                      emailTipo === 'info_sedes_hospedaje'
+                        ? 'bg-indigo-50 border-indigo-400 text-indigo-900 ring-2 ring-indigo-300'
+                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    🏨 Sedes y Hoteles
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleEmailTipoChange('personalizado')}
+                    className={`col-span-2 sm:col-span-1 p-2.5 rounded-xl border text-left text-[11px] font-bold transition-all cursor-pointer ${
+                      emailTipo === 'personalizado'
+                        ? 'bg-purple-50 border-purple-400 text-purple-900 ring-2 ring-purple-300'
+                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    ✍️ Personalizado
+                  </button>
+                </div>
+              </div>
+
+              {/* Asunto */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Asunto del Correo
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-900/10"
+                />
+              </div>
+
+              {/* Mensaje */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Cuerpo del Mensaje (Texto)
+                </label>
+                <textarea
+                  rows={6}
+                  required
+                  value={emailBody}
+                  onChange={(e) => setEmailBody(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/10 leading-relaxed font-sans"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  * El correo se enviará con formato HTML enriquecido institucional con los logos y colores de Lions International.
+                </p>
+              </div>
+
+              {/* Botones de Envío */}
+              <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-2.5">
+                <a
+                  href={gmailService.getGmailComposeUrl({
+                    to: emailModalRegistro.email,
+                    subject: emailSubject,
+                    body: emailBody
+                  })}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-4 py-3 rounded-xl text-xs transition-colors cursor-pointer"
+                  title="Abrir en pestaña de Gmail Web"
+                >
+                  <ExternalLink size={14} />
+                  <span>Abrir en Gmail Web</span>
+                </a>
+
+                <div className="w-full sm:w-auto flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setEmailModalRegistro(null)}
+                    className="w-1/2 sm:w-auto px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSendingEmail}
+                    className="w-1/2 sm:w-auto inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white font-black px-6 py-3 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isSendingEmail ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        <span>Enviando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send size={14} />
+                        <span>Enviar desde Gmail</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Guía de Google Apps Script */}
+      {showScriptGuideModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center space-x-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-900 flex items-center justify-center font-bold">
+                  GS
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">
+                    Instalación de Webhook Gmail en Google Apps Script
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Cuenta: <strong>{DEFAULT_GMAIL_SENDER}</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowScriptGuideModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="text-xs text-slate-600 space-y-3 leading-relaxed">
+              <p>
+                Para habilitar o actualizar los envíos directos desde Gmail sin límites y con alta entregabilidad:
+              </p>
+              <ol className="list-decimal pl-5 space-y-1.5 font-medium text-slate-700">
+                <li>Ingresa a <a href="https://script.google.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline font-bold">script.google.com</a> con <strong>{DEFAULT_GMAIL_SENDER}</strong>.</li>
+                <li>Crea un <strong>Nuevo proyecto</strong>.</li>
+                <li>Pega el código de abajo en <code>Código.gs</code>.</li>
+                <li>Haz clic en <strong>Implementar &gt; Nueva implementación</strong>.</li>
+                <li>Tipo: <strong>Aplicación web</strong>, Ejecutar como: <strong>Yo ({DEFAULT_GMAIL_SENDER})</strong>, Quién tiene acceso: <strong>Cualquiera</strong>.</li>
+                <li>Copia la URL obtenida y pégala en el campo de configuración.</li>
+              </ol>
+
+              <div className="pt-2">
+                <div className="flex items-center justify-between bg-slate-900 text-white px-4 py-2 rounded-t-xl text-[11px] font-mono">
+                  <span>Código.gs (Google Apps Script)</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const code = `function doPost(e) {
+  try {
+    var rawData = e.postData ? e.postData.contents : null;
+    if (!rawData) {
+      return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "No data received" })).setMimeType(ContentService.MimeType.JSON);
+    }
+    var data = JSON.parse(rawData);
+    var destinatario = data.email;
+    var asunto = data.asunto || "LXXV Convención Nacional - Club de Leones Quetzaltenango";
+    var mensajeTexto = data.mensajeBienvenida || "Gracias por comunicarte con el Club de Leones de Quetzaltenango.";
+    var htmlBody = data.htmlBody || null;
+    if (!destinatario) {
+      return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "Falta email destinatario" })).setMimeType(ContentService.MimeType.JSON);
+    }
+    var options = { name: "Club de Leones Quetzaltenango", replyTo: "${DEFAULT_GMAIL_SENDER}" };
+    if (htmlBody) { options.htmlBody = htmlBody; }
+    GmailApp.sendEmail(destinatario, asunto, mensajeTexto, options);
+    return ContentService.createTextOutput(JSON.stringify({ status: "success", message: "Correo enviado a " + destinatario })).setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: error.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
+                      navigator.clipboard.writeText(code);
+                      setIsCopiedScriptCode(true);
+                      setTimeout(() => setIsCopiedScriptCode(false), 3000);
+                    }}
+                    className="text-amber-400 hover:text-amber-300 font-bold flex items-center space-x-1 cursor-pointer"
+                  >
+                    {isCopiedScriptCode ? <Check size={12} /> : <Copy size={12} />}
+                    <span>{isCopiedScriptCode ? '¡Copiado!' : 'Copiar Código'}</span>
+                  </button>
+                </div>
+                <pre className="bg-slate-950 text-slate-300 p-3.5 rounded-b-xl text-[10px] font-mono overflow-x-auto max-h-48">
+{`function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var options = { name: "Club de Leones Quetzaltenango", replyTo: "${DEFAULT_GMAIL_SENDER}" };
+    if (data.htmlBody) options.htmlBody = data.htmlBody;
+    GmailApp.sendEmail(data.email, data.asunto, data.mensajeBienvenida, options);
+    return ContentService.createTextOutput(JSON.stringify({ status: "success" })).setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ error: error.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}`}
+                </pre>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowScriptGuideModal(false)}
+                className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl"
+              >
+                Entendido
+              </button>
             </div>
           </div>
         </div>

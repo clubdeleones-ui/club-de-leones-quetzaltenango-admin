@@ -49,6 +49,7 @@ import {
 import QRCode from 'qrcode';
 import { firebaseService } from '../services/firebaseService';
 import { telegramService } from '../services/telegramService';
+import { gmailService } from '../services/gmailService';
 import { recurrenteService } from '../services/recurrenteService';
 import { ConvencionConfig, ConvencionRegistro } from '../types';
 
@@ -768,6 +769,10 @@ export default function Convencion() {
             if (reg.estadoPago !== 'Pagado') {
               reg.estadoPago = 'Pagado';
               await firebaseService.saveConvencionRegistro(reg);
+              // Enviar correo automático oficial de confirmación de pago y entrada QR por Gmail
+              gmailService.sendRegistrationEmail(reg, 'pago_confirmado', undefined, config?.googleScriptUrl).catch(err => {
+                console.warn("No se pudo enviar correo de confirmación de pago por Gmail:", err);
+              });
             }
             try {
               localStorage.removeItem(CONVENCION_DRAFT_KEY);
@@ -1166,9 +1171,14 @@ export default function Convencion() {
       
       await firebaseService.saveConvencionRegistro(nuevoRegistro);
       
-      // Send webhook & Telegram notifications
-      telegramService.sendGoogleScriptWebhook(nuevoRegistro, config?.googleScriptUrl).catch(err => {
-        console.warn("No se pudo enviar webhook de correo:", err);
+      // Enviar correo informativo automático por Gmail & notificación de Telegram
+      gmailService.sendRegistrationEmail(
+        nuevoRegistro, 
+        'pre_registro', 
+        { customWelcomeText: config?.mensajeBienvenidaEmail }, 
+        config?.googleScriptUrl
+      ).catch(err => {
+        console.warn("No se pudo enviar correo de bienvenida por Gmail:", err);
       });
 
       telegramService.notifyNuevaInscripcionConvencion(

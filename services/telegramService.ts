@@ -1,4 +1,5 @@
 import { ConvencionRegistro } from '../types';
+import { gmailService } from './gmailService';
 
 export const DEFAULT_GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwN-mwP87KpWN7AFjNL5W6bfi_Cc0h2RtZzufyOo15kHlEW-G_sRB7DSW2P1vJujV3V/exec';
 export const DEFAULT_TELEGRAM_BOT_TOKEN = '8649525379:AAEY1ywJt2rWSA8jQf1akXbD4ndCcqfVIiE';
@@ -190,42 +191,12 @@ ${(registro as any).esAcompanante ? `<b>Acompañante de:</b> ${(registro as any)
     customScriptUrl?: string,
     customWelcomeText?: string
   ): Promise<boolean> => {
-    const scriptUrl = customScriptUrl || 
-      (import.meta as any).env?.VITE_GOOGLE_SCRIPT_URL || 
-      DEFAULT_GOOGLE_SCRIPT_URL;
-
-    if (!scriptUrl) {
-      console.warn("No se encontró la URL del Webhook de Google Apps Script.");
-      return false;
-    }
-
-    const defaultMsg = "¡Bienvenido, Compañero León! Tu pre-inscripción a la Convención ha sido confirmada con éxito. A partir de este momento recibirás información oportuna de primera mano sobre los avances, actividades y beneficios tempranos por tu confirmación.";
-
-    try {
-      await fetch(scriptUrl, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id: registro.id,
-          nombre: registro.nombre,
-          email: registro.email,
-          telefono: registro.telefono,
-          club: registro.club,
-          cargo: registro.cargo,
-          distrito: registro.distrito,
-          fechaRegistro: registro.fechaRegistro,
-          asunto: "¡Bienvenido! Pre-Inscripción Confirmada - Convención Lionística Quetzaltenango",
-          mensajeBienvenida: customWelcomeText || defaultMsg
-        })
-      });
-      return true;
-    } catch (error) {
-      console.error("Error enviando webhook a Google Apps Script:", error);
-      return false;
-    }
+    return await gmailService.sendRegistrationEmail(
+      registro, 
+      'pre_registro', 
+      { customWelcomeText }, 
+      customScriptUrl
+    );
   },
 
   /**
@@ -237,36 +208,12 @@ ${(registro as any).esAcompanante ? `<b>Acompañante de:</b> ${(registro as any)
     mensajeBody: string, 
     customScriptUrl?: string
   ): Promise<number> => {
-    const scriptUrl = customScriptUrl || 
-      (import.meta as any).env?.VITE_GOOGLE_SCRIPT_URL || 
-      DEFAULT_GOOGLE_SCRIPT_URL;
-
-    if (!scriptUrl || destinatarios.length === 0) return 0;
-
-    let enviados = 0;
-    for (const reg of destinatarios) {
-      try {
-        await fetch(scriptUrl, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: reg.id,
-            nombre: reg.nombre,
-            email: reg.email,
-            telefono: reg.telefono,
-            club: reg.club,
-            cargo: reg.cargo,
-            asunto: asunto,
-            mensajeBienvenida: mensajeBody,
-            esBoletinMasivo: true
-          })
-        });
-        enviados++;
-      } catch (e) {
-        console.error("Error enviando boletín a " + reg.email, e);
-      }
-    }
-    return enviados;
+    return await gmailService.sendMassBroadcast(
+      destinatarios, 
+      asunto, 
+      mensajeBody, 
+      customScriptUrl
+    );
   }
 };
+
