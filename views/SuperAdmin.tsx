@@ -1,5 +1,4 @@
-import { safeSetItem } from '../utils/storage';
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, Suspense } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { 
   MOCK_SOCIOS, 
@@ -98,23 +97,35 @@ import {
 import { generateActaPDF, generateActaCode, generateReciboPagoPDF, generateAgendaPDF } from '../utils/pdfGenerator';
 import { FormattedActa } from '../components/FormattedActa';
 import { compressImageFile, validateImageFile } from '../utils/imageCompressor';
-import { ParqueoManager } from '../components/ParqueoManager';
-import { Presupuestos } from './Presupuestos';
-import { Comisiones } from './Comisiones';
-import { MinutasComisiones } from './MinutasComisiones';
-import { Afiliacion } from './Afiliacion';
-import { Inventario } from './Inventario';
-import { GaleriaAdmin } from './GaleriaAdmin';
-import { AgendaContactos } from './AgendaContactos';
-import { LineaTiempoAdmin } from './LineaTiempoAdmin';
-import { AsignacionFunciones } from './AsignacionFunciones';
-import { RequerimientosActividades } from './RequerimientosActividades';
-import { AdminActas } from './admin/AdminActas';
-import { AdminCuotas } from './admin/AdminCuotas';
-import { AdminCalendario } from './admin/AdminCalendario';
-import { AdminConvencion } from './admin/AdminConvencion';
-import { BibliotecaSolicitudesSecretaria } from './BibliotecaSolicitudesSecretaria';
-import { NeveraAdmin } from './NeveraAdmin';
+import { lazyWithRetry } from '../utils/lazyRetry';
+
+// Lazy loading sub-tabs to reduce SuperAdmin bundle size and improve load times
+const ParqueoManager = lazyWithRetry(() => import('../components/ParqueoManager').then(m => ({ default: m.ParqueoManager })), 'AdminParqueo');
+const Presupuestos = lazyWithRetry(() => import('./Presupuestos').then(m => ({ default: m.Presupuestos })), 'Presupuestos');
+const Comisiones = lazyWithRetry(() => import('./Comisiones').then(m => ({ default: m.Comisiones })), 'Comisiones');
+const MinutasComisiones = lazyWithRetry(() => import('./MinutasComisiones').then(m => ({ default: m.MinutasComisiones })), 'MinutasComisiones');
+const Afiliacion = lazyWithRetry(() => import('./Afiliacion').then(m => ({ default: m.Afiliacion })), 'Afiliacion');
+const Inventario = lazyWithRetry(() => import('./Inventario').then(m => ({ default: m.Inventario })), 'Inventario');
+const GaleriaAdmin = lazyWithRetry(() => import('./GaleriaAdmin').then(m => ({ default: m.GaleriaAdmin })), 'GaleriaAdmin');
+const AgendaContactos = lazyWithRetry(() => import('./AgendaContactos').then(m => ({ default: m.AgendaContactos })), 'AgendaContactos');
+const LineaTiempoAdmin = lazyWithRetry(() => import('./LineaTiempoAdmin').then(m => ({ default: m.LineaTiempoAdmin })), 'LineaTiempoAdmin');
+const AsignacionFunciones = lazyWithRetry(() => import('./AsignacionFunciones'), 'AsignacionFunciones');
+const RequerimientosActividades = lazyWithRetry(() => import('./RequerimientosActividades'), 'RequerimientosActividades');
+const AdminActas = lazyWithRetry(() => import('./admin/AdminActas').then(m => ({ default: m.AdminActas })), 'AdminActas');
+const AdminCuotas = lazyWithRetry(() => import('./admin/AdminCuotas').then(m => ({ default: m.AdminCuotas })), 'AdminCuotas');
+const AdminCalendario = lazyWithRetry(() => import('./admin/AdminCalendario').then(m => ({ default: m.AdminCalendario })), 'AdminCalendario');
+const AdminConvencion = lazyWithRetry(() => import('./admin/AdminConvencion').then(m => ({ default: m.AdminConvencion })), 'AdminConvencion');
+const BibliotecaSolicitudesSecretaria = lazyWithRetry(() => import('./BibliotecaSolicitudesSecretaria').then(m => ({ default: m.BibliotecaSolicitudesSecretaria })), 'BibliotecaSolicitudesSecretaria');
+const NeveraAdmin = lazyWithRetry(() => import('./NeveraAdmin'), 'NeveraAdmin');
+
+const TabLoadingFallback: React.FC = () => (
+  <div className="flex flex-col items-center justify-center p-16 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm min-h-[350px] animate-in fade-in duration-300">
+    <div className="w-10 h-10 border-4 border-blue-900 border-t-amber-500 rounded-full animate-spin"></div>
+    <p className="mt-4 text-xs font-black uppercase tracking-widest text-slate-400 animate-pulse">
+      Cargando módulo...
+    </p>
+  </div>
+);
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
 
 const CATEGORIAS_MODULOS = [
@@ -5404,13 +5415,25 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           )}
 
           {/* TAB: ACTIVIDADES */}
-          {activeTab === 'calendario' && <AdminCalendario />}
+          {activeTab === 'calendario' && (
+            <Suspense fallback={<TabLoadingFallback />}>
+              <AdminCalendario />
+            </Suspense>
+          )}
 
           {/* TAB: CONTROL DE CUOTAS */}
-          {activeTab === 'cuotas' && <AdminCuotas />}
+          {activeTab === 'cuotas' && (
+            <Suspense fallback={<TabLoadingFallback />}>
+              <AdminCuotas />
+            </Suspense>
+          )}
 
           {/* TAB: LIBRO DE ACTAS */}
-          {activeTab === 'actas' && <AdminActas user={user} />}
+          {activeTab === 'actas' && (
+            <Suspense fallback={<TabLoadingFallback />}>
+              <AdminActas user={user} />
+            </Suspense>
+          )}
 
           {/* TAB: DONACIONES RECIBIDAS */}
           {activeTab === 'donaciones' && (
@@ -5749,37 +5772,59 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
             </div>
           )}
           {activeTab === 'parqueo' && (
-            <ParqueoManager />
+            <Suspense fallback={<TabLoadingFallback />}>
+              <ParqueoManager />
+            </Suspense>
           )}
           {activeTab === 'nevera_admin' && (
-            <NeveraAdmin />
+            <Suspense fallback={<TabLoadingFallback />}>
+              <NeveraAdmin />
+            </Suspense>
           )}
           {activeTab === 'presupuestos' && (
-            <Presupuestos />
+            <Suspense fallback={<TabLoadingFallback />}>
+              <Presupuestos />
+            </Suspense>
           )}
           {activeTab === 'comisiones' && (
-            <Comisiones />
+            <Suspense fallback={<TabLoadingFallback />}>
+              <Comisiones />
+            </Suspense>
           )}
           {activeTab === 'minutas' && (
-            <MinutasComisiones />
+            <Suspense fallback={<TabLoadingFallback />}>
+              <MinutasComisiones />
+            </Suspense>
           )}
           {activeTab === 'requerimientos_actividades' && (
-            <RequerimientosActividades user={user} />
+            <Suspense fallback={<TabLoadingFallback />}>
+              <RequerimientosActividades user={user} />
+            </Suspense>
           )}
           {activeTab === 'afiliacion' && (
-            <Afiliacion user={user} />
+            <Suspense fallback={<TabLoadingFallback />}>
+              <Afiliacion user={user} />
+            </Suspense>
           )}
           {activeTab === 'inventario' && (
-            <Inventario />
+            <Suspense fallback={<TabLoadingFallback />}>
+              <Inventario />
+            </Suspense>
           )}
           {activeTab === 'galeria_admin' && (
-            <GaleriaAdmin />
+            <Suspense fallback={<TabLoadingFallback />}>
+              <GaleriaAdmin />
+            </Suspense>
           )}
           {activeTab === 'linea_tiempo_admin' && (
-            <LineaTiempoAdmin />
+            <Suspense fallback={<TabLoadingFallback />}>
+              <LineaTiempoAdmin />
+            </Suspense>
           )}
           {activeTab === 'agenda_contactos' && (
-            <AgendaContactos />
+            <Suspense fallback={<TabLoadingFallback />}>
+              <AgendaContactos />
+            </Suspense>
           )}
           {activeTab === 'presidencia' && (
             renderControlSolicitudesList()
@@ -5791,13 +5836,19 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
             renderRankingLionistico()
           )}
           {activeTab === 'asignacion_funciones' && (
-            <AsignacionFunciones />
+            <Suspense fallback={<TabLoadingFallback />}>
+              <AsignacionFunciones />
+            </Suspense>
           )}
           {activeTab === 'convencion_admin' && (
-            <AdminConvencion />
+            <Suspense fallback={<TabLoadingFallback />}>
+              <AdminConvencion />
+            </Suspense>
           )}
           {activeTab === 'archivo_solicitudes_secretaria' && (
-            <BibliotecaSolicitudesSecretaria user={user} />
+            <Suspense fallback={<TabLoadingFallback />}>
+              <BibliotecaSolicitudesSecretaria user={user} />
+            </Suspense>
           )}
         </main>
       </div>
