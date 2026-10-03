@@ -45,18 +45,16 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const isEvaluationView = location.pathname.startsWith('/ficha-evaluacion') || location.pathname === '/evaluacion-compartida';
-  const isPublicRoute = [
-    '/',
-    '/actividades',
-    '/galeria',
-    '/historia',
-    '/convencion',
-    '/programas/futuro',
+  const isProtectedRoute = [
+    '/dashboard',
+    '/admin',
     '/socios',
-    '/solicitudes',
-    '/donar',
-    '/proponer-socio'
-  ].includes(location.pathname);
+    '/estatutos',
+    '/retencion',
+    '/actas'
+  ].some(route => location.pathname === route || location.pathname.startsWith(route + '/'));
+
+  const isPublicRoute = !isProtectedRoute && location.pathname !== '/login';
   const dropdownRef = useRef<HTMLDivElement>(null);
   const programasRef = useRef<HTMLDivElement>(null);
 

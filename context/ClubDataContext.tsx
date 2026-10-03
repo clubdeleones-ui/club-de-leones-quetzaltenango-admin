@@ -202,9 +202,12 @@ interface ClubDataContextType {
   };
 }
 
-const ClubDataContext = createContext<ClubDataContextType | undefined>(undefined);
+interface ClubDataProviderProps {
+  children: React.ReactNode;
+  isAuthenticated?: boolean;
+}
 
-export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const ClubDataProvider: React.FC<ClubDataProviderProps> = ({ children, isAuthenticated = false }) => {
   // 1. Initialize state from LocalStorage or constant fallbacks (for offline/instant load)
   const [socios, setSocios] = useState<Socio[]>(() => getLocalData(KEYS.SOCIOS, MOCK_SOCIOS));
   const [propuestas, setPropuestas] = useState<PropuestaSocio[]>(() => getLocalData(KEYS.PROPUESTAS, MOCK_PROPUESTAS));
@@ -248,75 +251,13 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     requerimientosActividades: true,
   });
 
-  // 2. Sync mock data to Firestore once if collection is empty, and run cleaning migrations
+  // 2. Limpieza de claves obsoletas de caché local (sin tocar producción)
   useEffect(() => {
-    // Clean up old fragmented keys to free up space
     const oldKeys = ['club_leones_socios_v3', 'club_leones_socios_v4'];
     oldKeys.forEach(k => localStorage.removeItem(k));
-
-    const performInitialSync = async () => {
-      try {
-        const isInit = await firebaseService.isSystemInitialized();
-        if (isInit) {
-          console.log("El sistema ya está inicializado. Omitiendo sincronización de datos de prueba.");
-          return;
-        }
-
-        await firebaseService.syncInitialSocios(MOCK_SOCIOS);
-        await firebaseService.syncInitialActividades(MOCK_ACTIVIDADES);
-        await firebaseService.syncInitialGaleria(MOCK_GALERIA);
-        await firebaseService.syncInitialActas(MOCK_ACTAS);
-        await firebaseService.syncInitialRequerimientos(MOCK_REQUERIMIENTOS);
-        
-        await firebaseService.setSystemInitialized();
-        console.log("Datos de prueba sincronizados e inicialización guardada en Firestore.");
-      } catch (err) {
-        console.error("Error performing initial mock data sync:", err);
-      }
-    };
-
-    const cleanPaymentsMigration = async () => {
-      const MIGRATION_KEY = 'club_leones_payments_cleared_2026_v2';
-      if (localStorage.getItem(MIGRATION_KEY) !== 'true') {
-        try {
-          // Clear local storage cache
-          localStorage.removeItem('club_leones_socios');
-          
-          // Clear Firestore socios payment histories
-          const sociosCol = collection(db, "socios");
-          const snapshot = await getDocs(sociosCol);
-          if (!snapshot.empty) {
-            for (const docSnap of snapshot.docs) {
-              const data = docSnap.data();
-              if ((data.historialPagos && data.historialPagos.length > 0) || data.montoPendiente !== 0 || data.estadoCuotas !== 'Pendiente') {
-                await setDoc(doc(db, "socios", docSnap.id), {
-                  ...data,
-                  historialPagos: [],
-                  montoPendiente: 0,
-                  estadoCuotas: 'Pendiente',
-                  fechaUltimoPago: ''
-                }, { merge: true });
-              }
-            }
-            console.log("Firestore socios payment histories cleared successfully.");
-          }
-          
-          safeSetItem(MIGRATION_KEY, 'true');
-        } catch (err) {
-          console.error("Error running payments clearing migration:", err);
-        }
-      }
-    };
-
-    const initData = async () => {
-      // await cleanPaymentsMigration();
-      await performInitialSync();
-    };
-
-    initData();
   }, []);
 
-  // 3. Set up root-level onSnapshot subscriptions
+  // 3. Set up root-level onSnapshot subscriptions for public essentials (Actividades, Galería, Historia, Socios, Solicitudes)
   useEffect(() => {
     // 3a. Socios
     const unsubSocios = onSnapshot(collection(db, 'socios'), (snapshot) => {
@@ -329,29 +270,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLoading(prev => ({ ...prev, socios: false }));
     });
 
-    // 3b. Propuestas
-    const unsubPropuestas = onSnapshot(collection(db, 'propuestas'), (snapshot) => {
-      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as PropuestaSocio);
-      setPropuestas(list);
-      safeSetLocalData(KEYS.PROPUESTAS, list);
-      setLoading(prev => ({ ...prev, propuestas: false }));
-    }, (err) => {
-      console.error("Error subscribing to propuestas:", err);
-      setLoading(prev => ({ ...prev, propuestas: false }));
-    });
-
-    // 3c. Solicitudes
-    const unsubSolicitudes = onSnapshot(collection(db, 'solicitudes'), (snapshot) => {
-      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Solicitud);
-      setSolicitudes(list);
-      safeSetLocalData(KEYS.SOLICITUDES, list);
-      setLoading(prev => ({ ...prev, solicitudes: false }));
-    }, (err) => {
-      console.error("Error subscribing to solicitudes:", err);
-      setLoading(prev => ({ ...prev, solicitudes: false }));
-    });
-
-    // 3d. Actividades (ordered by date ascending)
+    // 3b. Actividades (ordered by date ascending)
     const unsubActividades = onSnapshot(collection(db, 'actividades'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Actividad)
         .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
@@ -363,67 +282,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLoading(prev => ({ ...prev, actividades: false }));
     });
 
-    // 3e. Solicitudes de Voluntarios (ordered by date descending)
-    const unsubVoluntarios = onSnapshot(collection(db, 'solicitudes_voluntarios'), (snapshot) => {
-      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as SolicitudVoluntario)
-        .sort((a, b) => new Date(b.fechaRegistro).getTime() - new Date(a.fechaRegistro).getTime());
-      setVoluntarios(list);
-      safeSetLocalData(KEYS.VOLUNTARIOS, list);
-      setLoading(prev => ({ ...prev, voluntarios: false }));
-    }, (err) => {
-      console.error("Error subscribing to voluntarios:", err);
-      setLoading(prev => ({ ...prev, voluntarios: false }));
-    });
-
-    // 3f. Actas (ordered by date descending)
-    const unsubActas = onSnapshot(collection(db, 'actas'), (snapshot) => {
-      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Acta)
-        .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
-      setActas(list);
-      safeSetLocalData(KEYS.ACTAS, list);
-      setLoading(prev => ({ ...prev, actas: false }));
-    }, (err) => {
-      console.error("Error subscribing to actas:", err);
-      setLoading(prev => ({ ...prev, actas: false }));
-    });
-
-    // 3g. Comisiones
-    const qComisiones = query(collection(db, 'comisiones'));
-    const unsubComisiones = onSnapshot(qComisiones, (snapshot) => {
-      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Comision);
-      setComisiones(list);
-      safeSetLocalData(KEYS.COMISIONES, list);
-      setLoading(prev => ({ ...prev, comisiones: false }));
-    }, (err) => {
-      console.error("Error subscribing to comisiones:", err);
-      setLoading(prev => ({ ...prev, comisiones: false }));
-    });
-
-    // 3h. Minutas
-    const qMinutas = query(collection(db, 'minutas'));
-    const unsubMinutas = onSnapshot(qMinutas, (snapshot) => {
-      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as MinutaComision);
-      setMinutas(list);
-      safeSetLocalData(KEYS.MINUTAS, list);
-      setLoading(prev => ({ ...prev, minutas: false }));
-    }, (err) => {
-      console.error("Error subscribing to minutas:", err);
-      setLoading(prev => ({ ...prev, minutas: false }));
-    });
-
-    // 3i. Agenda de Contactos
-    const unsubAgenda = onSnapshot(collection(db, 'agenda'), (snapshot) => {
-      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as ContactoAgenda)
-        .sort((a, b) => a.nombre.localeCompare(b.nombre));
-      setAgenda(list);
-      safeSetLocalData(KEYS.AGENDA, list);
-      setLoading(prev => ({ ...prev, agenda: false }));
-    }, (err) => {
-      console.error("Error subscribing to agenda:", err);
-      setLoading(prev => ({ ...prev, agenda: false }));
-    });
-
-    // 3j. Galeria Items
+    // 3c. Galeria Items
     const unsubGaleria = onSnapshot(collection(db, 'galeria'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as GaleriaItem)
         .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
@@ -435,7 +294,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLoading(prev => ({ ...prev, galeria: false }));
     });
 
-    // 3k. Línea de Tiempo / Hitos
+    // 3d. Línea de Tiempo / Hitos
     const unsubHitos = onSnapshot(collection(db, 'linea_tiempo'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as HitoHistorico);
       setHitos(list);
@@ -446,7 +305,120 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLoading(prev => ({ ...prev, hitos: false }));
     });
 
-    // 3l. Presupuestos Rubros
+    // 3e. Solicitudes
+    const unsubSolicitudes = onSnapshot(collection(db, 'solicitudes'), (snapshot) => {
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Solicitud);
+      setSolicitudes(list);
+      safeSetLocalData(KEYS.SOLICITUDES, list);
+      setLoading(prev => ({ ...prev, solicitudes: false }));
+    }, (err) => {
+      console.error("Error subscribing to solicitudes:", err);
+      setLoading(prev => ({ ...prev, solicitudes: false }));
+    });
+
+    // 3f. Solicitudes de Voluntarios
+    const unsubVoluntarios = onSnapshot(collection(db, 'solicitudes_voluntarios'), (snapshot) => {
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as SolicitudVoluntario)
+        .sort((a, b) => new Date(b.fechaRegistro).getTime() - new Date(a.fechaRegistro).getTime());
+      setVoluntarios(list);
+      safeSetLocalData(KEYS.VOLUNTARIOS, list);
+      setLoading(prev => ({ ...prev, voluntarios: false }));
+    }, (err) => {
+      console.error("Error subscribing to voluntarios:", err);
+      setLoading(prev => ({ ...prev, voluntarios: false }));
+    });
+
+    return () => {
+      unsubSocios();
+      unsubActividades();
+      unsubGaleria();
+      unsubHitos();
+      unsubSolicitudes();
+      unsubVoluntarios();
+    };
+  }, []);
+
+  // 4. Set up private administrative subscriptions only when a user is authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setLoading(prev => ({
+        ...prev,
+        propuestas: false,
+        actas: false,
+        comisiones: false,
+        minutas: false,
+        agenda: false,
+        rubros: false,
+        fondos: false,
+        asignaciones: false,
+        agendas: false,
+        tareasComisiones: false,
+        asistencias: false,
+        requerimientosActividades: false
+      }));
+      return;
+    }
+
+    // 4a. Propuestas
+    const unsubPropuestas = onSnapshot(collection(db, 'propuestas'), (snapshot) => {
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as PropuestaSocio);
+      setPropuestas(list);
+      safeSetLocalData(KEYS.PROPUESTAS, list);
+      setLoading(prev => ({ ...prev, propuestas: false }));
+    }, (err) => {
+      console.error("Error subscribing to propuestas:", err);
+      setLoading(prev => ({ ...prev, propuestas: false }));
+    });
+
+    // 4b. Actas
+    const unsubActas = onSnapshot(collection(db, 'actas'), (snapshot) => {
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Acta)
+        .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+      setActas(list);
+      safeSetLocalData(KEYS.ACTAS, list);
+      setLoading(prev => ({ ...prev, actas: false }));
+    }, (err) => {
+      console.error("Error subscribing to actas:", err);
+      setLoading(prev => ({ ...prev, actas: false }));
+    });
+
+    // 4c. Comisiones
+    const qComisiones = query(collection(db, 'comisiones'));
+    const unsubComisiones = onSnapshot(qComisiones, (snapshot) => {
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Comision);
+      setComisiones(list);
+      safeSetLocalData(KEYS.COMISIONES, list);
+      setLoading(prev => ({ ...prev, comisiones: false }));
+    }, (err) => {
+      console.error("Error subscribing to comisiones:", err);
+      setLoading(prev => ({ ...prev, comisiones: false }));
+    });
+
+    // 4d. Minutas
+    const qMinutas = query(collection(db, 'minutas'));
+    const unsubMinutas = onSnapshot(qMinutas, (snapshot) => {
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as MinutaComision);
+      setMinutas(list);
+      safeSetLocalData(KEYS.MINUTAS, list);
+      setLoading(prev => ({ ...prev, minutas: false }));
+    }, (err) => {
+      console.error("Error subscribing to minutas:", err);
+      setLoading(prev => ({ ...prev, minutas: false }));
+    });
+
+    // 4e. Agenda de Contactos
+    const unsubAgenda = onSnapshot(collection(db, 'agenda'), (snapshot) => {
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as ContactoAgenda)
+        .sort((a, b) => a.nombre.localeCompare(b.nombre));
+      setAgenda(list);
+      safeSetLocalData(KEYS.AGENDA, list);
+      setLoading(prev => ({ ...prev, agenda: false }));
+    }, (err) => {
+      console.error("Error subscribing to agenda:", err);
+      setLoading(prev => ({ ...prev, agenda: false }));
+    });
+
+    // 4f. Presupuestos Rubros
     const unsubRubros = onSnapshot(collection(db, 'presupuestos_rubros'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as RubroPresupuesto);
       setRubros(list);
@@ -457,7 +429,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLoading(prev => ({ ...prev, rubros: false }));
     });
 
-    // 3m. Presupuestos Fondos
+    // 4g. Presupuestos Fondos
     const unsubFondos = onSnapshot(collection(db, 'presupuestos_fondos'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as FondoPresupuesto);
       setFondos(list);
@@ -468,7 +440,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLoading(prev => ({ ...prev, fondos: false }));
     });
 
-    // 3n. Presupuestos Asignaciones
+    // 4h. Presupuestos Asignaciones
     const unsubAsignaciones = onSnapshot(collection(db, 'presupuestos_asignaciones'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as AsignacionComision);
       setAsignaciones(list);
@@ -479,7 +451,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLoading(prev => ({ ...prev, asignaciones: false }));
     });
 
-    // 3o. Reunion Agendas
+    // 4i. Reunion Agendas
     const unsubAgendas = onSnapshot(collection(db, 'agendas'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as ReunionAgenda);
       setAgendas(list);
@@ -490,7 +462,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLoading(prev => ({ ...prev, agendas: false }));
     });
 
-    // 3p. Tareas Comisiones
+    // 4j. Tareas Comisiones
     const unsubTareasComisiones = onSnapshot(collection(db, 'tareas_comisiones'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as TareaComision);
       setTareasComisiones(list);
@@ -501,7 +473,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLoading(prev => ({ ...prev, tareasComisiones: false }));
     });
 
-    // 3q. Asistencias
+    // 4k. Asistencias
     const unsubAsistencias = onSnapshot(collection(db, 'asistencias'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Asistencia);
       setAsistencias(list);
@@ -512,7 +484,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLoading(prev => ({ ...prev, asistencias: false }));
     });
 
-    // 3r. Requerimientos Actividades
+    // 4l. Requerimientos Actividades
     const qRequerimientos = query(collection(db, 'requerimientos_actividades'));
     const unsubRequerimientos = onSnapshot(qRequerimientos, (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as RequerimientoActividad);
@@ -524,6 +496,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLoading(prev => ({ ...prev, requerimientosActividades: false }));
     });
 
+    // 4m. Roles Config
     const unsubRoles = onSnapshot(collection(db, 'config_roles'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       if (list.length === 0) {
@@ -531,7 +504,6 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           await setDoc(doc(db, 'config_roles', role.id), { label: role.label, allowedTabs: role.allowedTabs, orden: role.orden }).catch(err => console.error("Error seeding role:", role.id, err));
         });
       } else {
-        // Dynamic automatic migration: Ensure any module in ALL_APP_MODULES is granted to defaultRoles (or SUPER_ADMIN) if missing
         list.forEach(async (role: any) => {
           let updatedTabs = [...(role.allowedTabs || [])];
           let changed = false;
@@ -558,6 +530,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       console.error("Error subscribing to config_roles:", err);
     });
 
+    // 4n. Puestos Config
     const unsubPuestos = onSnapshot(collection(db, 'config_puestos'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       if (list.length === 0) {
@@ -573,17 +546,11 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
 
     return () => {
-      unsubSocios();
       unsubPropuestas();
-      unsubSolicitudes();
-      unsubActividades();
-      unsubVoluntarios();
       unsubActas();
       unsubComisiones();
       unsubMinutas();
       unsubAgenda();
-      unsubGaleria();
-      unsubHitos();
       unsubRubros();
       unsubFondos();
       unsubAsignaciones();
@@ -594,7 +561,7 @@ export const ClubDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       unsubRoles();
       unsubPuestos();
     };
-  }, []);
+  }, [isAuthenticated]);
 
   const saveRoleConfig = async (roleId: string, label: string, allowedTabs: string[], orden?: number) => {
     const docRef = doc(db, 'config_roles', roleId);

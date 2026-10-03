@@ -159,7 +159,7 @@ const App: React.FC = () => {
         <ToastProvider>
           <ConfirmProvider>
           <ErrorBoundary>
-            <ClubDataProvider>
+            <ClubDataProvider isAuthenticated={auth.isAuthenticated}>
               <UserSessionSync auth={auth} onUpdateUser={handleUpdateUser} />
               <Router>
               <Layout auth={auth} onLogout={handleLogout}>

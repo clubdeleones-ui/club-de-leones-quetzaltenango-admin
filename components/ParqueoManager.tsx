@@ -27,7 +27,7 @@ import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
-import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, addDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, addDoc, limit } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { firebaseService } from '../services/firebaseService';
 import { VehiculoParqueo, RegistroBano, TipoRentaParqueo } from '../types';
@@ -73,15 +73,35 @@ export const ParqueoManager: React.FC = () => {
   const [showBanosReportModal, setShowBanosReportModal] = useState(false);
 
   useEffect(() => {
-    const q = collection(db, 'parqueo');
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const vehList: VehiculoParqueo[] = [];
-      const banoList: RegistroBano[] = [];
+    // Consulta acotada con límite para evitar saturar memoria en horas o días de alta afluencia
+    const qParqueo = query(collection(db, 'parqueo'), limit(400));
+    const qBanos = query(collection(db, 'banos'), limit(400));
+
+    let vehList: VehiculoParqueo[] = [];
+    let banoParqueoList: RegistroBano[] = [];
+    let banosDirectList: RegistroBano[] = [];
+
+    const mergeAndSet = () => {
+      // Unir registros de baños de ambas fuentes (migración gradual transparente sin perder histórico)
+      const allBanos = [...banosDirectList, ...banoParqueoList];
+      const uniqueBanos = Array.from(new Map(allBanos.map(b => [b.id, b])).values());
+      uniqueBanos.sort((a, b) => new Date(b.fecha || 0).getTime() - new Date(a.fecha || 0).getTime());
+
+      vehList.sort((a, b) => new Date(b.horaEntrada || 0).getTime() - new Date(a.horaEntrada || 0).getTime());
+
+      setVehiculos([...vehList]);
+      setRegistrosBanos(uniqueBanos);
+      setIsLoading(false);
+    };
+
+    const unsubParqueo = onSnapshot(qParqueo, (snapshot) => {
+      vehList = [];
+      banoParqueoList = [];
 
       snapshot.forEach(docSnap => {
         const data = docSnap.data();
         if (data.tipoEntrada === 'bano' || (data.numeroPlaca && String(data.numeroPlaca).startsWith('BAÑO-'))) {
-          banoList.push({
+          banoParqueoList.push({
             id: docSnap.id,
             genero: data.genero || (String(data.numeroPlaca).includes('MUJER') ? 'mujer' : 'hombre'),
             monto: data.monto || data.costo || 3.0,
@@ -93,20 +113,34 @@ export const ParqueoManager: React.FC = () => {
         }
       });
 
-      // Sort vehicles by entry time
-      vehList.sort((a, b) => new Date(b.horaEntrada || 0).getTime() - new Date(a.horaEntrada || 0).getTime());
-      // Sort bathroom entries by date
-      banoList.sort((a, b) => new Date(b.fecha || 0).getTime() - new Date(a.fecha || 0).getTime());
-
-      setVehiculos(vehList);
-      setRegistrosBanos(banoList);
-      setIsLoading(false);
+      mergeAndSet();
     }, (error) => {
       console.error("Error fetching parqueo in real-time:", error);
       setIsLoading(false);
     });
 
-    return () => unsubscribe();
+    const unsubBanos = onSnapshot(qBanos, (snapshot) => {
+      banosDirectList = [];
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        banosDirectList.push({
+          id: docSnap.id,
+          genero: data.genero || 'hombre',
+          monto: data.monto || 3.0,
+          fecha: data.fecha || data.horaEntrada || new Date().toISOString(),
+          fechaCorta: data.fechaCorta || (data.fecha ? String(data.fecha).split('T')[0] : '')
+        } as RegistroBano);
+      });
+
+      mergeAndSet();
+    }, (error) => {
+      console.warn("Aviso al consultar colección banos:", error);
+    });
+
+    return () => {
+      unsubParqueo();
+      unsubBanos();
+    };
   }, []);
 
   const handleRecordBano = async (genero: 'hombre' | 'mujer') => {
@@ -126,38 +160,28 @@ export const ParqueoManager: React.FC = () => {
     setBanoToast(`+Q.3.00 (${genero === 'hombre' ? 'Hombre' : 'Mujer'}) Anotado`);
     setTimeout(() => setBanoToast(null), 2500);
 
-    try {
-      const banoDocPayload = {
-        numeroPlaca: `BAÑO-${genero.toUpperCase()}`,
-        isExtranjera: false,
-        estado: 'Completado',
-        tipoEntrada: 'bano',
-        genero: genero,
-        monto: 3.0,
-        costo: 3.0,
-        fecha: now.toISOString(),
-        fechaCorta: fechaCortaStr,
-        horaEntrada: now.toISOString(),
-        horaSalida: now.toISOString()
-      };
+    const banoDocPayload = {
+      id: docId,
+      numeroPlaca: `BAÑO-${genero.toUpperCase()}`,
+      isExtranjera: false,
+      estado: 'Completado',
+      tipoEntrada: 'bano',
+      genero: genero,
+      monto: 3.0,
+      costo: 3.0,
+      fecha: now.toISOString(),
+      fechaCorta: fechaCortaStr,
+      horaEntrada: now.toISOString(),
+      horaSalida: now.toISOString()
+    };
 
-      await setDoc(doc(db, 'parqueo', docId), banoDocPayload);
+    try {
+      // Guardar directamente en la colección banos
+      await setDoc(doc(db, 'banos', docId), banoDocPayload);
     } catch (err) {
-      console.error("Error al registrar uso de baño en Firestore:", err);
+      console.error("Error al registrar uso de baño en banos Firestore, intentando respaldo:", err);
       try {
-        await addDoc(collection(db, 'parqueo'), {
-          numeroPlaca: `BAÑO-${genero.toUpperCase()}`,
-          isExtranjera: false,
-          estado: 'Completado',
-          tipoEntrada: 'bano',
-          genero: genero,
-          monto: 3.0,
-          costo: 3.0,
-          fecha: now.toISOString(),
-          fechaCorta: fechaCortaStr,
-          horaEntrada: now.toISOString(),
-          horaSalida: now.toISOString()
-        });
+        await setDoc(doc(db, 'parqueo', docId), banoDocPayload);
       } catch (err2) {
         console.error("Error secundario al guardar uso de baño:", err2);
       }
@@ -167,6 +191,9 @@ export const ParqueoManager: React.FC = () => {
   const handleDeleteLastBano = async (id: string) => {
     // Optimistic local delete
     setRegistrosBanos(prev => prev.filter(b => b.id !== id));
+    try {
+      await deleteDoc(doc(db, 'banos', id));
+    } catch (_) {}
     try {
       await deleteDoc(doc(db, 'parqueo', id));
     } catch (err) {
