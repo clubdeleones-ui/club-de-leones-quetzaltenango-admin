@@ -512,6 +512,7 @@ export default function Convencion() {
     includeCultural: boolean;
     includeFamiliar: boolean;
     telegramOption: 'telegram' | 'email' | null;
+    telegramVerified?: boolean;
     savedAt?: number;
   }
 
@@ -546,6 +547,7 @@ export default function Convencion() {
   const [includeCultural, setIncludeCultural] = useState<boolean>(false);
   const [includeFamiliar, setIncludeFamiliar] = useState<boolean>(false);
   const [telegramOption, setTelegramOption] = useState<'telegram' | 'email' | null>(() => initialDraft?.telegramOption || null);
+  const [telegramVerified, setTelegramVerified] = useState<boolean>(() => !!initialDraft?.telegramVerified);
   const [isDraftRestored, setIsDraftRestored] = useState<boolean>(() => {
     return !!(
       initialDraft && 
@@ -832,6 +834,7 @@ export default function Convencion() {
       includeCultural ||
       includeFamiliar ||
       telegramOption ||
+      telegramVerified ||
       wizardStep > 1
     );
 
@@ -847,6 +850,7 @@ export default function Convencion() {
           includeCultural,
           includeFamiliar,
           telegramOption,
+          telegramVerified,
           savedAt: Date.now()
         };
         localStorage.setItem(CONVENCION_DRAFT_KEY, JSON.stringify(draft));
@@ -864,6 +868,7 @@ export default function Convencion() {
     includeCultural,
     includeFamiliar,
     telegramOption,
+    telegramVerified,
     isSubmitted
   ]);
 
@@ -1089,6 +1094,7 @@ export default function Convencion() {
     setIncludeCultural(false);
     setIncludeFamiliar(false);
     setTelegramOption(null);
+    setTelegramVerified(false);
     setPaymentSuccessData(null);
     setWizardStep(1);
     setIsSubmitted(false);
@@ -1164,6 +1170,7 @@ export default function Convencion() {
         includeCultural,
         includeFamiliar,
         preferenciaNotificacion: telegramOption || 'email',
+        telegramVerificado: telegramOption === 'telegram' ? telegramVerified : false,
         montoPagar: montoTotal,
         estadoPago: metodo === 'recurrente' ? 'Checkout_Creado' : 'Pendiente',
         fechaRegistro: new Date().toISOString()
@@ -2247,21 +2254,144 @@ export default function Convencion() {
                               </div>
                             </label>
 
-                            {/* Botón Desplegable para Unirse al Bot si tiene Telegram marcado */}
+                            {/* Desplegable de Configuración y Verificación si tiene Telegram marcado */}
                             {telegramOption === 'telegram' && (
-                              <div className="mt-4 pt-4 border-t border-cyan-400/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                                <p className="text-xs text-cyan-200 font-medium">
-                                  Toca el botón azul para abrir el chat con el bot y presiona <strong className="text-white font-bold">“Iniciar / Start”</strong>:
-                                </p>
-                                <a 
-                                  href="https://t.me/ConvencionLeonesbot" 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center justify-center space-x-2.5 text-xs font-black bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-600 hover:from-blue-400 hover:to-cyan-400 text-white px-5 py-3.5 rounded-xl transition-all shadow-[0_10px_25px_rgba(6,182,212,0.3)] border border-cyan-300/40 active:scale-95 cursor-pointer shrink-0"
-                                >
-                                  <Send size={16} />
-                                  <span>🤖 Unirme ahora a @ConvencionLeonesbot</span>
-                                </a>
+                              <div className="mt-4 pt-4 border-t border-cyan-400/25 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                                <div className="bg-slate-950/60 p-4 sm:p-5 rounded-2xl border border-white/10 space-y-3.5">
+                                  {/* Paso A: Abrir chat con el bot */}
+                                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div className="text-xs text-slate-300">
+                                      <span className="font-extrabold text-cyan-300 block mb-0.5 text-xs sm:text-sm">
+                                        Paso 1: Abre el Bot Oficial en Telegram
+                                      </span>
+                                      <span>Toca el botón azul para abrir el chat con el bot y presiona <strong className="text-white font-bold">“Iniciar / Start”</strong>:</span>
+                                    </div>
+                                    <a 
+                                      href={`https://t.me/ConvencionLeonesbot?start=${encodeURIComponent(form.telefono ? 'socio_' + form.telefono : 'inscripcion')}`}
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center justify-center space-x-2 text-xs font-black bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-600 hover:from-blue-400 hover:to-cyan-400 text-white px-4 py-2.5 rounded-xl transition-all shadow-md border border-cyan-300/40 active:scale-95 cursor-pointer shrink-0"
+                                    >
+                                      <Send size={15} />
+                                      <span>Abrir @ConvencionLeonesbot</span>
+                                      <ExternalLink size={13} className="opacity-70" />
+                                    </a>
+                                  </div>
+
+                                  {/* Paso B: Casilla interactiva para confirmar que ya verificó su número */}
+                                  <div 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setTelegramVerified(!telegramVerified);
+                                    }}
+                                    className={`p-3.5 rounded-xl border transition-all cursor-pointer select-none flex items-start sm:items-center space-x-3 ${
+                                      telegramVerified 
+                                        ? 'bg-emerald-500/20 border-emerald-400/80 ring-2 ring-emerald-400/40 shadow-md' 
+                                        : 'bg-white/[0.04] border-white/15 hover:border-cyan-400/40 hover:bg-white/[0.07]'
+                                    }`}
+                                  >
+                                    <input 
+                                      type="checkbox"
+                                      id="checkTelegramVerified"
+                                      checked={telegramVerified}
+                                      onChange={(e) => {
+                                        e.stopPropagation();
+                                        setTelegramVerified(e.target.checked);
+                                      }}
+                                      className="mt-0.5 sm:mt-0 w-5 h-5 rounded text-emerald-400 bg-slate-900 border-white/30 focus:ring-emerald-400 cursor-pointer shrink-0"
+                                    />
+                                    <div className="flex-1 text-left">
+                                      <div className="flex items-center space-x-2 flex-wrap">
+                                        <span className="font-black text-white text-xs sm:text-sm">
+                                          Paso 2: Ya inicié el bot y verifiqué mi número de teléfono
+                                        </span>
+                                        {telegramVerified && (
+                                          <span className="bg-emerald-500/30 text-emerald-300 text-[10px] font-black px-2 py-0.5 rounded-full uppercase border border-emerald-400/30">
+                                            Confirmado
+                                          </span>
+                                        )}
+                                      </div>
+                                      <span className="text-[11px] text-slate-300 block mt-0.5 font-medium">
+                                        {form.telefono 
+                                          ? `Confirmas que tu número (${form.telefono}) fue verificado en el bot para recibir avisos y credenciales.` 
+                                          : 'Marca esta casilla para confirmar que ya interactuaste con el bot en Telegram.'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* BOTÓN DE TELEGRAM EN EL FORMULARIO INDICANDO SI ESTÁ CONECTADO AL BOT */}
+                                <div className="pt-1">
+                                  {telegramVerified ? (
+                                    <div className="space-y-2 animate-in fade-in zoom-in-95 duration-200">
+                                      <div className="flex items-center justify-between px-1">
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 flex items-center space-x-1.5">
+                                          <span className="relative flex h-2 w-2">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                          </span>
+                                          <span>Estado de Conexión al Bot: Activo</span>
+                                        </span>
+                                        <span className="text-[10px] text-emerald-300 font-bold">
+                                          {form.telefono || 'Número móvil'} sincronizado
+                                        </span>
+                                      </div>
+
+                                      <a 
+                                        href={`https://t.me/ConvencionLeonesbot?start=${encodeURIComponent(form.telefono ? 'socio_' + form.telefono : 'inscripcion')}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="w-full flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-black text-sm shadow-[0_10px_30px_rgba(16,185,129,0.35)] border-2 border-emerald-300/50 transition-all transform hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer group"
+                                      >
+                                        <div className="flex items-center space-x-3.5 text-left">
+                                          <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shrink-0 group-hover:scale-110 group-hover:rotate-6 transition-all shadow-inner">
+                                            <Send size={22} className="stroke-[2.5]" />
+                                          </div>
+                                          <div>
+                                            <div className="flex items-center space-x-2">
+                                              <span className="text-white font-black text-sm sm:text-base tracking-tight flex items-center space-x-1.5">
+                                                <span>🟢 Conectado al Bot de Telegram</span>
+                                              </span>
+                                              <span className="bg-white/25 text-white border border-white/40 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                                                Verificado
+                                              </span>
+                                            </div>
+                                            <p className="text-[11px] text-emerald-100 font-medium mt-0.5">
+                                              @ConvencionLeonesbot • Recibirás credenciales digitales, mapas y alertas en vivo aquí
+                                            </p>
+                                          </div>
+                                        </div>
+                                        
+                                        <div className="hidden sm:flex items-center space-x-1.5 text-xs text-white bg-white/15 group-hover:bg-white/25 px-3.5 py-2 rounded-xl border border-white/20 transition-colors shrink-0">
+                                          <CheckCircle2 size={15} className="text-emerald-300" />
+                                          <span>Conectado</span>
+                                          <ExternalLink size={13} className="opacity-80" />
+                                        </div>
+                                      </a>
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-1.5">
+                                      <div className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-white/[0.03] text-slate-400 text-xs sm:text-sm border border-dashed border-white/20">
+                                        <div className="flex items-center space-x-3 text-left">
+                                          <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center text-slate-500 shrink-0">
+                                            <Send size={18} />
+                                          </div>
+                                          <div>
+                                            <span className="text-slate-300 font-bold block text-xs sm:text-sm">
+                                              Bot de Telegram: Pendiente de Verificación de Número
+                                            </span>
+                                            <span className="text-[11px] text-slate-400 block font-normal">
+                                              Inicia el bot y marca la casilla del Paso 2 para habilitar tu botón de conexión.
+                                            </span>
+                                          </div>
+                                        </div>
+                                        <span className="text-[10px] font-black uppercase text-slate-400 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10 shrink-0">
+                                          En Espera
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             )}
                           </div>
@@ -2495,9 +2625,38 @@ export default function Convencion() {
 
                       {/* Resumen Final de Pago Desglosado */}
                       <div className="bg-gradient-to-b from-white/[0.06] to-white/[0.02] p-6 rounded-3xl border border-white/15 text-left space-y-3 shadow-2xl">
-                        <div className="flex justify-between items-center text-xs font-bold text-slate-300 border-b border-white/10 pb-3">
-                          <span>Socio: <strong className="text-white">{form.nombre}</strong></span>
-                          <span>Club: <strong className="text-white">{form.club === 'Otro Club' ? customClub : form.club}</strong></span>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs font-bold text-slate-300 border-b border-white/10 pb-3">
+                          <div>Socio: <strong className="text-white">{form.nombre}</strong></div>
+                          <div>Club: <strong className="text-white">{form.club === 'Otro Club' ? customClub : form.club}</strong></div>
+                        </div>
+
+                        {/* Canal de Avisos & Estado Telegram */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-1.5 border-b border-white/10 text-xs">
+                          <span className="text-slate-300 font-medium">Canal de Notificaciones:</span>
+                          {telegramOption === 'telegram' ? (
+                            telegramVerified ? (
+                              <a 
+                                href={`https://t.me/ConvencionLeonesbot?start=${encodeURIComponent(form.telefono ? 'socio_' + form.telefono : 'inscripcion')}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center space-x-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 px-3 py-1 rounded-full text-[11px] font-extrabold hover:bg-emerald-500/30 transition-colors cursor-pointer"
+                              >
+                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                <Send size={12} />
+                                <span>🟢 Conectado al Bot (@ConvencionLeonesbot)</span>
+                              </a>
+                            ) : (
+                              <span className="inline-flex items-center space-x-1.5 bg-cyan-500/15 text-cyan-300 border border-cyan-400/30 px-3 py-1 rounded-full text-[11px] font-bold">
+                                <Send size={12} />
+                                <span>Telegram (Pendiente de verificar número)</span>
+                              </span>
+                            )
+                          ) : (
+                            <span className="inline-flex items-center space-x-1.5 bg-slate-800 text-slate-300 border border-white/15 px-3 py-1 rounded-full text-[11px] font-bold">
+                              <Mail size={12} className="text-emerald-400" />
+                              <span>Correo Electrónico ({form.email})</span>
+                            </span>
+                          )}
                         </div>
 
                         {/* Desglose de Ítems */}

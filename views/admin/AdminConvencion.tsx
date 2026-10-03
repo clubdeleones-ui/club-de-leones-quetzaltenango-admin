@@ -1851,6 +1851,13 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                             </span>
                           )}
 
+                          {reg.telegramVerificado && (
+                            <span className="inline-flex items-center space-x-1 text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full text-[10px] font-black">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                              <span>Bot Telegram Conectado</span>
+                            </span>
+                          )}
+
                           <span className="text-slate-400 text-[11px]">
                             📅 {new Date(reg.fechaRegistro).toLocaleDateString('es-GT', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                           </span>

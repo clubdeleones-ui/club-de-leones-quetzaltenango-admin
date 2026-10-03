@@ -177,6 +177,7 @@ export const telegramService = {
 <b>Cargo:</b> ${registro.cargo}
 <b>Email:</b> ${registro.email}
 <b>Teléfono / Telegram:</b> ${registro.telefono}
+<b>Canal Preferido:</b> ${registro.preferenciaNotificacion === 'telegram' ? '📱 Telegram' : '✉️ Correo Electrónico'}${registro.telegramVerificado ? '\n<b>Estado Bot:</b> 🟢 <i>Conectado y número verificado</i>' : ''}
 ${(registro as any).esAcompanante ? `<b>Acompañante de:</b> ${(registro as any).nombreTitular || 'N/A'}` : ''}
 <b>Fecha de Registro:</b> ${new Date(registro.fechaRegistro).toLocaleString('es-GT')}
 

@@ -514,6 +514,7 @@ export interface ConvencionRegistro {
   estadoPago?: 'Pendiente' | 'Pagado' | 'Checkout_Creado';
   recurrenteCheckoutUrl?: string;
   preferenciaNotificacion?: 'telegram' | 'email';
+  telegramVerificado?: boolean;
   fechaRegistro: string;
 }
 
