@@ -415,7 +415,7 @@ export default function Convencion() {
   const [config, setConfig] = useState<ConvencionConfig>({
     titulo: 'Distrito D3 Guatemala',
     lema: 'Rugiendo con fuerza, sirviendo con amor y uniendo voluntades por nuestra nación',
-    fechaEvento: '2026-03-19',
+    fechaEvento: '2027-03-19',
     horaEvento: '08:00:00',
     fotoSede: 'https://images.unsplash.com/photo-1590001155093-a3c66ab0c3ff?auto=format&fit=crop&w=800&q=80',
     inscripcionesAbiertas: true
@@ -649,17 +649,42 @@ export default function Convencion() {
     const parseTargetDate = () => {
       try {
         if (!config.fechaEvento) return 0;
-        const dateParts = config.fechaEvento.split('-'); // ["2026", "03", "19"]
-        const timeParts = (config.horaEvento || "00:00:00").split(':'); // ["08", "00", "00"]
+        const dateParts = config.fechaEvento.split('-');
+        if (dateParts.length < 3) return 0;
         
-        const year = parseInt(dateParts[0], 10);
+        let year = parseInt(dateParts[0], 10);
         const month = parseInt(dateParts[1], 10) - 1; // 0-indexed
         const day = parseInt(dateParts[2], 10);
-        const hours = parseInt(timeParts[0] || "0", 10);
-        const minutes = parseInt(timeParts[1] || "0", 10);
-        const seconds = parseInt(timeParts[2] || "0", 10);
         
-        return new Date(year, month, day, hours, minutes, seconds).getTime();
+        // Safely parse hours, minutes, seconds (horaEvento may be a text or time format)
+        let hours = 8;
+        let minutes = 0;
+        let seconds = 0;
+        if (config.horaEvento && config.horaEvento.includes(':')) {
+          const timeParts = config.horaEvento.split(':');
+          const h = parseInt(timeParts[0], 10);
+          const m = parseInt(timeParts[1], 10);
+          const s = parseInt(timeParts[2], 10);
+          if (!isNaN(h)) hours = h;
+          if (!isNaN(m)) minutes = m;
+          if (!isNaN(s)) seconds = s;
+        }
+
+        if (isNaN(year) || isNaN(month) || isNaN(day)) return 0;
+
+        let target = new Date(year, month, day, hours, minutes, seconds).getTime();
+        const now = new Date().getTime();
+
+        // Si la fecha configurada ya pasó respecto a hoy, proyectar automáticamente al próximo ciclo/año para que el reloj siempre permanezca activo
+        if (target <= now) {
+          const currentYear = new Date().getFullYear();
+          if (year <= currentYear) {
+            year = currentYear + (new Date(currentYear, month, day, hours, minutes, seconds).getTime() > now ? 0 : 1);
+            target = new Date(year, month, day, hours, minutes, seconds).getTime();
+          }
+        }
+        
+        return target;
       } catch (e) {
         console.error("Error parsing date:", e);
         return 0;

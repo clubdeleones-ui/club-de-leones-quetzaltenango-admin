@@ -1118,7 +1118,7 @@ export const firebaseService = {
       return {
         titulo: "Distrito D3 Guatemala",
         lema: "Rugiendo con fuerza, sirviendo con amor y uniendo voluntades por nuestra nación",
-        fechaEvento: "2026-03-19",
+        fechaEvento: "2027-03-19",
         horaEvento: "08:00:00",
         fotoSede: "https://images.unsplash.com/photo-1590001155093-a3c66ab0c3ff?auto=format&fit=crop&w=800&q=80",
         fotoSedeEtiqueta: "Sede Oficial",
@@ -1173,7 +1173,7 @@ export const firebaseService = {
       return {
         titulo: "Distrito D3 Guatemala",
         lema: "Rugiendo con fuerza, sirviendo con amor y uniendo voluntades por nuestra nación",
-        fechaEvento: "2026-03-19",
+        fechaEvento: "2027-03-19",
         horaEvento: "08:00:00",
         fotoSede: "https://images.unsplash.com/photo-1590001155093-a3c66ab0c3ff?auto=format&fit=crop&w=800&q=80",
         fotoSedeEtiqueta: "Sede Oficial",
