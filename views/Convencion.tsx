@@ -542,9 +542,9 @@ export default function Convencion() {
   const [telefonoDigitos, setTelefonoDigitos] = useState(() => initialDraft?.telefonoDigitos || '');
   const [dpiDigitos, setDpiDigitos] = useState(() => initialDraft?.dpiDigitos || '');
   const [customClub, setCustomClub] = useState(() => initialDraft?.customClub || '');
-  const [includeHotel, setIncludeHotel] = useState<boolean>(() => initialDraft?.includeHotel ?? false);
-  const [includeCultural, setIncludeCultural] = useState<boolean>(() => initialDraft?.includeCultural ?? false);
-  const [includeFamiliar, setIncludeFamiliar] = useState<boolean>(() => initialDraft?.includeFamiliar ?? false);
+  const [includeHotel, setIncludeHotel] = useState<boolean>(false);
+  const [includeCultural, setIncludeCultural] = useState<boolean>(false);
+  const [includeFamiliar, setIncludeFamiliar] = useState<boolean>(false);
   const [telegramOption, setTelegramOption] = useState<'telegram' | 'email' | null>(() => initialDraft?.telegramOption || null);
   const [isDraftRestored, setIsDraftRestored] = useState<boolean>(() => {
     return !!(
@@ -2439,99 +2439,28 @@ export default function Convencion() {
                           </div>
                         </div>
 
-                        {/* 2. Complementos Opcionales Adicionales (Checkboxes) */}
-                        <div className="space-y-3 pt-3">
-                          <div className="flex items-center space-x-2">
-                            <Sparkles size={16} className="text-yellow-400" />
-                            <label className="text-xs font-black uppercase tracking-wider text-yellow-300 block">
-                              Complementos Opcionales Recomendados (Añade a tu experiencia):
-                            </label>
+                        {/* 2. Anuncio de Paquetes Opcionales Posteriores */}
+                        <div className="bg-gradient-to-r from-blue-900/40 via-indigo-950/40 to-blue-900/30 p-5 sm:p-6 rounded-3xl border border-yellow-400/30 text-left space-y-3 shadow-xl relative overflow-hidden">
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/5 rounded-full blur-2xl pointer-events-none" />
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 rounded-2xl bg-yellow-500/20 border border-yellow-400/40 flex items-center justify-center text-yellow-300 shrink-0 shadow-inner">
+                              <Sparkles size={20} />
+                            </div>
+                            <div>
+                              <h4 className="text-sm sm:text-base font-black text-white tracking-tight">
+                                Paquetes & Experiencias Opcionales
+                              </h4>
+                              <p className="text-[11px] text-cyan-200 font-semibold">
+                                Hospedaje en Hotel Sede, Tours Inmersivos y Actividades Familiares
+                              </p>
+                            </div>
                           </div>
 
-                          <div className="grid grid-cols-1 gap-3.5">
-                            {/* Complemento: Hospedaje en Hotel Sede (+ Q. 400.00) */}
-                            <label className={`p-5 rounded-2xl border-2 transition-all duration-300 cursor-pointer flex items-start space-x-4 select-none ${
-                              includeHotel ? 'bg-amber-500/20 border-amber-400 shadow-[0_10px_30px_rgba(245,158,11,0.25)]' : 'bg-white/[0.03] border-white/15 hover:border-white/30'
-                            }`}>
-                              <input 
-                                type="checkbox" 
-                                checked={includeHotel}
-                                onChange={(e) => setIncludeHotel(e.target.checked)}
-                                className="mt-1 w-5 h-5 text-amber-500 rounded border-white/30 focus:ring-amber-400 cursor-pointer shrink-0"
-                              />
-                              <div className="flex-1 space-y-1.5">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-sm sm:text-base font-black text-white flex items-center">
-                                    <Hotel size={18} className="text-amber-400 mr-2 shrink-0" />
-                                    Paquete Hospedaje Oficial en Hotel Sede + Recorrido
-                                  </span>
-                                  <span className="text-base sm:text-lg font-black text-amber-300 shrink-0 ml-2">+ Q. 400.00</span>
-                                </div>
-                                <p className="text-xs text-slate-300 leading-relaxed font-medium">
-                                  Hospedaje confortable en el Hotel Sede Oficial y recorrido cultural guiado por sitios históricos de Xelajú con almuerzo típico incluido.
-                                </p>
-                              </div>
-                            </label>
-
-                            {/* Complemento: Paquete Inmersivo Cultural (+ Q. 150.00) */}
-                            <label className={`p-5 rounded-2xl border-2 transition-all duration-300 cursor-pointer flex items-start space-x-4 select-none ${
-                              includeCultural ? 'bg-cyan-500/20 border-cyan-400 shadow-[0_10px_30px_rgba(6,182,212,0.25)]' : 'bg-white/[0.03] border-white/15 hover:border-white/30'
-                            }`}>
-                              <input 
-                                type="checkbox" 
-                                checked={includeCultural}
-                                onChange={(e) => setIncludeCultural(e.target.checked)}
-                                className="mt-1 w-5 h-5 text-cyan-500 rounded border-white/30 focus:ring-cyan-400 cursor-pointer shrink-0"
-                              />
-                              <div className="flex-1 space-y-2">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-sm sm:text-base font-black text-white flex items-center">
-                                    <Compass size={18} className="text-cyan-400 mr-2 shrink-0" />
-                                    Paquete Inmersivo Cultural Individual
-                                  </span>
-                                  <span className="text-base sm:text-lg font-black text-cyan-300 shrink-0 ml-2">+ Q. 150.00</span>
-                                </div>
-                                <div className="bg-[#09172f]/80 p-3.5 rounded-xl border border-cyan-400/30 text-xs text-slate-200 space-y-1">
-                                  <p className="font-extrabold text-cyan-300">✨ Incluye pase a experiencias culturales de libre elección:</p>
-                                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] font-medium pt-1 text-slate-300">
-                                    <li>• 🌙 Tour nocturno con leyendas de Quetzaltenango</li>
-                                    <li>• 🍫 Visita guiada al Museo del Chocolate Artesanal</li>
-                                    <li>• 📖 Taller familiar de cuentacuentos y literatura</li>
-                                    <li>• 🌿 Caminata ecológica por senderos naturales</li>
-                                  </ul>
-                                </div>
-                              </div>
-                            </label>
-
-                            {/* Complemento: Paquete Familiar Inmersivo Cultural (+ Q. 450.00) */}
-                            <label className={`p-5 rounded-2xl border-2 transition-all duration-300 cursor-pointer flex items-start space-x-4 select-none ${
-                              includeFamiliar ? 'bg-purple-500/20 border-purple-400 shadow-[0_10px_30px_rgba(168,85,247,0.25)]' : 'bg-white/[0.03] border-white/15 hover:border-white/30'
-                            }`}>
-                              <input 
-                                type="checkbox" 
-                                checked={includeFamiliar}
-                                onChange={(e) => setIncludeFamiliar(e.target.checked)}
-                                className="mt-1 w-5 h-5 text-purple-500 rounded border-white/30 focus:ring-purple-400 cursor-pointer shrink-0"
-                              />
-                              <div className="flex-1 space-y-2">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-sm sm:text-base font-black text-white flex items-center">
-                                    <Users size={18} className="text-purple-400 mr-2 shrink-0" />
-                                    Paquete Familiar Inmersivo Cultural (Grupo Familiar)
-                                  </span>
-                                  <span className="text-base sm:text-lg font-black text-purple-300 shrink-0 ml-2">+ Q. 450.00</span>
-                                </div>
-                                <div className="bg-[#09172f]/80 p-3.5 rounded-xl border border-purple-400/30 text-xs text-slate-200 space-y-1">
-                                  <p className="font-extrabold text-purple-300">👨‍👩‍👧‍👦 Pase familiar con cupos múltiples para acompañantes:</p>
-                                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] font-medium pt-1 text-slate-300">
-                                    <li>• 🌙 Tour nocturno familiar con leyendas tradicionales</li>
-                                    <li>• 🍫 Degustación en Museo del Chocolate para el grupo</li>
-                                    <li>• 📖 Taller cultural interactivo para niños y adultos</li>
-                                    <li>• 🌿 Recorrido campestre y fotografía en la naturaleza</li>
-                                  </ul>
-                                </div>
-                              </div>
-                            </label>
+                          <div className="bg-[#081530]/80 p-4 rounded-2xl border border-white/10 text-xs sm:text-sm text-slate-200 flex items-start space-x-3">
+                            <Info size={19} className="text-yellow-400 shrink-0 mt-0.5" />
+                            <p className="leading-relaxed font-semibold text-slate-100">
+                              Recibirás paquetes opcionales para mejorar la experiencia en la convención una vez estés inscrito.
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -2574,27 +2503,9 @@ export default function Convencion() {
                         {/* Desglose de Ítems */}
                         <div className="space-y-2 text-xs text-slate-300 py-1">
                           <div className="flex justify-between items-center font-medium">
-                            <span>• Inscripción Oficial de Convencionista:</span>
+                            <span>• Inscripción Oficial Base de Convencionista:</span>
                             <span className="font-bold text-white">Q. 650.00</span>
                           </div>
-                          {includeHotel && (
-                            <div className="flex justify-between items-center font-medium text-amber-300">
-                              <span>• Hospedaje Hotel Sede & Tour Cultural:</span>
-                              <span className="font-bold">+ Q. 400.00</span>
-                            </div>
-                          )}
-                          {includeCultural && (
-                            <div className="flex justify-between items-center font-medium text-cyan-300">
-                              <span>• Paquete Inmersivo Cultural Individual:</span>
-                              <span className="font-bold">+ Q. 150.00</span>
-                            </div>
-                          )}
-                          {includeFamiliar && (
-                            <div className="flex justify-between items-center font-medium text-purple-300">
-                              <span>• Paquete Familiar Inmersivo Cultural:</span>
-                              <span className="font-bold">+ Q. 450.00</span>
-                            </div>
-                          )}
                         </div>
 
                         <div className="flex justify-between items-center pt-3 border-t border-white/15 text-sm sm:text-base font-black">
