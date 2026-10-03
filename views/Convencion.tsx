@@ -36,7 +36,9 @@ import {
   Flame,
   Zap,
   Shield,
-  Mail
+  Mail,
+  Save,
+  RotateCcw
 } from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
 import { telegramService } from '../services/telegramService';
@@ -429,7 +431,44 @@ export default function Convencion() {
     seconds: 0
   });
 
-  const [form, setForm] = useState({
+  // Clave y estructura para persistencia de borrador en localStorage
+  const CONVENCION_DRAFT_KEY = 'club_leones_convencion_form_draft_v1';
+
+  interface ConvencionDraftData {
+    form: {
+      nombre: string;
+      email: string;
+      telefono: string;
+      club: string;
+      cargo: string;
+      distrito: string;
+    };
+    wizardStep: 1 | 2 | 3 | 4;
+    telefonoDigitos: string;
+    dpiDigitos: string;
+    customClub: string;
+    includeHotel: boolean;
+    includeCultural: boolean;
+    includeFamiliar: boolean;
+    telegramOption: 'telegram' | 'email' | null;
+    savedAt?: number;
+  }
+
+  const initialDraft = useMemo((): ConvencionDraftData | null => {
+    try {
+      const raw = localStorage.getItem(CONVENCION_DRAFT_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return parsed as ConvencionDraftData;
+      }
+    } catch (err) {
+      console.warn("Error al recuperar borrador del formulario de convención:", err);
+    }
+    return null;
+  }, []);
+
+  const [form, setForm] = useState(() => initialDraft?.form || {
     nombre: '',
     email: '',
     telefono: '',
@@ -438,20 +477,26 @@ export default function Convencion() {
     distrito: 'Zona A-1'
   });
 
-  const [wizardStep, setWizardStep] = useState<1 | 2 | 3 | 4>(1);
-  const [telefonoDigitos, setTelefonoDigitos] = useState('');
-  const [dpiDigitos, setDpiDigitos] = useState('');
-  const [customClub, setCustomClub] = useState('');
-  const [includeHotel, setIncludeHotel] = useState(false);
-  const [includeCultural, setIncludeCultural] = useState(false);
-  const [includeFamiliar, setIncludeFamiliar] = useState(false);
+  const [wizardStep, setWizardStep] = useState<1 | 2 | 3 | 4>(() => initialDraft?.wizardStep || 1);
+  const [telefonoDigitos, setTelefonoDigitos] = useState(() => initialDraft?.telefonoDigitos || '');
+  const [dpiDigitos, setDpiDigitos] = useState(() => initialDraft?.dpiDigitos || '');
+  const [customClub, setCustomClub] = useState(() => initialDraft?.customClub || '');
+  const [includeHotel, setIncludeHotel] = useState<boolean>(() => initialDraft?.includeHotel ?? false);
+  const [includeCultural, setIncludeCultural] = useState<boolean>(() => initialDraft?.includeCultural ?? false);
+  const [includeFamiliar, setIncludeFamiliar] = useState<boolean>(() => initialDraft?.includeFamiliar ?? false);
+  const [telegramOption, setTelegramOption] = useState<'telegram' | 'email' | null>(() => initialDraft?.telegramOption || null);
+  const [isDraftRestored, setIsDraftRestored] = useState<boolean>(() => {
+    return !!(
+      initialDraft && 
+      (initialDraft.form?.nombre || initialDraft.form?.email || initialDraft.telefonoDigitos || (initialDraft.wizardStep && initialDraft.wizardStep > 1))
+    );
+  });
 
   const baseCost = 650;
   const hotelCost = includeHotel ? 400 : 0;
   const culturalCost = includeCultural ? 150 : 0;
   const familiarCost = includeFamiliar ? 450 : 0;
   const montoTotal = baseCost + hotelCost + culturalCost + familiarCost;
-  const [telegramOption, setTelegramOption] = useState<'telegram' | 'email' | null>(null);
   const [isRedirectingPayment, setIsRedirectingPayment] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -574,6 +619,9 @@ export default function Convencion() {
               reg.estadoPago = 'Pagado';
               await firebaseService.saveConvencionRegistro(reg);
             }
+            try {
+              localStorage.removeItem(CONVENCION_DRAFT_KEY);
+            } catch (e) {}
             setForm({
               nombre: reg.nombre,
               email: reg.email,
@@ -609,6 +657,60 @@ export default function Convencion() {
 
     handleUrlStatus();
   }, [searchParams]);
+
+  // Auto-guardado de progreso del formulario en localStorage
+  useEffect(() => {
+    if (isSubmitted) {
+      try {
+        localStorage.removeItem(CONVENCION_DRAFT_KEY);
+      } catch (e) {}
+      return;
+    }
+
+    const hasData = Boolean(
+      form.nombre.trim() ||
+      form.email.trim() ||
+      telefonoDigitos.trim() ||
+      dpiDigitos.trim() ||
+      customClub.trim() ||
+      includeHotel ||
+      includeCultural ||
+      includeFamiliar ||
+      telegramOption ||
+      wizardStep > 1
+    );
+
+    if (hasData) {
+      try {
+        const draft: ConvencionDraftData = {
+          form,
+          wizardStep,
+          telefonoDigitos,
+          dpiDigitos,
+          customClub,
+          includeHotel,
+          includeCultural,
+          includeFamiliar,
+          telegramOption,
+          savedAt: Date.now()
+        };
+        localStorage.setItem(CONVENCION_DRAFT_KEY, JSON.stringify(draft));
+      } catch (err) {
+        console.warn("No se pudo guardar el borrador en localStorage:", err);
+      }
+    }
+  }, [
+    form,
+    wizardStep,
+    telefonoDigitos,
+    dpiDigitos,
+    customClub,
+    includeHotel,
+    includeCultural,
+    includeFamiliar,
+    telegramOption,
+    isSubmitted
+  ]);
 
   // Load config from Firestore on mount
   useEffect(() => {
@@ -813,6 +915,10 @@ export default function Convencion() {
   };
 
   const handleResetForm = () => {
+    try {
+      localStorage.removeItem(CONVENCION_DRAFT_KEY);
+    } catch (e) {}
+    setIsDraftRestored(false);
     setForm({
       nombre: '',
       email: '',
@@ -952,6 +1058,10 @@ export default function Convencion() {
         }
       }
 
+      try {
+        localStorage.removeItem(CONVENCION_DRAFT_KEY);
+      } catch (e) {}
+      setIsDraftRestored(false);
       setPaymentSuccessData({
         id: nuevoRegistro.id,
         nombre: nuevoRegistro.nombre,
@@ -1448,6 +1558,10 @@ export default function Convencion() {
 
                     {/* Badges de Garantía */}
                     <div className="pt-2 flex flex-wrap items-center justify-center gap-4 text-[11px] font-extrabold text-slate-300">
+                      <span className="flex items-center space-x-1.5 bg-white/5 border border-white/10 px-3 py-1 rounded-full text-emerald-300">
+                        <Save size={12} className="text-emerald-400" />
+                        <span>Auto-guardado activo</span>
+                      </span>
                       <span className="flex items-center space-x-1.5 bg-white/5 border border-white/10 px-3 py-1 rounded-full">
                         <Lock size={12} className="text-emerald-400" />
                         <span>Conexión Encriptada SSL</span>
@@ -1462,6 +1576,27 @@ export default function Convencion() {
                       </span>
                     </div>
                   </div>
+
+                  {/* Banner de Borrador Restaurado */}
+                  {isDraftRestored && (
+                    <div className="mb-6 max-w-3xl mx-auto p-4 rounded-2xl bg-emerald-500/10 border border-emerald-400/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-emerald-300 animate-in fade-in duration-300 shadow-md">
+                      <div className="flex items-center space-x-2.5">
+                        <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+                        <div>
+                          <span className="font-black text-white block sm:inline mr-1">Progreso recuperado:</span>
+                          <span className="text-emerald-200">Restauramos los datos y el paso donde te quedaste para que continúes sin volver a empezar.</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleResetForm}
+                        className="inline-flex items-center space-x-1.5 text-[11px] font-black text-slate-300 hover:text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors cursor-pointer shrink-0 self-end sm:self-auto"
+                      >
+                        <RotateCcw size={13} />
+                        <span>Empezar de cero</span>
+                      </button>
+                    </div>
+                  )}
 
                   {/* Barra de Progreso por Pasos (Wizard Stepper Dinámico) */}
                   <div className="mb-8 sm:mb-12 max-w-3xl mx-auto w-full">
