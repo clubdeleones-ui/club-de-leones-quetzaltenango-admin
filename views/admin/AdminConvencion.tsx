@@ -518,10 +518,18 @@ export function AdminConvencion() {
 
   const handleSaveAlianza = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!alianzaForm.name.trim()) {
+      setErrorMsg('Por favor, ingresa el nombre de la institución o alianza.');
+      return;
+    }
+
     setSaving(true);
     setErrorMsg('');
     try {
-      let finalLogoUrl = alianzaForm.logoUrl;
+      let finalLogoUrl = (alianzaForm.logoUrl || '').trim();
+      if (finalLogoUrl && finalLogoUrl.startsWith('www.')) {
+        finalLogoUrl = `https://${finalLogoUrl}`;
+      }
 
       if (alianzaLogoFile) {
         let compressedBase64 = await compressImageFile(alianzaLogoFile, 500, 500, 0.7, removeBlackBg);
@@ -1702,7 +1710,7 @@ export function AdminConvencion() {
               </button>
             </div>
 
-            <form onSubmit={handleSaveAlianza} className="p-6 space-y-5">
+            <form noValidate onSubmit={handleSaveAlianza} className="p-6 space-y-5">
               {/* Nombre */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600" htmlFor="ali_name">Nombre de la Institución / Alianza</label>
@@ -1800,7 +1808,7 @@ export function AdminConvencion() {
                 <div className="col-span-2 space-y-1.5">
                   <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600" htmlFor="ali_url">O pega URL de la Imagen</label>
                   <input
-                    type="url"
+                    type="text"
                     id="ali_url"
                     value={alianzaForm.logoUrl}
                     onChange={(e) => {
@@ -1808,7 +1816,7 @@ export function AdminConvencion() {
                       setAlianzaForm(prev => ({ ...prev, logoUrl: val }));
                       if (!alianzaLogoFile) setAlianzaLogoPreview(val);
                     }}
-                    placeholder="https://..."
+                    placeholder="https://... o enlace de imagen"
                     className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl px-4 py-2.5 text-slate-800 text-xs focus:outline-none font-semibold"
                   />
                 </div>
