@@ -207,6 +207,8 @@ interface ClubDataProviderProps {
   isAuthenticated?: boolean;
 }
 
+const ClubDataContext = createContext<ClubDataContextType | undefined>(undefined);
+
 export const ClubDataProvider: React.FC<ClubDataProviderProps> = ({ children, isAuthenticated = false }) => {
   // 1. Initialize state from LocalStorage or constant fallbacks (for offline/instant load)
   const [socios, setSocios] = useState<Socio[]>(() => getLocalData(KEYS.SOCIOS, MOCK_SOCIOS));

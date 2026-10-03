@@ -27,12 +27,23 @@ class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
+  private isChunkOrDeploymentError(error?: Error | null): boolean {
+    if (!error) return false;
+    const msg = ((error.message || '') + ' ' + (error.name || '') + ' ' + String(error)).toLowerCase();
+    return (
+      msg.includes('fetch dynamically imported module') ||
+      msg.includes('importing a module script failed') ||
+      msg.includes('chunkloaderror') ||
+      msg.includes('loading chunk') ||
+      msg.includes('dynamic import') ||
+      msg.includes('failed to load resource') ||
+      msg.includes('error loading module') ||
+      msg.includes('mime type')
+    );
+  }
+
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    const isChunkError = 
-      error.message?.includes('Failed to fetch dynamically imported module') ||
-      error.name === 'ChunkLoadError' ||
-      error.message?.includes('chunk') ||
-      error.message?.includes('dynamic import');
+    const isChunkError = this.isChunkOrDeploymentError(error);
       
     if (isChunkError) {
       console.warn('[ErrorBoundary] Actualizando assets del despliegue más reciente...');
@@ -42,7 +53,7 @@ class ErrorBoundary extends Component<Props, State> {
         safeSetItem('last_chunk_error_reload', now.toString());
         setTimeout(() => {
           window.location.reload();
-        }, 100);
+        }, 150);
       }
     } else {
       console.error('Uncaught application error:', error, errorInfo);
@@ -51,11 +62,7 @@ class ErrorBoundary extends Component<Props, State> {
 
   public render() {
     if (this.state.hasError) {
-      const isChunkError = 
-        this.state.error?.message?.includes('Failed to fetch dynamically imported module') ||
-        this.state.error?.name === 'ChunkLoadError' ||
-        this.state.error?.message?.includes('chunk') ||
-        this.state.error?.message?.includes('dynamic import');
+      const isChunkError = this.isChunkOrDeploymentError(this.state.error);
 
       // Si es un error de chunk o versión nueva, mostramos una pantalla de transición elegante y limpia
       if (isChunkError) {
@@ -81,7 +88,10 @@ class ErrorBoundary extends Component<Props, State> {
               Ha ocurrido un detalle inesperado en la interfaz. Por favor, recarga la página para continuar.
             </p>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                sessionStorage.clear();
+                window.location.reload();
+              }}
               className="bg-blue-900 hover:bg-blue-800 text-white px-6 py-3 rounded-xl font-bold transition-all w-full shadow-md cursor-pointer"
             >
               Recargar Página
