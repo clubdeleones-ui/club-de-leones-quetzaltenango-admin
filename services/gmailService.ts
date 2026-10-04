@@ -157,12 +157,14 @@ RESUMEN DE REGISTRO:
 • Club: ${club}
 
 MÉTODOS DE PAGO DISPONIBLES:
-1. Transferencia Bancaria Directa:
-   - Banco Industrial: Cuenta Monetaria No. 018-009876-5 (Club de Leones Quetzaltenango)
-   - Banco G&T Continental: Cuenta Monetaria No. 066-001234-9 (Club de Leones Quetzaltenango)
-   (Favor enviar tu boleta por WhatsApp o a este correo electrónico indicando tu folio ${folio}).
+1. Depósito o Transferencia Bancaria Oficial:
+   - Banco: Banrural
+   - Tipo de Cuenta: Monetaria
+   - No. de Cuenta: 3827008588
+   - A nombre de: Club de Leones de Quetzaltenango
+   (Favor enviar la fotografía de tu boleta por WhatsApp o a este correo indicando tu folio ${folio}).
 
-2. Pago con Tarjeta de Crédito/Débito en Línea:
+2. Pago con Tarjeta de Crédito/Débito en Línea (Cuotas disponibles):
    Puedes generar tu pago seguro en línea desde la página oficial:
    👉 ${webUrl}
 
@@ -190,17 +192,19 @@ Correo: ${DEFAULT_GMAIL_SENDER}
     </p>
 
     <div style="background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 16px; margin: 18px 0; font-size: 13px;">
-      <strong style="color: #92400e;">Opciones de Pago:</strong>
+      <strong style="color: #92400e;">Cuenta Bancaria Oficial para Depósito o Transferencia:</strong>
       <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #78350f; line-height: 1.6;">
-        <li><strong>Banco Industrial:</strong> Cuenta Monetaria No. 018-009876-5</li>
-        <li><strong>Banco G&T Continental:</strong> Cuenta Monetaria No. 066-001234-9</li>
-        <li><strong>En línea con Tarjeta:</strong> Directamente en la plataforma web</li>
+        <li><strong>Banco:</strong> Banrural</li>
+        <li><strong>Tipo de Cuenta:</strong> Monetaria</li>
+        <li><strong>No. de Cuenta:</strong> <span style="font-family: monospace; font-size: 14px; font-weight: bold; background: #fef3c7; padding: 2px 6px; border-radius: 4px;">3827008588</span></li>
+        <li><strong>A nombre de:</strong> Club de Leones de Quetzaltenango</li>
+        <li><strong>En línea con Tarjeta (Visacuotas / Mastercuotas):</strong> Directamente en la plataforma web</li>
       </ul>
     </div>
 
     <div style="text-align: center; margin: 22px 0;">
       <a href="${webUrl}" style="background: #d97706; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: 800; font-size: 13px; display: inline-block;">
-        Pagar o Reportar Boleta en Línea
+        Pagar con Tarjeta o Consultar Entrada QR
       </a>
     </div>
 

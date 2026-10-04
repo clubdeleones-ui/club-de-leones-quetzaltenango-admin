@@ -175,7 +175,7 @@ const CARGO_OPTIONS = [
 export const ALIANZAS_CONVENCION = [
   { 
     id: 'pat-1', 
-    name: 'LXXIV Convención Nacional 2026', 
+    name: 'LXXV Convención Nacional 2027', 
     category: 'Identidad Oficial', 
     badge: '', 
     logoUrl: 'images/patrocinadores/logo-convencion.png', 
@@ -555,10 +555,10 @@ export default function Convencion() {
     );
   });
 
-  const baseCost = 650;
-  const hotelCost = includeHotel ? 400 : 0;
-  const culturalCost = includeCultural ? 150 : 0;
-  const familiarCost = includeFamiliar ? 450 : 0;
+  const baseCost = config.tarifaBase && config.tarifaBase > 0 ? config.tarifaBase : 650;
+  const hotelCost = includeHotel ? (config.tarifaHotel || 400) : 0;
+  const culturalCost = includeCultural ? (config.tarifaCultural || 150) : 0;
+  const familiarCost = includeFamiliar ? (config.tarifaFamiliar || 450) : 0;
   const montoTotal = baseCost + hotelCost + culturalCost + familiarCost;
   const [isRedirectingPayment, setIsRedirectingPayment] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -578,6 +578,7 @@ export default function Convencion() {
 
   // Custom dropdown states
   const [openDropdown, setOpenDropdown] = useState<'cargo' | 'zona' | 'club' | null>(null);
+  const [clubSearchTerm, setClubSearchTerm] = useState('');
   const cargoRef = useRef<HTMLDivElement>(null);
   const zonaRef = useRef<HTMLDivElement>(null);
   const clubRef = useRef<HTMLDivElement>(null);
@@ -619,7 +620,7 @@ export default function Convencion() {
 
   const handleSearchQr = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const query = qrSearchQuery.trim().toLowerCase();
+    const query = qrSearchQuery.trim();
     if (!query) {
       setQrSearchError("Por favor ingresa tu correo, teléfono o folio de registro.");
       return;
@@ -631,19 +632,10 @@ export default function Convencion() {
     setQrCodeDataUrl('');
 
     try {
-      const allRegistros = await firebaseService.getConvencionRegistros();
-      const cleanPhone = query.replace(/\D/g, '');
-
-      const match = allRegistros.find(r => {
-        const emailMatch = r.email && r.email.toLowerCase().trim() === query;
-        const phoneMatch = cleanPhone.length >= 6 && r.telefono && r.telefono.replace(/\D/g, '').includes(cleanPhone);
-        const idMatch = r.id && r.id.toLowerCase() === query;
-        const nombreMatch = query.length >= 4 && r.nombre && r.nombre.toLowerCase().includes(query);
-        return emailMatch || phoneMatch || idMatch || nombreMatch;
-      });
+      const match = await firebaseService.searchConvencionRegistro(query);
 
       if (!match) {
-        setQrSearchError("No encontramos ninguna inscripción con esos datos. Revisa el correo o teléfono que utilizaste al registrarte, o llena tu formulario.");
+        setQrSearchError("No encontramos ninguna inscripción con esos datos. Revisa el correo, teléfono o folio que utilizaste al registrarte, o llena tu formulario.");
         return;
       }
 
@@ -655,7 +647,7 @@ export default function Convencion() {
         participante: match.nombre,
         club: match.club,
         paquete: match.paquete || 'General',
-        monto: match.montoPagar || 650,
+        monto: match.montoPagar || baseCost,
         estado: match.estadoPago || 'Pendiente',
         fecha: match.fechaRegistro
       });
@@ -938,15 +930,6 @@ export default function Convencion() {
         let target = new Date(year, month, day, hours, minutes, seconds).getTime();
         const now = new Date().getTime();
 
-        // Si la fecha configurada ya pasó respecto a hoy, proyectar automáticamente al próximo ciclo/año para que el reloj siempre permanezca activo
-        if (target <= now) {
-          const currentYear = new Date().getFullYear();
-          if (year <= currentYear) {
-            year = currentYear + (new Date(currentYear, month, day, hours, minutes, seconds).getTime() > now ? 0 : 1);
-            target = new Date(year, month, day, hours, minutes, seconds).getTime();
-          }
-        }
-        
         return target;
       } catch (e) {
         console.error("Error parsing date:", e);
@@ -995,9 +978,15 @@ export default function Convencion() {
     }));
   };
 
+  const isInternacional = form.distrito === 'Otro / Internacional';
+
   const handleDpiChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/\D/g, '').slice(0, 13);
-    setDpiDigitos(val);
+    if (isInternacional) {
+      setDpiDigitos(e.target.value.slice(0, 20));
+    } else {
+      const val = e.target.value.replace(/\D/g, '').slice(0, 13);
+      setDpiDigitos(val);
+    }
   };
 
   const handleZoneSelect = (selectedZone: string) => {
@@ -1045,9 +1034,16 @@ export default function Convencion() {
         showToast("El número de teléfono debe tener exactamente 8 dígitos.", "error");
         return;
       }
-      if (dpiDigitos.length !== 13) {
-        showToast("El número de DPI debe tener 13 dígitos numéricos.", "error");
-        return;
+      if (isInternacional) {
+        if (dpiDigitos.trim().length < 5) {
+          showToast("Por favor ingresa un número de Pasaporte o documento de identificación válido (mínimo 5 caracteres).", "error");
+          return;
+        }
+      } else {
+        if (dpiDigitos.length !== 13) {
+          showToast("El número de DPI debe tener 13 dígitos numéricos (o selecciona 'Otro / Internacional' si eres del extranjero).", "error");
+          return;
+        }
       }
     }
 
@@ -1522,7 +1518,7 @@ export default function Convencion() {
                 Respaldos & Alianzas Institucionales
               </span>
               <h3 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                Aliados Estratégicos de la LXXIV Convención
+                Aliados Estratégicos de la LXXV Convención
               </h3>
             </div>
           </div>
@@ -1745,7 +1741,7 @@ export default function Convencion() {
                   <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4 mb-10">
                     <div className="inline-flex items-center space-x-2 bg-yellow-500/15 border border-yellow-400/30 text-yellow-300 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider shadow-sm">
                       <ShieldCheck size={14} className="text-yellow-400" />
-                      <span>Pre-inscripción Oficial • Quetzaltenango 2026</span>
+                      <span>Pre-inscripción Oficial • Quetzaltenango 2027</span>
                     </div>
                     
                     <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight bg-gradient-to-r from-white via-amber-100 to-yellow-300 bg-clip-text text-transparent">
@@ -1925,9 +1921,25 @@ export default function Convencion() {
 
                         {/* DPI / Documento Identificación */}
                         <div className="space-y-2">
-                          <label className="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center space-x-1.5" htmlFor="dpi">
-                            <span>DPI / Documento de Identificación *</span>
-                          </label>
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center space-x-1.5" htmlFor="dpi">
+                              <span>{isInternacional ? 'Pasaporte / Doc. Identificación *' : 'DPI / Documento de Identificación *'}</span>
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const nextDistrito = isInternacional ? 'Zona A-1' : 'Otro / Internacional';
+                                setForm(prev => ({
+                                  ...prev,
+                                  distrito: nextDistrito,
+                                  club: nextDistrito === 'Otro / Internacional' ? 'Otro Club' : (ZONAS_CLUBS[nextDistrito]?.[0] || '')
+                                }));
+                              }}
+                              className="text-[10px] text-yellow-300 hover:text-yellow-200 underline font-extrabold cursor-pointer"
+                            >
+                              {isInternacional ? '🇬🇹 Soy de Guatemala (DPI)' : '🌎 ¿Vienes del extranjero?'}
+                            </button>
+                          </div>
                           <input 
                             type="text" 
                             id="dpi"
@@ -1935,8 +1947,8 @@ export default function Convencion() {
                             value={dpiDigitos}
                             onChange={handleDpiChange}
                             required
-                            maxLength={13}
-                            placeholder="Ej. 2500 12345 0901"
+                            maxLength={isInternacional ? 20 : 13}
+                            placeholder={isInternacional ? "Ej. Pasaporte A1234567" : "Ej. 2500 12345 0901"}
                             className="w-full bg-[#0a162e]/90 border border-white/20 focus:border-yellow-400 rounded-2xl px-4 py-3.5 text-white text-base sm:text-sm focus:outline-none focus:ring-4 focus:ring-yellow-400/20 transition-all placeholder:text-slate-400 min-h-[48px] shadow-inner font-mono"
                           />
                         </div>
@@ -2122,12 +2134,27 @@ export default function Convencion() {
                                   <ChevronDown size={18} className={`text-yellow-400 transition-transform duration-200 shrink-0 ml-2 ${openDropdown === 'club' ? 'rotate-180' : ''}`} />
                                 </button>
                                 {openDropdown === 'club' && (
-                                  <div className="absolute z-[100] mt-2 w-full rounded-2xl border-2 border-yellow-500/60 bg-[#06152d] shadow-[0_20px_50px_rgba(0,0,0,0.95)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-60 overflow-y-auto no-scrollbar">
-                                    {(ZONAS_CLUBS[form.distrito] || []).map((c) => (
+                                  <div className="absolute z-[100] mt-2 w-full rounded-2xl border-2 border-yellow-500/60 bg-[#06152d] shadow-[0_20px_50px_rgba(0,0,0,0.95)] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 max-h-64 overflow-y-auto no-scrollbar">
+                                    <div className="p-2 border-b border-white/10 sticky top-0 bg-[#06152d] z-10">
+                                      <input
+                                        type="text"
+                                        value={clubSearchTerm}
+                                        onChange={(e) => setClubSearchTerm(e.target.value)}
+                                        placeholder="Filtrar club..."
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="w-full bg-[#0a1b38] border border-white/20 rounded-xl px-3 py-1.5 text-xs text-white placeholder:text-slate-400 focus:outline-none focus:border-yellow-400"
+                                      />
+                                    </div>
+                                    {(ZONAS_CLUBS[form.distrito] || [])
+                                      .filter(c => !clubSearchTerm || c.toLowerCase().includes(clubSearchTerm.toLowerCase()))
+                                      .map((c) => (
                                       <button
                                         key={c}
                                         type="button"
-                                        onClick={() => handleClubSelect(c)}
+                                        onClick={() => {
+                                          handleClubSelect(c);
+                                          setClubSearchTerm('');
+                                        }}
                                         className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors text-left cursor-pointer ${form.club === c ? 'bg-yellow-500/25 text-yellow-300 font-bold border-l-4 border-yellow-400' : 'text-white font-medium hover:bg-[#102a52]'} ${c === 'Otro Club' ? 'border-t border-white/10 italic text-slate-300' : ''}`}
                                       >
                                         <span>{c === 'Otro Club' ? '✏️ Otro Club...' : c}</span>
@@ -2543,11 +2570,11 @@ export default function Convencion() {
                               </div>
                               <div>
                                 <h4 className="text-lg font-black text-white tracking-tight">Inscripción Base a la Convención Nacional</h4>
-                                <span className="text-xs text-yellow-300 font-extrabold block">Tarifa Oficial de Convencionista Quetzaltenango 2026</span>
+                                <span className="text-xs text-yellow-300 font-extrabold block">Tarifa Oficial de Convencionista Quetzaltenango 2027</span>
                               </div>
                             </div>
                             <div className="text-left sm:text-right pl-13 sm:pl-0">
-                              <span className="text-3xl font-black text-yellow-300 tracking-tight drop-shadow">Q. 650.00</span>
+                              <span className="text-3xl font-black text-yellow-300 tracking-tight drop-shadow">Q. {baseCost.toLocaleString()}.00</span>
                             </div>
                           </div>
 
@@ -2663,8 +2690,26 @@ export default function Convencion() {
                         <div className="space-y-2 text-xs text-slate-300 py-1">
                           <div className="flex justify-between items-center font-medium">
                             <span>• Inscripción Oficial Base de Convencionista:</span>
-                            <span className="font-bold text-white">Q. 650.00</span>
+                            <span className="font-bold text-white">Q. {baseCost.toLocaleString()}.00</span>
                           </div>
+                          {includeHotel && (
+                            <div className="flex justify-between items-center font-medium">
+                              <span>• Hospedaje Hotel Sede & Tour:</span>
+                              <span className="font-bold text-white">Q. {(config.tarifaHotel || 400).toLocaleString()}.00</span>
+                            </div>
+                          )}
+                          {includeCultural && (
+                            <div className="flex justify-between items-center font-medium">
+                              <span>• Paquete Inmersivo Cultural:</span>
+                              <span className="font-bold text-white">Q. {(config.tarifaCultural || 150).toLocaleString()}.00</span>
+                            </div>
+                          )}
+                          {includeFamiliar && (
+                            <div className="flex justify-between items-center font-medium">
+                              <span>• Paquete Familiar Inmersivo:</span>
+                              <span className="font-bold text-white">Q. {(config.tarifaFamiliar || 450).toLocaleString()}.00</span>
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex justify-between items-center pt-3 border-t border-white/15 text-sm sm:text-base font-black">
@@ -2736,7 +2781,7 @@ export default function Convencion() {
                       <span>{paymentSuccessData?.metodo === 'recurrente' || paymentSuccessData?.estadoPago === 'Pagado' ? 'Inscripción y Pago Confirmados' : 'Pre-inscripción Registrada Oficialmente'}</span>
                     </span>
                     <h3 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-                      ¡Bienvenido a la LXXIV Convención!
+                      ¡Bienvenido a la LXXV Convención!
                     </h3>
                     <p className="text-slate-200 text-sm sm:text-base leading-relaxed">
                       Compañero León <strong className="text-yellow-400 font-extrabold">{form.nombre}</strong> ({form.club === 'Otro Club' ? customClub : form.club}), tus datos han sido procesados satisfactoriamente.
@@ -2839,8 +2884,8 @@ export default function Convencion() {
                 <Zap size={20} className="animate-pulse" />
               </div>
               <div className="leading-tight">
-                <span className="text-[10px] font-black uppercase tracking-widest text-yellow-400 block">LXXIV Convención Xela</span>
-                <span className="text-xs sm:text-sm font-black text-white">Tarifa Base Q. 650.00</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-yellow-400 block">LXXV Convención Xela</span>
+                <span className="text-xs sm:text-sm font-black text-white">Tarifa Base Q. {baseCost.toLocaleString()}.00</span>
               </div>
             </div>
 

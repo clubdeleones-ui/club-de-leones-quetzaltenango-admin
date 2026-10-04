@@ -45,7 +45,11 @@ import {
   ChevronDown,
   ChevronUp,
   RefreshCw,
-  Info
+  Info,
+  BarChart3,
+  TrendingUp,
+  PieChart,
+  Target
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { firebaseService } from '../../services/firebaseService';
@@ -70,7 +74,7 @@ const DEFAULT_ALIANZAS: ConvencionAlianza[] = ALIANZAS_CONVENCION;
 
 export function AdminConvencion() {
   const { confirm } = useConfirm();
-  const [activeSubTab, setActiveSubTab] = useState<'difusion' | 'registros' | 'config'>('difusion');
+  const [activeSubTab, setActiveSubTab] = useState<'difusion' | 'registros' | 'proyecciones' | 'config'>('difusion');
   const [activeConfigTab, setActiveConfigTab] = useState<'general' | 'actividades' | 'experiencias' | 'alianzas'>('general');
   
   // Mass Broadcast State
@@ -265,7 +269,7 @@ export function AdminConvencion() {
   const getWhatsAppMessage = (reg: ConvencionRegistro) => {
     const isPagado = reg.estadoPago === 'Pagado';
     if (isPagado) {
-      return `¡Hola Compañero(a) León ${reg.nombre}! 🦁 Le saluda el Comité Organizador de la LXXIV Convención Nacional Club de Leones Quetzaltenango 2026-2027.
+      return `¡Hola Compañero(a) León ${reg.nombre}! 🦁 Le saluda el Comité Organizador de la LXXV Convención Nacional Club de Leones Quetzaltenango 2027.
 
 Le confirmamos que su inscripción oficial está VALIDADA Y CONFIRMADA (Pagado) ✅.
 
@@ -276,7 +280,7 @@ Le confirmamos que su inscripción oficial está VALIDADA Y CONFIRMADA (Pagado) 
 
 Su entrada y código QR de acceso oficial han sido generados exitosamente. ¡Nos vemos en Xela para rugir juntos con fuerza y hermandad!`;
     } else {
-      return `¡Hola Compañero(a) León ${reg.nombre}! 🦁 Le saluda el Comité Organizador de la LXXIV Convención Nacional Club de Leones Quetzaltenango 2026-2027.
+      return `¡Hola Compañero(a) León ${reg.nombre}! 🦁 Le saluda el Comité Organizador de la LXXV Convención Nacional Club de Leones Quetzaltenango 2027.
 
 Hemos recibido su pre-registro oficial con los siguientes datos:
 📌 Folio Oficial: ${reg.id}
@@ -285,7 +289,7 @@ Hemos recibido su pre-registro oficial con los siguientes datos:
 💰 Total a Pagar: Q.${(reg.montoPagar || 0).toLocaleString()}.00
 ⏳ Estado actual: ${reg.estadoPago || 'Pendiente de Pago'}
 
-Quedamos a su entera disposición para apoyarle con su depósito o transferencia bancaria (Banrural) o pasarela de tarjeta para emitir su entrada QR oficial. ¿En qué podemos servirle?`;
+Quedamos a su entera disposición para apoyarle con su depósito o transferencia bancaria (Banrural Cuenta Monetaria 3827008588) o pasarela de tarjeta para emitir su entrada QR oficial. ¿En qué podemos servirle?`;
     }
   };
 
@@ -294,8 +298,8 @@ Quedamos a su entera disposición para apoyarle con su depósito o transferencia
     setIsCopiedQr(false);
     try {
       const qrPayload = JSON.stringify({
-        evento: "LXXIV Convención Nacional Club de Leones",
-        sede: "Quetzaltenango 2026-2027",
+        evento: "LXXV Convención Nacional Club de Leones",
+        sede: "Quetzaltenango 2027",
         folio: reg.id,
         participante: reg.nombre,
         club: reg.club,
@@ -320,7 +324,7 @@ Quedamos a su entera disposición para apoyarle con su depósito o transferencia
 
   const handleCopyTicketDetails = () => {
     if (!qrModalRegistro) return;
-    const text = `🎟️ ENTRADA OFICIAL • LXXIV CONVENCIÓN NACIONAL CLUB DE LEONES
+    const text = `🎟️ ENTRADA OFICIAL • LXXV CONVENCIÓN NACIONAL CLUB DE LEONES
 Folio: ${qrModalRegistro.id}
 Participante: ${qrModalRegistro.nombre}
 Club: ${qrModalRegistro.club} (${qrModalRegistro.cargo} • ${qrModalRegistro.distrito})
@@ -352,6 +356,11 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
           fotoSedeEtiqueta: dbConfig.fotoSedeEtiqueta || 'Sede Oficial',
           fotoSedeDescripcion: dbConfig.fotoSedeDescripcion || 'Teatro Municipal de Quetzaltenango',
           headerBgOverlayOpacity: dbConfig.headerBgOverlayOpacity !== undefined ? dbConfig.headerBgOverlayOpacity : 75,
+          tarifaBase: dbConfig.tarifaBase !== undefined ? dbConfig.tarifaBase : 650,
+          aforoMeta: dbConfig.aforoMeta !== undefined ? dbConfig.aforoMeta : 300,
+          cuentaBancariaBanrural: dbConfig.cuentaBancariaBanrural || '3827008588',
+          nombreCuentaBancaria: dbConfig.nombreCuentaBancaria || 'Club de Leones de Quetzaltenango',
+          bancoNombre: dbConfig.bancoNombre || 'Banrural Monetaria',
           actividadesCulturales: dbConfig.actividadesCulturales || [],
           experienciasUnicas: dbConfig.experienciasUnicas || []
         });
@@ -476,7 +485,9 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
         ...config,
         fotoSede: finalUrl,
         headerBgUrl: finalHeaderBgUrl,
-        headerBgOverlayOpacity: config.headerBgOverlayOpacity !== undefined ? Number(config.headerBgOverlayOpacity) : 75
+        headerBgOverlayOpacity: config.headerBgOverlayOpacity !== undefined ? Number(config.headerBgOverlayOpacity) : 75,
+        tarifaBase: config.tarifaBase ? Number(config.tarifaBase) : 650,
+        aforoMeta: config.aforoMeta ? Number(config.aforoMeta) : 300
       };
 
       await firebaseService.saveConvencionConfig(updatedConfig);
@@ -1212,6 +1223,17 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
 
         <div className="flex bg-slate-200/60 p-1.5 rounded-2xl border border-slate-250 gap-1.5 overflow-x-auto">
           <button
+            onClick={() => setActiveSubTab('proyecciones')}
+            className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+              activeSubTab === 'proyecciones'
+                ? 'bg-blue-900 text-white shadow-md'
+                : 'text-slate-700 hover:text-slate-900 hover:bg-white/50'
+            }`}
+          >
+            <TrendingUp size={15} className="text-emerald-400" />
+            <span>📊 Proyecciones</span>
+          </button>
+          <button
             onClick={() => setActiveSubTab('difusion')}
             className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
               activeSubTab === 'difusion'
@@ -1611,6 +1633,159 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                           placeholder="Escribe el cuerpo del correo que se enviará automáticamente..."
                           className="w-full bg-white border border-slate-200 focus:border-blue-900 rounded-xl p-3.5 text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-semibold"
                         />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Configuración Financiera, Cuotas y Aforo */}
+                  <div className="md:col-span-2 bg-slate-50 border border-slate-200/80 rounded-2xl p-5 space-y-4">
+                    <div className="border-b border-slate-200 pb-3">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-blue-900 flex items-center space-x-2">
+                        <CreditCard size={16} className="text-emerald-600" />
+                        <span>Parámetros Financieros, Cuotas & Meta de Aforo</span>
+                      </h4>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Define los costos base de inscripción, la meta de asistencia y las cuentas bancarias oficiales para transferencias.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Tarifa Base */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 block" htmlFor="tarifaBase">
+                          Tarifa Base de Pre-inscripción (Q)
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">Q</span>
+                          <input
+                            id="tarifaBase"
+                            name="tarifaBase"
+                            type="number"
+                            min="1"
+                            value={config.tarifaBase !== undefined ? config.tarifaBase : 650}
+                            onChange={handleConfigChange}
+                            required
+                            placeholder="650"
+                            className="w-full bg-white border border-slate-200 focus:border-blue-900 rounded-xl pl-8 pr-4 py-2.5 text-slate-800 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all"
+                          />
+                        </div>
+                        <span className="text-[10px] text-slate-400">Tarifa mostrada por defecto en el asistente de registro.</span>
+                      </div>
+
+                      {/* Meta de Aforo */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 block" htmlFor="aforoMeta">
+                          Meta de Aforo (Número de Participantes)
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">👥</span>
+                          <input
+                            id="aforoMeta"
+                            name="aforoMeta"
+                            type="number"
+                            min="10"
+                            value={config.aforoMeta !== undefined ? config.aforoMeta : 300}
+                            onChange={handleConfigChange}
+                            required
+                            placeholder="300"
+                            className="w-full bg-white border border-slate-200 focus:border-blue-900 rounded-xl pl-10 pr-4 py-2.5 text-slate-800 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all"
+                          />
+                        </div>
+                        <span className="text-[10px] text-slate-400">Capacidad proyectada para cálculos de % de ocupación.</span>
+                      </div>
+
+                      {/* Cuenta Banrural */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 block" htmlFor="cuentaBancariaBanrural">
+                          Número de Cuenta Banrural (Monetaria)
+                        </label>
+                        <input
+                          id="cuentaBancariaBanrural"
+                          name="cuentaBancariaBanrural"
+                          type="text"
+                          value={config.cuentaBancariaBanrural || '3827008588'}
+                          onChange={handleConfigChange}
+                          placeholder="3827008588"
+                          className="w-full bg-white border border-slate-200 focus:border-blue-900 rounded-xl px-4 py-2.5 text-slate-800 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all"
+                        />
+                        <span className="text-[10px] text-slate-400">Cuenta bancaria oficial para depósitos y transferencias.</span>
+                      </div>
+
+                      {/* Nombre Cuenta */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 block" htmlFor="nombreCuentaBancaria">
+                          Nombre del Titular de la Cuenta
+                        </label>
+                        <input
+                          id="nombreCuentaBancaria"
+                          name="nombreCuentaBancaria"
+                          type="text"
+                          value={config.nombreCuentaBancaria || 'Club de Leones de Quetzaltenango'}
+                          onChange={handleConfigChange}
+                          placeholder="Club de Leones de Quetzaltenango"
+                          className="w-full bg-white border border-slate-200 focus:border-blue-900 rounded-xl px-4 py-2.5 text-slate-800 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all"
+                        />
+                        <span className="text-[10px] text-slate-400">Titular verificado para emisión de boletas y transferencias.</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Configuración de Notificaciones Telegram Bot */}
+                  <div className="md:col-span-2 bg-slate-50 border border-slate-200/80 rounded-2xl p-5 space-y-4">
+                    <div className="border-b border-slate-200 pb-3 flex items-center justify-between">
+                      <div>
+                        <h4 className="text-xs font-black uppercase tracking-wider text-blue-900 flex items-center space-x-2">
+                          <Send size={16} className="text-sky-500" />
+                          <span>Notificaciones por Telegram Bot API</span>
+                        </h4>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Envío automático instantáneo de alertas de pre-inscripción y difusiones al canal/grupo oficial.
+                        </p>
+                      </div>
+                      <a
+                        href="https://t.me/ConvencionLeonesbot"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] font-bold text-sky-600 hover:text-sky-800 flex items-center space-x-1"
+                      >
+                        <span>@ConvencionLeonesbot</span>
+                        <ExternalLink size={12} />
+                      </a>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Telegram Chat ID */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 block" htmlFor="telegramChatId">
+                          Chat ID o Canal Oficial de Telegram
+                        </label>
+                        <input
+                          id="telegramChatId"
+                          name="telegramChatId"
+                          type="text"
+                          value={config.telegramChatId || '1507920109'}
+                          onChange={handleConfigChange}
+                          placeholder="1507920109"
+                          className="w-full bg-white border border-slate-200 focus:border-blue-900 rounded-xl px-4 py-2.5 text-slate-800 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all"
+                        />
+                        <span className="text-[10px] text-slate-400">ID del grupo o canal receptor de notificaciones operativas.</span>
+                      </div>
+
+                      {/* Telegram Bot Token Override */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 block" htmlFor="telegramBotToken">
+                          Token del Bot (Opcional - Reemplazar por defecto)
+                        </label>
+                        <input
+                          id="telegramBotToken"
+                          name="telegramBotToken"
+                          type="password"
+                          value={config.telegramBotToken || ''}
+                          onChange={handleConfigChange}
+                          placeholder="Dejar vacío para usar el bot preconfigurado"
+                          className="w-full bg-white border border-slate-200 focus:border-blue-900 rounded-xl px-4 py-2.5 text-slate-800 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all"
+                        />
+                        <span className="text-[10px] text-slate-400">Si se deja en blanco, se usa el bot @ConvencionLeonesbot del sistema.</span>
                       </div>
                     </div>
                   </div>
@@ -3174,6 +3349,439 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
             )}
           </div>
         )}
+
+        {/* ================= PROYECCIONES & MÉTRICAS TAB ================= */}
+        {activeSubTab === 'proyecciones' && (() => {
+          const aforoMeta = config.aforoMeta || 300;
+          const totalInscritos = registros.length;
+          const porcentajeAforo = Math.min(Math.round((totalInscritos / aforoMeta) * 100), 100);
+          const cuposDisponibles = Math.max(0, aforoMeta - totalInscritos);
+          
+          const tarifaBase = config.tarifaBase || 650;
+          const pagados = registros.filter(r => r.estadoPago === 'pagado');
+          const pendientes = registros.filter(r => r.estadoPago !== 'pagado');
+          
+          const recaudadoTotal = pagados.reduce((acc, r) => acc + (r.montoTotal || tarifaBase), 0);
+          const pendienteTotal = pendientes.reduce((acc, r) => acc + (r.montoTotal || tarifaBase), 0);
+          const pipelineTotal = recaudadoTotal + pendienteTotal;
+          const tasaCobro = pipelineTotal > 0 ? Math.round((recaudadoTotal / pipelineTotal) * 100) : 0;
+
+          // Acompañantes totales
+          const totalAcompanantes = registros.reduce((acc, r) => acc + (r.cantidadAcompanantes || 0), 0);
+          const totalPersonasEstimadas = totalInscritos + totalAcompanantes;
+
+          // Canales de comunicación
+          const conEmail = registros.filter(r => !!r.email).length;
+          const conTelegram = registros.filter(r => r.telegramVerificado).length;
+          const conTelefono = registros.filter(r => !!r.telefono).length;
+
+          // Métodos de Pago
+          const pagoTarjeta = registros.filter(r => r.metodoPago === 'tarjeta').length;
+          const pagoTransferencia = registros.filter(r => r.metodoPago !== 'tarjeta').length;
+
+          // Agrupación por Club
+          const clubCountMap: Record<string, { total: number; pagados: number; monto: number }> = {};
+          registros.forEach(r => {
+            const club = (r.clubNombre || r.club || 'Sin Club Registrado').trim();
+            if (!clubCountMap[club]) {
+              clubCountMap[club] = { total: 0, pagados: 0, monto: 0 };
+            }
+            clubCountMap[club].total += 1;
+            if (r.estadoPago === 'pagado') {
+              clubCountMap[club].pagados += 1;
+            }
+            clubCountMap[club].monto += (r.montoTotal || tarifaBase);
+          });
+          const rankingClubs = Object.entries(clubCountMap).sort((a, b) => b[1].total - a[1].total);
+          const maxClubTotal = rankingClubs.length > 0 ? rankingClubs[0][1].total : 1;
+
+          // Agrupación por Región / Distrito
+          const regionCountMap: Record<string, number> = {};
+          registros.forEach(r => {
+            const reg = (r.region || r.distrito || 'Sin Zona/Región').trim();
+            regionCountMap[reg] = (regionCountMap[reg] || 0) + 1;
+          });
+          const distritosRanking = Object.entries(regionCountMap).sort((a, b) => b[1] - a[1]);
+
+          // Agrupación por Cargo
+          const cargoCountMap: Record<string, number> = {};
+          registros.forEach(r => {
+            const c = (r.cargo || 'Socio León').trim();
+            cargoCountMap[c] = (cargoCountMap[c] || 0) + 1;
+          });
+          const cargosRanking = Object.entries(cargoCountMap).sort((a, b) => b[1] - a[1]);
+
+          return (
+            <div className="space-y-8 animate-in fade-in duration-300">
+              {/* Header con Acciones */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-blue-955 via-blue-900 to-indigo-950 p-6 rounded-3xl text-white shadow-xl">
+                <div>
+                  <div className="inline-flex items-center space-x-2 bg-yellow-400/20 border border-yellow-400/30 px-3 py-1 rounded-full text-yellow-300 text-[10px] font-black uppercase tracking-wider mb-2">
+                    <BarChart3 size={13} />
+                    <span>LXXV Convención Nacional 2027 • Panel Ejecutivo</span>
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                    Proyecciones, Métricas & Aforo
+                  </h3>
+                  <p className="text-xs text-blue-150 mt-1 max-w-xl">
+                    Análisis en tiempo real de inscripciones, recaudación financiera por cobrar, adopción de canales y ranking de delegaciones.
+                  </p>
+                </div>
+                <div className="flex items-center space-x-3 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleExportCSV}
+                    className="flex items-center space-x-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-black px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-sm active:scale-95"
+                  >
+                    <Download size={14} className="text-yellow-400" />
+                    <span>Exportar Base CSV</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubTab('difusion')}
+                    className="flex items-center space-x-2 bg-amber-400 hover:bg-amber-300 text-blue-950 text-xs font-black px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-md active:scale-95"
+                  >
+                    <Send size={14} />
+                    <span>Lanzar Difusión</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 4 Tarjetas de Métricas Principales */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                {/* Meta de Aforo */}
+                <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                        Meta de Asistencia
+                      </span>
+                      <div className="flex items-baseline space-x-2 mt-1">
+                        <span className="text-3xl font-black text-slate-900 tracking-tight">
+                          {totalInscritos}
+                        </span>
+                        <span className="text-xs font-extrabold text-slate-400">
+                          / {aforoMeta} meta
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-900 shrink-0">
+                      <Target size={20} />
+                    </div>
+                  </div>
+
+                  {/* Barra de progreso */}
+                  <div className="mt-4 space-y-1.5">
+                    <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                      <div 
+                        className={`h-full transition-all duration-500 rounded-full ${
+                          porcentajeAforo >= 80 ? 'bg-emerald-500' : porcentajeAforo >= 40 ? 'bg-blue-600' : 'bg-amber-500'
+                        }`}
+                        style={{ width: `${porcentajeAforo}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] font-bold">
+                      <span className="text-blue-900">{porcentajeAforo}% completado</span>
+                      <span className="text-slate-400">{cuposDisponibles} cupos libres</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
+                    <span>Acompañantes proyectados:</span>
+                    <strong className="text-slate-800 font-extrabold">+{totalAcompanantes} ({totalPersonasEstimadas} pers.)</strong>
+                  </div>
+                </div>
+
+                {/* Recaudación Confirmada */}
+                <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                        Recaudación Confirmada
+                      </span>
+                      <div className="flex items-baseline space-x-1 mt-1">
+                        <span className="text-2xl sm:text-3xl font-black text-emerald-700 tracking-tight">
+                          Q.{recaudadoTotal.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                      <CreditCard size={20} />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 space-y-1.5">
+                    <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                      <div 
+                        className="h-full bg-emerald-500 transition-all duration-500 rounded-full"
+                        style={{ width: `${tasaCobro}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] font-bold">
+                      <span className="text-emerald-700">{tasaCobro}% efectividad de cobro</span>
+                      <span className="text-slate-400">{pagados.length} socios pagados</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
+                    <span>Cartera por cobrar:</span>
+                    <strong className="text-amber-600 font-extrabold">Q.{pendienteTotal.toLocaleString()} ({pendientes.length})</strong>
+                  </div>
+                </div>
+
+                {/* Pipeline Bruto Total */}
+                <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                        Pipeline Bruto Esperado
+                      </span>
+                      <div className="flex items-baseline space-x-1 mt-1">
+                        <span className="text-2xl sm:text-3xl font-black text-blue-900 tracking-tight">
+                          Q.{pipelineTotal.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                      <TrendingUp size={20} />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 p-2.5 rounded-2xl bg-slate-50 border border-slate-100 text-xs space-y-1">
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-slate-500">Tarifa base regular:</span>
+                      <span className="font-extrabold text-slate-800">Q.{tarifaBase}.00</span>
+                    </div>
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-slate-500">Tickets registrados:</span>
+                      <span className="font-extrabold text-slate-800">{totalInscritos} boletos</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
+                    <span>Promedio por registro:</span>
+                    <strong className="text-slate-800 font-extrabold">
+                      Q.{totalInscritos > 0 ? Math.round(pipelineTotal / totalInscritos) : tarifaBase}.00
+                    </strong>
+                  </div>
+                </div>
+
+                {/* Adopción de Bot & Canales */}
+                <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                        Alcance & Automatización
+                      </span>
+                      <div className="flex items-baseline space-x-2 mt-1">
+                        <span className="text-3xl font-black text-sky-600 tracking-tight">
+                          {conTelegram}
+                        </span>
+                        <span className="text-xs font-extrabold text-slate-400">
+                          en Telegram Bot
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-10 h-10 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600 shrink-0">
+                      <Send size={20} />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-500 flex items-center space-x-1">
+                        <Mail size={12} className="text-rose-500" />
+                        <span>Correo verificado:</span>
+                      </span>
+                      <strong className="text-slate-800">{conEmail} ({totalInscritos > 0 ? Math.round((conEmail/totalInscritos)*100) : 0}%)</strong>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-500 flex items-center space-x-1">
+                        <Phone size={12} className="text-emerald-500" />
+                        <span>WhatsApp / Teléfono:</span>
+                      </span>
+                      <strong className="text-slate-800">{conTelefono} ({totalInscritos > 0 ? Math.round((conTelefono/totalInscritos)*100) : 0}%)</strong>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
+                    <span>Bot @ConvencionLeonesbot:</span>
+                    <strong className="text-sky-600 font-extrabold">
+                      {totalInscritos > 0 ? Math.round((conTelegram/totalInscritos)*100) : 0}% activo
+                    </strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Grid 2 Columnas: Top Delegaciones y Distribución */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Ranking de Clubes */}
+                <div className="lg:col-span-7 bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-5">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <div>
+                      <h4 className="text-base font-black text-slate-900 tracking-tight flex items-center space-x-2">
+                        <Award size={18} className="text-amber-500" />
+                        <span>Top Delegaciones por Club</span>
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Clubes con mayor representación e inscripciones registradas.
+                      </p>
+                    </div>
+                    <span className="text-xs font-black bg-blue-50 text-blue-900 border border-blue-100 px-3 py-1 rounded-full">
+                      {rankingClubs.length} Clubes activos
+                    </span>
+                  </div>
+
+                  {rankingClubs.length > 0 ? (
+                    <div className="space-y-3">
+                      {rankingClubs.slice(0, 8).map(([clubNombre, data], idx) => {
+                        const porcentajeClub = Math.round((data.total / maxClubTotal) * 100);
+                        return (
+                          <div key={clubNombre} className="p-3 rounded-2xl bg-slate-50/80 border border-slate-150 hover:bg-slate-100 transition-colors">
+                            <div className="flex items-center justify-between text-xs mb-1.5">
+                              <div className="flex items-center space-x-2 truncate pr-2">
+                                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                                  idx === 0 ? 'bg-amber-400 text-blue-950 shadow-sm' :
+                                  idx === 1 ? 'bg-slate-300 text-slate-800' :
+                                  idx === 2 ? 'bg-amber-700/20 text-amber-900' : 'bg-slate-200 text-slate-600'
+                                }`}>
+                                  {idx + 1}
+                                </span>
+                                <span className="font-extrabold text-slate-900 truncate">{clubNombre}</span>
+                              </div>
+                              <div className="flex items-center space-x-3 shrink-0">
+                                <span className="text-emerald-700 font-extrabold text-[11px]">
+                                  {data.pagados} pagados
+                                </span>
+                                <span className="font-black text-slate-900 text-xs">
+                                  {data.total} socios
+                                </span>
+                              </div>
+                            </div>
+                            <div className="w-full bg-slate-200/70 rounded-full h-1.5 overflow-hidden">
+                              <div 
+                                className="h-full bg-blue-900 rounded-full transition-all duration-300"
+                                style={{ width: `${porcentajeClub}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-slate-400 text-xs">
+                      No hay delegaciones registradas aún.
+                    </div>
+                  )}
+                </div>
+
+                {/* Distribución por Región & Métodos */}
+                <div className="lg:col-span-5 space-y-6">
+                  {/* Zonas y Regiones */}
+                  <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <h4 className="text-sm font-black text-slate-900 tracking-tight flex items-center space-x-2">
+                        <Compass size={16} className="text-blue-900" />
+                        <span>Distribución por Región / Distrito</span>
+                      </h4>
+                      <span className="text-[10px] font-bold text-slate-400">Total: {totalInscritos}</span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {distritosRanking.length > 0 ? (
+                        distritosRanking.slice(0, 5).map(([distrito, count]) => {
+                          const pct = totalInscritos > 0 ? Math.round((count / totalInscritos) * 100) : 0;
+                          return (
+                            <div key={distrito} className="flex items-center justify-between text-xs p-2 rounded-xl bg-slate-50 border border-slate-100">
+                              <span className="font-extrabold text-slate-700 truncate">{distrito}</span>
+                              <div className="flex items-center space-x-2 shrink-0">
+                                <span className="text-[10px] font-bold text-slate-400">{pct}%</span>
+                                <span className="bg-blue-900 text-white font-black text-[10px] px-2 py-0.5 rounded-full">
+                                  {count}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <p className="text-xs text-slate-400 text-center py-4">Sin datos de región</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Pasarela vs Bancos */}
+                  <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <h4 className="text-sm font-black text-slate-900 tracking-tight flex items-center space-x-2">
+                        <CreditCard size={16} className="text-emerald-600" />
+                        <span>Preferencia de Forma de Pago</span>
+                      </h4>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div className="p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-100 space-y-1">
+                        <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider block">
+                          Tarjeta en Línea
+                        </span>
+                        <p className="text-xl font-black text-indigo-950">
+                          {pagoTarjeta}
+                        </p>
+                        <span className="text-[10px] text-slate-500 block">
+                          {totalInscritos > 0 ? Math.round((pagoTarjeta/totalInscritos)*100) : 0}% vía Recurrente GT
+                        </span>
+                      </div>
+
+                      <div className="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-100 space-y-1">
+                        <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">
+                          Boleta Banrural
+                        </span>
+                        <p className="text-xl font-black text-emerald-950">
+                          {pagoTransferencia}
+                        </p>
+                        <span className="text-[10px] text-slate-500 block">
+                          {totalInscritos > 0 ? Math.round((pagoTransferencia/totalInscritos)*100) : 0}% Depósito/Transferencia
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recomendaciones Operativas Inteligentes */}
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-3xl p-6 shadow-sm">
+                <div className="flex items-start space-x-3.5">
+                  <div className="p-2.5 bg-amber-400 text-blue-950 rounded-2xl shrink-0">
+                    <Sparkles size={20} />
+                  </div>
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-black text-amber-950 uppercase tracking-wider">
+                      Recomendaciones Operativas & Acciones Sugeridas
+                    </h4>
+                    <ul className="text-xs text-amber-900/90 space-y-1.5 list-disc pl-4">
+                      {pendientes.length > 0 ? (
+                        <li>
+                          Hay <strong>{pendientes.length} pre-registros pendientes de pago</strong> (equivalente a <strong>Q.{pendienteTotal.toLocaleString()}.00</strong>). Recomendamos lanzar un recordatorio masivo usando la pestaña <strong>📢 Difusión Masiva</strong> con la plantilla de pago para acelerar la cobranza.
+                        </li>
+                      ) : (
+                        <li>¡Excelente! Todas las pre-inscripciones registradas se encuentran solventes y con pago confirmado.</li>
+                      )}
+                      {conTelegram < totalInscritos && (
+                        <li>
+                          El <strong>{totalInscritos > 0 ? Math.round(((totalInscritos - conTelegram) / totalInscritos) * 100) : 0}%</strong> de los inscritos aún no ha iniciado sesión en el bot de Telegram. Invítalos a enviar <code>/start</code> a <strong>@ConvencionLeonesbot</strong> para recibir su credencial QR y notificaciones instantáneas de agenda.
+                        </li>
+                      )}
+                      {cuposDisponibles > 0 && (
+                        <li>
+                          Quedan <strong>{cuposDisponibles} cupos disponibles</strong> para alcanzar la meta oficial de <strong>{aforoMeta} participantes</strong> en Quetzaltenango.
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* ================= MODAL: ACTIVIDAD CULTURAL ================= */}
@@ -3534,7 +4142,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
               <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 w-32 h-32 bg-yellow-400/10 rounded-full blur-2xl pointer-events-none" />
               <div className="space-y-1 relative z-10">
                 <span className="text-[10px] font-black uppercase tracking-widest text-yellow-300 bg-yellow-500/20 border border-yellow-400/30 px-3 py-0.5 rounded-full inline-block">
-                  LXXIV Convención Lions 2026-2027
+                  LXXV Convención Lions 2026-2027
                 </span>
                 <h3 className="text-lg sm:text-xl font-black text-white tracking-tight flex items-center space-x-2">
                   <QrCode size={20} className="text-yellow-400" />

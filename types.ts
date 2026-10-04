@@ -495,6 +495,14 @@ export interface ConvencionConfig {
   telegramChatId?: string;
   mensajeBienvenidaEmail?: string;
   alianzas?: ConvencionAlianza[];
+  tarifaBase?: number;
+  tarifaHotel?: number;
+  tarifaCultural?: number;
+  tarifaFamiliar?: number;
+  aforoMeta?: number;
+  cuentaBancariaBanrural?: string;
+  nombreCuentaBancaria?: string;
+  bancoNombre?: string;
 }
 
 export interface MensajeEnviadoLog {

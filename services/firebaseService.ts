@@ -1302,6 +1302,81 @@ export const firebaseService = {
     }
   },
 
+  /**
+   * Búsqueda puntual y segura de un registro por folio, correo, teléfono o DPI
+   * Evita descargar toda la base de datos de inscritos en el cliente público.
+   */
+  searchConvencionRegistro: async (searchTerm: string): Promise<ConvencionRegistro | null> => {
+    const term = searchTerm.trim();
+    if (!term) return null;
+
+    try {
+      const colRef = collection(db, "convencion_registros");
+
+      // 1. Búsqueda directa por ID de documento (folio)
+      const directRef = doc(db, "convencion_registros", term);
+      const directSnap = await getDoc(directRef);
+      if (directSnap.exists()) {
+        return directSnap.data() as ConvencionRegistro;
+      }
+
+      if (!term.startsWith('reg_')) {
+        const withPrefixRef = doc(db, "convencion_registros", `reg_${term}`);
+        const withPrefixSnap = await getDoc(withPrefixRef);
+        if (withPrefixSnap.exists()) {
+          return withPrefixSnap.data() as ConvencionRegistro;
+        }
+      }
+
+      // 2. Búsqueda por correo electrónico
+      if (term.includes('@')) {
+        const qEmail = query(colRef, where("email", "==", term.toLowerCase()), limit(1));
+        const snapEmail = await getDocs(qEmail);
+        if (!snapEmail.empty) {
+          return snapEmail.docs[0].data() as ConvencionRegistro;
+        }
+      }
+
+      // 3. Búsqueda por número de teléfono
+      const cleanDigits = term.replace(/\D/g, '');
+      if (cleanDigits.length >= 8) {
+        const last8 = cleanDigits.slice(-8);
+        const qPhone1 = query(colRef, where("telefono", "==", `+502${last8}`), limit(1));
+        const snapPhone1 = await getDocs(qPhone1);
+        if (!snapPhone1.empty) {
+          return snapPhone1.docs[0].data() as ConvencionRegistro;
+        }
+
+        const qPhone2 = query(colRef, where("telefono", "==", last8), limit(1));
+        const snapPhone2 = await getDocs(qPhone2);
+        if (!snapPhone2.empty) {
+          return snapPhone2.docs[0].data() as ConvencionRegistro;
+        }
+      }
+
+      // 4. Búsqueda por DPI / Documento de identificación
+      if (cleanDigits.length === 13) {
+        const qDpi = query(colRef, where("dpi", "==", cleanDigits), limit(1));
+        const snapDpi = await getDocs(qDpi);
+        if (!snapDpi.empty) {
+          return snapDpi.docs[0].data() as ConvencionRegistro;
+        }
+      }
+
+      // 5. Intento final de búsqueda insensitiva por email exacto si difiere en mayúsculas
+      const qEmailRaw = query(colRef, where("email", "==", term), limit(1));
+      const snapEmailRaw = await getDocs(qEmailRaw);
+      if (!snapEmailRaw.empty) {
+        return snapEmailRaw.docs[0].data() as ConvencionRegistro;
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error buscando registro de convención:", error);
+      return null;
+    }
+  },
+
   deleteConvencionRegistro: async (id: string): Promise<void> => {
     try {
       const docRef = doc(db, "convencion_registros", id);
