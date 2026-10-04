@@ -324,10 +324,6 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
         });
         setImagePreview(dbConfig.fotoSede);
         setHeaderBgPreview(dbConfig.headerBgUrl || '');
-        
-        const dbRegistros = await firebaseService.getConvencionRegistros();
-        if (!isMounted) return;
-        setRegistros(dbRegistros);
       } catch (error) {
         if (!isMounted) return;
         console.error("Error al cargar datos de convención:", error);
@@ -337,7 +333,18 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
       }
     };
     loadData();
-    return () => { isMounted = false; };
+
+    // Suscripción en tiempo real (onSnapshot): cualquier nuevo registro o cambio
+    // se refleja inmediatamente en el navegador sin recargar la página
+    const unsubscribeRegistros = firebaseService.subscribeConvencionRegistros((liveRegistros) => {
+      if (!isMounted) return;
+      setRegistros(liveRegistros);
+    });
+
+    return () => { 
+      isMounted = false;
+      unsubscribeRegistros();
+    };
   }, []);
 
   const handleConfigChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -1938,15 +1945,25 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                   <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
                 </div>
 
-                {registros.length > 0 && (
-                  <button
-                    onClick={handleExportCSV}
-                    className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer whitespace-nowrap self-end sm:self-auto"
-                  >
-                    <Download size={14} />
-                    <span>Exportar CSV (Excel)</span>
-                  </button>
-                )}
+                <div className="flex items-center space-x-2.5 w-full sm:w-auto justify-between sm:justify-end">
+                  <div className="flex items-center space-x-2 text-[11px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-3 py-1.5 rounded-full shadow-xs">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span>En vivo (Tiempo real)</span>
+                  </div>
+
+                  {registros.length > 0 && (
+                    <button
+                      onClick={handleExportCSV}
+                      className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer whitespace-nowrap"
+                    >
+                      <Download size={14} />
+                      <span>Exportar CSV</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Píldoras de Filtro por Canal y Estado */}

@@ -8,6 +8,7 @@ import {
   updateDoc,
   deleteDoc,
   getDoc,
+  onSnapshot,
   query,
   where,
   limit,
@@ -1260,6 +1261,29 @@ export const firebaseService = {
     } catch (error) {
       console.error("Error fetching convencion registrations from Firestore:", error);
       return [];
+    }
+  },
+
+  /**
+   * Suscripción en tiempo real a los registros de la convención (onSnapshot).
+   * Notifica inmediatamente al navegador cada vez que se agrega, edita o elimina un registro.
+   */
+  subscribeConvencionRegistros: (callback: (registros: ConvencionRegistro[]) => void): (() => void) => {
+    try {
+      const colRef = collection(db, "convencion_registros");
+      return onSnapshot(colRef, (snapshot) => {
+        const list: ConvencionRegistro[] = [];
+        snapshot.forEach(doc => {
+          list.push(doc.data() as ConvencionRegistro);
+        });
+        list.sort((a, b) => new Date(b.fechaRegistro).getTime() - new Date(a.fechaRegistro).getTime());
+        callback(list);
+      }, (error) => {
+        console.error("Error en escucha en tiempo real de registros de convención:", error);
+      });
+    } catch (err) {
+      console.error("Error al suscribirse a registros de convención:", err);
+      return () => {};
     }
   },
 
