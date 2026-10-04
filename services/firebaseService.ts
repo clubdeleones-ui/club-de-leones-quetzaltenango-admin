@@ -15,7 +15,7 @@ import {
   writeBatch
 } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda, Acta, HitoHistorico, SolicitudVoluntario, ReunionAgenda, TareaComision, Asistencia, BienInventario, CategoriaInventario, ConvencionConfig, ConvencionRegistro, RegistroParticipacion, RequerimientoActividad, NeveraProducto, NeveraConsumo, NeveraSaldoSocio, NeveraCuentaAbono } from "../types";
+import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda, Acta, HitoHistorico, SolicitudVoluntario, ReunionAgenda, TareaComision, Asistencia, BienInventario, CategoriaInventario, ConvencionConfig, ConvencionRegistro, MensajeEnviadoLog, RegistroParticipacion, RequerimientoActividad, NeveraProducto, NeveraConsumo, NeveraSaldoSocio, NeveraCuentaAbono } from "../types";
 import { MOCK_NEVERA_CATALOG } from "../constants";
 
 // In-memory flag to avoid repeated 402 / quota-exceeded requests when Storage billing is disabled
@@ -1318,6 +1318,91 @@ export const firebaseService = {
     } catch (error) {
       console.error("Error updating convencion registration status in Firestore:", error);
       throw error;
+    }
+  },
+
+  /**
+   * Registra el envío de un correo o mensaje a un participante individual
+   */
+  registrarMensajeEnviado: async (
+    registroId: string, 
+    mensajeInfo: {
+      canal: 'gmail' | 'telegram' | 'whatsapp';
+      tipo: string;
+      asunto: string;
+      mensajeResumen?: string;
+    }
+  ): Promise<void> => {
+    try {
+      const docRef = doc(db, "convencion_registros", registroId);
+      const now = new Date().toISOString();
+      const nuevoLog: MensajeEnviadoLog = {
+        id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        fecha: now,
+        canal: mensajeInfo.canal,
+        tipo: mensajeInfo.tipo,
+        asunto: mensajeInfo.asunto,
+        mensajeResumen: mensajeInfo.mensajeResumen || ''
+      };
+
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const data = snap.data() as ConvencionRegistro;
+        const mensajesActuales = data.mensajesEnviados || [];
+        await updateDoc(docRef, {
+          ultimoMensajeEnviado: mensajeInfo.asunto || mensajeInfo.tipo,
+          fechaUltimoMensaje: now,
+          canalUltimoMensaje: mensajeInfo.canal,
+          mensajesEnviados: [nuevoLog, ...mensajesActuales]
+        });
+      }
+    } catch (error) {
+      console.error("Error registrando mensaje enviado en Firestore:", error);
+    }
+  },
+
+  /**
+   * Registra el envío masivo para un lote de participantes
+   */
+  registrarMensajeMasivoEnviado: async (
+    registroIds: string[],
+    mensajeInfo: {
+      canal: 'gmail' | 'telegram' | 'whatsapp';
+      tipo: string;
+      asunto: string;
+      mensajeResumen?: string;
+    }
+  ): Promise<void> => {
+    try {
+      const now = new Date().toISOString();
+      for (const id of registroIds) {
+        try {
+          const docRef = doc(db, "convencion_registros", id);
+          const snap = await getDoc(docRef);
+          if (snap.exists()) {
+            const data = snap.data() as ConvencionRegistro;
+            const mensajesActuales = data.mensajesEnviados || [];
+            const nuevoLog: MensajeEnviadoLog = {
+              id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+              fecha: now,
+              canal: mensajeInfo.canal,
+              tipo: mensajeInfo.tipo,
+              asunto: mensajeInfo.asunto,
+              mensajeResumen: mensajeInfo.mensajeResumen || ''
+            };
+            await updateDoc(docRef, {
+              ultimoMensajeEnviado: mensajeInfo.asunto || mensajeInfo.tipo,
+              fechaUltimoMensaje: now,
+              canalUltimoMensaje: mensajeInfo.canal,
+              mensajesEnviados: [nuevoLog, ...mensajesActuales]
+            });
+          }
+        } catch (innerErr) {
+          console.warn(`No se pudo actualizar registro de mensaje para ${id}:`, innerErr);
+        }
+      }
+    } catch (error) {
+      console.error("Error en registrarMensajeMasivoEnviado:", error);
     }
   },
 

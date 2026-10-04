@@ -497,6 +497,15 @@ export interface ConvencionConfig {
   alianzas?: ConvencionAlianza[];
 }
 
+export interface MensajeEnviadoLog {
+  id: string;
+  fecha: string;
+  canal: 'gmail' | 'telegram' | 'whatsapp';
+  tipo: string;
+  asunto: string;
+  mensajeResumen?: string;
+}
+
 export interface ConvencionRegistro {
   id: string;
   nombre: string;
@@ -516,6 +525,10 @@ export interface ConvencionRegistro {
   preferenciaNotificacion?: 'telegram' | 'email';
   telegramVerificado?: boolean;
   fechaRegistro: string;
+  ultimoMensajeEnviado?: string;
+  fechaUltimoMensaje?: string;
+  canalUltimoMensaje?: 'gmail' | 'telegram' | 'whatsapp';
+  mensajesEnviados?: MensajeEnviadoLog[];
 }
 
 export interface TareaVoluntario {

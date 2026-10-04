@@ -483,13 +483,14 @@ Correo Oficial: ${DEFAULT_GMAIL_SENDER}
   },
 
   /**
-   * Envío masivo de boletines o comunicados informativos
+   * Envío masivo de boletines o comunicados informativos con plantillas prediseñadas
    */
   sendMassBroadcast: async (
     destinatarios: ConvencionRegistro[], 
     asunto: string, 
     mensajeBody: string, 
-    customScriptUrl?: string
+    customScriptUrl?: string,
+    tipo: TipoCorreoConvencion = 'personalizado'
   ): Promise<number> => {
     const scriptUrl = customScriptUrl || 
       (import.meta as any).env?.VITE_GOOGLE_SCRIPT_URL || 
@@ -501,7 +502,7 @@ Correo Oficial: ${DEFAULT_GMAIL_SENDER}
     for (const reg of destinatarios) {
       if (!reg.email || !reg.email.includes('@')) continue;
       try {
-        const template = gmailService.generateTemplate('personalizado', reg, {
+        const template = gmailService.generateTemplate(tipo, reg, {
           customSubject: asunto,
           customBody: mensajeBody
         });
@@ -512,6 +513,7 @@ Correo Oficial: ${DEFAULT_GMAIL_SENDER}
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'broadcast_email',
+            tipo: tipo,
             id: reg.id,
             nombre: reg.nombre,
             email: reg.email,

@@ -37,14 +37,22 @@ import {
   Share2,
   Copy,
   ExternalLink,
-  Check
+  Check,
+  History,
+  CheckSquare,
+  Square,
+  Filter,
+  ChevronDown,
+  ChevronUp,
+  RefreshCw,
+  Info
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { firebaseService } from '../../services/firebaseService';
 import { telegramService } from '../../services/telegramService';
 import { gmailService, TipoCorreoConvencion, DEFAULT_GMAIL_SENDER, DEFAULT_GOOGLE_SCRIPT_URL } from '../../services/gmailService';
 import { compressImageFile, validateImageFile, removeDarkBackgroundFromDataUrl } from '../../utils/imageCompressor';
-import { ConvencionConfig, ConvencionRegistro, ConvencionActividad, ConvencionExperiencia, ConvencionAlianza } from '../../types';
+import { ConvencionConfig, ConvencionRegistro, ConvencionActividad, ConvencionExperiencia, ConvencionAlianza, MensajeEnviadoLog } from '../../types';
 import { ALIANZAS_CONVENCION } from '../Convencion';
 
 // Map of icons for selection
@@ -62,17 +70,23 @@ const DEFAULT_ALIANZAS: ConvencionAlianza[] = ALIANZAS_CONVENCION;
 
 export function AdminConvencion() {
   const { confirm } = useConfirm();
-  const [activeSubTab, setActiveSubTab] = useState<'config' | 'registros'>('config');
-  const [activeConfigTab, setActiveConfigTab] = useState<'general' | 'actividades' | 'experiencias' | 'alianzas' | 'difusion'>('general');
+  const [activeSubTab, setActiveSubTab] = useState<'difusion' | 'registros' | 'config'>('difusion');
+  const [activeConfigTab, setActiveConfigTab] = useState<'general' | 'actividades' | 'experiencias' | 'alianzas'>('general');
   
   // Mass Broadcast State
-  const [broadcastSubject, setBroadcastSubject] = useState('Avances y Boletín Oficial - LXXIV Convención Lionística');
+  const [broadcastChannelTab, setBroadcastChannelTab] = useState<'email' | 'telegram'>('email');
+  const [broadcastTemplateTipo, setBroadcastTemplateTipo] = useState<TipoCorreoConvencion>('recordatorio_pago');
+  const [broadcastSubject, setBroadcastSubject] = useState('⏳ Recordatorio: Completa tu Pago para la LXXV Convención Nacional');
   const [broadcastBody, setBroadcastBody] = useState('');
   const [broadcastTelegramMsg, setBroadcastTelegramMsg] = useState('');
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [channelFilter, setChannelFilter] = useState<'todos' | 'telegram_activo' | 'telegram_pendiente' | 'email' | 'pagados' | 'pendientes'>('todos');
-  const [broadcastRecipientFilter, setBroadcastRecipientFilter] = useState<'todos' | 'pagados' | 'pendientes' | 'telegram_activo' | 'email'>('todos');
+  const [broadcastRecipientFilter, setBroadcastRecipientFilter] = useState<'todos' | 'pagados' | 'pendientes' | 'sin_notificar' | 'notificados' | 'telegram_activo' | 'email'>('pendientes');
+  const [broadcastSelectedIds, setBroadcastSelectedIds] = useState<string[]>([]);
+  const [broadcastRecipientSearch, setBroadcastRecipientSearch] = useState<string>('');
   const [customTelegramDestination, setCustomTelegramDestination] = useState<string>('');
+  const [showBroadcastTemplatePreview, setShowBroadcastTemplatePreview] = useState<boolean>(false);
+  const [historialModalRegistro, setHistorialModalRegistro] = useState<ConvencionRegistro | null>(null);
 
   const [config, setConfig] = useState<ConvencionConfig>({
     titulo: '',
@@ -183,6 +197,14 @@ export function AdminConvencion() {
         config.googleScriptUrl
       );
       if (ok) {
+        // Registrar log en Firestore para el participante
+        await firebaseService.registrarMensajeEnviado(emailModalRegistro.id, {
+          canal: 'gmail',
+          tipo: emailTipo,
+          asunto: emailSubject,
+          mensajeResumen: emailBody.substring(0, 150)
+        });
+
         setSuccessMsg(`¡Correo enviado con éxito a ${emailModalRegistro.email}!`);
         setEmailModalRegistro(null);
         setTimeout(() => setSuccessMsg(''), 4000);
@@ -821,6 +843,28 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
     );
   });
 
+  // Participantes filtrados para el módulo de Difusión Masiva y control de envíos
+  const broadcastFilteredRegistros = registros.filter(r => {
+    if (broadcastRecipientFilter === 'pagados' && r.estadoPago !== 'Pagado') return false;
+    if (broadcastRecipientFilter === 'pendientes' && r.estadoPago === 'Pagado') return false;
+    if (broadcastRecipientFilter === 'sin_notificar' && r.ultimoMensajeEnviado) return false;
+    if (broadcastRecipientFilter === 'notificados' && !r.ultimoMensajeEnviado) return false;
+    if (broadcastRecipientFilter === 'telegram_activo' && !r.telegramVerificado) return false;
+    if (broadcastRecipientFilter === 'email' && r.preferenciaNotificacion !== 'email') return false;
+
+    if (broadcastRecipientSearch.trim()) {
+      const q = broadcastRecipientSearch.toLowerCase();
+      const matchName = (r.nombre || '').toLowerCase().includes(q);
+      const matchClub = (r.club || '').toLowerCase().includes(q);
+      const matchId = (r.id || '').toLowerCase().includes(q);
+      const matchEmail = (r.email || '').toLowerCase().includes(q);
+      const matchTel = (r.telefono || '').includes(q);
+      if (!matchName && !matchClub && !matchId && !matchEmail && !matchTel) return false;
+    }
+
+    return true;
+  });
+
   // Export CSV
   const handleExportCSV = () => {
     if (registros.length === 0) return;
@@ -899,6 +943,52 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
     }
   };
 
+  const handleSelectBroadcastTemplate = (tipo: TipoCorreoConvencion) => {
+    setBroadcastTemplateTipo(tipo);
+    const sampleReg: ConvencionRegistro = {
+      id: 'FOLIO-OFICIAL',
+      nombre: 'Estimado(a) Compañero(a) León',
+      email: 'socio@clubdeleones.org',
+      telefono: '55555555',
+      club: 'Club de Leones',
+      cargo: 'Socio Activo',
+      distrito: 'Distrito D-3',
+      montoPagar: 650,
+      estadoPago: tipo === 'pago_confirmado' ? 'Pagado' : 'Pendiente',
+      fechaRegistro: new Date().toISOString()
+    };
+    const tmpl = gmailService.generateTemplate(tipo, sampleReg);
+    setBroadcastSubject(tmpl.asunto.replace(' (Folio: FOLIO-OFICIAL)', ''));
+    setBroadcastBody(tmpl.cuerpoTexto);
+
+    // Ajustar filtro sugerido según la plantilla
+    if (tipo === 'pago_confirmado') {
+      setBroadcastRecipientFilter('pagados');
+    } else if (tipo === 'recordatorio_pago') {
+      setBroadcastRecipientFilter('pendientes');
+    } else if (tipo === 'pre_registro') {
+      setBroadcastRecipientFilter('sin_notificar');
+    } else {
+      setBroadcastRecipientFilter('todos');
+    }
+  };
+
+  const handleToggleSelectAllRecipients = (validList: ConvencionRegistro[]) => {
+    const validIds = validList.filter(r => r.email && r.email.includes('@')).map(r => r.id);
+    const allSelected = validIds.length > 0 && validIds.every(id => broadcastSelectedIds.includes(id));
+    if (allSelected) {
+      setBroadcastSelectedIds(prev => prev.filter(id => !validIds.includes(id)));
+    } else {
+      setBroadcastSelectedIds(prev => Array.from(new Set([...prev, ...validIds])));
+    }
+  };
+
+  const handleToggleSelectOneRecipient = (id: string) => {
+    setBroadcastSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
   const handleSendMassEmail = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!broadcastSubject.trim() || !broadcastBody.trim()) {
@@ -906,22 +996,26 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
       return;
     }
     
-    // Filtrar destinatarios según la opción seleccionada
-    let targetRegistros = registros.filter(r => r.email && r.email.includes('@'));
-    if (broadcastRecipientFilter === 'pagados') {
-      targetRegistros = targetRegistros.filter(r => r.estadoPago === 'Pagado');
-    } else if (broadcastRecipientFilter === 'pendientes') {
-      targetRegistros = targetRegistros.filter(r => r.estadoPago !== 'Pagado');
-    } else if (broadcastRecipientFilter === 'telegram_activo') {
-      targetRegistros = targetRegistros.filter(r => r.telegramVerificado);
-    } else if (broadcastRecipientFilter === 'email') {
-      targetRegistros = targetRegistros.filter(r => r.preferenciaNotificacion === 'email');
+    // Determinar destinatarios: selección manual o filtro de grupo
+    let targetRegistros: ConvencionRegistro[] = [];
+    if (broadcastSelectedIds.length > 0) {
+      targetRegistros = registros.filter(r => broadcastSelectedIds.includes(r.id) && r.email && r.email.includes('@'));
+    } else {
+      targetRegistros = broadcastFilteredRegistros.filter(r => r.email && r.email.includes('@'));
     }
 
     if (targetRegistros.length === 0) {
-      setErrorMsg("No hay participantes que coincidan con el filtro seleccionado para recibir el correo.");
+      setErrorMsg("No hay participantes con correo electrónico válido seleccionados para recibir el comunicado.");
       return;
     }
+
+    const okConfirm = await confirm({
+      title: "Confirmar Difusión Masiva",
+      message: `¿Estás seguro de enviar "${broadcastSubject}" a los ${targetRegistros.length} participantes seleccionados desde clubdeleonesquetzaltenango@gmail.com?`,
+      confirmLabel: `Enviar a ${targetRegistros.length} socios`,
+      danger: false
+    });
+    if (!okConfirm) return;
 
     setIsBroadcasting(true);
     setErrorMsg('');
@@ -931,10 +1025,23 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
         targetRegistros,
         broadcastSubject,
         broadcastBody,
-        config.googleScriptUrl
+        config.googleScriptUrl,
+        broadcastTemplateTipo
       );
-      setSuccessMsg(`¡Boletín enviado exitosamente a los ${enviados} participantes seleccionados desde clubdeleonesquetzaltenango@gmail.com!`);
-      setBroadcastBody('');
+
+      // Registrar historial de envíos en Firestore para cada participante
+      await firebaseService.registrarMensajeMasivoEnviado(
+        targetRegistros.map(r => r.id),
+        {
+          canal: 'gmail',
+          tipo: broadcastTemplateTipo,
+          asunto: broadcastSubject,
+          mensajeResumen: broadcastBody.substring(0, 150)
+        }
+      );
+
+      setSuccessMsg(`¡Difusión enviada exitosamente a los ${enviados} participantes seleccionados! El estatus de comunicación se actualizó en tiempo real.`);
+      setBroadcastSelectedIds([]);
     } catch (err: any) {
       setErrorMsg("Ocurrió un error al enviar la difusión masiva.");
     } finally {
@@ -948,17 +1055,38 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
       setErrorMsg("Por favor escribe el mensaje para Telegram.");
       return;
     }
+    const destinationChat = customTelegramDestination.trim() || config.telegramChatId || '';
+    const okConfirm = await confirm({
+      title: "Publicar en Telegram",
+      message: `¿Estás seguro de publicar este anuncio en el canal/chat de Telegram (${destinationChat || 'Chat Oficial'})?`,
+      confirmLabel: "Publicar en Telegram",
+      danger: false
+    });
+    if (!okConfirm) return;
+
     setIsBroadcasting(true);
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const destinationChat = customTelegramDestination.trim() || config.telegramChatId || '';
       const ok = await telegramService.sendMessage(
         config.telegramBotToken || undefined,
         destinationChat,
         `📢 <b>BOLETÍN OFICIAL DE LA CONVENCIÓN</b>\n\n${broadcastTelegramMsg}\n\n<i>LXXV Convención Nacional • Quetzaltenango 2027</i>`
       );
       if (ok) {
+        // Registrar en los registros de Telegram verificados
+        const telegramVerificados = registros.filter(r => r.telegramVerificado);
+        if (telegramVerificados.length > 0) {
+          await firebaseService.registrarMensajeMasivoEnviado(
+            telegramVerificados.map(r => r.id),
+            {
+              canal: 'telegram',
+              tipo: 'boletin_telegram',
+              asunto: 'Boletín Oficial en Telegram',
+              mensajeResumen: broadcastTelegramMsg.substring(0, 150)
+            }
+          );
+        }
         setSuccessMsg(`¡Anuncio publicado exitosamente en Telegram (${destinationChat || 'Chat Oficial'})!`);
         setBroadcastTelegramMsg('');
       } else {
@@ -992,28 +1120,44 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
           <p className="text-xs text-slate-550 mt-1">Gestiona los contenidos de la landing page pública y la base de pre-inscritos.</p>
         </div>
 
-        <div className="flex bg-slate-200/60 p-1 rounded-2xl border border-slate-250">
+        <div className="flex bg-slate-200/60 p-1.5 rounded-2xl border border-slate-250 gap-1.5 overflow-x-auto">
           <button
-            onClick={() => setActiveSubTab('config')}
-            className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
-              activeSubTab === 'config'
+            onClick={() => setActiveSubTab('difusion')}
+            className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+              activeSubTab === 'difusion'
                 ? 'bg-blue-900 text-white shadow-md'
-                : 'text-slate-600 hover:text-slate-900'
+                : 'text-slate-700 hover:text-slate-900 hover:bg-white/50'
             }`}
           >
-            <Settings size={14} />
-            <span>Contenidos</span>
+            <Mail size={15} className="text-amber-400" />
+            <span>📢 Difusión Masiva</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+              activeSubTab === 'difusion' ? 'bg-amber-400 text-blue-950' : 'bg-slate-300/80 text-slate-800'
+            }`}>
+              {registros.length}
+            </span>
           </button>
           <button
             onClick={() => setActiveSubTab('registros')}
-            className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
+            className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
               activeSubTab === 'registros'
                 ? 'bg-blue-900 text-white shadow-md'
-                : 'text-slate-600 hover:text-slate-900'
+                : 'text-slate-700 hover:text-slate-900 hover:bg-white/50'
             }`}
           >
-            <Users size={14} />
+            <Users size={15} />
             <span>Pre-registros ({registros.length})</span>
+          </button>
+          <button
+            onClick={() => setActiveSubTab('config')}
+            className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+              activeSubTab === 'config'
+                ? 'bg-blue-900 text-white shadow-md'
+                : 'text-slate-700 hover:text-slate-900 hover:bg-white/50'
+            }`}
+          >
+            <Settings size={15} />
+            <span>Contenidos Web</span>
           </button>
         </div>
       </div>
@@ -1066,14 +1210,6 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                 <Handshake size={14} className="text-yellow-600" />
                 <span>Alianzas & Logos ({config.alianzas?.length || DEFAULT_ALIANZAS.length})</span>
                 {activeConfigTab === 'alianzas' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-900 rounded-full" />}
-              </button>
-              <button 
-                onClick={() => setActiveConfigTab('difusion')}
-                className={`pb-3 relative transition-colors whitespace-nowrap flex items-center space-x-1.5 ${activeConfigTab === 'difusion' ? 'text-blue-900 font-black' : 'hover:text-slate-800'}`}
-              >
-                <Mail size={14} className="text-yellow-600" />
-                <span>Difusión Masiva ({registros.length} Inscritos)</span>
-                {activeConfigTab === 'difusion' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-900 rounded-full" />}
               </button>
             </div>
 
@@ -1634,110 +1770,321 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
               </div>
             )}
 
-            {/* Difusión Masiva Sub-Tab */}
-            {activeConfigTab === 'difusion' && (
-              <div className="space-y-8 max-w-4xl pt-2">
-                <div className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white p-6 rounded-3xl shadow-lg space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          </>
+        )}
+
+        {/* ================= DIFUSIÓN MASIVA TAB ================= */}
+        {activeSubTab === 'difusion' && (
+          <div className="space-y-8">
+            {/* Header Hero del Centro de Difusión */}
+            <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-6 sm:p-8 rounded-3xl shadow-xl space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <span className="bg-yellow-400/20 text-yellow-300 border border-yellow-400/30 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                      Canal Oficial de Difusión
+                    </span>
+                    <span className="text-xs text-blue-200 font-bold">LXXV Convención Nacional</span>
+                  </div>
+                  <h3 className="text-2xl font-black flex items-center space-x-2.5 mt-2">
+                    <Mail size={24} className="text-yellow-400" />
+                    <span>Centro de Difusión Masiva & Control de Participantes</span>
+                  </h3>
+                  <p className="text-xs sm:text-sm text-blue-100/90 leading-relaxed mt-1 max-w-3xl">
+                    Comunícate oportunamente con los <strong>{registros.length} participantes pre-inscritos</strong>. Monitorea a quién se le envió qué mensaje y su estatus de pago para un control integral de la convención.
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubTab('registros')}
+                    className="flex items-center space-x-1.5 bg-white/10 hover:bg-white/20 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition-colors cursor-pointer"
+                  >
+                    <Users size={14} />
+                    <span>Ver Pre-registros</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* KPI Cards del Centro de Difusión */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/10">
+                  <span className="text-[10px] font-black uppercase text-blue-200 block">Total Inscritos</span>
+                  <span className="text-xl font-black text-white">{registros.length}</span>
+                  <p className="text-[10px] text-blue-200/70 mt-0.5">En base de datos</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/10">
+                  <span className="text-[10px] font-black uppercase text-emerald-300 block">✅ Pagados</span>
+                  <span className="text-xl font-black text-emerald-300">{registros.filter(r => r.estadoPago === 'Pagado').length}</span>
+                  <p className="text-[10px] text-emerald-200/70 mt-0.5">Acreditados</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/10">
+                  <span className="text-[10px] font-black uppercase text-amber-300 block">⏳ Pendientes</span>
+                  <span className="text-xl font-black text-amber-300">{registros.filter(r => r.estadoPago !== 'Pagado').length}</span>
+                  <p className="text-[10px] text-amber-200/70 mt-0.5">Por completar pago</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/10">
+                  <span className="text-[10px] font-black uppercase text-blue-200 block">✉️ Con Correo</span>
+                  <span className="text-xl font-black text-white">{registros.filter(r => r.email && r.email.includes('@')).length}</span>
+                  <p className="text-[10px] text-blue-200/70 mt-0.5">Vía Webhook Gmail</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/10">
+                  <span className="text-[10px] font-black uppercase text-emerald-300 block flex items-center space-x-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span>Bot Telegram</span>
+                  </span>
+                  <span className="text-xl font-black text-white">{registros.filter(r => r.telegramVerificado).length}</span>
+                  <p className="text-[10px] text-emerald-200/70 mt-0.5">Activos en bot</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/10">
+                  <span className="text-[10px] font-black uppercase text-purple-300 block">📨 Con Envíos</span>
+                  <span className="text-xl font-black text-white">{registros.filter(r => !!r.ultimoMensajeEnviado).length}</span>
+                  <p className="text-[10px] text-purple-200/70 mt-0.5">Ya notificados</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Selector de Canal: Correo Electrónico vs Telegram */}
+            <div className="flex border-b border-slate-200 pb-2 space-x-4">
+              <button
+                type="button"
+                onClick={() => setBroadcastChannelTab('email')}
+                className={`pb-2.5 px-4 font-black text-sm flex items-center space-x-2 border-b-2 transition-all cursor-pointer ${
+                  broadcastChannelTab === 'email'
+                    ? 'border-blue-900 text-blue-900'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Mail size={16} />
+                <span>1. Boletín / Correo Masivo (Gmail Webhook)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setBroadcastChannelTab('telegram')}
+                className={`pb-2.5 px-4 font-black text-sm flex items-center space-x-2 border-b-2 transition-all cursor-pointer ${
+                  broadcastChannelTab === 'telegram'
+                    ? 'border-indigo-900 text-indigo-900'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Send size={16} />
+                <span>2. Canal Oficial de Telegram</span>
+              </button>
+            </div>
+
+            {/* Canal 1: Correo Electrónico con Plantillas Prediseñadas */}
+            {broadcastChannelTab === 'email' && (
+              <form onSubmit={handleSendMassEmail} className="space-y-6">
+                {/* Paso 1: Selector de Plantillas Prediseñadas */}
+                <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-sm space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                     <div>
-                      <h3 className="text-xl font-black flex items-center space-x-2">
-                        <Mail size={22} className="text-yellow-400" />
-                        <span>Módulo de Comunicación Masiva a Pre-Inscritos</span>
-                      </h3>
-                      <p className="text-xs text-blue-100 leading-relaxed mt-1">
-                        Envía boletines informativos por correo electrónico y anuncios oficiales por Telegram a la lista de <strong>{registros.length} participantes pre-inscritos</strong>.
+                      <h4 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center space-x-2">
+                        <Sparkles size={16} className="text-amber-500" />
+                        <span>Paso 1: Mensajes Prediseñados (Plantillas Oficiales)</span>
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Elige una plantilla prediseñada para adaptar el comunicado automáticamente con los datos y enlace QR de cada socio.
                       </p>
                     </div>
-                    <span className="bg-white/10 text-yellow-300 border border-yellow-400/30 text-xs font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider self-start sm:self-auto shrink-0">
-                      LXXV Convención
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowBroadcastTemplatePreview(!showBroadcastTemplatePreview)}
+                      className="text-xs font-bold text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3.5 py-1.5 rounded-xl transition-all flex items-center space-x-1.5 cursor-pointer self-start sm:self-auto"
+                    >
+                      <Eye size={14} />
+                      <span>{showBroadcastTemplatePreview ? 'Ocultar Vista Previa' : 'Ver Diseño Oficial'}</span>
+                    </button>
                   </div>
 
-                  {/* Resumen de Audiencias por Canal */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                    <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/15">
-                      <span className="text-[10px] font-black uppercase text-blue-200 block">Audiencia Correo</span>
-                      <span className="text-lg font-black text-white">{registros.filter(r => r.email && r.email.includes('@')).length} Destinatarios</span>
-                      <p className="text-[10px] text-blue-200/80 mt-0.5">Desde clubdeleonesquetzaltenango@gmail.com</p>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/15">
-                      <span className="text-[10px] font-black uppercase text-emerald-300 block flex items-center space-x-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span>Telegram Activos</span>
+                  {/* Botones de Plantillas */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectBroadcastTemplate('recordatorio_pago')}
+                      className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                        broadcastTemplateTipo === 'recordatorio_pago'
+                          ? 'bg-amber-50/80 border-amber-400 ring-2 ring-amber-400/40 text-amber-950 shadow-sm'
+                          : 'bg-slate-50 hover:bg-white border-slate-200 text-slate-700'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-base">⏳</span>
+                          <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                            Cobro
+                          </span>
+                        </div>
+                        <h5 className="text-xs font-extrabold text-slate-900">Recordatorio de Pago</h5>
+                        <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                          Cuentas de Banrural, Industrial, G&T y pago en línea.
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-bold text-amber-800 mt-3 block">
+                        Filtra a Pendientes
                       </span>
-                      <span className="text-lg font-black text-white">{registros.filter(r => r.telegramVerificado).length} Conectados al Bot</span>
-                      <p className="text-[10px] text-emerald-200/80 mt-0.5">Listos para recibir boletines directos</p>
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/15">
-                      <span className="text-[10px] font-black uppercase text-amber-300 block">Telegram Pendientes</span>
-                      <span className="text-lg font-black text-white">{registros.filter(r => r.preferenciaNotificacion === 'telegram' && !r.telegramVerificado).length} En Espera</span>
-                      <p className="text-[10px] text-amber-200/80 mt-0.5">Eligieron Telegram pero no verificaron</p>
-                    </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSelectBroadcastTemplate('pago_confirmado')}
+                      className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                        broadcastTemplateTipo === 'pago_confirmado'
+                          ? 'bg-emerald-50/80 border-emerald-400 ring-2 ring-emerald-400/40 text-emerald-950 shadow-sm'
+                          : 'bg-slate-50 hover:bg-white border-slate-200 text-slate-700'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-base">🎟️</span>
+                          <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                            Acreditados
+                          </span>
+                        </div>
+                        <h5 className="text-xs font-extrabold text-slate-900">Entrada QR Oficial</h5>
+                        <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                          Confirmación de acreditación con enlace directo a la entrada QR.
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-bold text-emerald-800 mt-3 block">
+                        Filtra a Pagados
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSelectBroadcastTemplate('pre_registro')}
+                      className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                        broadcastTemplateTipo === 'pre_registro'
+                          ? 'bg-blue-50/80 border-blue-400 ring-2 ring-blue-400/40 text-blue-950 shadow-sm'
+                          : 'bg-slate-50 hover:bg-white border-slate-200 text-slate-700'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-base">🦁</span>
+                          <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                            Bienvenida
+                          </span>
+                        </div>
+                        <h5 className="text-xs font-extrabold text-slate-900">Pre-Inscripción</h5>
+                        <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                          Recepción oficial de pre-registro con resumen de la ficha.
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-bold text-blue-800 mt-3 block">
+                        Filtra a No Notificados
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSelectBroadcastTemplate('info_sedes_hospedaje')}
+                      className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                        broadcastTemplateTipo === 'info_sedes_hospedaje'
+                          ? 'bg-indigo-50/80 border-indigo-400 ring-2 ring-indigo-400/40 text-indigo-950 shadow-sm'
+                          : 'bg-slate-50 hover:bg-white border-slate-200 text-slate-700'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-base">🏨</span>
+                          <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
+                            Logística
+                          </span>
+                        </div>
+                        <h5 className="text-xs font-extrabold text-slate-900">Sedes y Hospedaje</h5>
+                        <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                          Hoteles aliados, tarifas de descuento y sede de plenarias.
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-bold text-indigo-800 mt-3 block">
+                        Para todos
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSelectBroadcastTemplate('personalizado')}
+                      className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                        broadcastTemplateTipo === 'personalizado'
+                          ? 'bg-purple-50/80 border-purple-400 ring-2 ring-purple-400/40 text-purple-950 shadow-sm'
+                          : 'bg-slate-50 hover:bg-white border-slate-200 text-slate-700'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-base">✍️</span>
+                          <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">
+                            Libre
+                          </span>
+                        </div>
+                        <h5 className="text-xs font-extrabold text-slate-900">Boletín Personalizado</h5>
+                        <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                          Redacta comunicados y anuncios libres con membrete oficial.
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-bold text-purple-800 mt-3 block">
+                        Redacción libre
+                      </span>
+                    </button>
                   </div>
-                </div>
 
-                {/* Seccion 1: Difusión por Correo */}
-                <form onSubmit={handleSendMassEmail} className="bg-slate-50 border border-slate-200/80 rounded-3xl p-6 space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-3 gap-2">
-                    <h4 className="text-sm font-black text-blue-900 uppercase tracking-wider flex items-center space-x-2">
-                      <Mail size={16} className="text-blue-900" />
-                      <span>1. Enviar Boletín por Correo Electrónico</span>
-                    </h4>
-                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-3 py-1 rounded-full">
-                      Gmail Webhook Activo
-                    </span>
-                  </div>
-
-                  <div className="space-y-4">
-                    {/* Selector de Segmento / Audiencia */}
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Selecciona el Grupo de Destinatarios
-                      </label>
-                      <select
-                        value={broadcastRecipientFilter}
-                        onChange={(e) => setBroadcastRecipientFilter(e.target.value as any)}
-                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-900/10 cursor-pointer"
-                      >
-                        <option value="todos">
-                          👥 Todos los inscritos con correo ({registros.filter(r => r.email && r.email.includes('@')).length} personas)
-                        </option>
-                        <option value="pagados">
-                          ✅ Solo inscritos con Pago Confirmado ({registros.filter(r => r.estadoPago === 'Pagado' && r.email).length} personas)
-                        </option>
-                        <option value="pendientes">
-                          ⏳ Solo inscritos Pendientes de Pago ({registros.filter(r => r.estadoPago !== 'Pagado' && r.email).length} personas)
-                        </option>
-                        <option value="telegram_activo">
-                          🟢 Solo inscritos que también tienen Telegram Activo ({registros.filter(r => r.telegramVerificado && r.email).length} personas)
-                        </option>
-                        <option value="email">
-                          ✉️ Solo inscritos con preferencia de Correo ({registros.filter(r => r.preferenciaNotificacion === 'email' && r.email).length} personas)
-                        </option>
-                      </select>
+                  {/* Vista Previa Expandible */}
+                  {showBroadcastTemplatePreview && (
+                    <div className="mt-4 p-5 bg-slate-900 text-slate-100 rounded-2xl border border-slate-800 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-mono font-bold text-yellow-400">
+                          Diseño HTML Oficial Lions (Vista Previa Maqueta)
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          Se reemplazará con los datos de cada socio al enviar
+                        </span>
+                      </div>
+                      <div className="bg-white text-slate-900 p-4 rounded-xl text-xs space-y-2 border border-slate-200 max-h-72 overflow-y-auto font-sans leading-relaxed">
+                        <div className="bg-blue-900 text-white p-3 rounded-lg text-center font-bold">
+                          LXXV CONVENCIÓN NACIONAL • QUETZALTENANGO 2027
+                        </div>
+                        <div className="font-semibold text-slate-800">
+                          Asunto: {broadcastSubject}
+                        </div>
+                        <div className="p-3 bg-slate-50 rounded border border-slate-100 whitespace-pre-wrap text-slate-700 font-mono text-[11px]">
+                          {broadcastBody}
+                        </div>
+                        <div className="text-[10px] text-slate-400 text-center pt-2 border-t border-slate-100">
+                          Club de Leones Quetzaltenango • Donde la Amistad se Vuelve Servicio
+                        </div>
+                      </div>
                     </div>
+                  )}
 
+                  {/* Edición de Asunto y Mensaje */}
+                  <div className="pt-2 space-y-4">
                     <div>
-                      <label className="block text-xs font-bold text-slate-600 mb-1">Asunto del Correo</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-slate-700">Asunto del Correo</label>
+                        <span className="text-[10px] text-slate-400">Llegará a la bandeja de entrada del socio</span>
+                      </div>
                       <input 
                         type="text" 
                         required
                         value={broadcastSubject}
                         onChange={e => setBroadcastSubject(e.target.value)}
-                        placeholder="Ej. Boletín Oficial #1: Horarios de Plenarias y Hotel Sede"
-                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-900/10 text-slate-800"
+                        placeholder="Asunto oficial del comunicado..."
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-900/10 text-slate-900"
                       />
                     </div>
 
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="block text-xs font-bold text-slate-600">Mensaje / Contenido del Comunicado</label>
+                        <label className="block text-xs font-bold text-slate-700">Cuerpo del Mensaje</label>
                         <button
                           type="button"
-                          onClick={() => setBroadcastBody("Estimados Compañeros Leones:\n\nNos complace compartir con ustedes las últimas actualizaciones y novedades de la LXXV Convención Nacional que se llevará a cabo en Quetzaltenango.\n\nPor favor recuerden tener a mano su código QR de pre-inscripción y consultar el itinerario en vivo.\n\n¡Los esperamos con entusiasmo y espíritu de servicio!")}
-                          className="text-[10px] text-blue-900 font-bold hover:underline cursor-pointer"
+                          onClick={() => handleSelectBroadcastTemplate(broadcastTemplateTipo)}
+                          className="text-[10px] text-blue-900 font-bold hover:underline cursor-pointer flex items-center space-x-1"
                         >
-                          + Cargar Texto Sugerido
+                          <RefreshCw size={10} />
+                          <span>Restaurar texto de la plantilla</span>
                         </button>
                       </div>
                       <textarea
@@ -1745,129 +2092,408 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                         rows={5}
                         value={broadcastBody}
                         onChange={e => setBroadcastBody(e.target.value)}
-                        placeholder="Escribe aquí el contenido del boletín para los inscritos..."
-                        className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-900/10 text-slate-800"
+                        placeholder="Contenido del mensaje..."
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs font-medium outline-none focus:ring-2 focus:ring-blue-900/10 text-slate-800 leading-relaxed font-sans"
                       />
-                    </div>
-
-                    <div className="pt-2">
-                      <button
-                        type="submit"
-                        disabled={isBroadcasting || registros.length === 0}
-                        className="bg-blue-900 hover:bg-blue-850 text-white font-black px-6 py-3.5 rounded-xl text-xs uppercase tracking-wider shadow transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
-                      >
-                        {isBroadcasting ? (
-                          <>
-                            <Loader2 className="animate-spin" size={16} />
-                            <span>Enviando correos vía Google Apps Script...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Send size={16} />
-                            <span>Enviar Boletín por Correo</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                </form>
-
-                {/* Seccion 2: Difusión por Telegram */}
-                <form onSubmit={handleSendTelegramBroadcast} className="bg-slate-50 border border-slate-200/80 rounded-3xl p-6 space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-3 gap-2">
-                    <h4 className="text-sm font-black text-blue-900 uppercase tracking-wider flex items-center space-x-2">
-                      <Send size={16} className="text-blue-900" />
-                      <span>2. Publicar Anuncio en Canal / Grupo de Telegram</span>
-                    </h4>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-[10px] bg-blue-100 text-blue-800 font-extrabold px-3 py-1 rounded-full flex items-center space-x-1">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span>Bot Oficial: @ConvencionLeonesbot</span>
-                      </span>
-                      <a
-                        href="https://t.me/ConvencionLeonesbot"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[10px] bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-2.5 py-1 rounded-full transition-colors inline-flex items-center space-x-1"
-                      >
-                        <ExternalLink size={10} />
-                        <span>Abrir Bot</span>
-                      </a>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="block text-xs font-bold text-slate-700">
-                          Chat ID o Canal Destino en Telegram
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => setCustomTelegramDestination('1507920109')}
-                          className="text-[10px] text-blue-900 font-bold hover:underline cursor-pointer"
-                        >
-                          Usar Chat Oficial (1507920109)
-                        </button>
-                      </div>
-                      <input 
-                        type="text"
-                        value={customTelegramDestination}
-                        onChange={(e) => setCustomTelegramDestination(e.target.value)}
-                        placeholder={config.telegramChatId || '1507920109 (Chat o @canal público)'}
-                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-mono font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-900/10"
-                      />
-                      <p className="text-[11px] text-slate-500 mt-1">
-                        Ingresa el Chat ID numérico o el alias del canal público (ej. @convencionleones). Deja en blanco para usar el chat oficial configurado.
+                      <p className="text-[10px] text-slate-400 mt-1">
+                        * Cada correo se enviará personalizado con el nombre, club y folio del participante mediante el Webhook de Google Apps Script ({DEFAULT_GMAIL_SENDER}).
                       </p>
                     </div>
+                  </div>
+                </div>
 
+                {/* Paso 2: Destinatarios & Control de Participantes */}
+                <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-sm space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
                     <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="block text-xs font-bold text-slate-600">Mensaje para Telegram (Soporta HTML)</label>
+                      <h4 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center space-x-2">
+                        <Users size={16} className="text-blue-900" />
+                        <span>Paso 2: Control de Destinatarios, Estatus de Pago e Historial</span>
+                      </h4>
+                      <p className="text-xs text-slate-550 mt-0.5">
+                        Verifica el estatus de pago de cada socio y qué mensaje se le ha enviado antes de emitir la difusión.
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleSelectAllRecipients(broadcastFilteredRegistros)}
+                        className="text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap"
+                      >
+                        {broadcastFilteredRegistros.filter(r => r.email && r.email.includes('@')).every(r => broadcastSelectedIds.includes(r.id)) && broadcastSelectedIds.length > 0
+                          ? 'Deseleccionar Visibles'
+                          : `Seleccionar Visibles (${broadcastFilteredRegistros.filter(r => r.email).length})`
+                        }
+                      </button>
+                      {broadcastSelectedIds.length > 0 && (
                         <button
                           type="button"
-                          onClick={() => setBroadcastTelegramMsg("🦁 <b>AVISO IMPORTANTE DE LA CONVENCIÓN</b>\n\nEstimados Compañeros Leones, les recordamos que pueden consultar y descargar su <b>Entrada QR Oficial</b> directamente desde nuestra plataforma:\n\n👉 https://clubdeleonesquetzaltenango.org/#/convencion\n\n¡Nos vemos muy pronto en Quetzaltenango!")}
-                          className="text-[10px] text-blue-900 font-bold hover:underline cursor-pointer"
+                          onClick={() => setBroadcastSelectedIds([])}
+                          className="text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap"
                         >
-                          + Plantilla con Enlace QR
+                          Limpiar ({broadcastSelectedIds.length})
                         </button>
-                      </div>
-                      <textarea
-                        required
-                        rows={4}
-                        value={broadcastTelegramMsg}
-                        onChange={e => setBroadcastTelegramMsg(e.target.value)}
-                        placeholder="Escribe el mensaje que se publicará en Telegram... Puedes usar <b>negrita</b> e <i>itálica</i>."
-                        className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-900/10 text-slate-800"
-                      />
+                      )}
                     </div>
+                  </div>
 
-                    <div className="pt-2">
-                      <button
-                        type="submit"
-                        disabled={isBroadcasting}
-                        className="bg-indigo-900 hover:bg-indigo-850 text-white font-black px-6 py-3.5 rounded-xl text-xs uppercase tracking-wider shadow transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
-                      >
-                        {isBroadcasting ? (
+                  {/* Píldoras de Filtro Rápido */}
+                  <div className="flex items-center space-x-2 overflow-x-auto pb-1 text-xs font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setBroadcastRecipientFilter('todos')}
+                      className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                        broadcastRecipientFilter === 'todos'
+                          ? 'bg-slate-900 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      Todos ({registros.filter(r => r.email).length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBroadcastRecipientFilter('pendientes')}
+                      className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                        broadcastRecipientFilter === 'pendientes'
+                          ? 'bg-amber-600 text-white shadow-sm'
+                          : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200/60'
+                      }`}
+                    >
+                      ⏳ Pendientes de Pago ({registros.filter(r => r.estadoPago !== 'Pagado' && r.email).length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBroadcastRecipientFilter('pagados')}
+                      className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                        broadcastRecipientFilter === 'pagados'
+                          ? 'bg-emerald-600 text-white shadow-sm'
+                          : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200/60'
+                      }`}
+                    >
+                      ✅ Pagados Confirmados ({registros.filter(r => r.estadoPago === 'Pagado' && r.email).length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBroadcastRecipientFilter('sin_notificar')}
+                      className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                        broadcastRecipientFilter === 'sin_notificar'
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200/60'
+                      }`}
+                    >
+                      ⚪ Sin Envíos Previos ({registros.filter(r => !r.ultimoMensajeEnviado && r.email).length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBroadcastRecipientFilter('notificados')}
+                      className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                        broadcastRecipientFilter === 'notificados'
+                          ? 'bg-purple-600 text-white shadow-sm'
+                          : 'bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200/60'
+                      }`}
+                    >
+                      📨 Ya Notificados ({registros.filter(r => !!r.ultimoMensajeEnviado && r.email).length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBroadcastRecipientFilter('telegram_activo')}
+                      className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                        broadcastRecipientFilter === 'telegram_activo'
+                          ? 'bg-teal-600 text-white shadow-sm'
+                          : 'bg-teal-50 text-teal-800 hover:bg-teal-100 border border-teal-200/60'
+                      }`}
+                    >
+                      🟢 Con Telegram ({registros.filter(r => r.telegramVerificado && r.email).length})
+                    </button>
+                  </div>
+
+                  {/* Buscador de Destinatarios */}
+                  <div className="relative">
+                    <input 
+                      type="text"
+                      value={broadcastRecipientSearch}
+                      onChange={(e) => setBroadcastRecipientSearch(e.target.value)}
+                      placeholder="Buscar por socio, DPI, email, teléfono o club..."
+                      className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-900/10 font-medium"
+                    />
+                    <Search className="absolute left-3 top-2.5 text-slate-400" size={14} />
+                  </div>
+
+                  {/* Estado de selección actual */}
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center space-x-2">
+                      <Info size={16} className="text-blue-900 shrink-0" />
+                      <span className="text-slate-700 font-medium">
+                        {broadcastSelectedIds.length > 0 ? (
                           <>
-                            <Loader2 className="animate-spin" size={16} />
-                            <span>Publicando en Telegram...</span>
+                            <strong className="text-blue-900">{broadcastSelectedIds.length}</strong> participantes seleccionados manualmente.
                           </>
                         ) : (
                           <>
-                            <Send size={16} />
-                            <span>Publicar Anuncio en Telegram</span>
+                            Se enviará a los <strong className="text-blue-900">{broadcastFilteredRegistros.filter(r => r.email && r.email.includes('@')).length}</strong> participantes del filtro actual.
                           </>
                         )}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-500 font-mono">
+                      Total en lista: {broadcastFilteredRegistros.length}
+                    </span>
+                  </div>
+
+                  {/* Tabla / Lista de Destinatarios */}
+                  {broadcastFilteredRegistros.length > 0 ? (
+                    <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-xs divide-y divide-slate-100 max-h-96 overflow-y-auto bg-white">
+                      {broadcastFilteredRegistros.map((reg) => {
+                        const isSelected = broadcastSelectedIds.includes(reg.id);
+                        const hasEmail = !!(reg.email && reg.email.includes('@'));
+                        const isPagado = reg.estadoPago === 'Pagado';
+
+                        return (
+                          <div 
+                            key={reg.id}
+                            className={`p-3 sm:p-4 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                              isSelected ? 'bg-blue-50/50' : 'hover:bg-slate-50/70'
+                            }`}
+                          >
+                            <div className="flex items-start sm:items-center space-x-3 min-w-0 flex-1">
+                              <input 
+                                type="checkbox"
+                                disabled={!hasEmail}
+                                checked={isSelected}
+                                onChange={() => handleToggleSelectOneRecipient(reg.id)}
+                                className="w-4 h-4 rounded text-blue-900 border-slate-300 focus:ring-blue-900/20 cursor-pointer mt-1 sm:mt-0 shrink-0"
+                              />
+
+                              <div className="min-w-0 flex-1 space-y-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="font-extrabold text-xs text-slate-900">
+                                    {reg.nombre}
+                                  </span>
+                                  <span className="text-[10px] font-mono bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">
+                                    {reg.id}
+                                  </span>
+
+                                  {/* Estatus de Pago Interactivo */}
+                                  <select
+                                    value={reg.estadoPago || 'Pendiente'}
+                                    onChange={(e) => handleUpdateEstadoPago(reg.id, e.target.value as any)}
+                                    className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border cursor-pointer ${
+                                      isPagado 
+                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-300' 
+                                        : 'bg-amber-50 text-amber-700 border-amber-300'
+                                    }`}
+                                    title="Modificar estatus de pago"
+                                  >
+                                    <option value="Pendiente">⏳ Pendiente</option>
+                                    <option value="Checkout_Creado">💳 Link Creado</option>
+                                    <option value="Pagado">✅ Pagado</option>
+                                  </select>
+
+                                  {/* Badge del Último Mensaje Enviado */}
+                                  {reg.ultimoMensajeEnviado ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setHistorialModalRegistro(reg)}
+                                      className="inline-flex items-center space-x-1 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 px-2 py-0.5 rounded-full text-[9px] font-bold cursor-pointer transition-colors"
+                                      title={`Último: ${reg.ultimoMensajeEnviado}. Clic para ver historial completo.`}
+                                    >
+                                      <CheckCircle size={10} className="text-blue-600" />
+                                      <span className="max-w-[140px] truncate">{reg.ultimoMensajeEnviado}</span>
+                                      {reg.fechaUltimoMensaje && (
+                                        <span className="text-blue-600 font-normal">
+                                          ({new Date(reg.fechaUltimoMensaje).toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit' })})
+                                        </span>
+                                      )}
+                                    </button>
+                                  ) : (
+                                    <span className="text-[9px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full font-medium">
+                                      ⚪ Sin envíos
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-slate-550">
+                                  <span>🦁 {reg.club} ({reg.cargo})</span>
+                                  <span className={hasEmail ? "text-slate-600" : "text-red-500 font-bold"}>
+                                    ✉️ {reg.email || 'Sin correo'}
+                                  </span>
+                                  {reg.telefono && <span>📞 {reg.telefono}</span>}
+                                  {reg.telegramVerificado && (
+                                    <span className="text-emerald-700 font-bold">🟢 Bot Telegram</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Acciones individuales */}
+                            <div className="flex items-center space-x-2 shrink-0 self-end sm:self-center">
+                              {reg.mensajesEnviados && reg.mensajesEnviados.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setHistorialModalRegistro(reg)}
+                                  className="text-[10px] font-bold text-slate-600 hover:text-blue-900 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center space-x-1"
+                                  title="Ver historial de mensajes enviados"
+                                >
+                                  <History size={12} />
+                                  <span>({reg.mensajesEnviados.length})</span>
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEmailModal(reg, reg.estadoPago === 'Pagado' ? 'pago_confirmado' : 'recordatorio_pago')}
+                                className="text-[10px] font-bold text-blue-900 hover:text-white bg-blue-50 hover:bg-blue-900 border border-blue-200 px-2.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center space-x-1"
+                                title="Redactar correo individual solo a este socio"
+                              >
+                                <Mail size={12} />
+                                <span>Individual</span>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                      <Users className="mx-auto text-slate-300 mb-2" size={24} />
+                      <p className="text-xs font-bold text-slate-600">No hay participantes que coincidan con este filtro.</p>
+                      <button
+                        type="button"
+                        onClick={() => { setBroadcastRecipientFilter('todos'); setBroadcastRecipientSearch(''); }}
+                        className="text-xs text-blue-900 font-black underline mt-1 cursor-pointer"
+                      >
+                        Ver todos los inscritos
                       </button>
                     </div>
+                  )}
+
+                  {/* Paso 3: Botón de Envío */}
+                  <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="text-xs text-slate-500">
+                      Plantilla activa: <strong className="text-slate-800">{broadcastTemplateTipo}</strong>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isBroadcasting || (broadcastSelectedIds.length === 0 && broadcastFilteredRegistros.filter(r => r.email).length === 0)}
+                      className="bg-blue-900 hover:bg-blue-850 text-white font-black px-6 py-3.5 rounded-2xl text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer"
+                    >
+                      {isBroadcasting ? (
+                        <>
+                          <Loader2 className="animate-spin" size={16} />
+                          <span>Enviando difusión masiva vía Apps Script...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Send size={16} className="text-amber-400" />
+                          <span>
+                            {broadcastSelectedIds.length > 0 
+                              ? `Enviar Difusión a los ${broadcastSelectedIds.length} Socios Seleccionados`
+                              : `Enviar Difusión a ${broadcastFilteredRegistros.filter(r => r.email).length} Socios Filtrados`
+                            }
+                          </span>
+                        </>
+                      )}
+                    </button>
                   </div>
-                </form>
-              </div>
+                </div>
+              </form>
             )}
 
-          </>
+            {/* Canal 2: Telegram Broadcast */}
+            {broadcastChannelTab === 'telegram' && (
+              <form onSubmit={handleSendTelegramBroadcast} className="bg-slate-50 border border-slate-200/80 rounded-3xl p-6 space-y-4 max-w-4xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-3 gap-2">
+                  <h4 className="text-sm font-black text-blue-900 uppercase tracking-wider flex items-center space-x-2">
+                    <Send size={16} className="text-blue-900" />
+                    <span>Publicar Anuncio en Canal / Grupo de Telegram</span>
+                  </h4>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-[10px] bg-blue-100 text-blue-800 font-extrabold px-3 py-1 rounded-full flex items-center space-x-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                      <span>Bot Oficial: @ConvencionLeonesbot</span>
+                    </span>
+                    <a
+                      href="https://t.me/ConvencionLeonesbot"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-2.5 py-1 rounded-full transition-colors inline-flex items-center space-x-1"
+                    >
+                      <ExternalLink size={10} />
+                      <span>Abrir Bot</span>
+                    </a>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-bold text-slate-700">
+                        Chat ID o Canal Destino en Telegram
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setCustomTelegramDestination('1507920109')}
+                        className="text-[10px] text-blue-900 font-bold hover:underline cursor-pointer"
+                      >
+                        Usar Chat Oficial (1507920109)
+                      </button>
+                    </div>
+                    <input 
+                      type="text"
+                      value={customTelegramDestination}
+                      onChange={(e) => setCustomTelegramDestination(e.target.value)}
+                      placeholder={config.telegramChatId || '1507920109 (Chat o @canal público)'}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-mono font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-900/10"
+                    />
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Ingresa el Chat ID numérico o el alias del canal público (ej. @convencionleones). Deja en blanco para usar el chat oficial configurado.
+                    </p>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-bold text-slate-600">Mensaje para Telegram (Soporta HTML)</label>
+                      <button
+                        type="button"
+                        onClick={() => setBroadcastTelegramMsg("🦁 <b>AVISO IMPORTANTE DE LA CONVENCIÓN</b>\n\nEstimados Compañeros Leones, les recordamos que pueden consultar y descargar su <b>Entrada QR Oficial</b> directamente desde nuestra plataforma:\n\n👉 https://clubdeleonesquetzaltenango.org/#/convencion\n\n¡Nos vemos muy pronto en Quetzaltenango!")}
+                        className="text-[10px] text-blue-900 font-bold hover:underline cursor-pointer"
+                      >
+                        + Plantilla con Enlace QR
+                      </button>
+                    </div>
+                    <textarea
+                      required
+                      rows={4}
+                      value={broadcastTelegramMsg}
+                      onChange={e => setBroadcastTelegramMsg(e.target.value)}
+                      placeholder="Escribe el mensaje que se publicará en Telegram... Puedes usar <b>negrita</b> e <i>itálica</i>."
+                      className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-900/10 text-slate-800"
+                    />
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={isBroadcasting}
+                      className="bg-indigo-900 hover:bg-indigo-850 text-white font-black px-6 py-3.5 rounded-xl text-xs uppercase tracking-wider shadow transition-all flex items-center space-x-2 disabled:opacity-50 cursor-pointer"
+                    >
+                      {isBroadcasting ? (
+                        <>
+                          <Loader2 className="animate-spin" size={16} />
+                          <span>Publicando en Telegram...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Send size={16} />
+                          <span>Publicar Anuncio en Telegram</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            )}
+          </div>
         )}
 
         {/* ================= PRE-REGISTROS TAB ================= */}
@@ -1953,6 +2579,15 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                     </span>
                     <span>En vivo (Tiempo real)</span>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubTab('difusion')}
+                    className="flex items-center space-x-1.5 bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-850 hover:to-indigo-850 text-white font-black px-3.5 py-2 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer whitespace-nowrap"
+                  >
+                    <Mail size={14} className="text-amber-400" />
+                    <span>Difusión Masiva</span>
+                  </button>
 
                   {registros.length > 0 && (
                     <button
@@ -2088,7 +2723,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                               </span>
-                              <span>🟢 Bot Telegram Activo (Recibe Difusión)</span>
+                              <span>🟢 Bot Telegram Activo</span>
                             </button>
                           ) : reg.preferenciaNotificacion === 'telegram' ? (
                             <button
@@ -2113,13 +2748,14 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                             </button>
                           )}
 
+                          {/* Folio */}
                           <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
                             {reg.id}
                           </span>
                         </div>
 
                         {/* Metadatos en línea sin forzar scroll horizontal */}
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 font-medium">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-600 font-medium">
                           <span className="flex items-center text-slate-800 font-bold">
                             🦁 {reg.club} <span className="text-slate-400 font-normal ml-1">({reg.cargo} • {reg.distrito})</span>
                           </span>
@@ -2146,13 +2782,36 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                             </span>
                           )}
 
+                          {/* Badge de Historial / Último Comunicado Enviado */}
+                          {reg.ultimoMensajeEnviado ? (
+                            <button
+                              type="button"
+                              onClick={() => setHistorialModalRegistro(reg)}
+                              className="inline-flex items-center space-x-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200/80 px-2.5 py-0.5 rounded-full text-[10px] font-bold cursor-pointer transition-colors shadow-xs"
+                              title={`Último: ${reg.ultimoMensajeEnviado}. Clic para ver historial completo.`}
+                            >
+                              <CheckCircle size={10} className="text-blue-600" />
+                              <span className="font-extrabold text-blue-950">Enviado:</span>
+                              <span className="max-w-[130px] truncate">{reg.ultimoMensajeEnviado}</span>
+                              {reg.fechaUltimoMensaje && (
+                                <span className="text-[9px] text-blue-600 font-normal">
+                                  ({new Date(reg.fechaUltimoMensaje).toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit' })})
+                                </span>
+                              )}
+                            </button>
+                          ) : (
+                            <span className="inline-flex items-center space-x-1 text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full text-[10px] font-medium">
+                              ⚪ Sin comunicados
+                            </span>
+                          )}
+
                           <span className="text-slate-400 text-[11px]">
-                            📅 {new Date(reg.fechaRegistro).toLocaleDateString('es-GT', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            📅 {new Date(reg.fechaRegistro).toLocaleDateString('es-GT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
                       </div>
 
-                      {/* Botones de Acción Rápida (WhatsApp, Llamar, Telegram, Gmail, QR) */}
+                      {/* Botones de Acción Rápida (WhatsApp, Llamar, Telegram, Gmail, Historial, QR) */}
                       <div className="flex items-center flex-wrap sm:flex-nowrap gap-2 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
                         {/* Botón WhatsApp */}
                         {cleanPhone ? (
@@ -2160,7 +2819,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                             href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(whatsappMsg)}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center space-x-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                            className="inline-flex items-center space-x-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
                             title="Mandar mensaje de WhatsApp"
                           >
                             <MessageCircle size={15} className="text-emerald-600 fill-emerald-100" />
@@ -2210,7 +2869,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                           <button
                             type="button"
                             onClick={() => handleOpenEmailModal(reg, reg.estadoPago === 'Pagado' ? 'pago_confirmado' : 'recordatorio_pago')}
-                            className="inline-flex items-center space-x-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                            className="inline-flex items-center space-x-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
                             title="Enviar correo informativo vía Gmail"
                           >
                             <Mail size={14} className="text-rose-600" />
@@ -2218,11 +2877,22 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                           </button>
                         )}
 
+                        {/* Botón Historial de Comunicados */}
+                        <button
+                          type="button"
+                          onClick={() => setHistorialModalRegistro(reg)}
+                          className="inline-flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-2.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+                          title="Ver historial de mensajes enviados a este socio"
+                        >
+                          <History size={14} className="text-slate-600" />
+                          <span>Historial</span>
+                        </button>
+
                         {/* Botón Reenviar Entrada QR */}
                         <button
                           type="button"
                           onClick={() => handleOpenQrModal(reg)}
-                          className="inline-flex items-center space-x-1.5 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-slate-950 font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm shadow-yellow-500/20 active:scale-95 cursor-pointer"
+                          className="inline-flex items-center space-x-1.5 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-slate-950 font-black px-3.5 py-2 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm shadow-yellow-500/20 active:scale-95 cursor-pointer"
                           title="Ver y reenviar entrada QR oficial"
                         >
                           <QrCode size={15} />
@@ -3067,6 +3737,159 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                 className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl"
               >
                 Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Historial de Comunicados del Participante */}
+      {historialModalRegistro && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 space-y-4">
+            <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-black">
+                  <History size={20} />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="text-base font-black text-slate-900">
+                      Historial de Comunicados
+                    </h3>
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
+                      historialModalRegistro.estadoPago === 'Pagado'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}>
+                      {historialModalRegistro.estadoPago === 'Pagado' ? '✓ Pago Confirmado' : '⏳ Pago Pendiente'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 font-semibold mt-0.5">
+                    {historialModalRegistro.nombre} · <span className="text-slate-400 font-normal">{historialModalRegistro.email}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHistorialModalRegistro(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Ficha Resumen del Participante */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-100 text-xs">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Club</span>
+                <span className="font-bold text-slate-800 truncate block">{historialModalRegistro.club || 'No especificado'}</span>
+              </div>
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Cargo</span>
+                <span className="font-bold text-slate-800 truncate block">{historialModalRegistro.cargo || 'Socio'}</span>
+              </div>
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Telegram</span>
+                <span className="font-bold text-slate-800 truncate block">
+                  {historialModalRegistro.telegramChatId ? '🟢 Conectado' : (historialModalRegistro.tieneTelegram ? '🟡 Registrado' : '⚪ No')}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Mensajes</span>
+                <span className="font-bold text-indigo-700 block">
+                  {historialModalRegistro.mensajesEnviados?.length || (historialModalRegistro.ultimoMensajeEnviado ? 1 : 0)} registrados
+                </span>
+              </div>
+            </div>
+
+            {/* Línea de tiempo o listado de mensajes enviados */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">
+                Línea de Tiempo de Envíos
+              </h4>
+
+              {(!historialModalRegistro.mensajesEnviados || historialModalRegistro.mensajesEnviados.length === 0) && !historialModalRegistro.ultimoMensajeEnviado ? (
+                <div className="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200 p-6 space-y-2">
+                  <div className="w-10 h-10 mx-auto rounded-full bg-slate-100 text-slate-400 flex items-center justify-center">
+                    <Send size={18} />
+                  </div>
+                  <p className="text-xs font-bold text-slate-600">Aún no se han enviado comunicados a este socio</p>
+                  <p className="text-[11px] text-slate-400">Puedes redactar y enviarle un correo institucional con un solo clic.</p>
+                </div>
+              ) : (
+                <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                  {historialModalRegistro.mensajesEnviados && historialModalRegistro.mensajesEnviados.length > 0 ? (
+                    historialModalRegistro.mensajesEnviados.slice().reverse().map((msg, idx) => (
+                      <div key={msg.id || idx} className="p-3.5 bg-slate-50 hover:bg-slate-100/80 rounded-2xl border border-slate-200 transition-colors space-y-1">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs font-black text-slate-900">{msg.asunto}</span>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              msg.canal === 'telegram'
+                                ? 'bg-sky-100 text-sky-800'
+                                : 'bg-rose-100 text-rose-800'
+                            }`}>
+                              {msg.canal === 'telegram' ? '✈️ Telegram' : '✉️ Gmail'}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-semibold text-slate-400">
+                            {new Date(msg.fecha).toLocaleString('es-GT', { dateStyle: 'short', timeStyle: 'short' })}
+                          </span>
+                        </div>
+                        {msg.mensajeResumen && (
+                          <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                            {msg.mensajeResumen}
+                          </p>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs font-black text-slate-900">{historialModalRegistro.ultimoMensajeEnviado}</span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            historialModalRegistro.canalUltimoMensaje === 'telegram'
+                              ? 'bg-sky-100 text-sky-800'
+                              : 'bg-rose-100 text-rose-800'
+                          }`}>
+                            {historialModalRegistro.canalUltimoMensaje === 'telegram' ? '✈️ Telegram' : '✉️ Gmail'}
+                          </span>
+                        </div>
+                        {historialModalRegistro.fechaUltimoMensaje && (
+                          <span className="text-[10px] font-semibold text-slate-400">
+                            {new Date(historialModalRegistro.fechaUltimoMensaje).toLocaleString('es-GT', { dateStyle: 'short', timeStyle: 'short' })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Acciones */}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setHistorialModalRegistro(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer"
+              >
+                Cerrar
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const target = historialModalRegistro;
+                  setHistorialModalRegistro(null);
+                  handleOpenEmailModal(target, target.estadoPago === 'Pagado' ? 'pago_confirmado' : 'recordatorio_pago');
+                }}
+                className="inline-flex items-center space-x-2 bg-rose-600 hover:bg-rose-700 text-white font-black px-4 py-2 rounded-xl text-xs shadow cursor-pointer transition-all active:scale-95"
+              >
+                <Send size={13} />
+                <span>Enviar Correo a este Socio</span>
               </button>
             </div>
           </div>
