@@ -534,8 +534,10 @@ export interface ConvencionRegistro {
   telegramVerificado?: boolean;
   fechaRegistro: string;
   ultimoMensajeEnviado?: string;
+  ultimoTipoNotificacion?: string;
   fechaUltimoMensaje?: string;
   canalUltimoMensaje?: 'gmail' | 'telegram' | 'whatsapp';
+  notificacionesEnviadas?: string[];
   mensajesEnviados?: MensajeEnviadoLog[];
 }
 

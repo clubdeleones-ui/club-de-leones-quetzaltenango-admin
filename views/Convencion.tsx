@@ -1169,7 +1169,20 @@ export default function Convencion() {
         telegramVerificado: telegramOption === 'telegram' ? telegramVerified : false,
         montoPagar: montoTotal,
         estadoPago: metodo === 'recurrente' ? 'Checkout_Creado' : 'Pendiente',
-        fechaRegistro: new Date().toISOString()
+        fechaRegistro: new Date().toISOString(),
+        ultimoTipoNotificacion: 'pre_registro',
+        ultimoMensajeEnviado: '🦁 Confirmación de Pre-Inscripción: LXXV Convención Nacional',
+        fechaUltimoMensaje: new Date().toISOString(),
+        canalUltimoMensaje: 'gmail',
+        notificacionesEnviadas: ['pre_registro'],
+        mensajesEnviados: [{
+          id: `msg_${Date.now()}_pre`,
+          fecha: new Date().toISOString(),
+          canal: 'gmail',
+          tipo: 'pre_registro',
+          asunto: '🦁 Confirmación de Pre-Inscripción: LXXV Convención Nacional',
+          mensajeResumen: 'Bienvenido y confirmación de pre-registro recibida.'
+        }]
       };
       
       await firebaseService.saveConvencionRegistro(nuevoRegistro);

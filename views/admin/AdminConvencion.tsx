@@ -76,6 +76,86 @@ const ICON_OPTIONS = [
 
 const DEFAULT_ALIANZAS: ConvencionAlianza[] = ALIANZAS_CONVENCION;
 
+export interface NotificacionItemCatalogo {
+  tipo: TipoCorreoConvencion;
+  label: string;
+  shortLabel: string;
+  badgeColor: string;
+  borderColor: string;
+  textColor: string;
+  isRelevant: (reg: ConvencionRegistro) => boolean;
+}
+
+export const NOTIFICACIONES_CONVENCION: NotificacionItemCatalogo[] = [
+  {
+    tipo: 'pre_registro',
+    label: 'Pre-Inscripción',
+    shortLabel: 'Pre-Inscrip.',
+    badgeColor: 'bg-emerald-50',
+    borderColor: 'border-emerald-300',
+    textColor: 'text-emerald-800',
+    isRelevant: () => true
+  },
+  {
+    tipo: 'recordatorio_pago',
+    label: 'Recordatorio Pago',
+    shortLabel: 'Rec. Pago',
+    badgeColor: 'bg-amber-50',
+    borderColor: 'border-amber-300',
+    textColor: 'text-amber-800',
+    isRelevant: (reg) => (reg.estadoPago || '').toLowerCase() !== 'pagado'
+  },
+  {
+    tipo: 'pago_confirmado',
+    label: 'Boleto QR / Pago',
+    shortLabel: 'Boleto QR',
+    badgeColor: 'bg-blue-50',
+    borderColor: 'border-blue-300',
+    textColor: 'text-blue-800',
+    isRelevant: (reg) => (reg.estadoPago || '').toLowerCase() === 'pagado'
+  },
+  {
+    tipo: 'info_sedes_hospedaje',
+    label: 'Hoteles y Sedes',
+    shortLabel: 'Hoteles',
+    badgeColor: 'bg-purple-50',
+    borderColor: 'border-purple-300',
+    textColor: 'text-purple-800',
+    isRelevant: () => true
+  }
+];
+
+export const getNotificacionesDetalle = (reg: ConvencionRegistro) => {
+  const sentSet = new Set<string>(reg.notificacionesEnviadas || []);
+  if (reg.mensajesEnviados) {
+    reg.mensajesEnviados.forEach(m => {
+      if (m.tipo) sentSet.add(m.tipo);
+    });
+  }
+  // Fallback seguro: si tiene ultimoMensajeEnviado y el set está vacío, asumimos pre_registro
+  if (reg.ultimoMensajeEnviado && sentSet.size === 0) {
+    sentSet.add('pre_registro');
+  }
+
+  const enviadas: NotificacionItemCatalogo[] = [];
+  const pendientes: NotificacionItemCatalogo[] = [];
+
+  NOTIFICACIONES_CONVENCION.forEach(item => {
+    if (sentSet.has(item.tipo)) {
+      enviadas.push(item);
+    } else if (item.isRelevant(reg)) {
+      pendientes.push(item);
+    }
+  });
+
+  return {
+    enviadas,
+    pendientes,
+    hasSent: (tipo: string) => sentSet.has(tipo),
+    totalEnviados: sentSet.size
+  };
+};
+
 export function AdminConvencion() {
   const { confirm } = useConfirm();
   const [activeSubTab, setActiveSubTab] = useState<'difusion' | 'registros' | 'proyecciones' | 'config'>('difusion');
@@ -88,8 +168,8 @@ export function AdminConvencion() {
   const [broadcastBody, setBroadcastBody] = useState('');
   const [broadcastTelegramMsg, setBroadcastTelegramMsg] = useState('');
   const [isBroadcasting, setIsBroadcasting] = useState(false);
-  const [channelFilter, setChannelFilter] = useState<'todos' | 'telegram_activo' | 'telegram_pendiente' | 'email' | 'pagados' | 'pendientes'>('todos');
-  const [broadcastRecipientFilter, setBroadcastRecipientFilter] = useState<'todos' | 'pagados' | 'pendientes' | 'sin_notificar' | 'notificados' | 'telegram_activo' | 'email'>('pendientes');
+  const [channelFilter, setChannelFilter] = useState<'todos' | 'telegram_activo' | 'telegram_pendiente' | 'email' | 'pagados' | 'pendientes' | 'falta_recordatorio' | 'falta_confirmacion'>('todos');
+  const [broadcastRecipientFilter, setBroadcastRecipientFilter] = useState<'todos' | 'pagados' | 'pendientes' | 'sin_este_comunicado' | 'sin_notificar' | 'notificados' | 'telegram_activo' | 'email'>('pendientes');
   const [broadcastSelectedIds, setBroadcastSelectedIds] = useState<string[]>([]);
   const [broadcastRecipientSearch, setBroadcastRecipientSearch] = useState<string>('');
   const [customTelegramDestination, setCustomTelegramDestination] = useState<string>('');
@@ -916,6 +996,16 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
       if (channelFilter === 'email' && r.preferenciaNotificacion !== 'email') return false;
       if (channelFilter === 'pagados' && !isPagado) return false;
       if (channelFilter === 'pendientes' && isPagado) return false;
+      if (channelFilter === 'falta_recordatorio') {
+        if (isPagado) return false;
+        const notif = getNotificacionesDetalle(r);
+        if (notif.hasSent('recordatorio_pago')) return false;
+      }
+      if (channelFilter === 'falta_confirmacion') {
+        if (!isPagado) return false;
+        const notif = getNotificacionesDetalle(r);
+        if (notif.hasSent('pago_confirmado')) return false;
+      }
 
       const term = searchTerm.toLowerCase().trim();
       if (!term) return true;
@@ -955,6 +1045,10 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
       const isPagado = (r.estadoPago || '').toLowerCase() === 'pagado';
       if (broadcastRecipientFilter === 'pagados' && !isPagado) return false;
       if (broadcastRecipientFilter === 'pendientes' && isPagado) return false;
+      if (broadcastRecipientFilter === 'sin_este_comunicado') {
+        const notif = getNotificacionesDetalle(r);
+        if (notif.hasSent(broadcastTemplateTipo)) return false;
+      }
       if (broadcastRecipientFilter === 'sin_notificar' && r.ultimoMensajeEnviado) return false;
       if (broadcastRecipientFilter === 'notificados' && !r.ultimoMensajeEnviado) return false;
       if (broadcastRecipientFilter === 'telegram_activo' && !r.telegramVerificado) return false;
@@ -982,7 +1076,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
       if (broadcastSortOrder === 'club') return (a.club || '').localeCompare(b.club || '');
       return timeA - timeB;
     });
-  }, [registros, broadcastRecipientFilter, broadcastRecipientSearch, broadcastSortOrder]);
+  }, [registros, broadcastRecipientFilter, broadcastRecipientSearch, broadcastSortOrder, broadcastTemplateTipo]);
 
   // Export CSV enriquecido con N° Cronológico y Fecha/Hora
   const handleExportCSV = () => {
@@ -1008,6 +1102,8 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
       "Estado de Pago",
       "Canal Preferido",
       "Telegram Activo (Bot)",
+      "Notificaciones Enviadas",
+      "Notificaciones Pendientes",
       "Ultimo Comunicado Enviado"
     ];
     const csvRows = [
@@ -1015,6 +1111,9 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
       ...filteredRegistros.map(r => {
         const dt = formatRegistroDateTime(r.fechaRegistro);
         const nro = cronoMap.get(r.id) || '';
+        const notif = getNotificacionesDetalle(r);
+        const enviadasText = notif.enviadas.map(e => e.label).join(' | ') || 'Ninguna';
+        const pendientesText = notif.pendientes.map(p => p.label).join(' | ') || 'Ninguna';
         return [
           `"${nro}"`,
           `"${(r.id || '').replace(/"/g, '""')}"`,
@@ -1035,6 +1134,8 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
           `"${r.estadoPago || 'Pendiente'}"`,
           `"${r.preferenciaNotificacion === 'telegram' ? 'Telegram' : 'Correo'}"`,
           `"${r.telegramVerificado ? 'SI (Activo en Bot)' : 'NO'}"`,
+          `"${enviadasText.replace(/"/g, '""')}"`,
+          `"${pendientesText.replace(/"/g, '""')}"`,
           `"${(r.ultimoMensajeEnviado || 'Ninguno').replace(/"/g, '""')}"`
         ].join(',');
       })
@@ -1152,12 +1253,14 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
   };
 
   // Selecciona directamente por criterio específico
-  const handleSelectByCriterion = (criterion: 'pendientes' | 'pagados' | 'sin_notificar' | 'telegram') => {
+  const handleSelectByCriterion = (criterion: 'pendientes' | 'pagados' | 'sin_notificar' | 'telegram' | 'sin_este_comunicado') => {
     let ids: string[] = [];
     if (criterion === 'pendientes') {
       ids = registros.filter(r => r.estadoPago !== 'Pagado' && r.email && r.email.includes('@')).map(r => r.id);
     } else if (criterion === 'pagados') {
       ids = registros.filter(r => r.estadoPago === 'Pagado' && r.email && r.email.includes('@')).map(r => r.id);
+    } else if (criterion === 'sin_este_comunicado') {
+      ids = registros.filter(r => !getNotificacionesDetalle(r).hasSent(broadcastTemplateTipo) && r.email && r.email.includes('@')).map(r => r.id);
     } else if (criterion === 'sin_notificar') {
       ids = registros.filter(r => !r.ultimoMensajeEnviado && r.email && r.email.includes('@')).map(r => r.id);
     } else if (criterion === 'telegram') {
@@ -2581,6 +2684,14 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                       </button>
                       <button
                         type="button"
+                        onClick={() => handleSelectByCriterion('sin_este_comunicado')}
+                        className="px-2.5 py-1 rounded-lg bg-rose-100/80 hover:bg-rose-100 text-rose-900 font-bold text-[11px] transition-colors cursor-pointer"
+                        title="Selecciona a todos los socios que aún NO han recibido la plantilla activa"
+                      >
+                        ⏳ Pendientes de este comunicado ({registros.filter(r => !getNotificacionesDetalle(r).hasSent(broadcastTemplateTipo) && r.email).length})
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => handleSelectByCriterion('sin_notificar')}
                         className="px-2.5 py-1 rounded-lg bg-indigo-100/80 hover:bg-indigo-100 text-indigo-900 font-bold text-[11px] transition-colors cursor-pointer"
                         title="Selecciona a socios que nunca han recibido comunicados"
@@ -2612,7 +2723,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                   </div>
 
                   {/* Píldoras de Filtro Rápido de Destinatarios */}
-                  <div className="flex items-center space-x-2 overflow-x-auto pb-1 text-xs font-bold">
+                  <div className="flex items-center space-x-2 overflow-x-auto pb-1 text-xs font-bold scrollbar-thin">
                     <button
                       type="button"
                       onClick={() => setBroadcastRecipientFilter('todos')}
@@ -2623,6 +2734,19 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                       }`}
                     >
                       Todos ({registros.filter(r => r.email).length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBroadcastRecipientFilter('sin_este_comunicado')}
+                      className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1.5 ${
+                        broadcastRecipientFilter === 'sin_este_comunicado'
+                          ? 'bg-rose-600 text-white shadow-sm'
+                          : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200/60'
+                      }`}
+                      title="Filtra a quienes tienen pendiente recibir el comunicado seleccionado"
+                    >
+                      <Clock size={12} className={broadcastRecipientFilter === 'sin_este_comunicado' ? 'text-white' : 'text-rose-600'} />
+                      <span>Falta este comunicado ({registros.filter(r => !getNotificacionesDetalle(r).hasSent(broadcastTemplateTipo) && r.email).length})</span>
                     </button>
                     <button
                       type="button"
@@ -2860,27 +2984,47 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                                     <option value="Pagado">✅ Pagado</option>
                                   </select>
 
-                                  {/* Badge del Último Mensaje Enviado */}
-                                  {reg.ultimoMensajeEnviado ? (
+                                  {/* Matriz de Notificaciones: Enviadas y Pendientes */}
+                                  <div className="flex flex-wrap items-center gap-1">
+                                    {getNotificacionesDetalle(reg).enviadas.map(n => (
+                                      <span
+                                        key={n.tipo}
+                                        className={`inline-flex items-center space-x-1 ${n.badgeColor} ${n.borderColor} ${n.textColor} border px-2 py-0.5 rounded-full text-[9px] font-black shadow-2xs`}
+                                        title={`Enviado con éxito: ${n.label}`}
+                                      >
+                                        <CheckCircle size={9} className="shrink-0" />
+                                        <span>{n.shortLabel}</span>
+                                      </span>
+                                    ))}
+
+                                    {getNotificacionesDetalle(reg).pendientes.map(n => (
+                                      <span
+                                        key={n.tipo}
+                                        className="inline-flex items-center space-x-1 bg-amber-50/90 text-amber-800 border border-dashed border-amber-300 px-2 py-0.5 rounded-full text-[9px] font-bold"
+                                        title={`Pendiente: ${n.label}`}
+                                      >
+                                        <Clock size={8} className="text-amber-600 shrink-0" />
+                                        <span>Pend: {n.shortLabel}</span>
+                                      </span>
+                                    ))}
+
+                                    {getNotificacionesDetalle(reg).enviadas.length === 0 && (
+                                      <span className="text-[9px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full font-medium">
+                                        ⚪ Sin envíos
+                                      </span>
+                                    )}
+
+                                    {/* Botón rápido al historial */}
                                     <button
                                       type="button"
                                       onClick={() => setHistorialModalRegistro(reg)}
-                                      className="inline-flex items-center space-x-1 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 px-2 py-0.5 rounded-full text-[9px] font-bold cursor-pointer transition-colors"
-                                      title={`Último: ${reg.ultimoMensajeEnviado}. Clic para ver historial completo.`}
+                                      className="inline-flex items-center space-x-0.5 text-[9px] font-bold text-blue-700 hover:text-blue-900 bg-blue-50/60 hover:bg-blue-100 px-1.5 py-0.5 rounded-full border border-blue-200 transition-colors cursor-pointer"
+                                      title="Ver historial completo de envíos"
                                     >
-                                      <CheckCircle size={10} className="text-blue-600" />
-                                      <span className="max-w-[140px] truncate">{reg.ultimoMensajeEnviado}</span>
-                                      {reg.fechaUltimoMensaje && (
-                                        <span className="text-blue-600 font-normal">
-                                          ({new Date(reg.fechaUltimoMensaje).toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit' })})
-                                        </span>
-                                      )}
+                                      <History size={9} />
+                                      <span>({reg.mensajesEnviados?.length || (reg.ultimoMensajeEnviado ? 1 : 0)})</span>
                                     </button>
-                                  ) : (
-                                    <span className="text-[9px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full font-medium">
-                                      ⚪ Sin envíos
-                                    </span>
-                                  )}
+                                  </div>
                                 </div>
 
                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-slate-550">
@@ -3281,6 +3425,32 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                   </button>
                   <button
                     type="button"
+                    onClick={() => setChannelFilter('falta_recordatorio')}
+                    className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1 ${
+                      channelFilter === 'falta_recordatorio'
+                        ? 'bg-rose-600 text-white shadow-sm'
+                        : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200/60'
+                    }`}
+                    title="Socios pendientes de pago que aún NO han recibido recordatorio de pago"
+                  >
+                    <Clock size={11} className={channelFilter === 'falta_recordatorio' ? 'text-white' : 'text-rose-600'} />
+                    <span>⏳ Falta Recordatorio ({registros.filter(r => (r.estadoPago || '').toLowerCase() !== 'pagado' && !getNotificacionesDetalle(r).hasSent('recordatorio_pago')).length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChannelFilter('falta_confirmacion')}
+                    className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1 ${
+                      channelFilter === 'falta_confirmacion'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200/60'
+                    }`}
+                    title="Socios con pago acreditado que aún NO han recibido la confirmación con boleto QR"
+                  >
+                    <QrCode size={11} className={channelFilter === 'falta_confirmacion' ? 'text-white' : 'text-blue-600'} />
+                    <span>🎟️ Falta Boleto QR ({registros.filter(r => (r.estadoPago || '').toLowerCase() === 'pagado' && !getNotificacionesDetalle(r).hasSent('pago_confirmado')).length})</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setChannelFilter('telegram_activo')}
                     className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1.5 ${
                       channelFilter === 'telegram_activo'
@@ -3322,7 +3492,14 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                           <th className="py-3.5 px-3 whitespace-nowrap">Socio León & Club</th>
                           <th className="py-3.5 px-3 whitespace-nowrap">Contacto & Canales</th>
                           <th className="py-3.5 px-3 whitespace-nowrap">Cuota & Estatus Pago</th>
-                          <th className="py-3.5 px-3 whitespace-nowrap">Último Comunicado</th>
+                          <th className="py-3.5 px-3 whitespace-nowrap">
+                            <div className="flex items-center space-x-1.5">
+                              <span>Notificaciones & Envíos</span>
+                              <span className="text-[9px] bg-slate-200 text-slate-700 font-mono px-1.5 py-0.5 rounded-full lowercase font-bold">
+                                enviadas / pendientes
+                              </span>
+                            </div>
+                          </th>
                           <th className="py-3.5 pl-3 pr-5 text-right whitespace-nowrap">Acciones</th>
                         </tr>
                       </thead>
@@ -3486,30 +3663,69 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                                 </div>
                               </td>
 
-                              {/* Último Comunicado */}
-                              <td className="py-3.5 px-3 align-top">
-                                {reg.ultimoMensajeEnviado ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => setHistorialModalRegistro(reg)}
-                                    className="inline-flex flex-col text-left bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200/80 p-1.5 rounded-xl text-[10px] font-bold cursor-pointer transition-colors max-w-[150px]"
-                                    title={`Último: ${reg.ultimoMensajeEnviado}. Clic para ver historial completo.`}
-                                  >
-                                    <div className="flex items-center space-x-1">
-                                      <CheckCircle size={10} className="text-blue-600 shrink-0" />
-                                      <span className="truncate">{reg.ultimoMensajeEnviado}</span>
+                              {/* Notificaciones & Comunicados */}
+                              <td className="py-3.5 px-3 align-top min-w-[190px]">
+                                {(() => {
+                                  const notif = getNotificacionesDetalle(reg);
+                                  return (
+                                    <div className="space-y-1.5">
+                                      {/* Chips Enviados */}
+                                      {notif.enviadas.length > 0 ? (
+                                        <div className="flex flex-wrap items-center gap-1">
+                                          {notif.enviadas.map(n => (
+                                            <span 
+                                              key={n.tipo}
+                                              className={`inline-flex items-center space-x-1 text-[9px] font-black px-1.5 py-0.5 rounded-md border shadow-2xs ${n.badgeColor} ${n.borderColor} ${n.textColor}`}
+                                              title={`✓ Enviado: ${n.label}`}
+                                            >
+                                              <CheckCircle size={9} className="shrink-0" />
+                                              <span>{n.shortLabel}</span>
+                                            </span>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <span className="inline-block text-[9px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
+                                          ⚪ Sin envíos
+                                        </span>
+                                      )}
+
+                                      {/* Chips Pendientes */}
+                                      {notif.pendientes.length > 0 && (
+                                        <div className="flex flex-wrap items-center gap-1">
+                                          <span className="text-[9px] font-bold text-amber-700/80 mr-0.5">Pend:</span>
+                                          {notif.pendientes.map(n => (
+                                            <span
+                                              key={n.tipo}
+                                              className="inline-flex items-center space-x-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-50/90 text-amber-800 border border-dashed border-amber-300/80"
+                                              title={`⏳ Pendiente de enviar: ${n.label}`}
+                                            >
+                                              <Clock size={8} className="text-amber-600 shrink-0" />
+                                              <span>{n.shortLabel}</span>
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
+
+                                      {/* Enlace al Historial Detallado */}
+                                      <div className="pt-0.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => setHistorialModalRegistro(reg)}
+                                          className="inline-flex items-center space-x-1 text-[9px] font-bold text-blue-700 hover:text-blue-900 hover:underline cursor-pointer"
+                                          title="Ver historial completo y horas de envío"
+                                        >
+                                          <History size={10} className="shrink-0 text-blue-600" />
+                                          <span>Historial ({reg.mensajesEnviados?.length || (reg.ultimoMensajeEnviado ? 1 : 0)})</span>
+                                          {reg.fechaUltimoMensaje && (
+                                            <span className="text-slate-400 font-normal">
+                                              · {new Date(reg.fechaUltimoMensaje).toLocaleDateString('es-GT', { day: '2-digit', month: 'short' })}
+                                            </span>
+                                          )}
+                                        </button>
+                                      </div>
                                     </div>
-                                    {reg.fechaUltimoMensaje && (
-                                      <span className="text-[9px] text-blue-600 font-normal mt-0.5">
-                                        {new Date(reg.fechaUltimoMensaje).toLocaleDateString('es-GT', { day: '2-digit', month: 'short' })}
-                                      </span>
-                                    )}
-                                  </button>
-                                ) : (
-                                  <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-1 rounded-lg font-medium inline-block">
-                                    ⚪ Sin envíos
-                                  </span>
-                                )}
+                                  );
+                                })()}
                               </td>
 
                               {/* Acciones Rápidas */}
@@ -3689,6 +3905,56 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                               </span>
                             ) : null}
                           </div>
+
+                          {/* Notificaciones & Comunicados */}
+                          {(() => {
+                            const notif = getNotificacionesDetalle(reg);
+                            return (
+                              <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] uppercase font-black tracking-wider text-slate-400">
+                                    Notificaciones
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setHistorialModalRegistro(reg)}
+                                    className="text-[10px] font-bold text-blue-700 hover:text-blue-900 flex items-center space-x-1 cursor-pointer"
+                                  >
+                                    <History size={10} />
+                                    <span>Historial ({reg.mensajesEnviados?.length || (reg.ultimoMensajeEnviado ? 1 : 0)})</span>
+                                  </button>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-1">
+                                  {notif.enviadas.map(n => (
+                                    <span 
+                                      key={n.tipo}
+                                      className={`inline-flex items-center space-x-1 text-[9px] font-black px-1.5 py-0.5 rounded-md border ${n.badgeColor} ${n.borderColor} ${n.textColor}`}
+                                      title={`Enviado con éxito: ${n.label}`}
+                                    >
+                                      <CheckCircle size={9} className="shrink-0" />
+                                      <span>{n.shortLabel}</span>
+                                    </span>
+                                  ))}
+                                  {notif.pendientes.map(n => (
+                                    <span
+                                      key={n.tipo}
+                                      className="inline-flex items-center space-x-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-dashed border-amber-300"
+                                      title={`Pendiente de enviar: ${n.label}`}
+                                    >
+                                      <Clock size={8} className="text-amber-600 shrink-0" />
+                                      <span>Pend: {n.shortLabel}</span>
+                                    </span>
+                                  ))}
+                                  {notif.enviadas.length === 0 && (
+                                    <span className="text-[9px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md font-medium">
+                                      ⚪ Sin envíos
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
 
                         {/* Barra de Acciones de la Tarjeta */}
@@ -5070,6 +5336,50 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                 </span>
               </div>
             </div>
+
+            {/* Matriz de Notificaciones del Participante */}
+            {(() => {
+              const modalNotifStatus = getNotificacionesDetalle(historialModalRegistro);
+              return (
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-700">
+                      Matriz de Notificaciones y Comunicados
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-500">
+                      {modalNotifStatus.enviadas.length} enviada(s) · {modalNotifStatus.pendientes.length} pendiente(s)
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {NOTIFICACIONES_CONVENCION.map(n => {
+                      const isEnviada = modalNotifStatus.hasSent(n.tipo);
+                      return (
+                        <div 
+                          key={n.tipo}
+                          className={`p-2.5 rounded-xl border text-xs flex flex-col justify-between transition-all ${
+                            isEnviada 
+                              ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950 shadow-2xs' 
+                              : 'bg-white border-slate-200 text-slate-600'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-1 mb-1">
+                            <span className="font-black text-[11px] truncate">{n.label}</span>
+                            {isEnviada ? (
+                              <CheckCircle size={13} className="text-emerald-600 shrink-0" />
+                            ) : (
+                              <Clock size={13} className="text-amber-500 shrink-0" />
+                            )}
+                          </div>
+                          <span className={`text-[10px] font-extrabold ${isEnviada ? 'text-emerald-700' : 'text-amber-600'}`}>
+                            {isEnviada ? '✓ Enviado' : '⏳ Pendiente'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Línea de tiempo o listado de mensajes enviados */}
             <div className="space-y-3">

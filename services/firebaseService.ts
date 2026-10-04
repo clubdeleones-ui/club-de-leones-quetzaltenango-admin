@@ -1427,8 +1427,10 @@ export const firebaseService = {
         const mensajesActuales = data.mensajesEnviados || [];
         await updateDoc(docRef, {
           ultimoMensajeEnviado: mensajeInfo.asunto || mensajeInfo.tipo,
+          ultimoTipoNotificacion: mensajeInfo.tipo,
           fechaUltimoMensaje: now,
           canalUltimoMensaje: mensajeInfo.canal,
+          notificacionesEnviadas: arrayUnion(mensajeInfo.tipo),
           mensajesEnviados: [nuevoLog, ...mensajesActuales]
         });
       }
@@ -1471,8 +1473,10 @@ export const firebaseService = {
 
           batch.update(docRef, {
             ultimoMensajeEnviado: mensajeInfo.asunto || mensajeInfo.tipo,
+            ultimoTipoNotificacion: mensajeInfo.tipo,
             fechaUltimoMensaje: now,
             canalUltimoMensaje: mensajeInfo.canal,
+            notificacionesEnviadas: arrayUnion(mensajeInfo.tipo),
             mensajesEnviados: arrayUnion(nuevoLog)
           });
         }
