@@ -49,7 +49,11 @@ import {
   BarChart3,
   TrendingUp,
   PieChart,
-  Target
+  Target,
+  ArrowUpDown,
+  LayoutList,
+  LayoutGrid,
+  SlidersHorizontal
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { firebaseService } from '../../services/firebaseService';
@@ -91,6 +95,12 @@ export function AdminConvencion() {
   const [customTelegramDestination, setCustomTelegramDestination] = useState<string>('');
   const [showBroadcastTemplatePreview, setShowBroadcastTemplatePreview] = useState<boolean>(false);
   const [historialModalRegistro, setHistorialModalRegistro] = useState<ConvencionRegistro | null>(null);
+  
+  // Control de orden cronológico, ordenamiento y modo de visualización
+  const [sortOrder, setSortOrder] = useState<'antiguos' | 'recientes' | 'nombre' | 'club' | 'pago'>('antiguos');
+  const [viewMode, setViewMode] = useState<'tabla' | 'tarjetas'>('tabla');
+  const [broadcastSortOrder, setBroadcastSortOrder] = useState<'antiguos' | 'recientes' | 'nombre' | 'club'>('antiguos');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   
   // Opciones avanzadas de Difusión Masiva (Progreso en tiempo real, deduplicación y vista previa de destinatario)
   const [broadcastProgress, setBroadcastProgress] = useState<{
@@ -854,73 +864,180 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
     }
   };
 
-  // Filtered registrations
-  const filteredRegistros = registros.filter(r => {
-    // Filtro por canal o estado
-    if (channelFilter === 'telegram_activo' && !r.telegramVerificado) return false;
-    if (channelFilter === 'telegram_pendiente' && !(r.preferenciaNotificacion === 'telegram' && !r.telegramVerificado)) return false;
-    if (channelFilter === 'email' && r.preferenciaNotificacion !== 'email') return false;
-    if (channelFilter === 'pagados' && r.estadoPago !== 'Pagado') return false;
-    if (channelFilter === 'pendientes' && r.estadoPago === 'Pagado') return false;
+  // Helper para copiar texto con feedback visual
+  const handleCopyText = (text: string, id: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
-    const term = searchTerm.toLowerCase();
-    return (
-      (r.nombre || '').toLowerCase().includes(term) ||
-      (r.email || '').toLowerCase().includes(term) ||
-      (r.telefono || '').toLowerCase().includes(term) ||
-      (r.dpi && r.dpi.toLowerCase().includes(term)) ||
-      (r.club || '').toLowerCase().includes(term) ||
-      (r.cargo || '').toLowerCase().includes(term) ||
-      (r.distrito || '').toLowerCase().includes(term) ||
-      (r.paquete && r.paquete.toLowerCase().includes(term)) ||
-      (r.estadoPago && r.estadoPago.toLowerCase().includes(term))
-    );
-  });
+  // Helper de formateo de fecha y hora exacta
+  const formatRegistroDateTime = (isoDate?: string) => {
+    if (!isoDate) return { fecha: 'Sin fecha', hora: '', relativa: '' };
+    try {
+      const d = new Date(isoDate);
+      if (isNaN(d.getTime())) return { fecha: isoDate, hora: '', relativa: '' };
+      
+      const fecha = d.toLocaleDateString('es-GT', { 
+        day: '2-digit', 
+        month: 'short', 
+        year: 'numeric' 
+      });
+      const hora = d.toLocaleTimeString('es-GT', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+      });
+      return { fecha, hora };
+    } catch {
+      return { fecha: isoDate, hora: '', relativa: '' };
+    }
+  };
+
+  // Mapa de posición cronológica oficial (orden en que se dio el registro #1, #2, #3...)
+  const cronoMap = React.useMemo(() => {
+    const map = new Map<string, number>();
+    const sorted = [...registros].sort((a, b) => {
+      const timeA = a.fechaRegistro ? new Date(a.fechaRegistro).getTime() : 0;
+      const timeB = b.fechaRegistro ? new Date(b.fechaRegistro).getTime() : 0;
+      return timeA - timeB;
+    });
+    sorted.forEach((r, idx) => map.set(r.id, idx + 1));
+    return map;
+  }, [registros]);
+
+  // Filtered registrations con ordenamiento flexible
+  const filteredRegistros = React.useMemo(() => {
+    const list = registros.filter(r => {
+      const isPagado = (r.estadoPago || '').toLowerCase() === 'pagado';
+      if (channelFilter === 'telegram_activo' && !r.telegramVerificado) return false;
+      if (channelFilter === 'telegram_pendiente' && !(r.preferenciaNotificacion === 'telegram' && !r.telegramVerificado)) return false;
+      if (channelFilter === 'email' && r.preferenciaNotificacion !== 'email') return false;
+      if (channelFilter === 'pagados' && !isPagado) return false;
+      if (channelFilter === 'pendientes' && isPagado) return false;
+
+      const term = searchTerm.toLowerCase().trim();
+      if (!term) return true;
+      return (
+        (r.nombre || '').toLowerCase().includes(term) ||
+        (r.email || '').toLowerCase().includes(term) ||
+        (r.telefono || '').toLowerCase().includes(term) ||
+        (r.dpi && r.dpi.toLowerCase().includes(term)) ||
+        (r.id && r.id.toLowerCase().includes(term)) ||
+        (r.club || '').toLowerCase().includes(term) ||
+        (r.cargo || '').toLowerCase().includes(term) ||
+        (r.distrito || '').toLowerCase().includes(term) ||
+        (r.paquete && r.paquete.toLowerCase().includes(term)) ||
+        (r.estadoPago && r.estadoPago.toLowerCase().includes(term))
+      );
+    });
+
+    return list.sort((a, b) => {
+      const timeA = a.fechaRegistro ? new Date(a.fechaRegistro).getTime() : 0;
+      const timeB = b.fechaRegistro ? new Date(b.fechaRegistro).getTime() : 0;
+      if (sortOrder === 'antiguos') return timeA - timeB; // Cronológico oficial 1 a N
+      if (sortOrder === 'recientes') return timeB - timeA; // Más recientes primero
+      if (sortOrder === 'nombre') return (a.nombre || '').localeCompare(b.nombre || '');
+      if (sortOrder === 'club') return (a.club || '').localeCompare(b.club || '');
+      if (sortOrder === 'pago') {
+        const isPagadoA = (a.estadoPago || '').toLowerCase() === 'pagado' ? 1 : 0;
+        const isPagadoB = (b.estadoPago || '').toLowerCase() === 'pagado' ? 1 : 0;
+        return isPagadoB - isPagadoA;
+      }
+      return timeA - timeB;
+    });
+  }, [registros, channelFilter, searchTerm, sortOrder]);
 
   // Participantes filtrados para el módulo de Difusión Masiva y control de envíos
-  const broadcastFilteredRegistros = registros.filter(r => {
-    if (broadcastRecipientFilter === 'pagados' && r.estadoPago !== 'Pagado') return false;
-    if (broadcastRecipientFilter === 'pendientes' && r.estadoPago === 'Pagado') return false;
-    if (broadcastRecipientFilter === 'sin_notificar' && r.ultimoMensajeEnviado) return false;
-    if (broadcastRecipientFilter === 'notificados' && !r.ultimoMensajeEnviado) return false;
-    if (broadcastRecipientFilter === 'telegram_activo' && !r.telegramVerificado) return false;
-    if (broadcastRecipientFilter === 'email' && r.preferenciaNotificacion !== 'email') return false;
+  const broadcastFilteredRegistros = React.useMemo(() => {
+    const list = registros.filter(r => {
+      const isPagado = (r.estadoPago || '').toLowerCase() === 'pagado';
+      if (broadcastRecipientFilter === 'pagados' && !isPagado) return false;
+      if (broadcastRecipientFilter === 'pendientes' && isPagado) return false;
+      if (broadcastRecipientFilter === 'sin_notificar' && r.ultimoMensajeEnviado) return false;
+      if (broadcastRecipientFilter === 'notificados' && !r.ultimoMensajeEnviado) return false;
+      if (broadcastRecipientFilter === 'telegram_activo' && !r.telegramVerificado) return false;
+      if (broadcastRecipientFilter === 'email' && r.preferenciaNotificacion !== 'email') return false;
 
-    if (broadcastRecipientSearch.trim()) {
-      const q = broadcastRecipientSearch.toLowerCase();
-      const matchName = (r.nombre || '').toLowerCase().includes(q);
-      const matchClub = (r.club || '').toLowerCase().includes(q);
-      const matchId = (r.id || '').toLowerCase().includes(q);
-      const matchEmail = (r.email || '').toLowerCase().includes(q);
-      const matchTel = (r.telefono || '').includes(q);
-      if (!matchName && !matchClub && !matchId && !matchEmail && !matchTel) return false;
-    }
+      if (broadcastRecipientSearch.trim()) {
+        const q = broadcastRecipientSearch.toLowerCase();
+        const matchName = (r.nombre || '').toLowerCase().includes(q);
+        const matchClub = (r.club || '').toLowerCase().includes(q);
+        const matchId = (r.id || '').toLowerCase().includes(q);
+        const matchEmail = (r.email || '').toLowerCase().includes(q);
+        const matchTel = (r.telefono || '').includes(q);
+        if (!matchName && !matchClub && !matchId && !matchEmail && !matchTel) return false;
+      }
 
-    return true;
-  });
+      return true;
+    });
 
-  // Export CSV
+    return list.sort((a, b) => {
+      const timeA = a.fechaRegistro ? new Date(a.fechaRegistro).getTime() : 0;
+      const timeB = b.fechaRegistro ? new Date(b.fechaRegistro).getTime() : 0;
+      if (broadcastSortOrder === 'antiguos') return timeA - timeB;
+      if (broadcastSortOrder === 'recientes') return timeB - timeA;
+      if (broadcastSortOrder === 'nombre') return (a.nombre || '').localeCompare(b.nombre || '');
+      if (broadcastSortOrder === 'club') return (a.club || '').localeCompare(b.club || '');
+      return timeA - timeB;
+    });
+  }, [registros, broadcastRecipientFilter, broadcastRecipientSearch, broadcastSortOrder]);
+
+  // Export CSV enriquecido con N° Cronológico y Fecha/Hora
   const handleExportCSV = () => {
     if (registros.length === 0) return;
     
-    const headers = ["Nombre Completo", "DPI", "Email", "Telefono", "Canal Preferido", "Telegram Activo (Bot)", "Club", "Cargo", "Zona", "Paquete", "Monto a Pagar (Q)", "Estado de Pago", "Fecha Registro"];
+    const headers = [
+      "N° Cronologico",
+      "Folio",
+      "Fecha Registro",
+      "Hora Registro",
+      "Nombre Completo",
+      "Tipo Documento",
+      "DPI o Pasaporte",
+      "Email",
+      "Telefono",
+      "Club",
+      "Cargo",
+      "Zona o Distrito",
+      "Paquete",
+      "Acompanantes Cantidad",
+      "Monto a Pagar (Q)",
+      "Metodo de Pago",
+      "Estado de Pago",
+      "Canal Preferido",
+      "Telegram Activo (Bot)",
+      "Ultimo Comunicado Enviado"
+    ];
     const csvRows = [
       headers.join(','),
-      ...filteredRegistros.map(r => [
-        `"${(r.nombre || '').replace(/"/g, '""')}"`,
-        `"${(r.dpi || '').replace(/"/g, '""')}"`,
-        `"${(r.email || '').replace(/"/g, '""')}"`,
-        `"${(r.telefono || '').replace(/"/g, '""')}"`,
-        `"${r.preferenciaNotificacion === 'telegram' ? 'Telegram' : 'Correo'}"`,
-        `"${r.telegramVerificado ? 'SÍ (Activo en Bot)' : 'NO'}"`,
-        `"${(r.club || '').replace(/"/g, '""')}"`,
-        `"${(r.cargo || '').replace(/"/g, '""')}"`,
-        `"${(r.distrito || '').replace(/"/g, '""')}"`,
-        `"${(r.paquete || '').replace(/"/g, '""')}"`,
-        `"${r.montoPagar || 0}"`,
-        `"${r.estadoPago || 'Pendiente'}"`,
-        `"${new Date(r.fechaRegistro).toLocaleString()}"`
-      ].join(','))
+      ...filteredRegistros.map(r => {
+        const dt = formatRegistroDateTime(r.fechaRegistro);
+        const nro = cronoMap.get(r.id) || '';
+        return [
+          `"${nro}"`,
+          `"${(r.id || '').replace(/"/g, '""')}"`,
+          `"${dt.fecha}"`,
+          `"${dt.hora}"`,
+          `"${(r.nombre || '').replace(/"/g, '""')}"`,
+          `"${(r.tipoIdentificacion || 'DPI').toUpperCase()}"`,
+          `"${(r.dpi || '').replace(/"/g, '""')}"`,
+          `"${(r.email || '').replace(/"/g, '""')}"`,
+          `"${(r.telefono || '').replace(/"/g, '""')}"`,
+          `"${(r.club || '').replace(/"/g, '""')}"`,
+          `"${(r.cargo || '').replace(/"/g, '""')}"`,
+          `"${(r.distrito || '').replace(/"/g, '""')}"`,
+          `"${(r.paquete || '').replace(/"/g, '""')}"`,
+          `"${r.cantidadAcompanantes || 0}"`,
+          `"${r.montoPagar || 0}"`,
+          `"${r.metodoPago === 'tarjeta' ? 'Tarjeta en linea' : 'Transferencia Banrural'}"`,
+          `"${r.estadoPago || 'Pendiente'}"`,
+          `"${r.preferenciaNotificacion === 'telegram' ? 'Telegram' : 'Correo'}"`,
+          `"${r.telegramVerificado ? 'SI (Activo en Bot)' : 'NO'}"`,
+          `"${(r.ultimoMensajeEnviado || 'Ninguno').replace(/"/g, '""')}"`
+        ].join(',');
+      })
     ];
 
     const csvContent = "\uFEFF" + csvRows.join("\n");
@@ -2634,8 +2751,8 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                   {/* Tabla / Lista de Destinatarios */}
                   {broadcastFilteredRegistros.length > 0 ? (
                     <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs divide-y divide-slate-100 max-h-96 overflow-y-auto bg-white">
-                      {/* Cabecera con Checkbox Maestro */}
-                      <div className="bg-slate-100/90 px-3 sm:px-4 py-2 flex items-center justify-between text-xs font-bold text-slate-700 sticky top-0 z-10 backdrop-blur-xs border-b border-slate-200">
+                      {/* Cabecera con Checkbox Maestro y Ordenamiento */}
+                      <div className="bg-slate-100/95 px-3 sm:px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-slate-700 sticky top-0 z-10 backdrop-blur-xs border-b border-slate-200">
                         <div className="flex items-center space-x-3">
                           <input 
                             type="checkbox"
@@ -2647,21 +2764,42 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                             className="w-4 h-4 rounded text-blue-900 border-slate-300 focus:ring-blue-900/20 cursor-pointer"
                             title="Seleccionar o deseleccionar todos los visibles"
                           />
-                          <span className="text-[11px] uppercase tracking-wider font-black text-slate-600">
-                            Participante & Club
+                          <span className="text-[11px] uppercase tracking-wider font-black text-slate-700">
+                            Destinatarios ({broadcastFilteredRegistros.length})
                           </span>
                         </div>
-                        <span className="text-[11px] text-slate-500 font-mono">
-                          {broadcastSelectedIds.length > 0 
-                            ? `${broadcastSelectedIds.length} seleccionados` 
-                            : `${broadcastFilteredRegistros.filter(r => r.email).length} con correo`}
-                        </span>
+
+                        {/* Control de Orden Cronológico en Difusión */}
+                        <div className="flex items-center space-x-2">
+                          <span className="text-[10px] text-slate-500 font-bold hidden sm:inline flex items-center space-x-1">
+                            <ArrowUpDown size={11} className="text-slate-400" />
+                            <span>Ordenar:</span>
+                          </span>
+                          <select
+                            value={broadcastSortOrder}
+                            onChange={(e) => setBroadcastSortOrder(e.target.value as any)}
+                            className="bg-white border border-slate-200 text-slate-700 text-[10px] font-bold rounded-lg px-2 py-1 cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-900 shadow-2xs"
+                          >
+                            <option value="antiguos">⏱️ Primeros Registrados (1 a N)</option>
+                            <option value="recientes">🕒 Más Recientes Primero</option>
+                            <option value="club">🦁 Por Club</option>
+                            <option value="nombre">👤 Por Nombre</option>
+                          </select>
+
+                          <span className="text-[11px] text-blue-900 font-black font-mono bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+                            {broadcastSelectedIds.length > 0 
+                              ? `${broadcastSelectedIds.length} seleccionados` 
+                              : `${broadcastFilteredRegistros.filter(r => r.email).length} con correo`}
+                          </span>
+                        </div>
                       </div>
 
                       {broadcastFilteredRegistros.map((reg) => {
                         const isSelected = broadcastSelectedIds.includes(reg.id);
                         const hasEmail = !!(reg.email && reg.email.includes('@'));
-                        const isPagado = reg.estadoPago === 'Pagado';
+                        const isPagado = (reg.estadoPago || '').toLowerCase() === 'pagado';
+                        const nro = cronoMap.get(reg.id);
+                        const dt = formatRegistroDateTime(reg.fechaRegistro);
 
                         return (
                           <div 
@@ -2679,11 +2817,29 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                                 className="w-4 h-4 rounded text-blue-900 border-slate-300 focus:ring-blue-900/20 cursor-pointer mt-1 sm:mt-0 shrink-0"
                               />
 
+                              {/* N° Cronológico de Registro */}
+                              <span 
+                                className="w-7 h-7 rounded-xl bg-slate-900 text-white font-mono font-black text-[10px] flex items-center justify-center shrink-0 shadow-2xs"
+                                title={`Socio N° ${nro} registrado en el sistema`}
+                              >
+                                #{nro || '-'}
+                              </span>
+
                               <div className="min-w-0 flex-1 space-y-1">
-                                <div className="flex flex-wrap items-center gap-2">
+                                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                                   <span className="font-extrabold text-xs text-slate-900">
                                     {reg.nombre}
                                   </span>
+
+                                  {/* Fecha y Hora de Registro */}
+                                  <span 
+                                    className="text-[10px] font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md flex items-center space-x-1 border border-slate-200/60"
+                                    title="Fecha y hora exacta en que se registró"
+                                  >
+                                    <Clock size={10} className="text-blue-900" />
+                                    <span>{dt.fecha} • {dt.hora}</span>
+                                  </span>
+
                                   <span className="text-[10px] font-mono bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">
                                     {reg.id}
                                   </span>
@@ -2984,364 +3140,616 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
               </div>
             </div>
 
-            {/* Barra de Búsqueda y Píldoras de Filtro Rápido */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3.5">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div className="relative w-full sm:max-w-md">
+            {/* Barra de Búsqueda, Filtros y Controles de Vista */}
+            <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+              {/* Fila Superior: Buscador + Controles de Orden y Modo de Vista */}
+              <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-3">
+                {/* Buscador Rápido */}
+                <div className="relative flex-1 max-w-lg">
                   <input 
                     type="text" 
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Buscar por socio, DPI, email, teléfono o club..."
-                    className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-xl pl-10 pr-4 py-2 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-medium"
+                    placeholder="Buscar por socio, club, DPI, folio, email o teléfono..."
+                    className="w-full bg-slate-50 border border-slate-200 focus:border-blue-900 rounded-2xl pl-10 pr-8 py-2.5 text-slate-800 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all font-medium"
                   />
-                  <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
-                </div>
-
-                <div className="flex items-center space-x-2.5 w-full sm:w-auto justify-between sm:justify-end">
-                  <div className="flex items-center space-x-2 text-[11px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-3 py-1.5 rounded-full shadow-xs">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                    </span>
-                    <span>En vivo (Tiempo real)</span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveSubTab('difusion')}
-                    className="flex items-center space-x-1.5 bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-850 hover:to-indigo-850 text-white font-black px-3.5 py-2 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer whitespace-nowrap"
-                  >
-                    <Mail size={14} className="text-amber-400" />
-                    <span>Difusión Masiva</span>
-                  </button>
-
-                  {registros.length > 0 && (
+                  <Search className="absolute left-3.5 top-3 text-slate-400" size={16} />
+                  {searchTerm && (
                     <button
-                      onClick={handleExportCSV}
-                      className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer whitespace-nowrap"
+                      type="button"
+                      onClick={() => setSearchTerm('')}
+                      className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 text-xs font-bold"
                     >
-                      <Download size={14} />
-                      <span>Exportar CSV</span>
+                      ✕
                     </button>
                   )}
                 </div>
+
+                {/* Controles de Orden y Acciones */}
+                <div className="flex flex-wrap items-center gap-2 justify-between lg:justify-end">
+                  {/* Selector de Orden Cronológico */}
+                  <div className="flex items-center space-x-1.5 bg-slate-100 p-1 rounded-2xl border border-slate-200/80">
+                    <span className="text-[10px] font-bold text-slate-500 pl-2 hidden sm:inline flex items-center space-x-1">
+                      <ArrowUpDown size={12} className="text-slate-400" />
+                      <span>Orden:</span>
+                    </span>
+                    <select
+                      value={sortOrder}
+                      onChange={(e) => setSortOrder(e.target.value as any)}
+                      className="bg-white border-0 text-slate-800 text-xs font-bold rounded-xl px-2.5 py-1.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-900/10 shadow-2xs"
+                      title="Seleccionar criterio de ordenamiento de la lista"
+                    >
+                      <option value="antiguos">⏱️ Primeros Registrados (1 a N • Orden en que se dio)</option>
+                      <option value="recientes">🕒 Más Recientes Primero</option>
+                      <option value="club">🦁 Por Club (A-Z)</option>
+                      <option value="nombre">👤 Por Nombre (A-Z)</option>
+                      <option value="pago">💰 Pagados Primero</option>
+                    </select>
+                  </div>
+
+                  {/* Toggle de Modo de Vista (Tabla vs Tarjetas) */}
+                  <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200/80">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('tabla')}
+                      className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                        viewMode === 'tabla'
+                          ? 'bg-blue-900 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                      }`}
+                      title="Vista en tabla ejecutiva compacta (aprovecha al máximo el espacio)"
+                    >
+                      <LayoutList size={14} />
+                      <span className="hidden sm:inline">Tabla</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('tarjetas')}
+                      className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                        viewMode === 'tarjetas'
+                          ? 'bg-blue-900 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                      }`}
+                      title="Vista en tarjetas visuales"
+                    >
+                      <LayoutGrid size={14} />
+                      <span className="hidden sm:inline">Tarjetas</span>
+                    </button>
+                  </div>
+
+                  {/* Botón Exportar CSV */}
+                  {registros.length > 0 && (
+                    <button
+                      onClick={handleExportCSV}
+                      className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black px-3.5 py-2 rounded-2xl text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer whitespace-nowrap active:scale-95"
+                      title="Descargar base completa con orden cronológico y fecha/hora"
+                    >
+                      <Download size={13} />
+                      <span className="hidden sm:inline">Exportar</span>
+                      <span>CSV</span>
+                    </button>
+                  )}
+
+                  {/* Salto a Difusión Masiva */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubTab('difusion')}
+                    className="flex items-center space-x-1.5 bg-amber-400 hover:bg-amber-300 text-blue-950 font-black px-3.5 py-2 rounded-2xl text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer whitespace-nowrap active:scale-95"
+                    title="Ir al módulo de envíos masivos"
+                  >
+                    <Mail size={13} />
+                    <span className="hidden sm:inline">Difusión</span>
+                  </button>
+                </div>
               </div>
 
-              {/* Píldoras de Filtro por Canal y Estado */}
-              <div className="flex items-center space-x-2 overflow-x-auto pb-1 text-xs font-bold">
-                <button
-                  type="button"
-                  onClick={() => setChannelFilter('todos')}
-                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
-                    channelFilter === 'todos'
-                      ? 'bg-slate-900 text-white shadow-sm'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  Todos ({registros.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setChannelFilter('telegram_activo')}
-                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1.5 ${
-                    channelFilter === 'telegram_activo'
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200/60'
-                  }`}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                  <span>🟢 Telegram Activo ({registros.filter(r => r.telegramVerificado).length})</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setChannelFilter('telegram_pendiente')}
-                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
-                    channelFilter === 'telegram_pendiente'
-                      ? 'bg-amber-600 text-white shadow-sm'
-                      : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200/60'
-                  }`}
-                >
-                  🟡 Telegram Pendiente ({registros.filter(r => r.preferenciaNotificacion === 'telegram' && !r.telegramVerificado).length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setChannelFilter('email')}
-                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
-                    channelFilter === 'email'
-                      ? 'bg-blue-900 text-white shadow-sm'
-                      : 'bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200/60'
-                  }`}
-                >
-                  ✉️ Solo Correo ({registros.filter(r => r.preferenciaNotificacion === 'email').length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setChannelFilter('pagados')}
-                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
-                    channelFilter === 'pagados'
-                      ? 'bg-teal-700 text-white shadow-sm'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  ✅ Pagados ({registros.filter(r => r.estadoPago === 'Pagado').length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setChannelFilter('pendientes')}
-                  className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
-                    channelFilter === 'pendientes'
-                      ? 'bg-rose-700 text-white shadow-sm'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  ⏳ Pendientes ({registros.filter(r => r.estadoPago !== 'Pagado').length})
-                </button>
+              {/* Fila Inferior: Píldoras de Filtro por Canal y Estado + Contador */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100">
+                <div className="flex items-center space-x-2 overflow-x-auto pb-1 text-xs font-bold scrollbar-thin">
+                  <button
+                    type="button"
+                    onClick={() => setChannelFilter('todos')}
+                    className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                      channelFilter === 'todos'
+                        ? 'bg-slate-900 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Todos ({registros.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChannelFilter('pagados')}
+                    className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1 ${
+                      channelFilter === 'pagados'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200/60'
+                    }`}
+                  >
+                    <span>✅ Pagados ({registros.filter(r => (r.estadoPago || '').toLowerCase() === 'pagado').length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChannelFilter('pendientes')}
+                    className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1 ${
+                      channelFilter === 'pendientes'
+                        ? 'bg-amber-600 text-white shadow-sm'
+                        : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200/60'
+                    }`}
+                  >
+                    <span>⏳ Pendientes ({registros.filter(r => (r.estadoPago || '').toLowerCase() !== 'pagado').length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChannelFilter('telegram_activo')}
+                    className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1.5 ${
+                      channelFilter === 'telegram_activo'
+                        ? 'bg-sky-600 text-white shadow-sm'
+                        : 'bg-sky-50 text-sky-800 hover:bg-sky-100 border border-sky-200/60'
+                    }`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-400"></span>
+                    <span>🟢 Telegram ({registros.filter(r => r.telegramVerificado).length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChannelFilter('email')}
+                    className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                      channelFilter === 'email'
+                        ? 'bg-blue-900 text-white shadow-sm'
+                        : 'bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200/60'
+                    }`}
+                  >
+                    ✉️ Solo Correo ({registros.filter(r => r.preferenciaNotificacion === 'email').length})
+                  </button>
+                </div>
+
+                <div className="text-[11px] text-slate-500 font-bold shrink-0 self-end sm:self-center">
+                  Mostrando <strong className="text-slate-900">{filteredRegistros.length}</strong> de <strong className="text-slate-900">{registros.length}</strong> socios
+                </div>
               </div>
             </div>
 
+            {/* Listado de Pre-registros: VISTA TABLA EJECUTIVA (viewMode === 'tabla') */}
             {filteredRegistros.length > 0 ? (
-              <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm bg-white divide-y divide-slate-100">
-                {filteredRegistros.map((reg) => {
-                  const isPagado = reg.estadoPago === 'Pagado';
-                  const isCheckout = reg.estadoPago === 'Checkout_Creado';
-                  const cleanPhone = getCleanPhone(reg.telefono);
-                  const whatsappMsg = getWhatsAppMessage(reg);
+              viewMode === 'tabla' ? (
+                <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50/90 border-b border-slate-200 text-[10px] font-black uppercase tracking-wider text-slate-500">
+                          <th className="py-3.5 pl-5 pr-3 whitespace-nowrap">N° / Registro</th>
+                          <th className="py-3.5 px-3 whitespace-nowrap">Socio León & Club</th>
+                          <th className="py-3.5 px-3 whitespace-nowrap">Contacto & Canales</th>
+                          <th className="py-3.5 px-3 whitespace-nowrap">Cuota & Estatus Pago</th>
+                          <th className="py-3.5 px-3 whitespace-nowrap">Último Comunicado</th>
+                          <th className="py-3.5 pl-3 pr-5 text-right whitespace-nowrap">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-xs">
+                        {filteredRegistros.map((reg) => {
+                          const isPagado = (reg.estadoPago || '').toLowerCase() === 'pagado';
+                          const isCheckout = reg.estadoPago === 'Checkout_Creado';
+                          const cleanPhone = getCleanPhone(reg.telefono);
+                          const whatsappMsg = getWhatsAppMessage(reg);
+                          const nro = cronoMap.get(reg.id);
+                          const dt = formatRegistroDateTime(reg.fechaRegistro);
 
-                  return (
-                    <div 
-                      key={reg.id} 
-                      className="p-4 sm:p-5 hover:bg-slate-50/70 transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-4"
-                    >
-                      {/* Información Principal del Participante */}
-                      <div className="flex-1 min-w-0 space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h4 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
-                            {reg.nombre}
-                          </h4>
+                          return (
+                            <tr key={reg.id} className="hover:bg-blue-50/30 transition-colors group">
+                              {/* N° y Fecha/Hora Exacta */}
+                              <td className="py-3.5 pl-5 pr-3 align-top whitespace-nowrap">
+                                <div className="space-y-1">
+                                  <div className="flex items-center space-x-1.5">
+                                    <span 
+                                      className="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-blue-955 text-amber-300 font-mono font-black text-xs shadow-2xs"
+                                      title={`Socio N° ${nro} registrado`}
+                                    >
+                                      #{nro || '-'}
+                                    </span>
+                                    <div>
+                                      <span className="font-extrabold text-slate-800 text-xs block leading-tight">
+                                        {dt.fecha}
+                                      </span>
+                                      <span className="font-mono text-[10px] text-slate-400 font-semibold block">
+                                        {dt.hora}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyText(reg.id, reg.id)}
+                                    className="font-mono text-[9px] text-slate-400 hover:text-blue-900 bg-slate-100 hover:bg-slate-200 px-1.5 py-0.5 rounded cursor-pointer transition-colors block max-w-[110px] truncate"
+                                    title="Clic para copiar Folio"
+                                  >
+                                    {copiedId === reg.id ? '✓ ¡Copiado!' : reg.id}
+                                  </button>
+                                </div>
+                              </td>
 
-                          {/* Selector de Estado de Pago Interactivo */}
+                              {/* Socio León & Club */}
+                              <td className="py-3.5 px-3 align-top min-w-[220px]">
+                                <div className="space-y-1">
+                                  <h4 className="text-sm font-black text-slate-900 tracking-tight leading-snug">
+                                    {reg.nombre}
+                                  </h4>
+                                  <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+                                    <span className="font-mono font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
+                                      {reg.tipoIdentificacion === 'pasaporte' ? 'PAS' : 'DPI'}: {reg.dpi || '-'}
+                                    </span>
+                                    <span className="text-blue-900 font-bold bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
+                                      {reg.cargo || 'Socio'}
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-slate-700 font-medium">
+                                    🦁 <strong>{reg.club}</strong> <span className="text-slate-400 font-normal">({reg.distrito})</span>
+                                  </div>
+                                  {reg.cantidadAcompanantes && reg.cantidadAcompanantes > 0 ? (
+                                    <span className="inline-block text-[10px] bg-amber-50 text-amber-900 border border-amber-200/80 px-2 py-0.5 rounded-full font-extrabold">
+                                      👥 +{reg.cantidadAcompanantes} familiar(es)
+                                    </span>
+                                  ) : null}
+                                </div>
+                              </td>
+
+                              {/* Contacto & Canales */}
+                              <td className="py-3.5 px-3 align-top min-w-[200px]">
+                                <div className="space-y-1 text-xs">
+                                  {/* Email con botón copiar */}
+                                  <div className="flex items-center space-x-1.5">
+                                    <span className="text-slate-700 truncate max-w-[150px] font-medium" title={reg.email}>
+                                      ✉️ {reg.email || 'Sin correo'}
+                                    </span>
+                                    {reg.email && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleCopyText(reg.email, reg.id + '-email')}
+                                        className="text-slate-400 hover:text-slate-700 cursor-pointer p-0.5"
+                                        title="Copiar correo"
+                                      >
+                                        <Copy size={11} />
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  {/* Teléfono */}
+                                  {reg.telefono && (
+                                    <div className="text-slate-600 font-mono text-[11px]">
+                                      📞 {reg.telefono}
+                                    </div>
+                                  )}
+
+                                  {/* Badge Interactivo de Telegram */}
+                                  <div>
+                                    {reg.telegramVerificado ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleToggleTelegramStatus(reg.id, true)}
+                                        className="inline-flex items-center space-x-1 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-full text-[9px] font-black transition-all cursor-pointer shadow-xs"
+                                        title="Está activo en el Bot de Telegram. Clic para cambiar estado."
+                                      >
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                        <span>🟢 Bot Activo</span>
+                                      </button>
+                                    ) : reg.preferenciaNotificacion === 'telegram' ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleToggleTelegramStatus(reg.id, false)}
+                                        className="inline-flex items-center space-x-1 text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full text-[9px] font-black transition-all cursor-pointer"
+                                        title="Eligió Telegram pero aún no envía /start al bot. Clic para verificar."
+                                      >
+                                        <span>🟡 Bot Pendiente</span>
+                                        <span className="underline ml-0.5 font-bold">Activar</span>
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleToggleTelegramStatus(reg.id, false)}
+                                        className="inline-flex items-center space-x-1 text-slate-500 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2 py-0.5 rounded-full text-[9px] font-medium transition-all cursor-pointer"
+                                        title="Prefiere difusión por correo. Clic para habilitar Telegram."
+                                      >
+                                        <span>✉️ Vía Correo</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Cuota & Estatus de Pago */}
+                              <td className="py-3.5 px-3 align-top whitespace-nowrap">
+                                <div className="space-y-1">
+                                  <div className="text-sm font-black text-slate-900">
+                                    Q.{(reg.montoPagar || 650).toLocaleString()}.00
+                                  </div>
+
+                                  {/* Selector de Estado de Pago */}
+                                  <select
+                                    value={reg.estadoPago || 'Pendiente'}
+                                    onChange={(e) => handleUpdateEstadoPago(reg.id, e.target.value as any)}
+                                    className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full border cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-900/10 block ${
+                                      isPagado 
+                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-300' 
+                                        : isCheckout 
+                                          ? 'bg-blue-50 text-blue-700 border-blue-300' 
+                                          : 'bg-amber-50 text-amber-700 border-amber-300'
+                                    }`}
+                                    title="Modificar estatus de pago del socio"
+                                  >
+                                    <option value="Pendiente">⏳ Pendiente</option>
+                                    <option value="Checkout_Creado">💳 Link Creado</option>
+                                    <option value="Pagado">✅ Pagado Confirmado</option>
+                                  </select>
+
+                                  <span className="text-[10px] text-slate-400 font-semibold block">
+                                    {reg.metodoPago === 'tarjeta' ? '💳 En línea (Recurrente)' : '🏦 Banrural Depósito'}
+                                  </span>
+                                </div>
+                              </td>
+
+                              {/* Último Comunicado */}
+                              <td className="py-3.5 px-3 align-top">
+                                {reg.ultimoMensajeEnviado ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setHistorialModalRegistro(reg)}
+                                    className="inline-flex flex-col text-left bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200/80 p-1.5 rounded-xl text-[10px] font-bold cursor-pointer transition-colors max-w-[150px]"
+                                    title={`Último: ${reg.ultimoMensajeEnviado}. Clic para ver historial completo.`}
+                                  >
+                                    <div className="flex items-center space-x-1">
+                                      <CheckCircle size={10} className="text-blue-600 shrink-0" />
+                                      <span className="truncate">{reg.ultimoMensajeEnviado}</span>
+                                    </div>
+                                    {reg.fechaUltimoMensaje && (
+                                      <span className="text-[9px] text-blue-600 font-normal mt-0.5">
+                                        {new Date(reg.fechaUltimoMensaje).toLocaleDateString('es-GT', { day: '2-digit', month: 'short' })}
+                                      </span>
+                                    )}
+                                  </button>
+                                ) : (
+                                  <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-1 rounded-lg font-medium inline-block">
+                                    ⚪ Sin envíos
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Acciones Rápidas */}
+                              <td className="py-3.5 pl-3 pr-5 align-top text-right whitespace-nowrap">
+                                <div className="inline-flex items-center space-x-1 bg-slate-100/70 p-1 rounded-2xl border border-slate-200/60 shadow-2xs">
+                                  {/* Entrada QR Oficial */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenQrModal(reg)}
+                                    className="inline-flex items-center space-x-1 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-blue-955 font-black px-2.5 py-1.5 rounded-xl text-[11px] uppercase tracking-wider transition-all shadow-xs cursor-pointer active:scale-95"
+                                    title="Ver y reenviar Entrada QR Oficial"
+                                  >
+                                    <QrCode size={13} />
+                                    <span>QR</span>
+                                  </button>
+
+                                  {/* WhatsApp */}
+                                  {cleanPhone ? (
+                                    <a
+                                      href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(whatsappMsg)}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl transition-all cursor-pointer"
+                                      title="Enviar WhatsApp con recordatorio"
+                                    >
+                                      <MessageCircle size={14} className="fill-emerald-100" />
+                                    </a>
+                                  ) : null}
+
+                                  {/* Gmail */}
+                                  {reg.email && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenEmailModal(reg, isPagado ? 'pago_confirmado' : 'recordatorio_pago')}
+                                      className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl transition-all cursor-pointer"
+                                      title="Enviar correo individual por Gmail"
+                                    >
+                                      <Mail size={14} />
+                                    </button>
+                                  )}
+
+                                  {/* Historial */}
+                                  <button
+                                    type="button"
+                                    onClick={() => setHistorialModalRegistro(reg)}
+                                    className="p-1.5 bg-white hover:bg-slate-200 text-slate-600 border border-slate-200 rounded-xl transition-all cursor-pointer"
+                                    title="Historial de mensajes enviados"
+                                  >
+                                    <History size={14} />
+                                  </button>
+
+                                  {/* Eliminar */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteRegistro(reg.id, reg.nombre)}
+                                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
+                                    title="Eliminar pre-registro"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                /* VISTA TARJETAS DETALLADAS (viewMode === 'tarjetas') */
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {filteredRegistros.map((reg) => {
+                    const isPagado = (reg.estadoPago || '').toLowerCase() === 'pagado';
+                    const isCheckout = reg.estadoPago === 'Checkout_Creado';
+                    const cleanPhone = getCleanPhone(reg.telefono);
+                    const whatsappMsg = getWhatsAppMessage(reg);
+                    const nro = cronoMap.get(reg.id);
+                    const dt = formatRegistroDateTime(reg.fechaRegistro);
+
+                    return (
+                      <div 
+                        key={reg.id} 
+                        className="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4"
+                      >
+                        {/* Cabecera de la Tarjeta */}
+                        <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
+                          <div className="flex items-center space-x-2.5">
+                            <span 
+                              className="w-8 h-8 rounded-xl bg-blue-955 text-amber-300 font-mono font-black text-xs flex items-center justify-center shrink-0 shadow-xs"
+                              title={`Socio N° ${nro} registrado`}
+                            >
+                              #{nro || '-'}
+                            </span>
+                            <div>
+                              <span className="text-xs font-black text-slate-800 block">
+                                {dt.fecha}
+                              </span>
+                              <span className="text-[10px] font-mono text-slate-400 font-semibold block">
+                                {dt.hora}
+                              </span>
+                            </div>
+                          </div>
+
                           <select
                             value={reg.estadoPago || 'Pendiente'}
                             onChange={(e) => handleUpdateEstadoPago(reg.id, e.target.value as any)}
-                            className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-900/20 transition-all ${
+                            className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-full border cursor-pointer ${
                               isPagado 
                                 ? 'bg-emerald-50 text-emerald-700 border-emerald-300' 
                                 : isCheckout 
                                   ? 'bg-blue-50 text-blue-700 border-blue-300' 
                                   : 'bg-amber-50 text-amber-700 border-amber-300'
                             }`}
-                            title="Cambiar estado del registro"
                           >
                             <option value="Pendiente">⏳ Pendiente</option>
                             <option value="Checkout_Creado">💳 Link Creado</option>
-                            <option value="Pagado">✅ Pagado Confirmado</option>
+                            <option value="Pagado">✅ Pagado</option>
                           </select>
-
-                          {/* BADGE INTERACTIVO DE ESTADO TELEGRAM / DIFUSIÓN */}
-                          {reg.telegramVerificado ? (
-                            <button
-                              type="button"
-                              onClick={() => handleToggleTelegramStatus(reg.id, true)}
-                              className="inline-flex items-center space-x-1.5 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-full text-[10px] font-black transition-all cursor-pointer shadow-xs"
-                              title="Está activo en el Bot de Telegram y recibirá mensajes masivos. Clic para cambiar."
-                            >
-                              <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                              </span>
-                              <span>🟢 Bot Telegram Activo</span>
-                            </button>
-                          ) : reg.preferenciaNotificacion === 'telegram' ? (
-                            <button
-                              type="button"
-                              onClick={() => handleToggleTelegramStatus(reg.id, false)}
-                              className="inline-flex items-center space-x-1 text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-full text-[10px] font-black transition-all cursor-pointer"
-                              title="Eligió Telegram pero aún no confirmó el número en el bot. Clic para marcarlo como Activo."
-                            >
-                              <span>🟡 Telegram (Pendiente en Bot)</span>
-                              <span className="text-[9px] underline ml-1 text-blue-800 font-extrabold">Verificar</span>
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleToggleTelegramStatus(reg.id, false)}
-                              className="inline-flex items-center space-x-1 text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer"
-                              title="Prefiere recibir difusión por Correo. Clic para activar recepción en Telegram."
-                            >
-                              <Mail size={11} className="text-slate-500" />
-                              <span>✉️ Difusión Correo</span>
-                              <span className="text-[9px] text-blue-700 font-extrabold underline ml-1">+Telegram</span>
-                            </button>
-                          )}
-
-                          {/* Folio */}
-                          <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
-                            {reg.id}
-                          </span>
                         </div>
 
-                        {/* Metadatos en línea sin forzar scroll horizontal */}
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-600 font-medium">
-                          <span className="flex items-center text-slate-800 font-bold">
-                            🦁 {reg.club} <span className="text-slate-400 font-normal ml-1">({reg.cargo} • {reg.distrito})</span>
-                          </span>
+                        {/* Cuerpo de Datos */}
+                        <div className="space-y-2 flex-1">
+                          <h4 className="text-base font-black text-slate-900 tracking-tight leading-snug">
+                            {reg.nombre}
+                          </h4>
 
-                          <span className="text-amber-700 font-bold">
-                            💰 Q{(reg.montoPagar || 0).toLocaleString()} <span className="text-slate-500 font-normal">({reg.paquete || 'General'})</span>
-                          </span>
-
-                          {reg.dpi && (
-                            <span className="text-slate-500 font-mono text-[11px]">
-                              DPI: {reg.dpi}
+                          <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+                            <span className="font-mono text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded font-bold">
+                              {reg.tipoIdentificacion === 'pasaporte' ? 'PAS' : 'DPI'}: {reg.dpi || '-'}
                             </span>
+                            <span className="text-blue-900 font-bold bg-blue-50 px-1.5 py-0.5 rounded">
+                              {reg.cargo || 'Socio'}
+                            </span>
+                            <span className="font-mono text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">
+                              ID: {reg.id}
+                            </span>
+                          </div>
+
+                          <div className="text-xs text-slate-700 font-medium pt-1">
+                            🦁 <strong>{reg.club}</strong> <span className="text-slate-400 font-normal">({reg.distrito})</span>
+                          </div>
+
+                          {/* Contactos */}
+                          <div className="pt-2 border-t border-slate-100 space-y-1 text-xs">
+                            <div className="flex items-center justify-between text-slate-600">
+                              <span className="truncate max-w-[200px]" title={reg.email}>✉️ {reg.email || 'Sin correo'}</span>
+                              {reg.email && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyText(reg.email, reg.id + '-email-card')}
+                                  className="text-slate-400 hover:text-slate-700 cursor-pointer"
+                                  title="Copiar correo"
+                                >
+                                  <Copy size={11} />
+                                </button>
+                              )}
+                            </div>
+                            {reg.telefono && (
+                              <div className="text-slate-600 font-mono text-[11px]">
+                                📞 {reg.telefono}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Inversión & Monto */}
+                          <div className="pt-2 flex items-center justify-between text-xs">
+                            <div>
+                              <span className="text-[10px] text-slate-400 uppercase font-black block">Cuota a Pagar</span>
+                              <span className="text-base font-black text-slate-900">
+                                Q.{(reg.montoPagar || 650).toLocaleString()}.00
+                              </span>
+                            </div>
+                            {reg.cantidadAcompanantes && reg.cantidadAcompanantes > 0 ? (
+                              <span className="text-[10px] bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 rounded-full font-extrabold">
+                                👥 +{reg.cantidadAcompanantes} familiar(es)
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        {/* Barra de Acciones de la Tarjeta */}
+                        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenQrModal(reg)}
+                            className="flex-1 flex items-center justify-center space-x-1.5 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-500 hover:to-yellow-500 text-blue-955 font-black py-2 rounded-xl text-xs uppercase tracking-wider transition-all shadow-xs cursor-pointer active:scale-95"
+                          >
+                            <QrCode size={14} />
+                            <span>Entrada QR</span>
+                          </button>
+
+                          {cleanPhone && (
+                            <a
+                              href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(whatsappMsg)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl transition-all cursor-pointer"
+                              title="WhatsApp"
+                            >
+                              <MessageCircle size={15} />
+                            </a>
                           )}
 
                           {reg.email && (
-                            <span className="text-slate-500 text-[11px]">
-                              ✉️ {reg.email}
-                            </span>
-                          )}
-
-                          {reg.telefono && (
-                            <span className="text-slate-500 text-[11px] font-mono">
-                              📞 {reg.telefono}
-                            </span>
-                          )}
-
-                          {/* Badge de Historial / Último Comunicado Enviado */}
-                          {reg.ultimoMensajeEnviado ? (
                             <button
                               type="button"
-                              onClick={() => setHistorialModalRegistro(reg)}
-                              className="inline-flex items-center space-x-1.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200/80 px-2.5 py-0.5 rounded-full text-[10px] font-bold cursor-pointer transition-colors shadow-xs"
-                              title={`Último: ${reg.ultimoMensajeEnviado}. Clic para ver historial completo.`}
+                              onClick={() => handleOpenEmailModal(reg, isPagado ? 'pago_confirmado' : 'recordatorio_pago')}
+                              className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl transition-all cursor-pointer"
+                              title="Gmail"
                             >
-                              <CheckCircle size={10} className="text-blue-600" />
-                              <span className="font-extrabold text-blue-950">Enviado:</span>
-                              <span className="max-w-[130px] truncate">{reg.ultimoMensajeEnviado}</span>
-                              {reg.fechaUltimoMensaje && (
-                                <span className="text-[9px] text-blue-600 font-normal">
-                                  ({new Date(reg.fechaUltimoMensaje).toLocaleDateString('es-GT', { day: '2-digit', month: '2-digit' })})
-                                </span>
-                              )}
+                              <Mail size={15} />
                             </button>
-                          ) : (
-                            <span className="inline-flex items-center space-x-1 text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full text-[10px] font-medium">
-                              ⚪ Sin comunicados
-                            </span>
                           )}
 
-                          <span className="text-slate-400 text-[11px]">
-                            📅 {new Date(reg.fechaRegistro).toLocaleDateString('es-GT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Botones de Acción Rápida (WhatsApp, Llamar, Telegram, Gmail, Historial, QR) */}
-                      <div className="flex items-center flex-wrap sm:flex-nowrap gap-2 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
-                        {/* Botón WhatsApp */}
-                        {cleanPhone ? (
-                          <a
-                            href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(whatsappMsg)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center space-x-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
-                            title="Mandar mensaje de WhatsApp"
-                          >
-                            <MessageCircle size={15} className="text-emerald-600 fill-emerald-100" />
-                            <span>WhatsApp</span>
-                          </a>
-                        ) : null}
-
-                        {/* Botón Telegram Directo */}
-                        {cleanPhone ? (
-                          <a
-                            href={`https://t.me/+502${cleanPhone}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center space-x-1.5 bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
-                            title="Abrir chat en Telegram"
-                          >
-                            <Send size={13} className="text-sky-600" />
-                            <span>Telegram</span>
-                          </a>
-                        ) : (
-                          <a
-                            href="https://t.me/ConvencionLeonesbot"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center space-x-1.5 bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
-                            title="Abrir bot oficial"
-                          >
-                            <Send size={13} className="text-sky-600" />
-                            <span>Bot</span>
-                          </a>
-                        )}
-
-                        {/* Botón Llamar */}
-                        {reg.telefono ? (
-                          <a
-                            href={`tel:${reg.telefono}`}
-                            className="inline-flex items-center space-x-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
-                            title="Hacer llamada telefónica"
-                          >
-                            <Phone size={14} className="text-blue-600" />
-                            <span>Llamar</span>
-                          </a>
-                        ) : null}
-
-                        {/* Botón Gmail */}
-                        {reg.email && (
                           <button
                             type="button"
-                            onClick={() => handleOpenEmailModal(reg, reg.estadoPago === 'Pagado' ? 'pago_confirmado' : 'recordatorio_pago')}
-                            className="inline-flex items-center space-x-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
-                            title="Enviar correo informativo vía Gmail"
+                            onClick={() => setHistorialModalRegistro(reg)}
+                            className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-all cursor-pointer"
+                            title="Historial de mensajes"
                           >
-                            <Mail size={14} className="text-rose-600" />
-                            <span>Gmail</span>
+                            <History size={15} />
                           </button>
-                        )}
 
-                        {/* Botón Historial de Comunicados */}
-                        <button
-                          type="button"
-                          onClick={() => setHistorialModalRegistro(reg)}
-                          className="inline-flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 px-2.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
-                          title="Ver historial de mensajes enviados a este socio"
-                        >
-                          <History size={14} className="text-slate-600" />
-                          <span>Historial</span>
-                        </button>
-
-                        {/* Botón Reenviar Entrada QR */}
-                        <button
-                          type="button"
-                          onClick={() => handleOpenQrModal(reg)}
-                          className="inline-flex items-center space-x-1.5 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-slate-950 font-black px-3.5 py-2 rounded-xl text-xs uppercase tracking-wider transition-all shadow-sm shadow-yellow-500/20 active:scale-95 cursor-pointer"
-                          title="Ver y reenviar entrada QR oficial"
-                        >
-                          <QrCode size={15} />
-                          <span>Entrada QR</span>
-                        </button>
-
-                        {/* Botón Eliminar */}
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteRegistro(reg.id, reg.nombre)}
-                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer ml-1"
-                          title="Eliminar pre-registro"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteRegistro(reg.id, reg.nombre)}
+                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
+                            title="Eliminar"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )
             ) : (
-              <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-slate-200">
+              <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-200">
                 <FileText className="w-12 h-12 text-slate-300 mx-auto" />
                 <p className="mt-4 text-slate-800 font-extrabold text-base">No hay pre-registros encontrados</p>
                 <p className="text-xs text-slate-400 mt-1">Los socios que se registren en la landing page aparecerán listados aquí.</p>
