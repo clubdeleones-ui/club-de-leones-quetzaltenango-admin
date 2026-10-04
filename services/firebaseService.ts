@@ -5,14 +5,15 @@ import {
   doc, 
   setDoc, 
   getDocs, 
-  updateDoc,
-  deleteDoc,
-  getDoc,
-  onSnapshot,
-  query,
-  where,
-  limit,
-  writeBatch
+  updateDoc, 
+  deleteDoc, 
+  getDoc, 
+  onSnapshot, 
+  query, 
+  where, 
+  limit, 
+  writeBatch,
+  arrayUnion
 } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda, Acta, HitoHistorico, SolicitudVoluntario, ReunionAgenda, TareaComision, Asistencia, BienInventario, CategoriaInventario, ConvencionConfig, ConvencionRegistro, MensajeEnviadoLog, RegistroParticipacion, RequerimientoActividad, NeveraProducto, NeveraConsumo, NeveraSaldoSocio, NeveraCuentaAbono } from "../types";
@@ -1362,7 +1363,7 @@ export const firebaseService = {
   },
 
   /**
-   * Registra el envío masivo para un lote de participantes
+   * Registra el envío masivo para un lote de participantes de forma eficiente y atómica (writeBatch)
    */
   registrarMensajeMasivoEnviado: async (
     registroIds: string[],
@@ -1373,33 +1374,35 @@ export const firebaseService = {
       mensajeResumen?: string;
     }
   ): Promise<void> => {
+    if (!registroIds || registroIds.length === 0) return;
     try {
       const now = new Date().toISOString();
-      for (const id of registroIds) {
-        try {
+      const chunkSize = 400; // Límite seguro de Firestore por batch (máx 500)
+      
+      for (let i = 0; i < registroIds.length; i += chunkSize) {
+        const chunk = registroIds.slice(i, i + chunkSize);
+        const batch = writeBatch(db);
+
+        for (const id of chunk) {
           const docRef = doc(db, "convencion_registros", id);
-          const snap = await getDoc(docRef);
-          if (snap.exists()) {
-            const data = snap.data() as ConvencionRegistro;
-            const mensajesActuales = data.mensajesEnviados || [];
-            const nuevoLog: MensajeEnviadoLog = {
-              id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-              fecha: now,
-              canal: mensajeInfo.canal,
-              tipo: mensajeInfo.tipo,
-              asunto: mensajeInfo.asunto,
-              mensajeResumen: mensajeInfo.mensajeResumen || ''
-            };
-            await updateDoc(docRef, {
-              ultimoMensajeEnviado: mensajeInfo.asunto || mensajeInfo.tipo,
-              fechaUltimoMensaje: now,
-              canalUltimoMensaje: mensajeInfo.canal,
-              mensajesEnviados: [nuevoLog, ...mensajesActuales]
-            });
-          }
-        } catch (innerErr) {
-          console.warn(`No se pudo actualizar registro de mensaje para ${id}:`, innerErr);
+          const nuevoLog: MensajeEnviadoLog = {
+            id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            fecha: now,
+            canal: mensajeInfo.canal,
+            tipo: mensajeInfo.tipo,
+            asunto: mensajeInfo.asunto,
+            mensajeResumen: mensajeInfo.mensajeResumen || ''
+          };
+
+          batch.update(docRef, {
+            ultimoMensajeEnviado: mensajeInfo.asunto || mensajeInfo.tipo,
+            fechaUltimoMensaje: now,
+            canalUltimoMensaje: mensajeInfo.canal,
+            mensajesEnviados: arrayUnion(nuevoLog)
+          });
         }
+
+        await batch.commit();
       }
     } catch (error) {
       console.error("Error en registrarMensajeMasivoEnviado:", error);

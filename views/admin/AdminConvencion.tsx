@@ -87,6 +87,17 @@ export function AdminConvencion() {
   const [customTelegramDestination, setCustomTelegramDestination] = useState<string>('');
   const [showBroadcastTemplatePreview, setShowBroadcastTemplatePreview] = useState<boolean>(false);
   const [historialModalRegistro, setHistorialModalRegistro] = useState<ConvencionRegistro | null>(null);
+  
+  // Opciones avanzadas de Difusión Masiva (Progreso en tiempo real, deduplicación y vista previa de destinatario)
+  const [broadcastProgress, setBroadcastProgress] = useState<{
+    current: number;
+    total: number;
+    email: string;
+    nombre: string;
+    porcentaje: number;
+  } | null>(null);
+  const [deduplicateEmails, setDeduplicateEmails] = useState<boolean>(true);
+  const [previewSampleRegistro, setPreviewSampleRegistro] = useState<ConvencionRegistro | null>(null);
 
   const [config, setConfig] = useState<ConvencionConfig>({
     titulo: '',
@@ -368,6 +379,18 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
       unsubscribeRegistros();
     };
   }, []);
+
+  // Prevenir cierre accidental de pestaña durante una difusión en curso
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isBroadcasting) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isBroadcasting]);
 
   const handleConfigChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -973,6 +996,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
     }
   };
 
+  // Alterna selección de todos los participantes visibles en el filtro actual
   const handleToggleSelectAllRecipients = (validList: ConvencionRegistro[]) => {
     const validIds = validList.filter(r => r.email && r.email.includes('@')).map(r => r.id);
     const allSelected = validIds.length > 0 && validIds.every(id => broadcastSelectedIds.includes(id));
@@ -981,6 +1005,37 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
     } else {
       setBroadcastSelectedIds(prev => Array.from(new Set([...prev, ...validIds])));
     }
+  };
+
+  // Selecciona a TODOS los participantes con email válido de la convención (padrón completo)
+  const handleSelectAllGlobal = () => {
+    const allValidIds = registros.filter(r => r.email && r.email.includes('@')).map(r => r.id);
+    setBroadcastSelectedIds(allValidIds);
+  };
+
+  // Invierte la selección dentro de la lista filtrada
+  const handleInvertFilteredSelection = (validList: ConvencionRegistro[]) => {
+    const validIds = validList.filter(r => r.email && r.email.includes('@')).map(r => r.id);
+    setBroadcastSelectedIds(prev => {
+      const remaining = prev.filter(id => !validIds.includes(id));
+      const newlySelected = validIds.filter(id => !prev.includes(id));
+      return [...remaining, ...newlySelected];
+    });
+  };
+
+  // Selecciona directamente por criterio específico
+  const handleSelectByCriterion = (criterion: 'pendientes' | 'pagados' | 'sin_notificar' | 'telegram') => {
+    let ids: string[] = [];
+    if (criterion === 'pendientes') {
+      ids = registros.filter(r => r.estadoPago !== 'Pagado' && r.email && r.email.includes('@')).map(r => r.id);
+    } else if (criterion === 'pagados') {
+      ids = registros.filter(r => r.estadoPago === 'Pagado' && r.email && r.email.includes('@')).map(r => r.id);
+    } else if (criterion === 'sin_notificar') {
+      ids = registros.filter(r => !r.ultimoMensajeEnviado && r.email && r.email.includes('@')).map(r => r.id);
+    } else if (criterion === 'telegram') {
+      ids = registros.filter(r => r.telegramVerificado && r.email && r.email.includes('@')).map(r => r.id);
+    }
+    setBroadcastSelectedIds(ids);
   };
 
   const handleToggleSelectOneRecipient = (id: string) => {
@@ -996,56 +1051,91 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
       return;
     }
     
-    // Determinar destinatarios: selección manual o filtro de grupo
-    let targetRegistros: ConvencionRegistro[] = [];
-    if (broadcastSelectedIds.length > 0) {
-      targetRegistros = registros.filter(r => broadcastSelectedIds.includes(r.id) && r.email && r.email.includes('@'));
-    } else {
-      targetRegistros = broadcastFilteredRegistros.filter(r => r.email && r.email.includes('@'));
-    }
+    // Lista base de participantes (manual o del filtro activo)
+    const baseList = broadcastSelectedIds.length > 0
+      ? registros.filter(r => broadcastSelectedIds.includes(r.id) && r.email && r.email.includes('@'))
+      : broadcastFilteredRegistros.filter(r => r.email && r.email.includes('@'));
 
-    if (targetRegistros.length === 0) {
+    if (baseList.length === 0) {
       setErrorMsg("No hay participantes con correo electrónico válido seleccionados para recibir el comunicado.");
       return;
     }
 
+    // Deduplicación preventiva por email
+    let targetRegistros: ConvencionRegistro[] = [];
+    if (deduplicateEmails) {
+      const seenEmails = new Set<string>();
+      targetRegistros = baseList.filter(r => {
+        const norm = (r.email || '').trim().toLowerCase();
+        if (seenEmails.has(norm)) return false;
+        seenEmails.add(norm);
+        return true;
+      });
+    } else {
+      targetRegistros = baseList;
+    }
+
+    const isSelectionExplicit = broadcastSelectedIds.length > 0;
+    const confirmTitle = isSelectionExplicit ? "Confirmar Difusión Masiva" : "⚠️ Enviar Difusión Masiva al Filtro Completo";
+    const confirmMessage = isSelectionExplicit
+      ? `¿Estás seguro de enviar "${broadcastSubject}" a los ${targetRegistros.length} participantes seleccionados desde ${DEFAULT_GMAIL_SENDER}?`
+      : `No has marcado casillas individuales. ¿Deseas enviar "${broadcastSubject}" a TODOS los ${targetRegistros.length} participantes del filtro actual desde ${DEFAULT_GMAIL_SENDER}?`;
+
     const okConfirm = await confirm({
-      title: "Confirmar Difusión Masiva",
-      message: `¿Estás seguro de enviar "${broadcastSubject}" a los ${targetRegistros.length} participantes seleccionados desde clubdeleonesquetzaltenango@gmail.com?`,
+      title: confirmTitle,
+      message: confirmMessage,
       confirmLabel: `Enviar a ${targetRegistros.length} socios`,
-      danger: false
+      danger: !isSelectionExplicit
     });
     if (!okConfirm) return;
 
     setIsBroadcasting(true);
     setErrorMsg('');
     setSuccessMsg('');
+    setBroadcastProgress({
+      current: 0,
+      total: targetRegistros.length,
+      email: '',
+      nombre: '',
+      porcentaje: 0
+    });
+
     try {
-      const enviados = await gmailService.sendMassBroadcast(
+      const result = await gmailService.sendMassBroadcast(
         targetRegistros,
         broadcastSubject,
         broadcastBody,
         config.googleScriptUrl,
-        broadcastTemplateTipo
-      );
-
-      // Registrar historial de envíos en Firestore para cada participante
-      await firebaseService.registrarMensajeMasivoEnviado(
-        targetRegistros.map(r => r.id),
-        {
-          canal: 'gmail',
-          tipo: broadcastTemplateTipo,
-          asunto: broadcastSubject,
-          mensajeResumen: broadcastBody.substring(0, 150)
+        broadcastTemplateTipo,
+        (progress) => {
+          setBroadcastProgress(progress);
         }
       );
 
-      setSuccessMsg(`¡Difusión enviada exitosamente a los ${enviados} participantes seleccionados! El estatus de comunicación se actualizó en tiempo real.`);
+      // Registrar historial de envíos en Firestore de forma atómica
+      if (result.idsEnviados.length > 0) {
+        await firebaseService.registrarMensajeMasivoEnviado(
+          result.idsEnviados,
+          {
+            canal: 'gmail',
+            tipo: broadcastTemplateTipo,
+            asunto: broadcastSubject,
+            mensajeResumen: broadcastBody.substring(0, 150)
+          }
+        );
+      }
+
+      const dupText = baseList.length !== targetRegistros.length 
+        ? ` (${baseList.length - targetRegistros.length} duplicados omitidos preventivamente)` 
+        : '';
+
+      setSuccessMsg(`🎉 ¡Difusión completada con éxito! Se enviaron ${result.enviados} correos (${result.fallidos} fallos, ${result.omitidos} omitidos por email inválido)${dupText}. El historial se actualizó en tiempo real.`);
       setBroadcastSelectedIds([]);
     } catch (err: any) {
-      setErrorMsg("Ocurrió un error al enviar la difusión masiva.");
+      setErrorMsg("Ocurrió un error al procesar la difusión masiva.");
     } finally {
       setIsBroadcasting(false);
+      setBroadcastProgress(null);
     }
   };
 
@@ -2114,22 +2204,60 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                         Verifica el estatus de pago de cada socio y qué mensaje se le ha enviado antes de emitir la difusión.
                       </p>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    {/* Botones de Selección Múltiple Avanzada */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSelectAllGlobal}
+                        className="text-xs font-bold text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200/80 px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1.5"
+                        title="Seleccionar a todos los socios con correo en toda la base de datos (padrón completo)"
+                      >
+                        <CheckSquare size={13} />
+                        <span>Todo el Padrón ({registros.filter(r => r.email && r.email.includes('@')).length})</span>
+                      </button>
+
                       <button
                         type="button"
                         onClick={() => handleToggleSelectAllRecipients(broadcastFilteredRegistros)}
-                        className="text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap"
+                        className={`text-xs font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap flex items-center space-x-1.5 ${
+                          broadcastFilteredRegistros.filter(r => r.email && r.email.includes('@')).length > 0 &&
+                          broadcastFilteredRegistros.filter(r => r.email && r.email.includes('@')).every(r => broadcastSelectedIds.includes(r.id))
+                            ? 'bg-amber-100 text-amber-900 hover:bg-amber-200 border border-amber-300'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                        }`}
+                        title="Seleccionar o deseleccionar solo los socios visibles en este filtro"
                       >
-                        {broadcastFilteredRegistros.filter(r => r.email && r.email.includes('@')).every(r => broadcastSelectedIds.includes(r.id)) && broadcastSelectedIds.length > 0
-                          ? 'Deseleccionar Visibles'
-                          : `Seleccionar Visibles (${broadcastFilteredRegistros.filter(r => r.email).length})`
-                        }
+                        {broadcastFilteredRegistros.filter(r => r.email && r.email.includes('@')).length > 0 &&
+                        broadcastFilteredRegistros.filter(r => r.email && r.email.includes('@')).every(r => broadcastSelectedIds.includes(r.id)) ? (
+                          <>
+                            <Square size={13} />
+                            <span>Deseleccionar Visibles</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckSquare size={13} />
+                            <span>Seleccionar Visibles ({broadcastFilteredRegistros.filter(r => r.email && r.email.includes('@')).length})</span>
+                          </>
+                        )}
                       </button>
+
+                      {broadcastFilteredRegistros.filter(r => r.email && r.email.includes('@')).length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => handleInvertFilteredSelection(broadcastFilteredRegistros)}
+                          className="text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap"
+                          title="Invertir la selección actual de socios visibles"
+                        >
+                          Invertir
+                        </button>
+                      )}
+
                       {broadcastSelectedIds.length > 0 && (
                         <button
                           type="button"
                           onClick={() => setBroadcastSelectedIds([])}
-                          className="text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap"
+                          className="text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer whitespace-nowrap"
+                          title="Quitar toda la selección manual"
                         >
                           Limpiar ({broadcastSelectedIds.length})
                         </button>
@@ -2137,7 +2265,61 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                     </div>
                   </div>
 
-                  {/* Píldoras de Filtro Rápido */}
+                  {/* Atajos de Selección Rápida por Estatus y Opciones de Protocolo */}
+                  <div className="flex flex-wrap items-center justify-between gap-2.5 bg-slate-50/90 p-3 rounded-2xl border border-slate-200/70 text-xs">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider mr-1">
+                        Marcar rápido:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectByCriterion('pendientes')}
+                        className="px-2.5 py-1 rounded-lg bg-amber-100/80 hover:bg-amber-100 text-amber-900 font-bold text-[11px] transition-colors cursor-pointer"
+                        title="Selecciona a todos los socios pendientes de pago"
+                      >
+                        ⏳ Solo Pendientes ({registros.filter(r => r.estadoPago !== 'Pagado' && r.email).length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectByCriterion('pagados')}
+                        className="px-2.5 py-1 rounded-lg bg-emerald-100/80 hover:bg-emerald-100 text-emerald-900 font-bold text-[11px] transition-colors cursor-pointer"
+                        title="Selecciona a todos los socios con pago confirmado"
+                      >
+                        ✅ Solo Pagados ({registros.filter(r => r.estadoPago === 'Pagado' && r.email).length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectByCriterion('sin_notificar')}
+                        className="px-2.5 py-1 rounded-lg bg-indigo-100/80 hover:bg-indigo-100 text-indigo-900 font-bold text-[11px] transition-colors cursor-pointer"
+                        title="Selecciona a socios que nunca han recibido comunicados"
+                      >
+                        ⚪ Sin Comunicados ({registros.filter(r => !r.ultimoMensajeEnviado && r.email).length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectByCriterion('telegram')}
+                        className="px-2.5 py-1 rounded-lg bg-teal-100/80 hover:bg-teal-100 text-teal-900 font-bold text-[11px] transition-colors cursor-pointer"
+                        title="Selecciona a socios conectados con Telegram"
+                      >
+                        🟢 Con Telegram ({registros.filter(r => r.telegramVerificado && r.email).length})
+                      </button>
+                    </div>
+
+                    {/* Toggle de Protocolo Anti-Spam / Deduplicación */}
+                    <label className="flex items-center space-x-1.5 text-xs text-slate-700 font-bold cursor-pointer select-none bg-white px-2.5 py-1 rounded-xl border border-slate-200 shadow-2xs hover:border-blue-900/30">
+                      <input 
+                        type="checkbox"
+                        checked={deduplicateEmails}
+                        onChange={(e) => setDeduplicateEmails(e.target.checked)}
+                        className="w-3.5 h-3.5 rounded text-blue-900 border-slate-300 focus:ring-blue-900/20 cursor-pointer"
+                      />
+                      <span title="Si varios registros comparten el mismo correo electrónico (ej. acompañantes o cónyuges con un mismo email), se enviará un único correo para evitar repeticiones innecesarias.">
+                        🛡️ Deduplicar correos repetidos
+                      </span>
+                    </label>
+                  </div>
+
+                  {/* Píldoras de Filtro Rápido de Destinatarios */}
                   <div className="flex items-center space-x-2 overflow-x-auto pb-1 text-xs font-bold">
                     <button
                       type="button"
@@ -2219,6 +2401,40 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                     <Search className="absolute left-3 top-2.5 text-slate-400" size={14} />
                   </div>
 
+                  {/* Barra de Progreso en Vivo durante la difusión masiva */}
+                  {broadcastProgress && (
+                    <div className="bg-gradient-to-r from-blue-955 via-blue-900 to-indigo-955 text-white p-5 rounded-2xl border border-blue-800 shadow-xl space-y-3 animate-in fade-in duration-300">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Loader2 className="animate-spin text-amber-400" size={18} />
+                          <span className="text-sm font-black uppercase tracking-wide">
+                            Enviando Difusión Masiva ({broadcastProgress.current} de {broadcastProgress.total})
+                          </span>
+                        </div>
+                        <span className="text-base font-black text-amber-400 font-mono">
+                          {broadcastProgress.porcentaje}%
+                        </span>
+                      </div>
+
+                      {/* Barra animada */}
+                      <div className="w-full bg-blue-955/80 rounded-full h-3 p-0.5 border border-white/20 overflow-hidden">
+                        <div 
+                          className="bg-gradient-to-r from-amber-400 via-emerald-400 to-teal-400 h-full rounded-full transition-all duration-300 shadow-sm"
+                          style={{ width: `${broadcastProgress.porcentaje}%` }}
+                        />
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-300 font-mono gap-1">
+                        <span className="truncate max-w-md">
+                          Destinatario: <strong className="text-white">{broadcastProgress.nombre}</strong> ({broadcastProgress.email})
+                        </span>
+                        <span className="text-amber-300/90 text-[11px] shrink-0">
+                          * Tasa anti-spam controlada (200ms entre envíos)
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Estado de selección actual */}
                   <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                     <div className="flex items-center space-x-2">
@@ -2226,23 +2442,47 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                       <span className="text-slate-700 font-medium">
                         {broadcastSelectedIds.length > 0 ? (
                           <>
-                            <strong className="text-blue-900">{broadcastSelectedIds.length}</strong> participantes seleccionados manualmente.
+                            <strong className="text-blue-900 font-black">{broadcastSelectedIds.length}</strong> participantes seleccionados manualmente.
                           </>
                         ) : (
                           <>
-                            Se enviará a los <strong className="text-blue-900">{broadcastFilteredRegistros.filter(r => r.email && r.email.includes('@')).length}</strong> participantes del filtro actual.
+                            Sin selección manual: se enviará a los <strong className="text-blue-900 font-black">{broadcastFilteredRegistros.filter(r => r.email && r.email.includes('@')).length}</strong> participantes del filtro actual.
                           </>
                         )}
                       </span>
                     </div>
                     <span className="text-[11px] text-slate-500 font-mono">
-                      Total en lista: {broadcastFilteredRegistros.length}
+                      Total en vista: {broadcastFilteredRegistros.length}
                     </span>
                   </div>
 
                   {/* Tabla / Lista de Destinatarios */}
                   {broadcastFilteredRegistros.length > 0 ? (
-                    <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-xs divide-y divide-slate-100 max-h-96 overflow-y-auto bg-white">
+                    <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs divide-y divide-slate-100 max-h-96 overflow-y-auto bg-white">
+                      {/* Cabecera con Checkbox Maestro */}
+                      <div className="bg-slate-100/90 px-3 sm:px-4 py-2 flex items-center justify-between text-xs font-bold text-slate-700 sticky top-0 z-10 backdrop-blur-xs border-b border-slate-200">
+                        <div className="flex items-center space-x-3">
+                          <input 
+                            type="checkbox"
+                            checked={
+                              broadcastFilteredRegistros.filter(r => r.email && r.email.includes('@')).length > 0 &&
+                              broadcastFilteredRegistros.filter(r => r.email && r.email.includes('@')).every(r => broadcastSelectedIds.includes(r.id))
+                            }
+                            onChange={() => handleToggleSelectAllRecipients(broadcastFilteredRegistros)}
+                            className="w-4 h-4 rounded text-blue-900 border-slate-300 focus:ring-blue-900/20 cursor-pointer"
+                            title="Seleccionar o deseleccionar todos los visibles"
+                          />
+                          <span className="text-[11px] uppercase tracking-wider font-black text-slate-600">
+                            Participante & Club
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-slate-500 font-mono">
+                          {broadcastSelectedIds.length > 0 
+                            ? `${broadcastSelectedIds.length} seleccionados` 
+                            : `${broadcastFilteredRegistros.filter(r => r.email).length} con correo`}
+                        </span>
+                      </div>
+
                       {broadcastFilteredRegistros.map((reg) => {
                         const isSelected = broadcastSelectedIds.includes(reg.id);
                         const hasEmail = !!(reg.email && reg.email.includes('@'));
@@ -2326,7 +2566,18 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                             </div>
 
                             {/* Acciones individuales */}
-                            <div className="flex items-center space-x-2 shrink-0 self-end sm:self-center">
+                            <div className="flex items-center space-x-1.5 shrink-0 self-end sm:self-center">
+                              {/* Vista previa personalizada para este socio */}
+                              <button
+                                type="button"
+                                onClick={() => setPreviewSampleRegistro(reg)}
+                                className="text-[10px] font-bold text-slate-600 hover:text-blue-900 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer flex items-center space-x-1"
+                                title="Ver vista previa personalizada de cómo recibirá el correo este socio"
+                              >
+                                <Eye size={12} />
+                                <span className="hidden sm:inline">Previa</span>
+                              </button>
+
                               {reg.mensajesEnviados && reg.mensajesEnviados.length > 0 && (
                                 <button
                                   type="button"
@@ -2370,6 +2621,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                   <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="text-xs text-slate-500">
                       Plantilla activa: <strong className="text-slate-800">{broadcastTemplateTipo}</strong>
+                      {deduplicateEmails && <span className="ml-2 text-emerald-600 font-bold">• Deduplicación activa</span>}
                     </div>
 
                     <button
@@ -2380,7 +2632,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                       {isBroadcasting ? (
                         <>
                           <Loader2 className="animate-spin" size={16} />
-                          <span>Enviando difusión masiva vía Apps Script...</span>
+                          <span>Enviando difusión masiva ({broadcastProgress ? `${broadcastProgress.current}/${broadcastProgress.total}` : 'Iniciando'})...</span>
                         </>
                       ) : (
                         <>
@@ -3890,6 +4142,75 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
               >
                 <Send size={13} />
                 <span>Enviar Correo a este Socio</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Vista Previa Personalizada de Correo para un Socio Específico */}
+      {previewSampleRegistro && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 space-y-4">
+            <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-900 flex items-center justify-center font-black">
+                  <Eye size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">
+                    Vista Previa de Correo Personalizado
+                  </h3>
+                  <p className="text-xs text-slate-550 font-medium">
+                    Destinatario: <strong>{previewSampleRegistro.nombre}</strong> ({previewSampleRegistro.email})
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewSampleRegistro(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Asunto que recibirá el socio */}
+            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-xs space-y-1">
+              <span className="text-[10px] font-black uppercase text-slate-400 block tracking-wider">Asunto oficial que se enviará</span>
+              <p className="font-extrabold text-slate-900">
+                {gmailService.generateTemplate(broadcastTemplateTipo, previewSampleRegistro, { customSubject: broadcastSubject, customBody: broadcastBody }).asunto}
+              </p>
+            </div>
+
+            {/* Render HTML real enriquecido */}
+            <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-inner max-h-96 overflow-y-auto bg-slate-100 p-4">
+              <div 
+                dangerouslySetInnerHTML={{
+                  __html: gmailService.generateTemplate(broadcastTemplateTipo, previewSampleRegistro, { customSubject: broadcastSubject, customBody: broadcastBody }).cuerpoHtml
+                }}
+              />
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setPreviewSampleRegistro(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer"
+              >
+                Cerrar Vista Previa
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const target = previewSampleRegistro;
+                  setPreviewSampleRegistro(null);
+                  handleOpenEmailModal(target, broadcastTemplateTipo);
+                }}
+                className="inline-flex items-center space-x-2 bg-rose-600 hover:bg-rose-700 text-white font-black px-4 py-2 rounded-xl text-xs shadow cursor-pointer transition-all active:scale-95"
+              >
+                <Mail size={13} />
+                <span>Enviar Correo Individual a este Socio</span>
               </button>
             </div>
           </div>

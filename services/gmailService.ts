@@ -16,6 +16,22 @@ export interface EmailTemplateData {
   cuerpoHtml: string;
 }
 
+export interface BroadcastProgressEvent {
+  current: number;
+  total: number;
+  email: string;
+  nombre: string;
+  porcentaje: number;
+}
+
+export interface BroadcastResult {
+  total: number;
+  enviados: number;
+  omitidos: number;
+  fallidos: number;
+  idsEnviados: string[];
+}
+
 export const gmailService = {
   /**
    * Genera el enlace oficial directo para redactar en Gmail Web
@@ -483,24 +499,50 @@ Correo Oficial: ${DEFAULT_GMAIL_SENDER}
   },
 
   /**
-   * Envío masivo de boletines o comunicados informativos con plantillas prediseñadas
+   * Envío masivo de boletines o comunicados informativos con plantillas prediseñadas,
+   * reporte de progreso en tiempo real y tasa controlada (rate limiting anti-spam).
    */
   sendMassBroadcast: async (
     destinatarios: ConvencionRegistro[], 
     asunto: string, 
     mensajeBody: string, 
     customScriptUrl?: string,
-    tipo: TipoCorreoConvencion = 'personalizado'
-  ): Promise<number> => {
+    tipo: TipoCorreoConvencion = 'personalizado',
+    onProgress?: (event: BroadcastProgressEvent) => void
+  ): Promise<BroadcastResult> => {
     const scriptUrl = customScriptUrl || 
       (import.meta as any).env?.VITE_GOOGLE_SCRIPT_URL || 
       DEFAULT_GOOGLE_SCRIPT_URL;
 
-    if (!scriptUrl || destinatarios.length === 0) return 0;
+    const result: BroadcastResult = {
+      total: destinatarios.length,
+      enviados: 0,
+      omitidos: 0,
+      fallidos: 0,
+      idsEnviados: []
+    };
 
-    let enviados = 0;
-    for (const reg of destinatarios) {
-      if (!reg.email || !reg.email.includes('@')) continue;
+    if (!scriptUrl || destinatarios.length === 0) return result;
+
+    const validDestinatarios = destinatarios.filter(r => r.email && r.email.includes('@'));
+    result.omitidos = destinatarios.length - validDestinatarios.length;
+
+    for (let index = 0; index < validDestinatarios.length; index++) {
+      const reg = validDestinatarios[index];
+      const currentNumber = index + 1;
+      const totalValid = validDestinatarios.length;
+      const porcentaje = Math.round((currentNumber / totalValid) * 100);
+
+      if (onProgress) {
+        onProgress({
+          current: currentNumber,
+          total: totalValid,
+          email: reg.email,
+          nombre: reg.nombre,
+          porcentaje
+        });
+      }
+
       try {
         const template = gmailService.generateTemplate(tipo, reg, {
           customSubject: asunto,
@@ -526,11 +568,20 @@ Correo Oficial: ${DEFAULT_GMAIL_SENDER}
             esBoletinMasivo: true
           })
         });
-        enviados++;
+
+        result.enviados++;
+        result.idsEnviados.push(reg.id);
+
+        // Retardo controlado de cortesía (200ms) para respetar rate limits de Google Apps Script y evitar flagging
+        if (index < validDestinatarios.length - 1) {
+          await new Promise(res => setTimeout(res, 200));
+        }
       } catch (e) {
         console.error("Error enviando correo masivo a " + reg.email, e);
+        result.fallidos++;
       }
     }
-    return enviados;
+
+    return result;
   }
 };
