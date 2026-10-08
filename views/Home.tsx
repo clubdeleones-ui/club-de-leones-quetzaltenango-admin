@@ -36,6 +36,7 @@ import { MOCK_ACTIVIDADES } from '../constants';
 import { getSafeActivityUrl, getSafeGalleryUrl, handleImageError, DEFAULT_ACTIVITY_FALLBACK, DEFAULT_GALLERY_FALLBACK } from '../utils/imageFallback';
 import { InscripcionVoluntarioModal } from '../components/InscripcionVoluntarioModal';
 import { formatDisplayDate } from '../utils/dateSpanishFormatter';
+import { AnimatedLionsLogo } from '../components/AnimatedLionsLogo';
 
 const CAUSAS_GLOBALES = [
   {
@@ -209,12 +210,11 @@ const Home: React.FC = () => {
           alt="Hero"
         />
         <div className="relative z-20 text-center text-white px-2 sm:px-6 max-w-4xl space-y-4 sm:space-y-6">
-          <div className="inline-block">
-            <img src="/images/logo.png" className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 bg-white p-2 rounded-full shadow-lg object-contain" alt="Lions Logo" />
-            <span className="bg-yellow-500 text-blue-900 text-[10px] sm:text-xs font-black px-3.5 py-1 rounded-full uppercase tracking-widest shadow-md">
-              Desde 1947 sirviendo
-            </span>
-          </div>
+          <AnimatedLionsLogo 
+            size="hero" 
+            badgeText="Desde 1947 sirviendo" 
+            className="mb-2 sm:mb-4"
+          />
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold leading-tight">
             Nosotros <span className="text-yellow-400">Servimos</span>
           </h1>
@@ -330,11 +330,10 @@ const Home: React.FC = () => {
               {/* Institutional reinforcement logo block */}
               <div className="flex flex-col sm:flex-row items-center gap-6 mt-8 pt-8 border-t border-white/10 relative z-10">
                 <div className="relative flex-shrink-0">
-                  <div className="absolute inset-0 bg-yellow-400/25 rounded-full blur-md group-hover:blur-lg transition-all" />
-                  <img 
-                    src="/images/logo.png" 
-                    className="w-16 h-16 bg-white p-1.5 rounded-full relative z-10 border border-yellow-400/40 shadow-inner group-hover:scale-105 transition-transform duration-500" 
-                    alt="Logo Club de Leones Quetzaltenango" 
+                  <AnimatedLionsLogo 
+                    size="md" 
+                    withBadge={false} 
+                    interactive={true}
                   />
                 </div>
                 <div className="text-center sm:text-left space-y-1">
