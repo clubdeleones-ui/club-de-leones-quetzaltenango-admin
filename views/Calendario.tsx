@@ -10,6 +10,8 @@ import { InscripcionVoluntarioModal } from '../components/InscripcionVoluntarioM
 import { ConfirmarParticipacionModal } from '../components/ConfirmarParticipacionModal';
 import { compressImageFile, validateImageFile } from '../utils/imageCompressor';
 import { getSafeActivityUrl, handleImageError, DEFAULT_ACTIVITY_FALLBACK } from '../utils/imageFallback';
+import { CausasGlobalesSection } from '../components/CausasGlobalesSection';
+import { getCausasParaMes, getCausaParaDia, CausaGlobalGST } from '../config/causasGlobalesGST';
 
 interface CalendarioProps {
     accessToken?: string;
@@ -128,6 +130,10 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
         "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
     ];
 
+    const causasDelMesActual = React.useMemo(() => {
+        return getCausasParaMes(year, month);
+    }, [year, month]);
+
     const getActivitiesForDay = (day: number) => {
         return actividades.filter(act => {
             const dateStr = act.fecha.split(' ')[0];
@@ -236,6 +242,39 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
             costoSocio: '',
             costoInvitado: '',
             vestimenta: 'Libre / Informal',
+            imagen: ''
+        });
+        setNewActividadImageFile(null);
+        setNewActividadImagePreview(null);
+        setIsActividadModalOpen(true);
+    };
+
+    const handleProgramarParaCausa = (causa: CausaGlobalGST) => {
+        if (!user || user.rol === 'DONANTE' || user.rol === 'GUEST') {
+            showAlert("Acceso Requerido", "Debes iniciar sesión con tu cuenta de socio activo para proponer una actividad.");
+            return;
+        }
+        const targetDate = `${causa.fechaInicio}T09:00`;
+        setModoProgramacionFechas('unico');
+        setFechasMultiples([targetDate]);
+        setRangoInicio(causa.fechaInicio);
+        setRangoFin(causa.fechaFin || causa.fechaInicio);
+        setRangoHora('09:00');
+
+        setNewActividad({
+            titulo: `${causa.causaGlobal}: ${causa.conmemoracion}`,
+            descripcion: `${causa.sugerenciaActividad}\n\nActividad Leonística enmarcada en las Causas Globales del Distrito D-3 Guatemala.`,
+            fecha: targetDate,
+            lugar: 'Sede Club de Leones Quetzaltenango / Comunidad',
+            esEnSalon: false,
+            publica: true,
+            conBotonDonacion: false,
+            donacionUrl: '',
+            conBotonVoluntariado: true,
+            conBotonAsistencia: true,
+            costoSocio: '',
+            costoInvitado: '',
+            vestimenta: 'Chaleco Leonístico / Informal',
             imagen: ''
         });
         setNewActividadImageFile(null);
@@ -1008,10 +1047,59 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                             </div>
                         </div>
 
+                        {/* Month Causa Global Banner if any */}
+                        {causasDelMesActual.length > 0 && (
+                            <div className="mb-6 p-4.5 rounded-2xl bg-gradient-to-r from-blue-950 via-indigo-950 to-slate-900 border border-blue-800 text-white shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-3 animate-in fade-in duration-300">
+                                <div className="space-y-1 text-left">
+                                    <div className="flex items-center gap-2">
+                                        <span className="px-2.5 py-0.5 rounded-full bg-yellow-400 text-blue-950 text-[10px] font-black uppercase tracking-wider shadow-2xs">
+                                            Enfoque GST {year}
+                                        </span>
+                                        <span className="text-xs text-blue-200 font-bold">
+                                            Lions Clubs International • Distrito D-3 Guatemala
+                                        </span>
+                                    </div>
+                                    <h4 className="text-sm sm:text-base font-black text-white">
+                                        Causas del Mes de {monthNames[month]}: {causasDelMesActual.map(c => c.causaGlobal).filter((v, i, a) => a.indexOf(v) === i).join(' • ')}
+                                    </h4>
+                                    <div className="flex flex-wrap gap-1.5 pt-1">
+                                        {causasDelMesActual.map(c => (
+                                            <span 
+                                                key={c.id} 
+                                                className="text-[10px] font-black px-2.5 py-1 rounded-lg border shadow-2xs flex items-center gap-1"
+                                                style={{ 
+                                                    backgroundColor: `${c.color.accentHex}25`, 
+                                                    borderColor: `${c.color.accentHex}60`, 
+                                                    color: '#ffffff' 
+                                                }}
+                                            >
+                                                <span>⭐</span>
+                                                <span>{c.fechaTexto}: {c.conmemoracion}</span>
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const el = document.getElementById('seccion-causas-globales');
+                                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                                    }}
+                                    className="shrink-0 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-black text-xs transition-colors flex items-center gap-1.5 cursor-pointer border border-white/20 shadow-xs"
+                                >
+                                    <span>Ver Calendario Oficial GST</span>
+                                    <ChevronRight size={14} />
+                                </button>
+                            </div>
+                        )}
+
                         {/* Luxury Visual Legend */}
                         <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-6 p-3.5 bg-slate-50/90 rounded-2xl border border-slate-200 text-xs font-bold text-slate-700">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">
                                 Identificadores:
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-yellow-50 text-yellow-950 border border-yellow-300 shadow-2xs font-extrabold">
+                                ⭐ Causa Global GST
                             </span>
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-100 text-purple-950 border border-purple-200 shadow-2xs font-extrabold">
                                 🏛️ Actividad en Salón
@@ -1056,6 +1144,7 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                 const dayReservations = getSalonReservationsForDay(dNum);
                                 const totalEventsCount = dayActivities.length + dayReservations.length;
                                 const hasOccupancy = totalEventsCount > 0;
+                                const causaDia = getCausaParaDia(year, month, dNum);
 
                                 // Combine items for unified presentation
                                 const allDayItems: Array<{ type: 'reservation' | 'activity'; data: any }> = [
@@ -1073,6 +1162,11 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                             setSelectedDate(new Date(year, month, dNum));
                                             setIsDayAvailabilityModalOpen(true);
                                         }}
+                                        style={{
+                                            borderTopWidth: causaDia ? '4px' : undefined,
+                                            borderTopColor: causaDia ? causaDia.color.accentHex : undefined,
+                                            backgroundColor: !isSelected && !isToday && !hasOccupancy && causaDia ? causaDia.color.lightBg : undefined
+                                        }}
                                         className={`group relative border rounded-2xl p-2 sm:p-2.5 min-h-[95px] sm:min-h-[120px] md:min-h-[140px] text-left transition-all flex flex-col justify-between hover:shadow-lg cursor-pointer w-full overflow-hidden ${
                                             isSelected 
                                                 ? 'bg-blue-50/40 border-blue-600 ring-2 ring-blue-600/30 shadow-md' 
@@ -1080,7 +1174,9 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                                     ? 'bg-amber-50/30 border-amber-400/80 shadow-xs'
                                                     : hasOccupancy
                                                         ? 'bg-white hover:bg-slate-50/80 border-slate-200'
-                                                        : 'bg-white hover:bg-slate-50/50 border-slate-150'
+                                                        : causaDia
+                                                            ? 'hover:brightness-95 border-slate-200'
+                                                            : 'bg-white hover:bg-slate-50/50 border-slate-150'
                                         }`}
                                     >
                                         {/* Day Cell Header */}
@@ -1102,12 +1198,30 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                                 )}
                                             </div>
 
-                                            {/* Badge count when there are 2 or more activities */}
-                                            {totalEventsCount >= 2 && (
-                                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200 shadow-2xs">
-                                                    {totalEventsCount} ev.
-                                                </span>
-                                            )}
+                                            <div className="flex items-center gap-1">
+                                                {/* Micro-badge de Causa Global GST */}
+                                                {causaDia && (
+                                                    <span 
+                                                        className="text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded font-black flex items-center gap-1 shadow-2xs shrink-0 truncate max-w-[85px] sm:max-w-[120px]"
+                                                        style={{
+                                                            backgroundColor: causaDia.color.accentHex + '20',
+                                                            color: causaDia.color.darkText,
+                                                            border: `1px solid ${causaDia.color.accentHex}40`
+                                                        }}
+                                                        title={`GST Lions: ${causaDia.conmemoracion}`}
+                                                    >
+                                                        <span>{causaDia.icono}</span>
+                                                        <span className="truncate hidden sm:inline">{causaDia.causa}</span>
+                                                    </span>
+                                                )}
+
+                                                {/* Badge count when there are 2 or more activities */}
+                                                {totalEventsCount >= 2 && (
+                                                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200 shadow-2xs">
+                                                        {totalEventsCount} ev.
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                         
                                         {/* Events Area (Luxury Pills / Micro-Cards) */}
@@ -1207,6 +1321,19 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                                     )}
                                                 </div>
                                             </div>
+                                        ) : causaDia ? (
+                                            <div 
+                                                className="w-full mt-auto pt-1 text-[9px] sm:text-[10px] font-extrabold flex items-center gap-1 rounded-lg px-2 py-1 border transition-colors shadow-2xs"
+                                                style={{
+                                                    backgroundColor: 'rgba(255,255,255,0.85)',
+                                                    color: causaDia.color.darkText,
+                                                    borderColor: causaDia.color.accentHex + '40'
+                                                }}
+                                                title={`Enfoque GST: ${causaDia.conmemoracion}`}
+                                            >
+                                                <span className="shrink-0">{causaDia.icono}</span>
+                                                <span className="truncate">{causaDia.conmemoracion}</span>
+                                            </div>
                                         ) : (
                                             <div className="hidden sm:flex items-center text-[9px] font-bold text-slate-300 group-hover:text-slate-500 transition-colors mt-auto pt-2">
                                                 <span>Libre</span>
@@ -1266,6 +1393,66 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                     </button>
                                 </div>
                             </div>
+
+                            {/* Banner Conmemorativo de Causa Global Lions GST si aplica al día */}
+                            {(() => {
+                                const causaSel = getCausaParaDia(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+                                if (!causaSel) return null;
+
+                                return (
+                                    <div 
+                                        className="p-5 sm:p-6 rounded-3xl border shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all"
+                                        style={{
+                                            backgroundColor: causaSel.color.lightBg,
+                                            borderColor: causaSel.color.accentHex + '50'
+                                        }}
+                                    >
+                                        <div className="flex items-start gap-4">
+                                            <div 
+                                                className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 shadow-xs"
+                                                style={{
+                                                    backgroundColor: 'white',
+                                                    border: `2px solid ${causaSel.color.accentHex}40`
+                                                }}
+                                            >
+                                                {causaSel.icono}
+                                            </div>
+                                            <div>
+                                                <div className="flex flex-wrap items-center gap-2 mb-1">
+                                                    <span 
+                                                        className="text-[10px] uppercase tracking-wider font-black px-2.5 py-0.5 rounded-full shadow-2xs"
+                                                        style={{
+                                                            backgroundColor: causaSel.color.accentHex,
+                                                            color: 'white'
+                                                        }}
+                                                    >
+                                                        Causa Global GST • Distrito D-3
+                                                    </span>
+                                                    <span className="text-xs font-bold text-slate-500">
+                                                        {causaSel.fechaTexto}
+                                                    </span>
+                                                </div>
+                                                <h5 className="font-black text-slate-900 text-lg sm:text-xl">
+                                                    {causaSel.conmemoracion}
+                                                </h5>
+                                                <p className="text-xs text-slate-600 font-medium max-w-xl mt-1 leading-relaxed">
+                                                    {causaSel.descripcionSugerida}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => handleProgramarParaCausa(causaSel)}
+                                            className="shrink-0 px-4 py-2.5 rounded-xl font-black text-xs text-white shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer hover:scale-[1.02] active:scale-95"
+                                            style={{ backgroundColor: causaSel.color.accentHex }}
+                                        >
+                                            <Sparkles size={14} />
+                                            <span>Proponer Actividad para esta Causa</span>
+                                        </button>
+                                    </div>
+                                );
+                            })()}
 
                             {/* Detailed List for the Day */}
                             {(() => {
@@ -1472,6 +1659,15 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                     )}
                 </div>
             )}
+
+            {/* SECCIÓN OFICIAL: Causas Globales 2026 - 2027 GST Lions Distrito D-3 */}
+            <div id="seccion-causas-globales" className="w-full pt-8">
+                <CausasGlobalesSection 
+                    actividadesExistentes={actividades}
+                    onProgramarParaCausa={handleProgramarParaCausa}
+                    isSocio={isSocio}
+                />
+            </div>
 
             {/* Volunteer Modal */}
             {isVolModalOpen && selectedActForVol && (
