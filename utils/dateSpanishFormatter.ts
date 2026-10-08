@@ -105,3 +105,18 @@ export function formatDisplayDate(dateStr: string): string {
   
   return dateStr;
 }
+
+/**
+ * Safely parses any date string (including "YYYY-MM-DD HH:MM" without 'T')
+ * preventing NaN timestamp errors on Safari / iOS WebKit.
+ */
+export function safeGetTime(dateStr?: string | null): number {
+  if (!dateStr) return 0;
+  const cleanStr = String(dateStr).trim();
+  const normalized = cleanStr.includes(' ') && !cleanStr.includes('T')
+    ? cleanStr.replace(' ', 'T')
+    : cleanStr;
+  const timestamp = new Date(normalized).getTime();
+  return isNaN(timestamp) ? 0 : timestamp;
+}
+

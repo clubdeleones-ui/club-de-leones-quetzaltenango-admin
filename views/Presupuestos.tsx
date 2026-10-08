@@ -9,12 +9,14 @@ import {
   Calendar,
   Activity,
   CheckCircle,
-  FileText
+  FileText,
+  FileSpreadsheet
 } from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
 import { useClubData } from '../context/ClubDataContext';
 import { RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision } from '../types';
 import { useModal } from '../context/ModalContext';
+import { GoogleSheetsImporterModal } from '../components/GoogleSheetsImporterModal';
 
 export const Presupuestos: React.FC = () => {
   const { showAlert, showConfirm } = useModal();
@@ -23,6 +25,7 @@ export const Presupuestos: React.FC = () => {
   };
 
   const [activeTab, setActiveTab] = useState<'fondos' | 'asignaciones' | 'rubros'>('fondos');
+  const [isSheetsModalOpen, setIsSheetsModalOpen] = useState(false);
   
   // Load data from global ClubDataContext
   const { 
@@ -162,6 +165,32 @@ export const Presupuestos: React.FC = () => {
             Presupuesto distribuido en {asignaciones.length} comisiones
           </div>
         </div>
+      </div>
+
+      {/* Action Bar / Importar desde Google Sheets */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0">
+            <FileSpreadsheet size={22} />
+          </div>
+          <div>
+            <h3 className="text-xs font-black text-slate-800 uppercase tracking-wide">
+              Sincronización con Hojas de Cálculo
+            </h3>
+            <p className="text-[11px] text-slate-500 font-medium">
+              Importa actividades por mes y presupuestos iniciales directamente desde Google Drive
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setIsSheetsModalOpen(true)}
+          className="px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs uppercase tracking-wider shadow-sm flex items-center justify-center gap-2 transition-all shrink-0"
+        >
+          <FileSpreadsheet size={16} />
+          <span>Importar de Google Sheets</span>
+        </button>
       </div>
 
       {/* Navigation */}
@@ -562,6 +591,12 @@ export const Presupuestos: React.FC = () => {
         )}
 
       </div>
+
+      {/* Modal Importador Google Sheets */}
+      <GoogleSheetsImporterModal
+        isOpen={isSheetsModalOpen}
+        onClose={() => setIsSheetsModalOpen(false)}
+      />
     </div>
   );
 };

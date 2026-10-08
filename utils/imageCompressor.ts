@@ -307,3 +307,61 @@ export const validateImageFile = (
   }
   return { valid: true };
 };
+
+/**
+ * Compresses an existing Base64 Data URL to fit within size limits (e.g. Firestore 1MB doc limit)
+ */
+export const compressBase64DataUrl = (
+  base64Data: string,
+  maxWidth = 400,
+  maxHeight = 400,
+  quality = 0.7
+): Promise<string> => {
+  if (!base64Data || !base64Data.startsWith('data:image')) {
+    return Promise.resolve(base64Data);
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(base64Data);
+          return;
+        }
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const compressed = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressed);
+      } catch {
+        resolve(base64Data);
+      }
+    };
+    img.onerror = () => resolve(base64Data);
+    img.src = base64Data;
+  });
+};
+

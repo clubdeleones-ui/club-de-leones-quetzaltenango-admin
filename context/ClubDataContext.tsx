@@ -1,4 +1,5 @@
 import { safeSetItem } from '../utils/storage';
+import { safeGetTime } from '../utils/dateSpanishFormatter';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../services/firebase';
 import { 
@@ -275,7 +276,7 @@ export const ClubDataProvider: React.FC<ClubDataProviderProps> = ({ children, is
     // 3b. Actividades (ordered by date ascending)
     const unsubActividades = onSnapshot(collection(db, 'actividades'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Actividad)
-        .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+        .sort((a, b) => safeGetTime(a.fecha) - safeGetTime(b.fecha));
       setActividades(list);
       safeSetLocalData(KEYS.ACTIVIDADES, list);
       setLoading(prev => ({ ...prev, actividades: false }));
@@ -287,7 +288,7 @@ export const ClubDataProvider: React.FC<ClubDataProviderProps> = ({ children, is
     // 3c. Galeria Items
     const unsubGaleria = onSnapshot(collection(db, 'galeria'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as GaleriaItem)
-        .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+        .sort((a, b) => safeGetTime(b.fecha) - safeGetTime(a.fecha));
       setGaleria(list);
       safeSetLocalData(KEYS.GALERIA, list);
       setLoading(prev => ({ ...prev, galeria: false }));
@@ -321,7 +322,7 @@ export const ClubDataProvider: React.FC<ClubDataProviderProps> = ({ children, is
     // 3f. Solicitudes de Voluntarios
     const unsubVoluntarios = onSnapshot(collection(db, 'solicitudes_voluntarios'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as SolicitudVoluntario)
-        .sort((a, b) => new Date(b.fechaRegistro).getTime() - new Date(a.fechaRegistro).getTime());
+        .sort((a, b) => safeGetTime(b.fechaRegistro) - safeGetTime(a.fechaRegistro));
       setVoluntarios(list);
       safeSetLocalData(KEYS.VOLUNTARIOS, list);
       setLoading(prev => ({ ...prev, voluntarios: false }));

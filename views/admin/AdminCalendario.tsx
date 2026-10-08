@@ -1,13 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  Plus, Calendar, Search, Filter, Edit, Trash2, Gift, Building, X, Loader2, Users, Check, Upload, ChevronLeft, ChevronRight, Phone, Printer, Sparkles
+  Plus, Calendar, Search, Filter, Edit, Trash2, Gift, Building, X, Loader2, Users, Check, Upload, ChevronLeft, ChevronRight, Phone, Printer, Sparkles, FileSpreadsheet
 } from 'lucide-react';
 import { Actividad, SolicitudVoluntario, RegistroParticipacion } from '../../types';
 import { firebaseService } from '../../services/firebaseService';
 import { useClubData } from '../../context/ClubDataContext';
 import { useModal } from '../../context/ModalContext';
 import { compressImageFile, validateImageFile } from '../../utils/imageCompressor';
-import { formatDisplayDate } from '../../utils/dateSpanishFormatter';
+import { formatDisplayDate, safeGetTime } from '../../utils/dateSpanishFormatter';
+import { GoogleSheetsImporterModal } from '../../components/GoogleSheetsImporterModal';
 
 export const AdminCalendario: React.FC = () => {
   const { 
@@ -48,6 +49,7 @@ export const AdminCalendario: React.FC = () => {
   }, []);
 
   const [calendarioSubTab, setCalendarioSubTab] = useState<'lista' | 'voluntarios' | 'asistentes' | 'salon'>('lista');
+  const [showSheetsModal, setShowSheetsModal] = useState(false);
 
   // Salon Management State & Helpers
   const [salonFilterStatus, setSalonFilterStatus] = useState<'Todos' | 'Pendiente' | 'Aprobada' | 'Rechazada'>('Todos');
@@ -179,9 +181,9 @@ export const AdminCalendario: React.FC = () => {
 
     // Sort
     if (actividadSort === 'recientes') {
-      result.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+      result.sort((a, b) => safeGetTime(b.fecha) - safeGetTime(a.fecha));
     } else if (actividadSort === 'antiguas') {
-      result.sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
+      result.sort((a, b) => safeGetTime(a.fecha) - safeGetTime(b.fecha));
     } else if (actividadSort === 'az') {
       result.sort((a, b) => a.titulo.localeCompare(b.titulo));
     } else if (actividadSort === 'za') {
@@ -223,7 +225,7 @@ export const AdminCalendario: React.FC = () => {
     }
 
     // Sort by registration date descending
-    result.sort((a, b) => new Date(b.fechaRegistro).getTime() - new Date(a.fechaRegistro).getTime());
+    result.sort((a, b) => safeGetTime(b.fechaRegistro) - safeGetTime(a.fechaRegistro));
 
     return result;
   }, [voluntarios, voluntarioSearch, voluntarioFilterActividad, voluntarioFilterEstado]);
@@ -245,9 +247,9 @@ export const AdminCalendario: React.FC = () => {
     // Sort participaciones
     result.sort((a, b) => {
       if (participacionSort === 'fechaDesc') {
-        return new Date(b.fechaRegistro).getTime() - new Date(a.fechaRegistro).getTime();
+        return safeGetTime(b.fechaRegistro) - safeGetTime(a.fechaRegistro);
       } else if (participacionSort === 'fechaAsc') {
-        return new Date(a.fechaRegistro).getTime() - new Date(b.fechaRegistro).getTime();
+        return safeGetTime(a.fechaRegistro) - safeGetTime(b.fechaRegistro);
       } else if (participacionSort === 'nombreAsc') {
         return a.nombre.localeCompare(b.nombre);
       } else {
@@ -1083,13 +1085,23 @@ export const AdminCalendario: React.FC = () => {
           <h3 className="text-3xl font-black text-slate-800 tracking-tight">Gestión de Actividades</h3>
           <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Crea, edita y publica los próximos eventos del club</p>
         </div>
-        <button 
-          onClick={() => setShowAddActividad(true)}
-          className="bg-blue-900 hover:bg-blue-800 text-white font-black px-6 py-3.5 rounded-2xl flex items-center justify-center space-x-2 shadow-lg shadow-blue-900/10 active:scale-95 transition-all text-sm"
-        >
-          <Plus size={18} />
-          <span>Programar Actividad</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <button 
+            type="button"
+            onClick={() => setShowSheetsModal(true)}
+            className="bg-emerald-700 hover:bg-emerald-800 text-white font-black px-5 py-3.5 rounded-2xl flex items-center justify-center space-x-2 shadow-lg shadow-emerald-700/10 active:scale-95 transition-all text-sm"
+          >
+            <FileSpreadsheet size={18} />
+            <span>Importar Cronograma (Sheets)</span>
+          </button>
+          <button 
+            onClick={() => setShowAddActividad(true)}
+            className="bg-blue-900 hover:bg-blue-800 text-white font-black px-6 py-3.5 rounded-2xl flex items-center justify-center space-x-2 shadow-lg shadow-blue-900/10 active:scale-95 transition-all text-sm"
+          >
+            <Plus size={18} />
+            <span>Programar Actividad</span>
+          </button>
+        </div>
       </div>
 
       {/* Add Activity Form Modal */}
@@ -2722,6 +2734,12 @@ export const AdminCalendario: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* Modal Importador Google Sheets */}
+      <GoogleSheetsImporterModal
+        isOpen={showSheetsModal}
+        onClose={() => setShowSheetsModal(false)}
+      />
     </div>
   );
 };

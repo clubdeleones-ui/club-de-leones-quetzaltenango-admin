@@ -1,16 +1,18 @@
 
 import { gapi } from 'gapi-script';
+import { env } from '../config/env';
 
-const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+const CLIENT_ID = env.googleClientId || import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 export const GOOGLE_CONFIG = {
     ESTATUTOS_DOC_ID: '1ynFhIRLt2R8JVHGmxVjm0-6Qfa9wCs-3pEzX6ZtMzOM',
 };
 const DISCOVERY_DOCS = [
     'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
     'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest',
-    'https://www.googleapis.com/discovery/v1/apis/docs/v1/rest'
+    'https://www.googleapis.com/discovery/v1/apis/docs/v1/rest',
+    'https://sheets.googleapis.com/$discovery/rest?version=v4'
 ];
-const SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/documents.readonly';
+const SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/documents.readonly https://www.googleapis.com/auth/spreadsheets.readonly';
 
 let initPromise: Promise<boolean> | null = null;
 
@@ -19,9 +21,14 @@ export const googleService = {
         if (!initPromise) {
             initPromise = new Promise((resolve, reject) => {
                 gapi.load('client', () => {
-                    gapi.client.init({
+                    const initConfig: any = {
                         discoveryDocs: DISCOVERY_DOCS,
-                    }).then(() => {
+                    };
+                    if (CLIENT_ID) {
+                        initConfig.clientId = CLIENT_ID;
+                        initConfig.scope = SCOPES;
+                    }
+                    gapi.client.init(initConfig).then(() => {
                         resolve(true);
                     }, (error: any) => {
                         initPromise = null; // reset if initialization failed
@@ -96,5 +103,179 @@ export const googleService = {
             }
         });
         return text;
+    },
+
+    // Extraer Spreadsheet ID de una URL o cadena
+    extractSpreadsheetId: (urlOrId: string): string => {
+        const clean = urlOrId.trim();
+        const match = clean.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+        if (match && match[1]) {
+            return match[1];
+        }
+        return clean;
+    },
+
+    // DRIVE API: List Google Sheets files from user's Google Drive
+    fetchSpreadsheetsFromDrive: async (): Promise<Array<{ id: string; name: string; modifiedTime?: string; iconLink?: string }>> => {
+        try {
+            await googleService.initClient();
+            const client = (gapi as any).client;
+            if (!client || !client.drive) {
+                throw new Error("El cliente de Google Drive no está inicializado.");
+            }
+            const response = await client.drive.files.list({
+                q: "mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false",
+                fields: 'files(id, name, modifiedTime, iconLink)',
+                orderBy: 'modifiedTime desc',
+                pageSize: 30
+            });
+            return response.result.files || [];
+        } catch (error: any) {
+            console.error('Error fetching spreadsheets from Drive:', error);
+            throw error;
+        }
+    },
+
+    // SHEETS API: Get list of tab titles inside a spreadsheet
+    fetchSpreadsheetTabs: async (spreadsheetIdOrUrl: string): Promise<string[]> => {
+        try {
+            await googleService.initClient();
+            const spreadsheetId = googleService.extractSpreadsheetId(spreadsheetIdOrUrl);
+            const client = (gapi as any).client;
+            if (!client || !client.sheets) {
+                throw new Error("El cliente de Google Sheets no está disponible.");
+            }
+            const response = await client.sheets.spreadsheets.get({
+                spreadsheetId,
+                fields: 'sheets.properties(sheetId,title,index)'
+            });
+            const sheets = response.result.sheets || [];
+            return sheets.map((s: any) => s.properties.title as string);
+        } catch (error: any) {
+            console.error('Error fetching sheet tabs:', error);
+            throw error;
+        }
+    },
+
+    // SHEETS API: Fetch data from a specific sheet using GAPI (OAuth)
+    fetchSheetData: async (spreadsheetIdOrUrl: string, range: string = 'A1:Z500'): Promise<Record<string, string>[]> => {
+        try {
+            await googleService.initClient();
+            const spreadsheetId = googleService.extractSpreadsheetId(spreadsheetIdOrUrl);
+            const client = (gapi as any).client;
+            if (!client || !client.sheets) {
+                throw new Error("El cliente de Google Sheets no está inicializado. Verifique los permisos.");
+            }
+            const response = await client.sheets.spreadsheets.values.get({
+                spreadsheetId,
+                range,
+            });
+            const values: string[][] = response.result.values || [];
+            if (values.length === 0) return [];
+
+            const [rawHeaders, ...rows] = values;
+            const headers = rawHeaders.map((h, i) => String(h || `Columna_${i + 1}`).trim());
+
+            return rows.map(row => {
+                const item: Record<string, string> = {};
+                headers.forEach((header, index) => {
+                    item[header] = String(row[index] || '').trim();
+                });
+                return item;
+            });
+        } catch (error: any) {
+            console.error('Error fetching Sheet data via GAPI:', error);
+            throw error;
+        }
+    },
+
+    // Leer hoja de Google Sheets pública o compartida vía exportación CSV (No requiere OAuth)
+    fetchSheetDataPublic: async (spreadsheetIdOrUrl: string, sheetName?: string): Promise<Record<string, string>[]> => {
+        try {
+            const spreadsheetId = googleService.extractSpreadsheetId(spreadsheetIdOrUrl);
+            let url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv`;
+            if (sheetName) {
+                url += `&sheet=${encodeURIComponent(sheetName)}`;
+            }
+
+            const res = await fetch(url);
+            if (!res.ok) {
+                throw new Error(`No se pudo leer la hoja de cálculo (${res.status} ${res.statusText}). Asegúrese de que la hoja tenga acceso de lectura ("Cualquiera con el enlace puede ver").`);
+            }
+            const csvText = await res.text();
+            return googleService.parseCsvToObjects(csvText);
+        } catch (error: any) {
+            console.error('Error fetching public sheet CSV:', error);
+            throw error;
+        }
+    },
+
+    // Parseador robusto de CSV a objetos
+    parseCsvToObjects: (csvText: string): Record<string, string>[] => {
+        const lines: string[] = [];
+        let currentLine = '';
+        let insideQuotes = false;
+
+        for (let i = 0; i < csvText.length; i++) {
+            const char = csvText[i];
+            if (char === '"') {
+                insideQuotes = !insideQuotes;
+                currentLine += char;
+            } else if ((char === '\n' || char === '\r') && !insideQuotes) {
+                if (currentLine.trim()) {
+                    lines.push(currentLine.trim());
+                }
+                currentLine = '';
+            } else {
+                currentLine += char;
+            }
+        }
+        if (currentLine.trim()) {
+            lines.push(currentLine.trim());
+        }
+
+        if (lines.length === 0) return [];
+
+        const parseLine = (line: string): string[] => {
+            const values: string[] = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+                const c = line[i];
+                if (c === '"') {
+                    if (inQuotes && line[i + 1] === '"') {
+                        current += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (c === ',' && !inQuotes) {
+                    values.push(current.trim());
+                    current = '';
+                } else {
+                    current += c;
+                }
+            }
+            values.push(current.trim());
+            return values.map(v => v.replace(/^"|"$/g, '').trim());
+        };
+
+        const headers = parseLine(lines[0]);
+        const records: Record<string, string>[] = [];
+
+        for (let i = 1; i < lines.length; i++) {
+            const values = parseLine(lines[i]);
+            // Ignorar filas completamente vacías
+            if (values.every(v => !v)) continue;
+            const item: Record<string, string> = {};
+            headers.forEach((h, index) => {
+                if (h) {
+                    item[h] = values[index] || '';
+                }
+            });
+            records.push(item);
+        }
+
+        return records;
     }
 };

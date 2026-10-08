@@ -1,4 +1,5 @@
 import { safeSetItem } from '../utils/storage';
+import { compressBase64DataUrl } from '../utils/imageCompressor';
 import { db, storage } from "./firebase";
 import { 
   collection, 
@@ -31,7 +32,7 @@ export const firebaseService = {
         return base64Data;
       }
       if (isStorageQuotaExceeded) {
-        return base64Data;
+        return await compressBase64DataUrl(base64Data, 400, 400, 0.7);
       }
       
       const uniqueName = `${candidateId}_${Date.now()}`;
@@ -44,8 +45,8 @@ export const firebaseService = {
       if (error?.code === 'storage/quota-exceeded' || error?.status === 402 || error?.message?.includes('402') || error?.message?.includes('quota')) {
         isStorageQuotaExceeded = true;
       }
-      console.warn("Storage no disponible o sin permisos para candidato, usando imagen optimizada:", error);
-      return base64Data;
+      console.warn("Firebase Storage no disponible. Guardando imagen comprimida en Firestore:", error);
+      return await compressBase64DataUrl(base64Data, 400, 400, 0.7);
     }
   },
 
@@ -201,7 +202,7 @@ export const firebaseService = {
         return base64Data;
       }
       if (isStorageQuotaExceeded) {
-        return base64Data;
+        return await compressBase64DataUrl(base64Data, 400, 400, 0.7);
       }
       const match = base64Data.match(/^data:([^;]+);base64,/);
       const contentType = match ? match[1] : 'image/jpeg';
@@ -215,8 +216,8 @@ export const firebaseService = {
         isStorageQuotaExceeded = true;
       }
       console.warn("Firebase Storage no disponible (cuenta de facturación o cuota). Almacenando fotografía optimizada directamente en Firestore:", error);
-      // Almacenamos el base64 comprimido directamente para que el socio nunca pierda su foto de perfil actualizada
-      return base64Data;
+      // Almacenamos el base64 comprimido y reducido para que nunca exceda el límite de documento de 1MB de Firestore
+      return await compressBase64DataUrl(base64Data, 400, 400, 0.7);
     }
   },
 
