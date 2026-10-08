@@ -87,14 +87,14 @@ export const GoogleSheetsImporterModal: React.FC<GoogleSheetsImporterModalProps>
         await loadDriveFiles();
       } catch (err: any) {
         console.error("Error al inicializar sesión de Google:", err);
-        showToast('No se pudieron listar los archivos de Drive. Intente de nuevo.', 'error');
+        showToast('Sesión iniciada. Puedes pegar el enlace de tu Google Sheet directamente.', 'info');
       } finally {
         setIsConnecting(false);
       }
     },
     onError: (err) => {
       console.error("Error en Google Login:", err);
-      showToast('Error al autorizar con Google.', 'error');
+      showToast('Error al autorizar con Google. Revisa las ventanas emergentes del navegador.', 'error');
       setIsConnecting(false);
     }
   });
@@ -104,11 +104,14 @@ export const GoogleSheetsImporterModal: React.FC<GoogleSheetsImporterModalProps>
     try {
       const files = await googleService.fetchSpreadsheetsFromDrive();
       setDriveFiles(files);
-      if (files.length > 0) {
-        setHasGoogleAuth(true);
+      setHasGoogleAuth(true);
+      if (files.length === 0) {
+        showToast('Conectado a Google. Si tu hoja está compartida o en otra carpeta, pega el enlace abajo para abrirla.', 'info');
       }
     } catch (err: any) {
       console.warn("Fallo al listar Drive:", err);
+      setHasGoogleAuth(true);
+      showToast('Sesión iniciada. Si tu hoja no aparece, puedes pegar el enlace directo abajo.', 'info');
     } finally {
       setIsLoadingFiles(false);
     }

@@ -15,6 +15,7 @@ const DISCOVERY_DOCS = [
 const SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/documents.readonly https://www.googleapis.com/auth/spreadsheets.readonly';
 
 let initPromise: Promise<boolean> | null = null;
+let currentAccessToken: string | null = null;
 
 export const googleService = {
     initClient: (): Promise<boolean> => {
@@ -29,6 +30,9 @@ export const googleService = {
                         initConfig.scope = SCOPES;
                     }
                     gapi.client.init(initConfig).then(() => {
+                        if (currentAccessToken && (gapi as any)?.client?.setToken) {
+                            (gapi as any).client.setToken({ access_token: currentAccessToken });
+                        }
                         resolve(true);
                     }, (error: any) => {
                         initPromise = null; // reset if initialization failed
@@ -41,12 +45,34 @@ export const googleService = {
     },
 
     setAccessToken: (token: string) => {
-        gapi.client.setToken({ access_token: token });
+        currentAccessToken = token;
+        try {
+            if (typeof gapi !== 'undefined' && (gapi as any)?.client?.setToken) {
+                (gapi as any).client.setToken({ access_token: token });
+            }
+        } catch (e) {
+            // Silencioso: gapi.client aún no ha cargado, se usa fetch REST nativo con el token
+        }
+    },
+
+    getAccessToken: (): string | null => {
+        return currentAccessToken;
     },
 
     // DRIVE API: Fetch files from a specific folder (Actas)
     fetchActasFromDrive: async (folderId: string) => {
         try {
+            if (currentAccessToken) {
+                const query = `'${folderId}' in parents and trashed = false`;
+                const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=${encodeURIComponent('files(id, name, createdTime, webViewLink, iconLink)')}`;
+                const res = await fetch(url, {
+                    headers: { Authorization: `Bearer ${currentAccessToken}`, Accept: 'application/json' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    return data.files || [];
+                }
+            }
             const response = await gapi.client.drive.files.list({
                 q: `'${folderId}' in parents and trashed = false`,
                 fields: 'files(id, name, createdTime, webViewLink, iconLink)',
@@ -61,6 +87,16 @@ export const googleService = {
     // DOCS API: Fetch content from a specific Document (Estatutos)
     fetchDocContent: async (documentId: string) => {
         try {
+            if (currentAccessToken) {
+                const url = `https://docs.googleapis.com/v1/documents/${documentId}`;
+                const res = await fetch(url, {
+                    headers: { Authorization: `Bearer ${currentAccessToken}`, Accept: 'application/json' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    return googleService.parseDocContent(data.body?.content || []);
+                }
+            }
             const response = await gapi.client.docs.documents.get({
                 documentId: documentId,
             });
@@ -75,6 +111,16 @@ export const googleService = {
     // CALENDAR API: Fetch events
     fetchCalendarEvents: async () => {
         try {
+            if (currentAccessToken) {
+                const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${encodeURIComponent(new Date().toISOString())}&showDeleted=false&singleEvents=true&maxResults=10&orderBy=startTime`;
+                const res = await fetch(url, {
+                    headers: { Authorization: `Bearer ${currentAccessToken}`, Accept: 'application/json' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    return data.items || [];
+                }
+            }
             const response = await gapi.client.calendar.events.list({
                 calendarId: 'primary',
                 timeMin: (new Date()).toISOString(),
@@ -118,18 +164,35 @@ export const googleService = {
     // DRIVE API: List Google Sheets files from user's Google Drive
     fetchSpreadsheetsFromDrive: async (): Promise<Array<{ id: string; name: string; modifiedTime?: string; iconLink?: string }>> => {
         try {
+            // 1. Vía REST directa con Access Token (ultra rápido, sin gapi)
+            if (currentAccessToken) {
+                const query = "mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false";
+                const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=${encodeURIComponent('files(id, name, modifiedTime, iconLink)')}&orderBy=modifiedTime desc&pageSize=50`;
+                const res = await fetch(url, {
+                    headers: {
+                        Authorization: `Bearer ${currentAccessToken}`,
+                        Accept: 'application/json'
+                    }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    return data.files || [];
+                }
+            }
+
+            // 2. Fallback con GAPI
             await googleService.initClient();
             const client = (gapi as any).client;
-            if (!client || !client.drive) {
-                throw new Error("El cliente de Google Drive no está inicializado.");
+            if (client && client.drive) {
+                const response = await client.drive.files.list({
+                    q: "mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false",
+                    fields: 'files(id, name, modifiedTime, iconLink)',
+                    orderBy: 'modifiedTime desc',
+                    pageSize: 30
+                });
+                return response.result.files || [];
             }
-            const response = await client.drive.files.list({
-                q: "mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false",
-                fields: 'files(id, name, modifiedTime, iconLink)',
-                orderBy: 'modifiedTime desc',
-                pageSize: 30
-            });
-            return response.result.files || [];
+            return [];
         } catch (error: any) {
             console.error('Error fetching spreadsheets from Drive:', error);
             throw error;
@@ -138,55 +201,114 @@ export const googleService = {
 
     // SHEETS API: Get list of tab titles inside a spreadsheet
     fetchSpreadsheetTabs: async (spreadsheetIdOrUrl: string): Promise<string[]> => {
+        const spreadsheetId = googleService.extractSpreadsheetId(spreadsheetIdOrUrl);
         try {
-            await googleService.initClient();
-            const spreadsheetId = googleService.extractSpreadsheetId(spreadsheetIdOrUrl);
-            const client = (gapi as any).client;
-            if (!client || !client.sheets) {
-                throw new Error("El cliente de Google Sheets no está disponible.");
+            // 1. Probar vía REST directa con Access Token
+            if (currentAccessToken) {
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties(sheetId,title,index)`;
+                const res = await fetch(url, {
+                    headers: {
+                        Authorization: `Bearer ${currentAccessToken}`,
+                        Accept: 'application/json'
+                    }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const sheets = data.sheets || [];
+                    const titles = sheets.map((s: any) => s.properties?.title as string).filter(Boolean);
+                    if (titles.length > 0) return titles;
+                }
             }
-            const response = await client.sheets.spreadsheets.get({
-                spreadsheetId,
-                fields: 'sheets.properties(sheetId,title,index)'
-            });
-            const sheets = response.result.sheets || [];
-            return sheets.map((s: any) => s.properties.title as string);
+
+            // 2. Probar vía GAPI
+            try {
+                await googleService.initClient();
+                const client = (gapi as any).client;
+                if (client && client.sheets) {
+                    const response = await client.sheets.spreadsheets.get({
+                        spreadsheetId,
+                        fields: 'sheets.properties(sheetId,title,index)'
+                    });
+                    const sheets = response.result.sheets || [];
+                    const titles = sheets.map((s: any) => s.properties.title as string).filter(Boolean);
+                    if (titles.length > 0) return titles;
+                }
+            } catch (gapiErr) {
+                console.warn('GAPI tabs fetch failed, checking public sheet:', gapiErr);
+            }
+
+            // 3. Fallback para hojas públicas compartidas
+            return ['Hoja 1'];
         } catch (error: any) {
             console.error('Error fetching sheet tabs:', error);
             throw error;
         }
     },
 
-    // SHEETS API: Fetch data from a specific sheet using GAPI (OAuth)
+    // SHEETS API: Fetch data from a specific sheet using REST/OAuth with fallback
     fetchSheetData: async (spreadsheetIdOrUrl: string, range: string = 'A1:Z500'): Promise<Record<string, string>[]> => {
+        const spreadsheetId = googleService.extractSpreadsheetId(spreadsheetIdOrUrl);
+        
+        // 1. Probar vía REST directa con Access Token
+        if (currentAccessToken) {
+            try {
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}`;
+                const res = await fetch(url, {
+                    headers: {
+                        Authorization: `Bearer ${currentAccessToken}`,
+                        Accept: 'application/json'
+                    }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const values: string[][] = data.values || [];
+                    if (values.length > 0) {
+                        const [rawHeaders, ...rows] = values;
+                        const headers = rawHeaders.map((h, i) => String(h || `Columna_${i + 1}`).trim());
+                        return rows.map(row => {
+                            const item: Record<string, string> = {};
+                            headers.forEach((header, index) => {
+                                item[header] = String(row[index] || '').trim();
+                            });
+                            return item;
+                        });
+                    }
+                }
+            } catch (restErr) {
+                console.warn('REST fetchSheetData failed, falling back:', restErr);
+            }
+        }
+
+        // 2. Probar vía GAPI
         try {
             await googleService.initClient();
-            const spreadsheetId = googleService.extractSpreadsheetId(spreadsheetIdOrUrl);
             const client = (gapi as any).client;
-            if (!client || !client.sheets) {
-                throw new Error("El cliente de Google Sheets no está inicializado. Verifique los permisos.");
-            }
-            const response = await client.sheets.spreadsheets.values.get({
-                spreadsheetId,
-                range,
-            });
-            const values: string[][] = response.result.values || [];
-            if (values.length === 0) return [];
-
-            const [rawHeaders, ...rows] = values;
-            const headers = rawHeaders.map((h, i) => String(h || `Columna_${i + 1}`).trim());
-
-            return rows.map(row => {
-                const item: Record<string, string> = {};
-                headers.forEach((header, index) => {
-                    item[header] = String(row[index] || '').trim();
+            if (client && client.sheets) {
+                const response = await client.sheets.spreadsheets.values.get({
+                    spreadsheetId,
+                    range,
                 });
-                return item;
-            });
-        } catch (error: any) {
-            console.error('Error fetching Sheet data via GAPI:', error);
-            throw error;
+                const values: string[][] = response.result.values || [];
+                if (values.length > 0) {
+                    const [rawHeaders, ...rows] = values;
+                    const headers = rawHeaders.map((h, i) => String(h || `Columna_${i + 1}`).trim());
+                    return rows.map(row => {
+                        const item: Record<string, string> = {};
+                        headers.forEach((header, index) => {
+                            item[header] = String(row[index] || '').trim();
+                        });
+                        return item;
+                    });
+                }
+            }
+        } catch (gapiErr) {
+            console.warn('GAPI fetchSheetData failed, trying CSV public fallback:', gapiErr);
         }
+
+        // 3. Fallback a lectura pública CSV
+        const matchSheet = range.match(/^'([^']+)'/);
+        const sheetName = matchSheet ? matchSheet[1] : undefined;
+        return googleService.fetchSheetDataPublic(spreadsheetId, sheetName);
     },
 
     // Leer hoja de Google Sheets pública o compartida vía exportación CSV (No requiere OAuth)
