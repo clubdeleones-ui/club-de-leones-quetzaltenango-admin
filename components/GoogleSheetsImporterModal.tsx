@@ -15,7 +15,8 @@ import {
   RefreshCw,
   ArrowRight,
   Sparkles,
-  Save
+  Save,
+  Upload
 } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { googleService } from '../services/googleService';
@@ -165,14 +166,18 @@ export const GoogleSheetsImporterModal: React.FC<GoogleSheetsImporterModalProps>
     loadDriveFiles(currentFolder.id);
   };
 
+  // Soporte para archivos Excel locales (.xlsx / .xls)
+  const [localWorkbook, setLocalWorkbook] = useState<any | null>(null);
+
   // Al seleccionar un archivo de Drive o ingresar URL/ID manual
-  const handleSelectFile = async (fileId: string, fileName?: string) => {
+  const handleSelectFile = async (fileId: string, fileName?: string, mimeType?: string) => {
+    setLocalWorkbook(null);
     setSelectedFile({ id: fileId, name: fileName || 'Documento de Google Sheets' });
     setIsLoadingTabs(true);
     setStep('select_tabs');
 
     try {
-      const tabs = await googleService.fetchSpreadsheetTabs(fileId);
+      const tabs = await googleService.fetchSpreadsheetTabs(fileId, fileName || mimeType);
       setAvailableTabs(tabs);
       
       // Auto-detectar pestañas por nombre
@@ -190,6 +195,34 @@ export const GoogleSheetsImporterModal: React.FC<GoogleSheetsImporterModalProps>
     }
   };
 
+  // Cargar archivo Excel directamente desde la computadora
+  const handleLocalFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsLoadingTabs(true);
+    try {
+      const { workbook, sheetNames } = await googleService.parseLocalExcelFile(file);
+      setLocalWorkbook(workbook);
+      setSelectedFile({ id: 'local-file', name: file.name });
+      setAvailableTabs(sheetNames);
+      
+      const foundCrono = sheetNames.find(t => /crono|activi|mes|agenda|event/i.test(t)) || sheetNames[0] || '';
+      const foundPresu = sheetNames.find(t => /presup|cost|financ|fond|numer|rubr/i.test(t)) || (sheetNames.length > 1 ? sheetNames[1] : sheetNames[0]) || '';
+      
+      setCronogramaTab(foundCrono);
+      setPresupuestoTab(foundPresu !== foundCrono ? foundPresu : (sheetNames[1] || foundCrono));
+      setStep('select_tabs');
+      showToast(`Archivo "${file.name}" cargado con éxito.`, 'success');
+    } catch (err: any) {
+      console.error("Error al procesar archivo Excel local:", err);
+      showToast('Error al leer el archivo Excel. Asegúrate de que sea un archivo .xlsx válido.', 'error');
+    } finally {
+      setIsLoadingTabs(false);
+      e.target.value = '';
+    }
+  };
+
   // Extraer y procesar datos de las pestañas seleccionadas
   const handleProcessTabs = async () => {
     if (!selectedFile) return;
@@ -198,7 +231,13 @@ export const GoogleSheetsImporterModal: React.FC<GoogleSheetsImporterModalProps>
     try {
       // 1. Procesar Cronograma / Actividades
       if (cronogramaTab) {
-        const cronoRecords = await googleService.fetchSheetData(selectedFile.id, `'${cronogramaTab}'!A1:Z200`);
+        let cronoRecords: Record<string, string>[] = [];
+        if (localWorkbook) {
+          cronoRecords = googleService.readWorkbookSheetData(localWorkbook, cronogramaTab);
+        } else {
+          cronoRecords = await googleService.fetchSheetData(selectedFile.id, `'${cronogramaTab}'!A1:Z200`, selectedFile.name);
+        }
+
         const activities = cronoRecords.map((row, index) => {
           const keys = Object.keys(row);
           const mesKey = keys.find(k => /mes|periodo|month/i.test(k));
@@ -232,7 +271,13 @@ export const GoogleSheetsImporterModal: React.FC<GoogleSheetsImporterModalProps>
 
       // 2. Procesar Presupuesto
       if (presupuestoTab) {
-        const presuRecords = await googleService.fetchSheetData(selectedFile.id, `'${presupuestoTab}'!A1:Z200`);
+        let presuRecords: Record<string, string>[] = [];
+        if (localWorkbook) {
+          presuRecords = googleService.readWorkbookSheetData(localWorkbook, presupuestoTab);
+        } else {
+          presuRecords = await googleService.fetchSheetData(selectedFile.id, `'${presupuestoTab}'!A1:Z200`, selectedFile.name);
+        }
+
         const budgetItems = presuRecords.map((row, index) => {
           const keys = Object.keys(row);
           const comisionKey = keys.find(k => /comisi|accion|acción|respons|area|área/i.test(k));
@@ -504,29 +549,42 @@ export const GoogleSheetsImporterModal: React.FC<GoogleSheetsImporterModalProps>
                           );
                         }
 
-                        // Hoja de cálculo
+                        // Hoja de cálculo o Excel
+                        const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || (file.mimeType && (file.mimeType.includes('openxml') || file.mimeType.includes('ms-excel')));
+
                         return (
                           <div
                             key={file.id}
-                            onClick={() => handleSelectFile(file.id, file.name)}
-                            className="p-3 rounded-xl border border-slate-200 bg-white hover:border-blue-900 hover:bg-blue-50/50 cursor-pointer transition-all flex items-center justify-between group shadow-2xs"
+                            onClick={() => handleSelectFile(file.id, file.name, file.mimeType)}
+                            className="p-3 rounded-xl border border-slate-200 bg-white hover:border-emerald-600 hover:bg-emerald-50/40 cursor-pointer transition-all flex items-center justify-between group shadow-2xs"
                           >
                             <div className="flex items-center space-x-2.5 overflow-hidden">
-                              <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0 group-hover:scale-105 transition-transform">
+                              <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform ${
+                                isExcel ? 'bg-emerald-100 border-emerald-300 text-emerald-800' : 'bg-blue-50 border-blue-200 text-blue-700'
+                              }`}>
                                 <FileSpreadsheet size={17} />
                               </div>
                               <div className="truncate">
-                                <p className="text-xs font-bold text-slate-800 group-hover:text-blue-900 truncate">
-                                  {file.name}
-                                </p>
-                                {file.modifiedTime && (
-                                  <p className="text-[10px] text-slate-400">
-                                    Modificado: {new Date(file.modifiedTime).toLocaleDateString()}
+                                <div className="flex items-center gap-1.5">
+                                  <p className="text-xs font-bold text-slate-800 group-hover:text-emerald-950 truncate">
+                                    {file.name}
                                   </p>
-                                )}
+                                </div>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className={`text-[8.5px] font-black uppercase px-1 py-0.2 rounded ${
+                                    isExcel ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'
+                                  }`}>
+                                    {isExcel ? 'Excel .xlsx' : 'Google Sheet'}
+                                  </span>
+                                  {file.modifiedTime && (
+                                    <span className="text-[10px] text-slate-400">
+                                      {new Date(file.modifiedTime).toLocaleDateString()}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                            <ArrowRight size={14} className="text-slate-300 group-hover:text-blue-900 group-hover:translate-x-1 transition-transform shrink-0" />
+                            <ArrowRight size={14} className="text-slate-300 group-hover:text-emerald-700 group-hover:translate-x-1 transition-transform shrink-0" />
                           </div>
                         );
                       })}
@@ -538,7 +596,7 @@ export const GoogleSheetsImporterModal: React.FC<GoogleSheetsImporterModalProps>
                         {searchQuery ? `No encontramos archivos con "${searchQuery}"` : 'No hay hojas ni subcarpetas en este nivel'}
                       </p>
                       <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
-                        Puedes buscar por palabra clave arriba, o pegar el enlace directo de tu Google Sheet aquí abajo.
+                        Puedes buscar por palabra clave arriba, subir el archivo Excel directamente desde tu computadora o pegar el enlace.
                       </p>
                       {folderHistory.length > 1 && (
                         <button
@@ -553,6 +611,34 @@ export const GoogleSheetsImporterModal: React.FC<GoogleSheetsImporterModalProps>
                   )}
                 </div>
               )}
+
+              {/* OPCIÓN DIRECTA: Subir archivo Excel (.xlsx / .csv) desde la computadora */}
+              <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200/90 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
+                <div className="flex items-center space-x-3.5">
+                  <div className="w-11 h-11 rounded-xl bg-white shadow-xs border border-emerald-200 flex items-center justify-center text-emerald-700 shrink-0">
+                    <Upload size={22} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-slate-900 uppercase tracking-wide">
+                      Cargar archivo Excel (.xlsx / .xls / .csv) desde tu equipo
+                    </h4>
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      ¿Tienes el archivo guardado en tu computadora? Cárgalo al instante sin necesidad de pasar por Google Drive.
+                    </p>
+                  </div>
+                </div>
+
+                <label className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer shrink-0">
+                  <Upload size={14} />
+                  <span>Examinar Excel</span>
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleLocalFileUpload}
+                    className="hidden"
+                  />
+                </label>
+              </div>
 
               {/* O ingreso directo de URL / ID */}
               <div className="pt-3 border-t border-slate-100 space-y-2">
@@ -571,7 +657,7 @@ export const GoogleSheetsImporterModal: React.FC<GoogleSheetsImporterModalProps>
                     type="button"
                     onClick={() => manualInput.trim() && handleSelectFile(manualInput.trim())}
                     disabled={!manualInput.trim() || isLoadingTabs}
-                    className="px-5 py-2.5 bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all"
+                    className="px-5 py-2.5 bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer"
                   >
                     {isLoadingTabs ? <Loader2 size={16} className="animate-spin" /> : 'Abrir Hoja'}
                   </button>

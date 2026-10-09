@@ -1,5 +1,6 @@
 
 import { gapi } from 'gapi-script';
+import * as XLSX from 'xlsx';
 import { env } from '../config/env';
 
 const CLIENT_ID = env.googleClientId || import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
@@ -160,8 +161,58 @@ export const googleService = {
         }
         return clean;
     },
+    // Cache en memoria para archivos Excel descargados de Drive
+    _excelCache: new Map<string, XLSX.WorkBook>(),
 
-    // DRIVE API: List Google Sheets files & folders with recursive search and folder navigation
+    isExcelFile: (fileNameOrMime: string = ''): boolean => {
+        return /xlsx|xls|spreadsheetml|ms-excel/i.test(fileNameOrMime);
+    },
+
+    // Descargar y parsear archivo Excel (.xlsx / .xls) desde Google Drive
+    fetchExcelFromDrive: async (fileId: string): Promise<XLSX.WorkBook> => {
+        if (googleService._excelCache.has(fileId)) {
+            return googleService._excelCache.get(fileId)!;
+        }
+        if (!currentAccessToken) {
+            throw new Error('Se requiere sesión de Google para descargar el archivo de Drive.');
+        }
+        const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`;
+        const res = await fetch(url, {
+            headers: {
+                Authorization: `Bearer ${currentAccessToken}`,
+            }
+        });
+        if (!res.ok) {
+            throw new Error(`Error al descargar archivo de Drive (${res.status} ${res.statusText})`);
+        }
+        const arrayBuffer = await res.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        googleService._excelCache.set(fileId, workbook);
+        return workbook;
+    },
+
+    // Parsear archivo Excel local (.xlsx/.xls/.csv) subido por el usuario desde su equipo
+    parseLocalExcelFile: async (file: File): Promise<{ workbook: XLSX.WorkBook; sheetNames: string[] }> => {
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        return { workbook, sheetNames: workbook.SheetNames };
+    },
+
+    // Leer registros de una hoja de cálculo desde un WorkBook en memoria (local o Drive)
+    readWorkbookSheetData: (workbook: XLSX.WorkBook, sheetName: string): Record<string, string>[] => {
+        const worksheet = workbook.Sheets[sheetName];
+        if (!worksheet) return [];
+        const rawJson: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+        return rawJson.map(row => {
+            const clean: Record<string, string> = {};
+            Object.keys(row).forEach(k => {
+                clean[String(k).trim()] = String(row[k] !== undefined && row[k] !== null ? row[k] : '').trim();
+            });
+            return clean;
+        });
+    },
+
+    // DRIVE API: List Google Sheets files, Excel (.xlsx/.xls) & folders with recursive search
     fetchSpreadsheetsFromDrive: async (options?: { 
         searchTerm?: string; 
         folderId?: string;
@@ -172,13 +223,15 @@ export const googleService = {
             const folderId = options?.folderId?.trim();
             const onlySheets = options?.onlySheets || false;
 
-            // Construir query de Drive v3
+            // Filtro de tipos de hojas: Sheets nativas + Excel xlsx/xls + CSV
+            const sheetMimes = "(mimeType = 'application/vnd.google-apps.spreadsheet' or mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' or mimeType = 'application/vnd.ms-excel' or mimeType = 'text/csv' or name contains '.xlsx' or name contains '.xls')";
+
             let queryParts: string[] = ['trashed = false'];
 
             if (onlySheets) {
-                queryParts.push("mimeType = 'application/vnd.google-apps.spreadsheet'");
+                queryParts.push(sheetMimes);
             } else {
-                queryParts.push("(mimeType = 'application/vnd.google-apps.spreadsheet' or mimeType = 'application/vnd.google-apps.folder')");
+                queryParts.push(`(${sheetMimes} or mimeType = 'application/vnd.google-apps.folder')`);
             }
 
             if (searchTerm) {
@@ -238,11 +291,25 @@ export const googleService = {
         }
     },
 
-    // SHEETS API: Get list of tab titles inside a spreadsheet
-    fetchSpreadsheetTabs: async (spreadsheetIdOrUrl: string): Promise<string[]> => {
+    // SHEETS / EXCEL API: Get list of tab titles inside a spreadsheet or Excel file
+    fetchSpreadsheetTabs: async (spreadsheetIdOrUrl: string, fileNameOrMime?: string): Promise<string[]> => {
         const spreadsheetId = googleService.extractSpreadsheetId(spreadsheetIdOrUrl);
+        const isExcel = googleService.isExcelFile(fileNameOrMime || '') || spreadsheetIdOrUrl.endsWith('.xlsx') || spreadsheetIdOrUrl.endsWith('.xls');
+
+        // 1. Si es un archivo Excel de Drive (.xlsx / .xls), descargarlo y leerlo con SheetJS
+        if (isExcel && currentAccessToken) {
+            try {
+                const workbook = await googleService.fetchExcelFromDrive(spreadsheetId);
+                if (workbook.SheetNames && workbook.SheetNames.length > 0) {
+                    return workbook.SheetNames;
+                }
+            } catch (excelErr) {
+                console.warn('Error reading Excel from Drive with SheetJS, trying Sheets API:', excelErr);
+            }
+        }
+
         try {
-            // 1. Probar vía REST directa con Access Token
+            // 2. Probar vía REST directa con Google Sheets API v4
             if (currentAccessToken) {
                 const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties(sheetId,title,index)`;
                 const res = await fetch(url, {
@@ -256,10 +323,20 @@ export const googleService = {
                     const sheets = data.sheets || [];
                     const titles = sheets.map((s: any) => s.properties?.title as string).filter(Boolean);
                     if (titles.length > 0) return titles;
+                } else if (res.status === 400 || res.status === 404) {
+                    // Si Sheets API falla porque el archivo en Drive es un binario .xlsx sin convertir
+                    try {
+                        const workbook = await googleService.fetchExcelFromDrive(spreadsheetId);
+                        if (workbook.SheetNames && workbook.SheetNames.length > 0) {
+                            return workbook.SheetNames;
+                        }
+                    } catch (e) {
+                        console.warn('Fallback Excel download failed:', e);
+                    }
                 }
             }
 
-            // 2. Probar vía GAPI
+            // 3. Probar vía GAPI
             try {
                 await googleService.initClient();
                 const client = (gapi as any).client;
@@ -269,14 +346,14 @@ export const googleService = {
                         fields: 'sheets.properties(sheetId,title,index)'
                     });
                     const sheets = response.result.sheets || [];
-                    const titles = sheets.map((s: any) => s.properties.title as string).filter(Boolean);
+                    const titles = sheets.map((s: any) => s.properties?.title as string).filter(Boolean);
                     if (titles.length > 0) return titles;
                 }
             } catch (gapiErr) {
                 console.warn('GAPI tabs fetch failed, checking public sheet:', gapiErr);
             }
 
-            // 3. Fallback para hojas públicas compartidas
+            // 4. Fallback para hojas públicas compartidas
             return ['Hoja 1'];
         } catch (error: any) {
             console.error('Error fetching sheet tabs:', error);
@@ -284,11 +361,25 @@ export const googleService = {
         }
     },
 
-    // SHEETS API: Fetch data from a specific sheet using REST/OAuth with fallback
-    fetchSheetData: async (spreadsheetIdOrUrl: string, range: string = 'A1:Z500'): Promise<Record<string, string>[]> => {
+    // SHEETS / EXCEL API: Fetch data from a specific sheet using REST/OAuth with fallback
+    fetchSheetData: async (spreadsheetIdOrUrl: string, range: string = 'A1:Z500', fileNameOrMime?: string): Promise<Record<string, string>[]> => {
         const spreadsheetId = googleService.extractSpreadsheetId(spreadsheetIdOrUrl);
+        const matchSheet = range.match(/^'([^']+)'/);
+        const sheetName = matchSheet ? matchSheet[1] : (range.split('!')[0] || 'Hoja 1');
+        const isExcel = googleService.isExcelFile(fileNameOrMime || '') || googleService._excelCache.has(spreadsheetId);
+
+        // 1. Si es Excel (.xlsx/.xls) o está en caché de SheetJS, leer directamente de la pestaña
+        if (isExcel) {
+            try {
+                const workbook = await googleService.fetchExcelFromDrive(spreadsheetId);
+                const records = googleService.readWorkbookSheetData(workbook, sheetName);
+                if (records.length > 0) return records;
+            } catch (excelErr) {
+                console.warn('Error reading sheet from Excel workbook, trying Sheets API:', excelErr);
+            }
+        }
         
-        // 1. Probar vía REST directa con Access Token
+        // 2. Probar vía REST directa con Access Token (Google Sheets API v4)
         if (currentAccessToken) {
             try {
                 const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}`;
@@ -312,13 +403,22 @@ export const googleService = {
                             return item;
                         });
                     }
+                } else if (res.status === 400 || res.status === 404) {
+                    // Fallback a descarga Excel si no era formato nativo de Sheets
+                    try {
+                        const workbook = await googleService.fetchExcelFromDrive(spreadsheetId);
+                        const records = googleService.readWorkbookSheetData(workbook, sheetName);
+                        if (records.length > 0) return records;
+                    } catch (e) {
+                        console.warn('Fallback Excel sheet read failed:', e);
+                    }
                 }
             } catch (restErr) {
                 console.warn('REST fetchSheetData failed, falling back:', restErr);
             }
         }
 
-        // 2. Probar vía GAPI
+        // 3. Probar vía GAPI
         try {
             await googleService.initClient();
             const client = (gapi as any).client;
@@ -344,9 +444,7 @@ export const googleService = {
             console.warn('GAPI fetchSheetData failed, trying CSV public fallback:', gapiErr);
         }
 
-        // 3. Fallback a lectura pública CSV
-        const matchSheet = range.match(/^'([^']+)'/);
-        const sheetName = matchSheet ? matchSheet[1] : undefined;
+        // 4. Fallback a lectura pública CSV
         return googleService.fetchSheetDataPublic(spreadsheetId, sheetName);
     },
 
