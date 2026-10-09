@@ -48,7 +48,7 @@ export const GoogleSheetsImporterModal: React.FC<GoogleSheetsImporterModalProps>
   const [driveFiles, setDriveFiles] = useState<Array<{ id: string; name: string; mimeType: string; modifiedTime?: string }>>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFile, setSelectedFile] = useState<{ id: string; name: string } | null>(null);
+  const [selectedFile, setSelectedFile] = useState<{ id: string; name: string; mimeType?: string } | null>(null);
   const [manualInput, setManualInput] = useState(initialSpreadsheetId || '');
 
   // Explorador de carpetas y migas de pan
@@ -172,7 +172,7 @@ export const GoogleSheetsImporterModal: React.FC<GoogleSheetsImporterModalProps>
   // Al seleccionar un archivo de Drive o ingresar URL/ID manual
   const handleSelectFile = async (fileId: string, fileName?: string, mimeType?: string) => {
     setLocalWorkbook(null);
-    setSelectedFile({ id: fileId, name: fileName || 'Documento de Google Sheets' });
+    setSelectedFile({ id: fileId, name: fileName || 'Documento de Google Sheets', mimeType });
     setIsLoadingTabs(true);
     setStep('select_tabs');
 
@@ -235,7 +235,7 @@ export const GoogleSheetsImporterModal: React.FC<GoogleSheetsImporterModalProps>
         if (localWorkbook) {
           cronoRecords = googleService.readWorkbookSheetData(localWorkbook, cronogramaTab);
         } else {
-          cronoRecords = await googleService.fetchSheetData(selectedFile.id, `'${cronogramaTab}'!A1:Z200`, selectedFile.name);
+          cronoRecords = await googleService.fetchSheetData(selectedFile.id, `'${cronogramaTab}'!A1:Z200`, selectedFile.mimeType || selectedFile.name);
         }
 
         const activities = cronoRecords.map((row, index) => {
@@ -275,7 +275,7 @@ export const GoogleSheetsImporterModal: React.FC<GoogleSheetsImporterModalProps>
         if (localWorkbook) {
           presuRecords = googleService.readWorkbookSheetData(localWorkbook, presupuestoTab);
         } else {
-          presuRecords = await googleService.fetchSheetData(selectedFile.id, `'${presupuestoTab}'!A1:Z200`, selectedFile.name);
+          presuRecords = await googleService.fetchSheetData(selectedFile.id, `'${presupuestoTab}'!A1:Z200`, selectedFile.mimeType || selectedFile.name);
         }
 
         const budgetItems = presuRecords.map((row, index) => {
@@ -306,7 +306,7 @@ export const GoogleSheetsImporterModal: React.FC<GoogleSheetsImporterModalProps>
       showToast('Datos leídos con éxito. Revisa y ajusta los valores antes de importar.', 'success');
     } catch (err: any) {
       console.error("Error al procesar hojas:", err);
-      showToast('Error al leer el contenido de las hojas seleccionadas.', 'error');
+      showToast(err?.message || 'Error al leer el contenido de las hojas seleccionadas. También puedes usar el botón de examinar archivo Excel local.', 'error');
     } finally {
       setIsProcessingSheets(false);
     }

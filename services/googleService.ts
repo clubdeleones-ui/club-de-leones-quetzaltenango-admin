@@ -168,27 +168,87 @@ export const googleService = {
         return /xlsx|xls|spreadsheetml|ms-excel/i.test(fileNameOrMime);
     },
 
-    // Descargar y parsear archivo Excel (.xlsx / .xls) desde Google Drive
-    fetchExcelFromDrive: async (fileId: string): Promise<XLSX.WorkBook> => {
+    // Descargar y parsear archivo Excel o Google Sheet nativo desde Google Drive
+    fetchWorkbookFromDrive: async (fileId: string, fileNameOrMime?: string): Promise<XLSX.WorkBook> => {
         if (googleService._excelCache.has(fileId)) {
             return googleService._excelCache.get(fileId)!;
         }
         if (!currentAccessToken) {
-            throw new Error('Se requiere sesión de Google para descargar el archivo de Drive.');
+            throw new Error('Se requiere sesión de Google para descargar o exportar el archivo de Drive.');
         }
-        const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`;
-        const res = await fetch(url, {
-            headers: {
-                Authorization: `Bearer ${currentAccessToken}`,
+
+        const isExplicitExcel = googleService.isExcelFile(fileNameOrMime || '') || 
+                                fileNameOrMime?.endsWith('.xlsx') || 
+                                fileNameOrMime?.endsWith('.xls');
+
+        // 1. Si NO es explícitamente un binario de Excel, intentar exportar vía Drive API v3 como XLSX
+        // Esto funciona para Google Sheets nativos y NO requiere tener activada la Google Sheets API
+        if (!isExplicitExcel) {
+            try {
+                const exportUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`;
+                const exportRes = await fetch(exportUrl, {
+                    headers: {
+                        Authorization: `Bearer ${currentAccessToken}`,
+                    }
+                });
+
+                if (exportRes.ok) {
+                    const arrayBuffer = await exportRes.arrayBuffer();
+                    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                    googleService._excelCache.set(fileId, workbook);
+                    return workbook;
+                }
+            } catch (exportErr) {
+                console.warn('Fallo Drive export como xlsx, probando descarga directa:', exportErr);
             }
-        });
-        if (!res.ok) {
-            throw new Error(`Error al descargar archivo de Drive (${res.status} ${res.statusText})`);
         }
-        const arrayBuffer = await res.arrayBuffer();
-        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-        googleService._excelCache.set(fileId, workbook);
-        return workbook;
+
+        // 2. Descargar directamente como medio binario (para archivos .xlsx / .xls almacenados en Drive)
+        try {
+            const mediaUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`;
+            const mediaRes = await fetch(mediaUrl, {
+                headers: {
+                    Authorization: `Bearer ${currentAccessToken}`,
+                }
+            });
+
+            if (mediaRes.ok) {
+                const arrayBuffer = await mediaRes.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                googleService._excelCache.set(fileId, workbook);
+                return workbook;
+            }
+        } catch (mediaErr) {
+            console.warn('Fallo descarga directa alt=media:', mediaErr);
+        }
+
+        // 3. Si era marcado como Excel pero falló la descarga directa, intentar export por si acaso
+        if (isExplicitExcel) {
+            try {
+                const exportUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`;
+                const exportRes = await fetch(exportUrl, {
+                    headers: {
+                        Authorization: `Bearer ${currentAccessToken}`,
+                    }
+                });
+
+                if (exportRes.ok) {
+                    const arrayBuffer = await exportRes.arrayBuffer();
+                    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                    googleService._excelCache.set(fileId, workbook);
+                    return workbook;
+                }
+            } catch (fallbackExportErr) {
+                console.warn('Fallback export también falló:', fallbackExportErr);
+            }
+        }
+
+        throw new Error('No se pudo descargar ni exportar el documento desde Google Drive. Compruebe los permisos de acceso.');
+    },
+
+    // Alias retrocompatible
+    fetchExcelFromDrive: async (fileId: string): Promise<XLSX.WorkBook> => {
+        return googleService.fetchWorkbookFromDrive(fileId);
     },
 
     // Parsear archivo Excel local (.xlsx/.xls/.csv) subido por el usuario desde su equipo
@@ -200,7 +260,11 @@ export const googleService = {
 
     // Leer registros de una hoja de cálculo desde un WorkBook en memoria (local o Drive)
     readWorkbookSheetData: (workbook: XLSX.WorkBook, sheetName: string): Record<string, string>[] => {
-        const worksheet = workbook.Sheets[sheetName];
+        // Buscar por nombre exacto o insensitivo a mayúsculas
+        const resolvedName = workbook.SheetNames.find(s => s.toLowerCase().trim() === sheetName.toLowerCase().trim()) || 
+                             (workbook.Sheets[sheetName] ? sheetName : workbook.SheetNames[0]);
+
+        const worksheet = workbook.Sheets[resolvedName];
         if (!worksheet) return [];
         const rawJson: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
         return rawJson.map(row => {
@@ -294,17 +358,17 @@ export const googleService = {
     // SHEETS / EXCEL API: Get list of tab titles inside a spreadsheet or Excel file
     fetchSpreadsheetTabs: async (spreadsheetIdOrUrl: string, fileNameOrMime?: string): Promise<string[]> => {
         const spreadsheetId = googleService.extractSpreadsheetId(spreadsheetIdOrUrl);
-        const isExcel = googleService.isExcelFile(fileNameOrMime || '') || spreadsheetIdOrUrl.endsWith('.xlsx') || spreadsheetIdOrUrl.endsWith('.xls');
 
-        // 1. Si es un archivo Excel de Drive (.xlsx / .xls), descargarlo y leerlo con SheetJS
-        if (isExcel && currentAccessToken) {
+        // 1. Prioridad: Descargar o exportar vía Drive API y parsear en memoria con SheetJS
+        // Esta vía funciona con el token de Drive sin requerir que la Google Sheets API esté habilitada
+        if (currentAccessToken) {
             try {
-                const workbook = await googleService.fetchExcelFromDrive(spreadsheetId);
+                const workbook = await googleService.fetchWorkbookFromDrive(spreadsheetId, fileNameOrMime);
                 if (workbook.SheetNames && workbook.SheetNames.length > 0) {
                     return workbook.SheetNames;
                 }
-            } catch (excelErr) {
-                console.warn('Error reading Excel from Drive with SheetJS, trying Sheets API:', excelErr);
+            } catch (driveErr) {
+                console.warn('Drive export/media para pestañas falló, probando Sheets API:', driveErr);
             }
         }
 
@@ -323,16 +387,6 @@ export const googleService = {
                     const sheets = data.sheets || [];
                     const titles = sheets.map((s: any) => s.properties?.title as string).filter(Boolean);
                     if (titles.length > 0) return titles;
-                } else if (res.status === 400 || res.status === 404) {
-                    // Si Sheets API falla porque el archivo en Drive es un binario .xlsx sin convertir
-                    try {
-                        const workbook = await googleService.fetchExcelFromDrive(spreadsheetId);
-                        if (workbook.SheetNames && workbook.SheetNames.length > 0) {
-                            return workbook.SheetNames;
-                        }
-                    } catch (e) {
-                        console.warn('Fallback Excel download failed:', e);
-                    }
                 }
             }
 
@@ -350,10 +404,10 @@ export const googleService = {
                     if (titles.length > 0) return titles;
                 }
             } catch (gapiErr) {
-                console.warn('GAPI tabs fetch failed, checking public sheet:', gapiErr);
+                console.warn('GAPI tabs fetch failed, fallback a pestaña única:', gapiErr);
             }
 
-            // 4. Fallback para hojas públicas compartidas
+            // 4. Fallback por defecto
             return ['Hoja 1'];
         } catch (error: any) {
             console.error('Error fetching sheet tabs:', error);
@@ -366,16 +420,17 @@ export const googleService = {
         const spreadsheetId = googleService.extractSpreadsheetId(spreadsheetIdOrUrl);
         const matchSheet = range.match(/^'([^']+)'/);
         const sheetName = matchSheet ? matchSheet[1] : (range.split('!')[0] || 'Hoja 1');
-        const isExcel = googleService.isExcelFile(fileNameOrMime || '') || googleService._excelCache.has(spreadsheetId);
 
-        // 1. Si es Excel (.xlsx/.xls) o está en caché de SheetJS, leer directamente de la pestaña
-        if (isExcel) {
+        // 1. Prioridad: Leer desde el WorkBook parseado en memoria o descargado vía Drive API (SheetJS)
+        if (googleService._excelCache.has(spreadsheetId) || currentAccessToken) {
             try {
-                const workbook = await googleService.fetchExcelFromDrive(spreadsheetId);
+                const workbook = await googleService.fetchWorkbookFromDrive(spreadsheetId, fileNameOrMime);
                 const records = googleService.readWorkbookSheetData(workbook, sheetName);
-                if (records.length > 0) return records;
+                if (records.length > 0) {
+                    return records;
+                }
             } catch (excelErr) {
-                console.warn('Error reading sheet from Excel workbook, trying Sheets API:', excelErr);
+                console.warn('Lectura desde WorkBook Drive falló, probando Sheets API:', excelErr);
             }
         }
         
@@ -403,18 +458,9 @@ export const googleService = {
                             return item;
                         });
                     }
-                } else if (res.status === 400 || res.status === 404) {
-                    // Fallback a descarga Excel si no era formato nativo de Sheets
-                    try {
-                        const workbook = await googleService.fetchExcelFromDrive(spreadsheetId);
-                        const records = googleService.readWorkbookSheetData(workbook, sheetName);
-                        if (records.length > 0) return records;
-                    } catch (e) {
-                        console.warn('Fallback Excel sheet read failed:', e);
-                    }
                 }
             } catch (restErr) {
-                console.warn('REST fetchSheetData failed, falling back:', restErr);
+                console.warn('REST Sheets API fetchSheetData falló:', restErr);
             }
         }
 
@@ -441,10 +487,10 @@ export const googleService = {
                 }
             }
         } catch (gapiErr) {
-            console.warn('GAPI fetchSheetData failed, trying CSV public fallback:', gapiErr);
+            console.warn('GAPI fetchSheetData failed:', gapiErr);
         }
 
-        // 4. Fallback a lectura pública CSV
+        // 4. Fallback a lectura pública CSV (solo para documentos publicados o de enlace público)
         return googleService.fetchSheetDataPublic(spreadsheetId, sheetName);
     },
 
@@ -465,6 +511,9 @@ export const googleService = {
             return googleService.parseCsvToObjects(csvText);
         } catch (error: any) {
             console.error('Error fetching public sheet CSV:', error);
+            if (error?.message?.includes('Failed to fetch') || error?.name === 'TypeError') {
+                throw new Error('No se pudo acceder a la hoja de cálculo. Si el documento es privado, conéctate con Google o usa el botón "Examinar Excel" para subir el archivo directamente.');
+            }
             throw error;
         }
     },
