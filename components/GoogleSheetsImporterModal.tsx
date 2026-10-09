@@ -9,6 +9,10 @@ import {
   Trash2, 
   X, 
   FolderOpen,
+  Folder,
+  ChevronRight,
+  Home as HomeIcon,
+  RefreshCw,
   ArrowRight,
   Sparkles,
   Save
@@ -40,11 +44,17 @@ export const GoogleSheetsImporterModal: React.FC<GoogleSheetsImporterModalProps>
   // Estados de conexión y archivos
   const [hasGoogleAuth, setHasGoogleAuth] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [driveFiles, setDriveFiles] = useState<Array<{ id: string; name: string; modifiedTime?: string }>>([]);
+  const [driveFiles, setDriveFiles] = useState<Array<{ id: string; name: string; mimeType: string; modifiedTime?: string }>>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFile, setSelectedFile] = useState<{ id: string; name: string } | null>(null);
   const [manualInput, setManualInput] = useState(initialSpreadsheetId || '');
+
+  // Explorador de carpetas y migas de pan
+  const [currentFolder, setCurrentFolder] = useState<{ id: string | null; name: string }>({ id: null, name: 'Mi Unidad' });
+  const [folderHistory, setFolderHistory] = useState<Array<{ id: string | null; name: string }>>([
+    { id: null, name: 'Mi Unidad' }
+  ]);
 
   // Pestañas disponibles y seleccionadas
   const [availableTabs, setAvailableTabs] = useState<string[]>([]);
@@ -84,7 +94,7 @@ export const GoogleSheetsImporterModal: React.FC<GoogleSheetsImporterModalProps>
         googleService.setAccessToken(tokenResponse.access_token);
         setHasGoogleAuth(true);
         showToast('Conectado con éxito a tu cuenta de Google', 'success');
-        await loadDriveFiles();
+        await loadDriveFiles(null);
       } catch (err: any) {
         console.error("Error al inicializar sesión de Google:", err);
         showToast('Sesión iniciada. Puedes pegar el enlace de tu Google Sheet directamente.', 'info');
@@ -99,22 +109,60 @@ export const GoogleSheetsImporterModal: React.FC<GoogleSheetsImporterModalProps>
     }
   });
 
-  const loadDriveFiles = async () => {
+  const loadDriveFiles = async (folderId?: string | null, search?: string) => {
     setIsLoadingFiles(true);
     try {
-      const files = await googleService.fetchSpreadsheetsFromDrive();
+      const files = await googleService.fetchSpreadsheetsFromDrive({
+        folderId: folderId || undefined,
+        searchTerm: search || undefined
+      });
       setDriveFiles(files);
       setHasGoogleAuth(true);
       if (files.length === 0) {
-        showToast('Conectado a Google. Si tu hoja está compartida o en otra carpeta, pega el enlace abajo para abrirla.', 'info');
+        if (search) {
+          showToast(`No se encontraron archivos con "${search}". Busca otro término o pega el enlace abajo.`, 'info');
+        } else {
+          showToast('Esta carpeta no contiene hojas de cálculo ni subcarpetas.', 'info');
+        }
       }
     } catch (err: any) {
       console.warn("Fallo al listar Drive:", err);
       setHasGoogleAuth(true);
-      showToast('Sesión iniciada. Si tu hoja no aparece, puedes pegar el enlace directo abajo.', 'info');
+      showToast('Sesión iniciada. Si tu archivo no aparece en la lista, puedes pegar el enlace directo abajo.', 'info');
     } finally {
       setIsLoadingFiles(false);
     }
+  };
+
+  const handleOpenFolder = (folderId: string, folderName: string) => {
+    setSearchQuery('');
+    const newFolder = { id: folderId, name: folderName };
+    setCurrentFolder(newFolder);
+    setFolderHistory(prev => [...prev, newFolder]);
+    loadDriveFiles(folderId);
+  };
+
+  const handleNavigateBreadcrumb = (index: number) => {
+    setSearchQuery('');
+    const target = folderHistory[index];
+    const newHistory = folderHistory.slice(0, index + 1);
+    setCurrentFolder(target);
+    setFolderHistory(newHistory);
+    loadDriveFiles(target.id);
+  };
+
+  const handleSearchDrive = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!searchQuery.trim()) {
+      loadDriveFiles(currentFolder.id);
+      return;
+    }
+    loadDriveFiles(null, searchQuery.trim());
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    loadDriveFiles(currentFolder.id);
   };
 
   // Al seleccionar un archivo de Drive o ingresar URL/ID manual
@@ -354,51 +402,155 @@ export const GoogleSheetsImporterModal: React.FC<GoogleSheetsImporterModalProps>
                 </button>
               </div>
 
-              {/* Lista de archivos de Drive encontrados */}
-              {driveFiles.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
-                      Hojas de cálculo en tu Drive ({driveFiles.length})
-                    </label>
-                    <div className="relative w-48 sm:w-64">
-                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              {/* Explorador de Archivos y Carpetas de Google Drive */}
+              {hasGoogleAuth && (
+                <div className="space-y-3.5 bg-slate-50/80 p-4 rounded-2xl border border-slate-200">
+                  
+                  {/* Barra de Búsqueda Recursiva en Todo Drive */}
+                  <form onSubmit={handleSearchDrive} className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                       <input
                         type="text"
-                        placeholder="Buscar por nombre..."
+                        placeholder="Buscar en todo tu Drive y subcarpetas (ej. Presupuesto, Actividades)..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-900"
+                        className="w-full pl-9 pr-8 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900 shadow-2xs"
                       />
+                      {searchQuery && (
+                        <button
+                          type="button"
+                          onClick={handleClearSearch}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                        >
+                          <X size={13} />
+                        </button>
+                      )}
                     </div>
+                    <button
+                      type="submit"
+                      disabled={isLoadingFiles}
+                      className="px-4 py-2 bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+                    >
+                      {isLoadingFiles ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                      <span className="hidden sm:inline">Buscar</span>
+                    </button>
+                  </form>
+
+                  {/* Migas de Pan (Breadcrumbs) de Navegación por Carpetas */}
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-200/80">
+                    <div className="flex items-center gap-1.5 text-xs overflow-x-auto py-1 px-2.5 bg-white border border-slate-200 rounded-xl flex-1 shadow-2xs">
+                      {folderHistory.map((folder, idx) => (
+                        <React.Fragment key={folder.id || 'root'}>
+                          {idx > 0 && <ChevronRight size={12} className="text-slate-400 shrink-0" />}
+                          <button
+                            type="button"
+                            onClick={() => handleNavigateBreadcrumb(idx)}
+                            className={`hover:text-blue-900 hover:underline font-bold truncate max-w-[130px] flex items-center gap-1 transition-colors cursor-pointer ${
+                              idx === folderHistory.length - 1 ? 'text-blue-950 font-black' : 'text-slate-500'
+                            }`}
+                          >
+                            {idx === 0 && <HomeIcon size={12} className="shrink-0" />}
+                            <span className="truncate">{folder.name}</span>
+                          </button>
+                        </React.Fragment>
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => loadDriveFiles(currentFolder.id)}
+                      disabled={isLoadingFiles}
+                      title="Actualizar carpeta actual"
+                      className="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-blue-900 hover:bg-slate-50 shadow-2xs transition-all cursor-pointer shrink-0"
+                    >
+                      <RefreshCw size={13} className={isLoadingFiles ? 'animate-spin' : ''} />
+                    </button>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto p-1">
-                    {driveFiles
-                      .filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                      .map((file) => (
-                        <div
-                          key={file.id}
-                          onClick={() => handleSelectFile(file.id, file.name)}
-                          className="p-3.5 rounded-xl border border-slate-200 hover:border-blue-900 hover:bg-blue-50/50 cursor-pointer transition-all flex items-center justify-between group shadow-xs"
-                        >
-                          <div className="flex items-center space-x-3 overflow-hidden">
-                            <FileSpreadsheet size={18} className="text-emerald-600 shrink-0" />
-                            <div className="truncate">
-                              <p className="text-xs font-bold text-slate-800 group-hover:text-blue-900 truncate">
-                                {file.name}
-                              </p>
-                              {file.modifiedTime && (
-                                <p className="text-[10px] text-slate-400">
-                                  Modificado: {new Date(file.modifiedTime).toLocaleDateString()}
-                                </p>
-                              )}
+                  {/* Contenido de la carpeta o resultados de búsqueda */}
+                  {isLoadingFiles ? (
+                    <div className="py-12 flex flex-col items-center justify-center space-y-2 text-slate-400">
+                      <Loader2 size={24} className="animate-spin text-blue-900" />
+                      <p className="text-xs font-semibold">Explorando Google Drive...</p>
+                    </div>
+                  ) : driveFiles.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-64 overflow-y-auto p-1">
+                      {driveFiles.map((file) => {
+                        const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
+
+                        if (isFolder) {
+                          return (
+                            <div
+                              key={file.id}
+                              onClick={() => handleOpenFolder(file.id, file.name)}
+                              className="p-3 rounded-xl border border-amber-200/90 bg-amber-50/40 hover:bg-amber-100/50 hover:border-amber-400 cursor-pointer transition-all flex items-center justify-between group shadow-2xs"
+                            >
+                              <div className="flex items-center space-x-2.5 overflow-hidden">
+                                <div className="w-8 h-8 rounded-lg bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-700 shrink-0 group-hover:scale-105 transition-transform">
+                                  <Folder size={17} />
+                                </div>
+                                <div className="truncate">
+                                  <p className="text-xs font-black text-slate-800 group-hover:text-amber-950 truncate">
+                                    {file.name}
+                                  </p>
+                                  <span className="text-[9.5px] font-extrabold text-amber-700 uppercase tracking-wider">
+                                    Carpeta • Clic para explorar
+                                  </span>
+                                </div>
+                              </div>
+                              <ArrowRight size={14} className="text-amber-500 group-hover:translate-x-1 transition-transform shrink-0" />
                             </div>
+                          );
+                        }
+
+                        // Hoja de cálculo
+                        return (
+                          <div
+                            key={file.id}
+                            onClick={() => handleSelectFile(file.id, file.name)}
+                            className="p-3 rounded-xl border border-slate-200 bg-white hover:border-blue-900 hover:bg-blue-50/50 cursor-pointer transition-all flex items-center justify-between group shadow-2xs"
+                          >
+                            <div className="flex items-center space-x-2.5 overflow-hidden">
+                              <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0 group-hover:scale-105 transition-transform">
+                                <FileSpreadsheet size={17} />
+                              </div>
+                              <div className="truncate">
+                                <p className="text-xs font-bold text-slate-800 group-hover:text-blue-900 truncate">
+                                  {file.name}
+                                </p>
+                                {file.modifiedTime && (
+                                  <p className="text-[10px] text-slate-400">
+                                    Modificado: {new Date(file.modifiedTime).toLocaleDateString()}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <ArrowRight size={14} className="text-slate-300 group-hover:text-blue-900 group-hover:translate-x-1 transition-transform shrink-0" />
                           </div>
-                          <ArrowRight size={14} className="text-slate-300 group-hover:text-blue-900 transition-transform group-hover:translate-x-1 shrink-0" />
-                        </div>
-                      ))}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="py-8 text-center space-y-2 bg-white rounded-xl border border-dashed border-slate-200 p-4">
+                      <FolderOpen size={28} className="mx-auto text-slate-300" />
+                      <p className="text-xs font-bold text-slate-600">
+                        {searchQuery ? `No encontramos archivos con "${searchQuery}"` : 'No hay hojas ni subcarpetas en este nivel'}
+                      </p>
+                      <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
+                        Puedes buscar por palabra clave arriba, o pegar el enlace directo de tu Google Sheet aquí abajo.
+                      </p>
+                      {folderHistory.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleNavigateBreadcrumb(0)}
+                          className="text-xs font-bold text-blue-900 hover:underline pt-1"
+                        >
+                          Volver a Mi Unidad raíz
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 

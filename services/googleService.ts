@@ -161,19 +161,56 @@ export const googleService = {
         return clean;
     },
 
-    // DRIVE API: List Google Sheets files from user's Google Drive
-    fetchSpreadsheetsFromDrive: async (): Promise<Array<{ id: string; name: string; modifiedTime?: string; iconLink?: string }>> => {
+    // DRIVE API: List Google Sheets files & folders with recursive search and folder navigation
+    fetchSpreadsheetsFromDrive: async (options?: { 
+        searchTerm?: string; 
+        folderId?: string;
+        onlySheets?: boolean;
+    }): Promise<Array<{ id: string; name: string; mimeType: string; modifiedTime?: string; iconLink?: string }>> => {
         try {
-            // 1. Vía REST directa con Access Token (ultra rápido, sin gapi)
+            const searchTerm = options?.searchTerm?.trim();
+            const folderId = options?.folderId?.trim();
+            const onlySheets = options?.onlySheets || false;
+
+            // Construir query de Drive v3
+            let queryParts: string[] = ['trashed = false'];
+
+            if (onlySheets) {
+                queryParts.push("mimeType = 'application/vnd.google-apps.spreadsheet'");
+            } else {
+                queryParts.push("(mimeType = 'application/vnd.google-apps.spreadsheet' or mimeType = 'application/vnd.google-apps.folder')");
+            }
+
+            if (searchTerm) {
+                // Búsqueda recursiva por nombre en todo el Drive
+                const escapedTerm = searchTerm.replace(/'/g, "\\'");
+                queryParts.push(`name contains '${escapedTerm}'`);
+            } else if (folderId) {
+                // Explorar contenidos dentro de una carpeta específica
+                queryParts.push(`'${folderId}' in parents`);
+            }
+
+            const query = queryParts.join(' and ');
+
+            // 1. Vía REST directa con Access Token (soporta subcarpetas y Shared Drives)
             if (currentAccessToken) {
-                const query = "mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false";
-                const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=${encodeURIComponent('files(id, name, modifiedTime, iconLink)')}&orderBy=modifiedTime desc&pageSize=50`;
+                const params = new URLSearchParams({
+                    q: query,
+                    fields: 'files(id, name, mimeType, modifiedTime, iconLink)',
+                    orderBy: 'folder,modifiedTime desc',
+                    pageSize: '100',
+                    supportsAllDrives: 'true',
+                    includeItemsFromAllDrives: 'true'
+                });
+
+                const url = `https://www.googleapis.com/drive/v3/files?${params.toString()}`;
                 const res = await fetch(url, {
                     headers: {
                         Authorization: `Bearer ${currentAccessToken}`,
                         Accept: 'application/json'
                     }
                 });
+
                 if (res.ok) {
                     const data = await res.json();
                     return data.files || [];
@@ -185,16 +222,18 @@ export const googleService = {
             const client = (gapi as any).client;
             if (client && client.drive) {
                 const response = await client.drive.files.list({
-                    q: "mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false",
-                    fields: 'files(id, name, modifiedTime, iconLink)',
-                    orderBy: 'modifiedTime desc',
-                    pageSize: 30
+                    q: query,
+                    fields: 'files(id, name, mimeType, modifiedTime, iconLink)',
+                    orderBy: 'folder,modifiedTime desc',
+                    pageSize: 50,
+                    supportsAllDrives: true,
+                    includeItemsFromAllDrives: true
                 });
                 return response.result.files || [];
             }
             return [];
         } catch (error: any) {
-            console.error('Error fetching spreadsheets from Drive:', error);
+            console.error('Error fetching spreadsheets/folders from Drive:', error);
             throw error;
         }
     },
