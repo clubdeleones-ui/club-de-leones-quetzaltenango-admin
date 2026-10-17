@@ -1,5 +1,5 @@
 import { ConvencionRegistro } from '../types';
-import { gmailService } from './gmailService';
+import { gmailService, BroadcastResult } from './gmailService';
 
 // Token de Telegram ofuscado para evitar alertas de escáneres estáticos de GitHub (GitGuardian)
 export const DEFAULT_TELEGRAM_BOT_TOKEN = (import.meta as any).env?.VITE_TELEGRAM_BOT_TOKEN || 
@@ -212,7 +212,7 @@ ${(registro as any).esAcompanante ? `<b>Acompañante de:</b> ${(registro as any)
     asunto: string, 
     mensajeBody: string, 
     customScriptUrl?: string
-  ): Promise<number> => {
+  ): Promise<BroadcastResult> => {
     return await gmailService.sendMassBroadcast(
       destinatarios, 
       asunto, 

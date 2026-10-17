@@ -11,6 +11,9 @@ export interface CausaGlobalGST {
     | 'Cáncer'
     | 'Medio Ambiente'
     | 'Cierre GST';
+  causa?: string;
+  icono?: string;
+  descripcionSugerida?: string;
   fechaTexto: string;
   conmemoracion: string;
   tipo: 'dia' | 'semana' | 'mes';
@@ -25,6 +28,8 @@ export interface CausaGlobalGST {
     border: string;
     accentHex: string;
     gradientHeader: string;
+    lightBg?: string;
+    darkText?: string;
   };
   iconoKey: 'users' | 'ribbon-gold' | 'peace' | 'lotus' | 'eye' | 'diabetes' | 'hunger' | 'ribbon-purple' | 'environment' | 'chart' | 'handshake';
   sugerenciaActividad: string;
@@ -312,7 +317,7 @@ export const CAUSAS_GLOBALES_GST_2026_2027: CausaGlobalGST[] = [
   // 14. Marzo 2027 (Mes de enfoque Ayuda Humanitaria)
   {
     id: 'gst-2027-03-mes',
-    causaGlobal: 'Ayuda Humanitaria',
+    causaGlobal: 'Ayuda Humanitaria / Paz',
     fechaTexto: 'Marzo 2027',
     conmemoracion: 'Período de enfoque en servicio humanitario',
     tipo: 'mes',
@@ -461,6 +466,32 @@ export const CAUSAS_GLOBALES_GST_2026_2027: CausaGlobalGST[] = [
   }
 ];
 
+const EMOJI_MAP: Record<string, string> = {
+  'users': '👥',
+  'ribbon-gold': '🎗️',
+  'ribbon-purple': '💜',
+  'peace': '🕊️',
+  'lotus': '🧘',
+  'eye': '👁️',
+  'diabetes': '🩸',
+  'hunger': '🍲',
+  'environment': '🌱',
+  'chart': '📊',
+  'handshake': '🤝'
+};
+
+const enrichCausa = (item: CausaGlobalGST): CausaGlobalGST => ({
+  ...item,
+  causa: item.causa || item.causaGlobal,
+  icono: item.icono || EMOJI_MAP[item.iconoKey] || '🦁',
+  descripcionSugerida: item.descripcionSugerida || item.sugerenciaActividad,
+  color: {
+    ...item.color,
+    lightBg: item.color.lightBg || `${item.color.accentHex}15`,
+    darkText: item.color.darkText || item.color.accentHex
+  }
+});
+
 // Helper: Obtener causas relevantes para un mes específico
 export const getCausasParaMes = (year: number, monthIndex: number): CausaGlobalGST[] => {
   return CAUSAS_GLOBALES_GST_2026_2027.filter(item => {
@@ -475,7 +506,7 @@ export const getCausasParaMes = (year: number, monthIndex: number): CausaGlobalG
       return fechaComparar >= inicio && fechaComparar <= fin;
     }
     return false;
-  });
+  }).map(enrichCausa);
 };
 
 // Helper: Obtener causa para un día exacto
@@ -484,7 +515,7 @@ export const getCausaParaDia = (year: number, monthIndex: number, day: number): 
   
   // Buscar primero evento de día exacto
   const exactDay = CAUSAS_GLOBALES_GST_2026_2027.find(item => item.tipo === 'dia' && item.fechaInicio === currentStr);
-  if (exactDay) return exactDay;
+  if (exactDay) return enrichCausa(exactDay);
 
   // Si no hay evento exacto, buscar si cae dentro de una semana especial
   const inWeek = CAUSAS_GLOBALES_GST_2026_2027.find(item => {
@@ -493,7 +524,8 @@ export const getCausaParaDia = (year: number, monthIndex: number, day: number): 
     }
     return false;
   });
-  if (inWeek) return inWeek;
+  if (inWeek) return enrichCausa(inWeek);
 
   return undefined;
 };
+
