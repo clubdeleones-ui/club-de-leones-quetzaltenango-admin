@@ -644,7 +644,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
               <span className="text-slate-500">Sede Central del Club de Leones</span>
             </p>
             <p className="text-sm">
-              Email: <a href="mailto:clubdeleonesquetzaltenango@gmail.com" className="text-slate-300 hover:text-yellow-400 transition-colors">clubdeleonesquetzaltenango@gmail.com</a>
+              Email: <a href={`mailto:${isConvencionRoute ? 'convencionleones27@gmail.com' : 'clubdeleonesquetzaltenango@gmail.com'}`} className="text-slate-300 hover:text-yellow-400 transition-colors">{isConvencionRoute ? 'convencionleones27@gmail.com' : 'clubdeleonesquetzaltenango@gmail.com'}</a>
             </p>
           </div>
         </div>

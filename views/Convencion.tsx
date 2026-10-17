@@ -2966,7 +2966,11 @@ export default function Convencion() {
                           <div><span className="text-slate-400">A Nombre:</span> <strong>Club de Leones de Quetzaltenango</strong></div>
                         </div>
                         <p className="text-[11px] text-slate-300 pt-1.5 border-t border-white/10 font-medium">
-                          Al realizar tu pago, envía la fotografía de tu boleta a la Comisión Organizadora con tu nombre y club.
+                          Al realizar tu pago, envía la fotografía de tu boleta a la Comisión Organizadora al correo{' '}
+                          <a href="mailto:convencionleones27@gmail.com" className="text-yellow-300 underline font-bold hover:text-yellow-200 transition-colors">
+                            convencionleones27@gmail.com
+                          </a>{' '}
+                          indicando tu nombre, club y folio de registro.
                         </p>
                       </div>
                     )}
@@ -2990,6 +2994,17 @@ export default function Convencion() {
                     >
                       Registrar a otro participante
                     </button>
+                  </div>
+
+                  {/* Correo Oficial de la Convención */}
+                  <div className="pt-4 border-t border-white/10 text-center text-xs text-slate-400">
+                    <span className="inline-flex items-center space-x-1.5">
+                      <Mail size={13} className="text-yellow-400" />
+                      <span>Correo oficial de la Convención:</span>
+                      <a href="mailto:convencionleones27@gmail.com" className="text-yellow-300 font-bold hover:underline">
+                        convencionleones27@gmail.com
+                      </a>
+                    </span>
                   </div>
                 </div>
               )

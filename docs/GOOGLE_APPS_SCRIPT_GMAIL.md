@@ -1,7 +1,7 @@
 # Guía y Código de Google Apps Script: Integración de Gmail
 
-Este script se instala en [script.google.com](https://script.google.com/) con la cuenta de Google institucional:
-`clubdeleonesquetzaltenango@gmail.com`
+Este script se instala en [script.google.com](https://script.google.com/) con la cuenta de Google de la convención:
+`convencionleones27@gmail.com`
 
 Permite enviar correos automatizados con plantillas institucionales HTML, confirmaciones de pre-registro, comprobantes de pago con Entrada QR, recordatorios y comunicados masivos sin costo y con alta entregabilidad desde la propia bandeja de Gmail.
 
@@ -39,7 +39,7 @@ function doPost(e) {
     // Configuración de envío con GmailApp
     var options = {
       name: "Club de Leones Quetzaltenango",
-      replyTo: "clubdeleonesquetzaltenango@gmail.com"
+      replyTo: "convencionleones27@gmail.com"
     };
 
     if (htmlBody) {
@@ -67,12 +67,12 @@ function doGet(e) {
 ---
 
 ## Pasos para Implementar / Actualizar
-1. Abre [script.google.com](https://script.google.com/) con `clubdeleonesquetzaltenango@gmail.com`.
+1. Abre [script.google.com](https://script.google.com/) con `convencionleones27@gmail.com`.
 2. Crea un **Nuevo proyecto** (o abre el existente de la Convención).
 3. Pega el código de arriba.
 4. Haz clic en **Implementar** > **Nueva implementación**.
 5. Selecciona tipo: **Aplicación web**.
-6. En *Ejecutar como*, selecciona: **Yo (clubdeleonesquetzaltenango@gmail.com)**.
+6. En *Ejecutar como*, selecciona: **Yo (convencionleones27@gmail.com)**.
 7. En *Quién tiene acceso*, selecciona: **Cualquier usuario** (Even Anonymous).
 8. Haz clic en **Implementar** y autoriza los permisos de envío de Gmail.
 9. Copia la URL resultante (`https://script.google.com/macros/s/.../exec`) y configúrala en el Dashboard de la Convención en la pestaña de Configuración.

@@ -335,9 +335,9 @@ export function AdminConvencion() {
         setIsTestingGmail(false);
         return;
       }
-      const res = await gmailService.sendTestEmail('clubdeleonesquetzaltenango@gmail.com', config.googleScriptUrl);
+      const res = await gmailService.sendTestEmail('convencionleones27@gmail.com', config.googleScriptUrl);
       if (res.ok) {
-        setSuccessMsg('¡Correo de prueba enviado con éxito a clubdeleonesquetzaltenango@gmail.com!');
+        setSuccessMsg('¡Correo de prueba enviado con éxito a convencionleones27@gmail.com!');
         setTimeout(() => setSuccessMsg(''), 4000);
       } else {
         setErrorMsg(res.message || 'No se pudo enviar el correo de prueba.');
@@ -1797,7 +1797,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                           <span>Automatización de Correos con Gmail</span>
                         </h4>
                         <p className="text-[11px] text-slate-500 mt-0.5">
-                          Envíos automáticos desde <strong>clubdeleonesquetzaltenango@gmail.com</strong> al pre-inscribirse o confirmar pago.
+                          Envíos automáticos desde <strong>convencionleones27@gmail.com</strong> al pre-inscribirse o confirmar pago.
                         </p>
                       </div>
                       <div className="flex items-center space-x-2">
