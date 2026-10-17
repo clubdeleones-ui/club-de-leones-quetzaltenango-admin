@@ -4,6 +4,7 @@ import { firebaseService } from '../services/firebaseService';
 import { Socio, UserRole } from '../types';
 import { useToast } from '../context/ToastContext';
 import { compressImageFile, validateImageFile } from '../utils/imageCompressor';
+import ProfilePhotoCropperModal from '../components/ProfilePhotoCropperModal';
 import {
   Search,
   User,
@@ -35,6 +36,9 @@ export default function CensoSocio() {
   const [censoActivo, setCensoActivo] = useState(true);
   const [sociosList, setSociosList] = useState<Socio[]>([]);
   const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // Photo Cropper state
+  const [rawCropperImage, setRawCropperImage] = useState<string | null>(null);
 
   // Flow step: 'search' | 'verify' | 'form' | 'success'
   const [step, setStep] = useState<'search' | 'verify' | 'form' | 'success'>('search');
@@ -189,8 +193,8 @@ export default function CensoSocio() {
     setStep('form');
   };
 
-  // Handle photo upload and compression
-  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle photo upload and open interactive cropper modal
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -200,15 +204,16 @@ export default function CensoSocio() {
       return;
     }
 
-    try {
-      setFormError(null);
-      const compressed = await compressImageFile(file, 400, 400, 0.7);
-      setFoto(compressed);
-      showToast("Foto procesada y optimizada", "info");
-    } catch (err) {
-      console.error("Error al comprimir foto:", err);
-      setFormError("No se pudo procesar la fotografía. Intenta con otra imagen.");
-    }
+    setFormError(null);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (typeof event.target?.result === 'string') {
+        setRawCropperImage(event.target.result);
+      }
+    };
+    reader.readAsDataURL(file);
+    // Reset file input value to allow re-uploading same file if cancelled
+    e.target.value = '';
   };
 
   // Submit form (Update or Create)
@@ -520,6 +525,11 @@ export default function CensoSocio() {
                               <span className="text-xs text-slate-500 font-medium truncate">
                                 {socio.puesto || socio.profesion || 'Socio'}
                               </span>
+                              {socio.telefono && socio.telefono.replace(/\D/g, '').length >= 4 && (
+                                <span className="text-[10px] font-mono font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                                  •••• {socio.telefono.replace(/\D/g, '').slice(-4)}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -601,10 +611,31 @@ export default function CensoSocio() {
             </div>
 
             <form onSubmit={handleVerify} className="space-y-4">
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-center">
-                <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">
-                  Ingresa los últimos 4 dígitos de tu Teléfono o DPI:
-                </label>
+              {(() => {
+                const cleanTel = (selectedSocio.telefono || '').replace(/\D/g, '');
+                const cleanDpi = (selectedSocio.dpi || '').replace(/\D/g, '');
+                const last4Tel = cleanTel.length >= 4 ? cleanTel.slice(-4) : '';
+                const last4Dpi = cleanDpi.length >= 4 ? cleanDpi.slice(-4) : '';
+
+                return (
+                  <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 text-center space-y-3">
+                    <label className="block text-xs font-black text-slate-700 uppercase tracking-wider">
+                      Confirma tu identidad ingresando los últimos 4 dígitos:
+                    </label>
+
+                    {last4Tel && (
+                      <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 bg-blue-50 text-blue-900 border border-blue-200 rounded-xl text-xs font-bold">
+                        <span>💡 Teléfono registrado termina en:</span>
+                        <span className="font-mono font-black text-sm bg-white px-2 py-0.5 rounded border border-blue-300">•••• {last4Tel}</span>
+                      </div>
+                    )}
+
+                    {!last4Tel && last4Dpi && (
+                      <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 bg-blue-50 text-blue-900 border border-blue-200 rounded-xl text-xs font-bold">
+                        <span>💡 DPI registrado termina en:</span>
+                        <span className="font-mono font-black text-sm bg-white px-2 py-0.5 rounded border border-blue-300">•••• {last4Dpi}</span>
+                      </div>
+                    )}
                 <input
                   type="password"
                   inputMode="numeric"
@@ -625,6 +656,8 @@ export default function CensoSocio() {
                   </p>
                 )}
               </div>
+            );
+          })()}
 
               <button
                 type="submit"
@@ -971,6 +1004,19 @@ export default function CensoSocio() {
               </Link>
             </div>
           </div>
+        )}
+
+        {/* Profile Photo Cropper Interactive Modal */}
+        {rawCropperImage && (
+          <ProfilePhotoCropperModal
+            imageSrc={rawCropperImage}
+            onCropComplete={(croppedBase64) => {
+              setFoto(croppedBase64);
+              setRawCropperImage(null);
+              showToast("¡Fotografía recortada y estandarizada en formato 1:1!", "success");
+            }}
+            onClose={() => setRawCropperImage(null)}
+          />
         )}
 
       </div>

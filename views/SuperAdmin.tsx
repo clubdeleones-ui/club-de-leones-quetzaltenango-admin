@@ -33,6 +33,7 @@ import { useModal } from '../context/ModalContext';
 import { useToast } from '../context/ToastContext';
 import { useConfirm } from '../components/ConfirmProvider';
 import { getWrittenDateTimeSpanish } from '../utils/dateSpanishFormatter';
+import ProfilePhotoCropperModal from '../components/ProfilePhotoCropperModal';
 import { 
   TrendingUp, 
   Calendar, 
@@ -640,6 +641,7 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const [socioSaveError, setSocioSaveError] = useState<string | null>(null);
   const [qrSocio, setQrSocio] = useState<Socio | null>(null);
   const [isGeneratingQr, setIsGeneratingQr] = useState(false);
+  const [rawAdminCropperImage, setRawAdminCropperImage] = useState<string | null>(null);
 
   // Check if editingSocio is a new registration
   const isNewSocio = useMemo(() => {
@@ -4348,7 +4350,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     printWindow.document.close();
   };
 
-  const handleEditSocioPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEditSocioPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const validation = validateImageFile(file);
@@ -4356,13 +4358,15 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       setSocioSaveError(validation.error || "Imagen inválida");
       return;
     }
-    try {
-      const compressed = await compressImageFile(file, 400, 400, 0.7);
-      setEditSocioForm(prev => ({ ...prev, foto: compressed }));
-    } catch (err) {
-      console.error("Error compressing image:", err);
-      setSocioSaveError("No se pudo procesar la imagen.");
-    }
+    setSocioSaveError(null);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (typeof event.target?.result === 'string') {
+        setRawAdminCropperImage(event.target.result);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleSaveSocioSubmit = async (e: React.FormEvent) => {
@@ -7108,6 +7112,20 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
             </div>
           </div>
         </div>
+      )}
+
+      {/* Profile Photo Cropper Interactive Modal for Admin */}
+      {rawAdminCropperImage && (
+        <ProfilePhotoCropperModal
+          imageSrc={rawAdminCropperImage}
+          onCropComplete={(croppedBase64) => {
+            setEditSocioForm(prev => ({ ...prev, foto: croppedBase64 }));
+            setRawAdminCropperImage(null);
+            showToast("Foto de socio recortada y estandarizada en 1:1", "success");
+          }}
+          onClose={() => setRawAdminCropperImage(null)}
+          title="Ajustar Foto de Socio"
+        />
       )}
 
       {/* --- PAYMENT REGISTRATION MODAL --- */}

@@ -37,6 +37,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { MOCK_DONACIONES, MOCK_SOCIOS } from '../constants';
 import { generateDiplomaDonacionPDF } from '../utils/pdfGenerator';
 import { compressImageFile, validateImageFile } from '../utils/imageCompressor';
+import ProfilePhotoCropperModal from '../components/ProfilePhotoCropperModal';
 import { firebaseService } from '../services/firebaseService';
 import { useModal } from '../context/ModalContext';
 import { useToast } from '../context/ToastContext';
@@ -81,6 +82,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
 
   const [showQrModal, setShowQrModal] = useState(false);
   const [isGeneratingQr, setIsGeneratingQr] = useState(false);
+  const [rawCropperImage, setRawCropperImage] = useState<string | null>(null);
 
   const handleQrClick = async () => {
     if (user.qrToken) {
@@ -183,7 +185,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
     setSocioSaveSuccess(false);
   };
 
-  const handleEditSocioPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEditSocioPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const validation = validateImageFile(file);
@@ -191,13 +193,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
       setSocioSaveError(validation.error || "Imagen inválida");
       return;
     }
-    try {
-      const compressed = await compressImageFile(file, 400, 400, 0.7);
-      setEditFoto(compressed);
-    } catch (err) {
-      console.error("Error compressing image:", err);
-      setSocioSaveError("No se pudo procesar la imagen.");
-    }
+    setSocioSaveError(null);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (typeof event.target?.result === 'string') {
+        setRawCropperImage(event.target.result);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleSaveSocioSubmit = async (e: React.FormEvent) => {
@@ -1070,6 +1074,19 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
             </p>
           </div>
         </div>
+      )}
+      {/* Profile Photo Cropper Interactive Modal */}
+      {rawCropperImage && (
+        <ProfilePhotoCropperModal
+          imageSrc={rawCropperImage}
+          onCropComplete={(croppedBase64) => {
+            setEditFoto(croppedBase64);
+            setRawCropperImage(null);
+            showToast("¡Fotografía recortada y estandarizada en formato 1:1!", "success");
+          }}
+          onClose={() => setRawCropperImage(null)}
+          title="Ajustar Mi Foto de Perfil"
+        />
       )}
     </div>
   );

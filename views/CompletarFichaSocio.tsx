@@ -4,6 +4,7 @@ import { firebaseService } from '../services/firebaseService';
 import { Socio } from '../types';
 import { useToast } from '../context/ToastContext';
 import { compressImageFile, validateImageFile } from '../utils/imageCompressor';
+import ProfilePhotoCropperModal from '../components/ProfilePhotoCropperModal';
 import { 
   User, 
   Mail, 
@@ -28,6 +29,9 @@ export default function CompletarFichaSocio() {
   const [error, setError] = useState<string | null>(null);
   const [socio, setSocio] = useState<Socio | null>(null);
   
+  // Photo cropper state
+  const [rawCropperImage, setRawCropperImage] = useState<string | null>(null);
+
   // Form states
   const [nombre, setNombre] = useState('');
   const [correo, setCorreo] = useState('');
@@ -76,7 +80,7 @@ export default function CompletarFichaSocio() {
     fetchSocio();
   }, [id]);
 
-  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const validation = validateImageFile(file);
@@ -84,14 +88,15 @@ export default function CompletarFichaSocio() {
       setSaveError(validation.error || "Imagen inválida");
       return;
     }
-    try {
-      const compressed = await compressImageFile(file, 400, 400, 0.7);
-      setFoto(compressed);
-      setSaveError(null);
-    } catch (err) {
-      console.error("Error compressing image:", err);
-      setSaveError("No se pudo procesar la imagen.");
-    }
+    setSaveError(null);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (typeof event.target?.result === 'string') {
+        setRawCropperImage(event.target.result);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -354,6 +359,19 @@ export default function CompletarFichaSocio() {
           )}
         </div>
       </div>
+
+      {/* Profile Photo Cropper Interactive Modal */}
+      {rawCropperImage && (
+        <ProfilePhotoCropperModal
+          imageSrc={rawCropperImage}
+          onCropComplete={(croppedBase64) => {
+            setFoto(croppedBase64);
+            setRawCropperImage(null);
+            showToast("¡Fotografía recortada y estandarizada en formato 1:1!", "success");
+          }}
+          onClose={() => setRawCropperImage(null)}
+        />
+      )}
     </div>
   );
 }
