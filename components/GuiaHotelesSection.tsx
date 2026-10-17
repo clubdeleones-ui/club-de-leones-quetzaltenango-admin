@@ -401,9 +401,8 @@ export const GuiaHotelesSection: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<string>('todos');
   const [selectedNights, setSelectedNights] = useState<number>(2); // 2 noches por defecto (Viernes a Domingo)
   
-  // Control de acordeón desplegable: IDs de hoteles expandidos (Set para permitir expandir/colapsar individual o grupal)
-  // Por defecto, inicializamos con Hotel Bella Luna expandido para mostrar el valor del convenio leonístico
-  const [expandedHotelIds, setExpandedHotelIds] = useState<Set<string>>(() => new Set(['bella-luna']));
+  // Control de acordeón desplegable: IDs de hoteles expandidos (inician todos cerrados por defecto)
+  const [expandedHotelIds, setExpandedHotelIds] = useState<Set<string>>(() => new Set());
   
   const [expandedAptHotel, setExpandedAptHotel] = useState<string | null>(null);
   const [copiedHotelId, setCopiedHotelId] = useState<string | null>(null);
