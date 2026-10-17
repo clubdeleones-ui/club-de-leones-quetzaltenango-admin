@@ -52,6 +52,7 @@ import { telegramService } from '../services/telegramService';
 import { gmailService } from '../services/gmailService';
 import { recurrenteService } from '../services/recurrenteService';
 import { ConvencionConfig, ConvencionRegistro } from '../types';
+import { GuiaHotelesSection } from '../components/GuiaHotelesSection';
 
 interface CountdownState {
   days: number;
@@ -718,6 +719,14 @@ export default function Convencion() {
   const scrollToInstalaciones = (e: React.MouseEvent) => {
     e.preventDefault();
     const element = document.getElementById('instalaciones');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const scrollToHoteles = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const element = document.getElementById('hoteles');
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
     }
@@ -1473,6 +1482,15 @@ export default function Convencion() {
                 <Compass size={17} className="text-yellow-400" />
                 <span>Explorar Sede & Programa</span>
               </button>
+
+              <button 
+                type="button"
+                onClick={scrollToHoteles}
+                className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-300 font-extrabold px-6 py-4 rounded-2xl text-sm transition-all border border-yellow-500/30 hover:border-yellow-400 backdrop-blur-md cursor-pointer"
+              >
+                <Building2 size={17} className="text-yellow-400" />
+                <span>Guía de Hoteles</span>
+              </button>
             </div>
 
             {/* Social Proof & Garantías */}
@@ -1728,6 +1746,9 @@ export default function Convencion() {
           ))}
         </div>
       </section>
+
+      {/* SECCIÓN INTERACTIVA: Guía de Hoteles y Hospedaje Oficial (D-3 Quetzaltenango) */}
+      <GuiaHotelesSection />
 
       {/* SECCIÓN 7: Formulario de Pre-registro Digital Guiado (4 Pasos) — GALA & CONVERSIÓN FLOTANTE */}
       <section id="pre-inscripcion" className="my-6 sm:my-20 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8 scroll-mt-10">
