@@ -61,6 +61,15 @@ interface CountdownState {
   seconds: number;
 }
 
+const CONVENCION_NAV_ITEMS = [
+  { id: 'inicio', label: 'Inicio', icon: Sparkles },
+  { id: 'instalaciones', label: 'Sede Oficial', icon: Compass },
+  { id: 'hoteles', label: 'Hoteles', icon: Building2 },
+  { id: 'agenda', label: 'Agenda & Cultura', icon: Calendar },
+  { id: 'mistica', label: 'Mística', icon: Flame },
+  { id: 'pre-inscripcion', label: 'Pre-registro', icon: ShieldCheck },
+];
+
 const ZONAS_CLUBS: Record<string, string[]> = {
   'Zona A-1': [
     'Guatemala Central',
@@ -708,28 +717,51 @@ export default function Convencion() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const scrollToPreInscripcion = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const element = document.getElementById('pre-inscripcion');
+  const [activeNavSection, setActiveNavSection] = useState<string>('inicio');
+
+  const scrollToSection = (id: string, e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    const element = document.getElementById(id);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+      const yOffset = -135;
+      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+      setActiveNavSection(id);
     }
+  };
+
+  useEffect(() => {
+    const handleScrollSpy = () => {
+      const sectionIds = ['pre-inscripcion', 'mistica', 'agenda', 'hoteles', 'instalaciones', 'inicio'];
+      const scrollPosition = window.scrollY + 160;
+
+      for (const id of sectionIds) {
+        const el = document.getElementById(id);
+        if (el) {
+          const top = el.offsetTop;
+          if (scrollPosition >= top) {
+            setActiveNavSection(id);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScrollSpy, { passive: true });
+    handleScrollSpy();
+    return () => window.removeEventListener('scroll', handleScrollSpy);
+  }, []);
+
+  const scrollToPreInscripcion = (e: React.MouseEvent) => {
+    scrollToSection('pre-inscripcion', e);
   };
 
   const scrollToInstalaciones = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const element = document.getElementById('instalaciones');
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
+    scrollToSection('instalaciones', e);
   };
 
   const scrollToHoteles = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const element = document.getElementById('hoteles');
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
+    scrollToSection('hoteles', e);
   };
 
   // Close dropdowns when clicking outside
@@ -1300,7 +1332,7 @@ export default function Convencion() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased overflow-x-hidden selection:bg-yellow-500 selection:text-blue-955 pb-24 relative">
       {/* Dynamic Hero Header Section Block - Floating Royal Banner */}
-      <div className="pt-2 sm:pt-8 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8">
+      <div id="inicio" className="pt-2 sm:pt-8 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8 scroll-mt-36">
         <header className="relative w-full py-10 sm:py-16 lg:py-20 px-3 sm:px-6 lg:px-8 overflow-hidden text-center z-10 rounded-2xl sm:rounded-[2.5rem] bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border sm:border-2 border-yellow-500/40 shadow-2xl">
           {/* Custom Header Background Image with Gradient Overlay */}
           {config.headerBgUrl && (
@@ -1512,8 +1544,51 @@ export default function Convencion() {
         </header>
       </div>
 
+      {/* SUB-NAVBAR INTERNO STICKY DE NAVEGACIÓN Y DESPLAZAMIENTO */}
+      <nav 
+        aria-label="Navegación rápida de secciones de la convención"
+        className="sticky top-20 z-40 bg-[#09152e]/95 backdrop-blur-xl border-y border-yellow-500/30 shadow-2xl transition-all duration-300"
+      >
+        <div className="max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8 flex items-center justify-between gap-3 h-14">
+          {/* Carrusel de Enlaces Rápidos (Swipable en móvil sin scrollbars) */}
+          <div className="flex items-center space-x-1 sm:space-x-2 overflow-x-auto no-scrollbar py-1 scroll-smooth w-full sm:w-auto">
+            {CONVENCION_NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeNavSection === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={(e) => scrollToSection(item.id, e)}
+                  className={`inline-flex items-center space-x-1.5 px-3 sm:px-4 py-2 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider shrink-0 transition-all duration-200 cursor-pointer ${
+                    isActive
+                      ? 'bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-400 text-blue-955 shadow-md shadow-yellow-400/25 scale-[1.02]'
+                      : 'text-slate-300 hover:text-white hover:bg-white/10 active:scale-95'
+                  }`}
+                >
+                  <Icon size={14} className={isActive ? 'text-blue-955' : 'text-yellow-400'} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Botón CTA Rápido de Pre-registro (en pantallas medianas y grandes) */}
+          <div className="hidden md:flex items-center space-x-2 shrink-0">
+            <button
+              type="button"
+              onClick={(e) => scrollToSection('pre-inscripcion', e)}
+              className="inline-flex items-center space-x-1.5 bg-yellow-400/20 hover:bg-yellow-400 hover:text-blue-955 text-yellow-300 border border-yellow-400/50 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-sm active:scale-95 group"
+            >
+              <ShieldCheck size={14} className="group-hover:scale-110 transition-transform" />
+              <span>Inscribirme Ahora</span>
+            </button>
+          </div>
+        </div>
+      </nav>
+
       {/* BANNER FLOTANTE: Conoce la Sede Virtualmente (Colina Country Club) */}
-      <section id="instalaciones" className="my-6 sm:my-10 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8 scroll-mt-10">
+      <section id="instalaciones" className="my-6 sm:my-10 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8 scroll-mt-36">
         <div className="bg-gradient-to-r from-[#0c1a38] via-[#09152e] to-[#0c1a38] text-white rounded-2xl sm:rounded-[2.5rem] p-4.5 sm:p-8 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-5 sm:gap-6 border sm:border-2 border-yellow-500/40 relative overflow-hidden text-center sm:text-left group">
           <div className="space-y-2 max-w-xl relative z-10">
             <span className="bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 text-[10px] font-black px-3.5 py-1 rounded-full uppercase tracking-wider inline-block shadow-sm">
@@ -1674,7 +1749,7 @@ export default function Convencion() {
       <GuiaHotelesSection />
 
       {/* SECCIÓN 4: Actividades Culturales y Sociales — CONTENEDORES FLOTANTES */}
-      <section className="my-8 sm:my-16 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8">
+      <section id="agenda" className="my-8 sm:my-16 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8 scroll-mt-36">
         <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4 mb-8 sm:mb-12">
           <div className="inline-flex items-center space-x-2 bg-blue-900/10 border border-blue-900/20 text-blue-900 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
             <Award size={14} />
@@ -1714,7 +1789,7 @@ export default function Convencion() {
       </section>
 
       {/* SECCIÓN 6: Experiencias Únicas — CONTENEDORES FLOTANTES */}
-      <section className="my-8 sm:my-16 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8">
+      <section id="mistica" className="my-8 sm:my-16 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8 scroll-mt-36">
         <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4 mb-8 sm:mb-12">
           <div className="inline-flex items-center space-x-2 bg-blue-900/10 border border-blue-900/20 text-blue-900 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
             <Compass size={14} className="text-amber-500" />
@@ -1751,7 +1826,7 @@ export default function Convencion() {
       </section>
 
       {/* SECCIÓN 7: Formulario de Pre-registro Digital Guiado (4 Pasos) — GALA & CONVERSIÓN FLOTANTE */}
-      <section id="pre-inscripcion" className="my-6 sm:my-20 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8 scroll-mt-10">
+      <section id="pre-inscripcion" className="my-6 sm:my-20 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8 scroll-mt-36">
         <div className="bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white rounded-2xl sm:rounded-[2.5rem] p-3.5 sm:p-12 lg:p-14 border sm:border-2 border-yellow-500/40 shadow-[0_25px_60px_rgba(0,0,0,0.35)] relative">
           {/* Acentos de Luz de Fondo encapsulados para no recortar menús desplegables */}
           <div className="absolute inset-0 rounded-2xl sm:rounded-[2.5rem] overflow-hidden pointer-events-none z-0">

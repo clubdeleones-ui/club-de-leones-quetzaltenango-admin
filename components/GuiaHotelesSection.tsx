@@ -456,7 +456,7 @@ export const GuiaHotelesSection: React.FC = () => {
   const allAreExpanded = filteredHoteles.every(h => expandedHotelIds.has(h.id));
 
   return (
-    <section id="hoteles" className="my-8 sm:my-16 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8 scroll-mt-10">
+    <section id="hoteles" className="my-8 sm:my-16 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8 scroll-mt-36">
       
       {/* Encabezado Principal */}
       <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4 mb-8 sm:mb-10">
