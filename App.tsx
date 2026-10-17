@@ -39,6 +39,7 @@ const RequerimientoPublico = lazyWithRetry(() => import('./views/RequerimientoPu
 const AgendaPublica = lazyWithRetry(() => import('./views/AgendaPublica').then(m => ({ default: m.AgendaPublica })), 'AgendaPublica');
 const NeveraPublica = lazyWithRetry(() => import('./views/NeveraPublica').then(m => ({ default: m.NeveraPublica })), 'NeveraPublica');
 const ProgramaFuturo = lazyWithRetry(() => import('./views/ProgramaFuturo'), 'ProgramaFuturo');
+const CensoSocio = lazyWithRetry(() => import('./views/CensoSocio'), 'CensoSocio');
 
 // Component to synchronize authenticated user session in real-time with Firestore socios collection
 interface UserSessionSyncProps {
@@ -197,6 +198,7 @@ const App: React.FC = () => {
               <Route path="/convocatoria/:id" element={<RequerimientoPublico />} />
               <Route path="/agenda-publica/:id" element={<AgendaPublica />} />
               <Route path="/nevera" element={<NeveraPublica />} />
+              <Route path="/censo" element={<CensoSocio />} />
 
               <Route path="/login" element={auth.isAuthenticated ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />} />
 

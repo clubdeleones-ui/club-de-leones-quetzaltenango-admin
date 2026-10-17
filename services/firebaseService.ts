@@ -383,6 +383,37 @@ export const firebaseService = {
     }
   },
 
+  // Get Censo Socios config (active state, message, deadline)
+  getCensoConfig: async (): Promise<{ activo: boolean; fechaLimite?: string; mensaje?: string }> => {
+    try {
+      const docRef = doc(db, "config", "censo_socios");
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const data = snap.data();
+        return {
+          activo: data.activo !== false,
+          fechaLimite: data.fechaLimite || '',
+          mensaje: data.mensaje || ''
+        };
+      }
+      return { activo: true, mensaje: "Portal oficial de censo y actualización de socios" };
+    } catch (err) {
+      console.warn("Error checking censo config, defaulting to active:", err);
+      return { activo: true, mensaje: "Portal oficial de censo y actualización de socios" };
+    }
+  },
+
+  // Save Censo Socios config
+  saveCensoConfig: async (config: { activo: boolean; fechaLimite?: string; mensaje?: string }): Promise<void> => {
+    try {
+      const docRef = doc(db, "config", "censo_socios");
+      await setDoc(docRef, config, { merge: true });
+    } catch (err) {
+      console.error("Error saving censo config:", err);
+      throw err;
+    }
+  },
+
   // Sync initial activities to Firestore
   syncInitialActividades: async (initialActividades: Actividad[]): Promise<void> => {
     try {

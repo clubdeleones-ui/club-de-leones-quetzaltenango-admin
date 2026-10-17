@@ -591,11 +591,28 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     return result;
   }, [voluntarios, voluntarioFilterActividad, voluntarioFilterEstado, voluntarioSearch]);
   const [roleFilter, setRoleFilter] = useState('Todos');
-  const [socioEstatusFilter, setSocioEstatusFilter] = useState<'todos' | 'activos' | 'directiva' | 'inactivos'>('todos');
+  const [socioEstatusFilter, setSocioEstatusFilter] = useState<'todos' | 'activos' | 'directiva' | 'inactivos' | 'pendientes'>('todos');
   const [socioSolvenciaFilter, setSocioSolvenciaFilter] = useState<'todos' | 'Al día' | 'Pendiente' | 'En mora'>('todos');
   const [socioViewMode, setSocioViewMode] = useState<'cards' | 'table'>('cards');
   const [selectedSocioDetail, setSelectedSocioDetail] = useState<Socio | null>(null);
   const [isLoadingSocios, setIsLoadingSocios] = useState(false);
+
+  // Censo QR Asambleas States
+  const [showCensoModal, setShowCensoModal] = useState(false);
+  const [censoActivo, setCensoActivo] = useState(true);
+  const [isSavingCensoConfig, setIsSavingCensoConfig] = useState(false);
+
+  useEffect(() => {
+    const loadCensoState = async () => {
+      try {
+        const cfg = await firebaseService.getCensoConfig();
+        setCensoActivo(cfg.activo);
+      } catch (e) {
+        console.warn("Error cargando config de censo:", e);
+      }
+    };
+    loadCensoState();
+  }, []);
 
   // Cuotas Redesign States
   const [cuotasFilterStatus, setCuotasFilterStatus] = useState<'Todos' | 'Al día' | 'Pendiente' | 'En mora'>('Todos');
@@ -4239,6 +4256,98 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       });
   };
 
+  const handleToggleCensoActivo = async () => {
+    setIsSavingCensoConfig(true);
+    try {
+      const nextState = !censoActivo;
+      await firebaseService.saveCensoConfig({ activo: nextState });
+      setCensoActivo(nextState);
+      showToast(`Portal de censo ${nextState ? 'activado' : 'pausado'} con éxito`, nextState ? 'success' : 'info');
+    } catch (err: any) {
+      console.error("Error cambiando estado de censo:", err);
+      showToast("No se pudo actualizar el estado del censo", "error");
+    } finally {
+      setIsSavingCensoConfig(false);
+    }
+  };
+
+  const handleAprobarSocioPendiente = async (socio: Socio) => {
+    try {
+      const year = new Date().getFullYear();
+      const seq = String(socios.length + 1).padStart(3, '0');
+      const nuevoCodigo = socio.codigoSocio && socio.codigoSocio.trim() !== '' ? socio.codigoSocio : `CLQ-${year}-${seq}`;
+      const updated: Socio = {
+        ...socio,
+        estatus: 'Active',
+        activo: true,
+        puesto: socio.puesto === 'Socio en Validación' ? 'Socio Regular' : (socio.puesto || 'Socio Regular'),
+        codigoSocio: nuevoCodigo,
+        fechaEdicion: new Date().toISOString(),
+        editadoPor: `Admin (${user.nombre})`
+      };
+      await firebaseService.saveSocio(updated);
+      setSocios(prev => prev.map(s => s.id === updated.id ? updated : s));
+      showToast(`¡Ficha de ${socio.nombre} aprobada! Código oficial asignado: #${nuevoCodigo}`, 'success');
+    } catch (err: any) {
+      console.error("Error al aprobar socio pendiente:", err);
+      showToast("Ocurrió un error al aprobar la ficha del socio", "error");
+    }
+  };
+
+  const handlePrintCensoSheet = () => {
+    const printUrl = `https://clubdeleonesquetzaltenango.org/#/censo`;
+    const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(printUrl)}`;
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast("Por favor permite ventanas emergentes para imprimir la lámina", "error");
+      return;
+    }
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Censo Leonístico - Club de Leones de Quetzaltenango</title>
+          <style>
+            @page { size: letter portrait; margin: 1.5cm; }
+            body { font-family: system-ui, -apple-system, sans-serif; text-align: center; color: #0B1E3D; padding: 25px; margin: 0; }
+            .header { border-bottom: 4px solid #C5A059; padding-bottom: 15px; margin-bottom: 25px; }
+            h1 { font-size: 26pt; margin: 0 0 6px 0; text-transform: uppercase; font-weight: 900; letter-spacing: 1px; }
+            h2 { font-size: 14pt; color: #C5A059; margin: 0; text-transform: uppercase; letter-spacing: 3px; font-weight: 800; }
+            .subtitle { font-size: 13pt; color: #475569; margin: 12px 0 0 0; font-weight: 600; }
+            .qr-container { display: inline-block; padding: 20px; border: 4px solid #0B1E3D; border-radius: 28px; margin: 25px 0; background: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.06); }
+            .qr-img { width: 330px; height: 330px; display: block; }
+            .instructions { font-size: 15pt; font-weight: 900; margin-top: 20px; line-height: 1.5; max-width: 550px; margin-left: auto; margin-right: auto; color: #0B1E3D; }
+            .steps { font-size: 11pt; color: #334155; margin-top: 15px; max-width: 550px; margin-left: auto; margin-right: auto; font-weight: 600; line-height: 1.6; }
+            .footer { margin-top: 45px; font-size: 10pt; color: #94A3B8; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; border-top: 1px solid #E2E8F0; padding-top: 15px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h2>Club de Leones de Quetzaltenango</h2>
+            <h1>Censo Leonístico Express</h1>
+            <div class="subtitle">Asamblea de Socios • Actualización y Registro sin Contraseñas</div>
+          </div>
+          <div class="qr-container">
+            <img src="${qrImgUrl}" class="qr-img" alt="Código QR Censo" />
+          </div>
+          <div class="instructions">
+            Apunta la cámara de tu teléfono móvil a este código QR para entrar a tu ficha.
+          </div>
+          <div class="steps">
+            <strong>Paso 1:</strong> Escribe tu nombre en la pantalla • <strong>Paso 2:</strong> Actualiza tus datos y foto • <strong>Paso 3:</strong> Si eres nuevo socio, regístrate en 2 minutos.
+          </div>
+          <div class="footer">
+            https://clubdeleonesquetzaltenango.org/#/censo • Distrito D-3 Guatemala
+          </div>
+          <script>
+            window.onload = function() { window.print(); }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   const handleEditSocioPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -4397,9 +4506,10 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     const directiva = socios.filter(s => isDirectivaSocio(s)).length;
     const alDia = socios.filter(s => s.estadoCuotas === 'Al día').length;
     const enMora = socios.filter(s => s.estadoCuotas === 'En mora' || s.estadoCuotas === 'Pendiente').length;
+    const pendientesValidacion = socios.filter(s => s.estatus === 'Pendiente' || s.estatus === 'Pending').length;
     const inactivos = socios.filter(s => s.estatus === 'Inactive' || s.activo === false).length;
-    const activos = total - inactivos;
-    return { total, directiva, alDia, enMora, inactivos, activos };
+    const activos = total - inactivos - pendientesValidacion;
+    return { total, directiva, alDia, enMora, inactivos, activos, pendientesValidacion };
   }, [socios]);
 
   const getSocioWhatsAppUrl = (socio: Socio) => {
@@ -4440,12 +4550,14 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
         return false;
       }
 
-      // 3. Filtro por Estatus de Membresía (Activos / Directiva / Inactivos)
+      // 3. Filtro por Estatus de Membresía (Activos / Directiva / Inactivos / Pendientes)
+      const isPending = s.estatus === 'Pendiente' || s.estatus === 'Pending';
       const isInactive = s.estatus === 'Inactive' || s.activo === false;
       const isDir = isDirectivaSocio(s);
-      if (socioEstatusFilter === 'activos' && isInactive) return false;
-      if (socioEstatusFilter === 'inactivos' && !isInactive) return false;
-      if (socioEstatusFilter === 'directiva' && !isDir) return false;
+      if (socioEstatusFilter === 'activos' && (isInactive || isPending)) return false;
+      if (socioEstatusFilter === 'inactivos' && (!isInactive || isPending)) return false;
+      if (socioEstatusFilter === 'directiva' && (!isDir || isPending)) return false;
+      if (socioEstatusFilter === 'pendientes' && !isPending) return false;
 
       // 4. Filtro por Solvencia de Cuotas
       if (socioSolvenciaFilter !== 'todos' && s.estadoCuotas !== socioSolvenciaFilter) {
@@ -4455,8 +4567,12 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
       return true;
     });
 
-    // Ordenamiento: Directiva primero, luego activos, luego inactivos, alfabéticamente
+    // Ordenamiento: Pendientes de validación primero, luego Directiva, luego activos, luego inactivos
     return list.sort((a, b) => {
+      const aPending = a.estatus === 'Pendiente' || a.estatus === 'Pending';
+      const bPending = b.estatus === 'Pendiente' || b.estatus === 'Pending';
+      if (aPending !== bPending) return aPending ? -1 : 1;
+
       const aInactive = a.estatus === 'Inactive' || a.activo === false;
       const bInactive = b.estatus === 'Inactive' || b.activo === false;
       if (aInactive !== bInactive) return aInactive ? 1 : -1;
@@ -4836,6 +4952,16 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
                   <button
                     type="button"
+                    onClick={() => setShowCensoModal(true)}
+                    className="bg-blue-900 hover:bg-blue-850 active:scale-95 text-white font-black px-4 py-2.5 rounded-2xl text-xs transition-all shadow-md shadow-blue-900/20 flex items-center justify-center space-x-2 cursor-pointer"
+                  >
+                    <QrCode size={16} className="text-yellow-400" />
+                    <span>QR Censo Asambleas</span>
+                    <span className={`w-2 h-2 rounded-full ${censoActivo ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={handleCreateSocioClick}
                     className="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black px-5 py-2.5 rounded-2xl text-xs transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center space-x-2 cursor-pointer ml-auto md:ml-0"
                   >
@@ -4960,6 +5086,47 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   </p>
                 </div>
               </div>
+
+              {/* Banner de Fichas Pendientes de Validación (Censo Express) */}
+              {socioMetrics.pendientesValidacion > 0 && (
+                <div className="p-4 sm:p-5 rounded-3xl bg-amber-500/10 border-2 border-amber-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in duration-300">
+                  <div className="flex items-center space-x-3.5">
+                    <span className="p-3 rounded-2xl bg-amber-500 text-amber-950 font-black flex-shrink-0 shadow-sm">
+                      <AlertCircle size={22} />
+                    </span>
+                    <div>
+                      <h4 className="text-base font-black text-amber-950">
+                        {socioMetrics.pendientesValidacion} {socioMetrics.pendientesValidacion === 1 ? 'Ficha de socio enviada' : 'Fichas de socios enviadas'} desde el Portal de Censo
+                      </h4>
+                      <p className="text-xs text-amber-900/80 font-medium mt-0.5">
+                        Nuevos prerregistros que requieren revisión y asignación de código oficial CLQ.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => { setSocioEstatusFilter('pendientes'); }}
+                      className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-sm cursor-pointer whitespace-nowrap ${
+                        socioEstatusFilter === 'pendientes'
+                          ? 'bg-amber-600 text-white'
+                          : 'bg-amber-500 hover:bg-amber-400 text-amber-950'
+                      }`}
+                    >
+                      {socioEstatusFilter === 'pendientes' ? 'Viendo Pendientes' : `Ver Pendientes (${socioMetrics.pendientesValidacion})`}
+                    </button>
+                    {socioEstatusFilter === 'pendientes' && (
+                      <button
+                        type="button"
+                        onClick={() => { setSocioEstatusFilter('todos'); }}
+                        className="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                      >
+                        Ver Todos
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Barra de Búsqueda y Filtros Enriquecidos */}
               <div className="bg-white rounded-[2.2rem] border border-slate-200/80 p-6 shadow-sm space-y-4">
@@ -5096,30 +5263,39 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {filteredSociosAdmin.map(socio => {
                       const isDirectiva = isDirectivaSocio(socio);
+                      const isPending = socio.estatus === 'Pendiente' || socio.estatus === 'Pending';
                       const isInactive = socio.estatus === 'Inactive' || socio.activo === false;
                       const comisionesSocio = getSocioComisionesList(socio.id);
                       const whatsappUrl = getSocioWhatsAppUrl(socio);
 
                       // Estilos temáticos según estado
-                      const cardBgColor = isInactive 
+                      const cardBgColor = isPending
+                        ? 'bg-gradient-to-br from-amber-50/50 via-white to-white'
+                        : isInactive 
                         ? 'bg-slate-50/70 opacity-90' 
                         : isDirectiva 
                         ? 'bg-gradient-to-br from-amber-50/20 via-white to-white' 
                         : 'bg-white';
 
-                      const cardBorderColor = isInactive 
+                      const cardBorderColor = isPending
+                        ? 'border-amber-300 shadow-amber-500/10 ring-1 ring-amber-400/30'
+                        : isInactive 
                         ? 'border-slate-300' 
                         : isDirectiva 
                         ? 'border-amber-250 shadow-amber-500/5' 
                         : 'border-slate-200/90';
 
-                      const leftBorderAccent = isInactive 
+                      const leftBorderAccent = isPending
+                        ? 'border-l-8 border-l-amber-500'
+                        : isInactive 
                         ? 'border-l-8 border-l-slate-400' 
                         : isDirectiva 
                         ? 'border-l-8 border-l-amber-500' 
                         : 'border-l-8 border-l-blue-900';
 
-                      const avatarBorder = isInactive 
+                      const avatarBorder = isPending
+                        ? 'ring-2 ring-amber-400'
+                        : isInactive 
                         ? 'ring-2 ring-slate-300' 
                         : isDirectiva 
                         ? 'ring-2 ring-amber-400' 
@@ -5200,6 +5376,14 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                               </span>
                             )}
 
+                            {/* Badge Pendiente Censo */}
+                            {isPending && (
+                              <span className="bg-amber-100 text-amber-950 border border-amber-300 text-[10px] font-black px-2.5 py-0.5 rounded-lg uppercase tracking-wider flex items-center animate-pulse">
+                                <AlertCircle size={10} className="mr-1 text-amber-700" />
+                                Pendiente Censo
+                              </span>
+                            )}
+
                             {/* Badge de Solvencia */}
                             <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-lg uppercase tracking-wider ml-auto flex items-center space-x-1 ${
                               socio.estadoCuotas === 'Al día'
@@ -5272,6 +5456,19 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
                           {/* Acciones de la Tarjeta */}
                           <div className="flex flex-wrap items-center justify-between gap-1.5 pt-3 border-t border-slate-100">
+                            {/* Botón Aprobar Socio Pendiente (Censo) */}
+                            {isPending && (
+                              <button
+                                type="button"
+                                onClick={() => handleAprobarSocioPendiente(socio)}
+                                className="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white px-3.5 py-2 rounded-xl font-black text-xs transition-all flex items-center justify-center shadow-md shadow-emerald-600/20 cursor-pointer"
+                                title="Aprobar ficha y asignar código oficial CLQ"
+                              >
+                                <CheckCircle2 size={14} className="mr-1.5" />
+                                <span>Aprobar</span>
+                              </button>
+                            )}
+
                             {/* Botón Ver Ficha Completa */}
                             <button
                               onClick={() => setSelectedSocioDetail(socio)}
@@ -5356,6 +5553,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                         <tbody className="divide-y divide-slate-100 font-semibold">
                           {filteredSociosAdmin.map(socio => {
                             const isDirectiva = isDirectivaSocio(socio);
+                            const isPending = socio.estatus === 'Pendiente' || socio.estatus === 'Pending';
                             const isInactive = socio.estatus === 'Inactive' || socio.activo === false;
                             const whatsappUrl = getSocioWhatsAppUrl(socio);
 
@@ -5386,6 +5584,11 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                 </td>
                                 <td className="py-3 px-6">
                                   <span className="font-bold text-slate-800 block">{socio.puesto || 'Socio Regular'}</span>
+                                  {isPending && (
+                                    <span className="text-[9px] font-black text-amber-800 uppercase bg-amber-100 px-2 py-0.5 rounded border border-amber-300 inline-block mt-0.5 animate-pulse">
+                                      Pendiente Censo
+                                    </span>
+                                  )}
                                   {isDirectiva && !isInactive && (
                                     <span className="text-[9px] font-black text-amber-700 uppercase bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
                                       Junta Directiva
@@ -5412,6 +5615,15 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                 </td>
                                 <td className="py-3 px-6 text-right">
                                   <div className="flex items-center justify-end space-x-1.5">
+                                    {isPending && (
+                                      <button
+                                        onClick={() => handleAprobarSocioPendiente(socio)}
+                                        className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg transition-colors cursor-pointer"
+                                        title="Aprobar y Asignar Código CLQ"
+                                      >
+                                        <CheckCircle2 size={15} />
+                                      </button>
+                                    )}
                                     <button
                                       onClick={() => setSelectedSocioDetail(socio)}
                                       className="p-2 hover:bg-blue-50 text-blue-700 rounded-lg transition-colors cursor-pointer"
@@ -6776,6 +6988,123 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                 <QrCode size={14} />
                 <span>Regenerar / Invalidar Anterior</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL QR CENSO Y ASAMBLEAS --- */}
+      {showCensoModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-300">
+          <div className="bg-white rounded-3xl sm:rounded-[2.5rem] border border-slate-200 shadow-2xl w-full max-w-lg p-6 sm:p-8 space-y-6 relative animate-in zoom-in-95 duration-300 max-h-[92vh] overflow-y-auto">
+            <button 
+              type="button"
+              onClick={() => setShowCensoModal(false)}
+              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors cursor-pointer"
+            >
+              <XIcon size={20} />
+            </button>
+
+            {/* Modal Header */}
+            <div className="text-center space-y-1 pr-6">
+              <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-yellow-50 text-yellow-800 text-[10px] font-black uppercase tracking-wider border border-yellow-200">
+                <Sparkles size={12} className="text-yellow-600" />
+                <span>Portal de Asambleas • Censo Express</span>
+              </span>
+              <h2 className="text-2xl font-black text-blue-950 tracking-tight">
+                Código QR de Censo Leonístico
+              </h2>
+              <p className="text-xs text-slate-500 font-medium max-w-xs mx-auto">
+                Los socios escanean este código con la cámara de su celular para buscarse o registrar su ficha sin contraseñas.
+              </p>
+            </div>
+
+            {/* Switch de activación en vivo */}
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <span className={`w-2.5 h-2.5 rounded-full ${censoActivo ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-800">
+                    Estado: {censoActivo ? 'Recepción Abierta' : 'Portal Pausado'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                  {censoActivo ? 'Cualquier socio en asamblea puede registrarse o actualizar sus datos.' : 'El acceso público está bloqueado temporalmente.'}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleToggleCensoActivo}
+                disabled={isSavingCensoConfig}
+                className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                  censoActivo
+                    ? 'bg-red-50 hover:bg-red-100 text-red-700 border border-red-200'
+                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm'
+                }`}
+              >
+                {isSavingCensoConfig ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : censoActivo ? (
+                  'Pausar Censo'
+                ) : (
+                  'Activar Censo'
+                )}
+              </button>
+            </div>
+
+            {/* QR Image Display */}
+            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200/80 flex flex-col items-center justify-center space-y-3">
+              <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-md">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent('https://clubdeleonesquetzaltenango.org/#/censo')}`}
+                  alt="QR Censo Asambleas"
+                  className="w-52 h-52 sm:w-56 sm:h-56 object-contain"
+                />
+              </div>
+              <div className="text-center">
+                <span className="text-[10px] font-mono font-bold text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-200 inline-block">
+                  https://clubdeleonesquetzaltenango.org/#/censo
+                </span>
+              </div>
+            </div>
+
+            {/* Acciones */}
+            <div className="space-y-2">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = 'https://clubdeleonesquetzaltenango.org/#/censo';
+                    navigator.clipboard.writeText(url)
+                      .then(() => showToast("¡Enlace del censo copiado al portapapeles!", "success"))
+                      .catch(() => prompt({ title: "Enlace del censo", message: "Copia el enlace manualmente:", defaultValue: url, okLabel: "Listo" }));
+                  }}
+                  className="flex-1 py-3 px-4 bg-white hover:bg-slate-100 text-slate-800 font-black text-xs uppercase tracking-wider rounded-xl border border-slate-200 flex items-center justify-center space-x-2 transition-all cursor-pointer shadow-sm"
+                >
+                  <Copy size={15} className="text-blue-900" />
+                  <span>Copiar Enlace</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePrintCensoSheet}
+                  className="flex-1 py-3 px-4 bg-blue-900 hover:bg-blue-850 text-white font-black text-xs uppercase tracking-wider rounded-xl flex items-center justify-center space-x-2 transition-all cursor-pointer shadow-md shadow-blue-900/20"
+                >
+                  <Printer size={15} className="text-yellow-400" />
+                  <span>Imprimir Lámina</span>
+                </button>
+              </div>
+
+              <a
+                href="#/censo"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs uppercase tracking-wider rounded-xl flex items-center justify-center space-x-1.5 transition-all text-center"
+              >
+                <span>Abrir Portal de Censo en Pestaña Nueva</span>
+                <ExternalLink size={13} />
+              </a>
             </div>
           </div>
         </div>
