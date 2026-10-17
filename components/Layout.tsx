@@ -167,7 +167,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
       )}
 
       {/* Main Premium Navbar */}
-      <nav className="bg-blue-900/95 backdrop-blur-md text-white shadow-xl sticky top-0 z-50 border-b border-blue-800/40 transition-all duration-300">
+      <nav className={`bg-blue-900/95 backdrop-blur-md text-white shadow-xl ${isConvencionRoute ? 'relative' : 'sticky top-0'} z-50 border-b border-blue-800/40 transition-all duration-300`}>
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             {/* Logo Section */}
