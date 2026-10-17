@@ -62,12 +62,12 @@ interface CountdownState {
 }
 
 const CONVENCION_NAV_ITEMS = [
-  { id: 'inicio', label: 'Inicio', icon: Sparkles },
-  { id: 'instalaciones', label: 'Sede Oficial', icon: Compass },
-  { id: 'hoteles', label: 'Hoteles', icon: Building2 },
-  { id: 'agenda', label: 'Agenda & Cultura', icon: Calendar },
-  { id: 'mistica', label: 'Mística', icon: Flame },
-  { id: 'pre-inscripcion', label: 'Pre-registro', icon: ShieldCheck },
+  { id: 'inicio', label: 'Inicio', shortLabel: 'Inicio', icon: Sparkles },
+  { id: 'instalaciones', label: 'Sede Oficial', shortLabel: 'Sede', icon: Compass },
+  { id: 'hoteles', label: 'Hoteles', shortLabel: 'Hoteles', icon: Building2 },
+  { id: 'agenda', label: 'Agenda & Cultura', shortLabel: 'Agenda', icon: Calendar },
+  { id: 'mistica', label: 'Mística Leonística', shortLabel: 'Mística', icon: Flame },
+  { id: 'pre-inscripcion', label: 'Pre-registro', shortLabel: 'Registro', icon: ShieldCheck },
 ];
 
 const ZONAS_CLUBS: Record<string, string[]> = {
@@ -718,6 +718,19 @@ export default function Convencion() {
   }, []);
 
   const [activeNavSection, setActiveNavSection] = useState<string>('inicio');
+  const navScrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-centrar la pestaña activa en la barra de navegación móvil al desplazarse
+  useEffect(() => {
+    if (navScrollRef.current) {
+      const activeEl = navScrollRef.current.querySelector(`[data-nav-id="${activeNavSection}"]`) as HTMLElement;
+      if (activeEl) {
+        const container = navScrollRef.current;
+        const scrollLeft = activeEl.offsetLeft - (container.clientWidth / 2) + (activeEl.clientWidth / 2);
+        container.scrollTo({ left: Math.max(0, scrollLeft), behavior: 'smooth' });
+      }
+    }
+  }, [activeNavSection]);
 
   const scrollToSection = (id: string, e?: React.MouseEvent) => {
     if (e) e.preventDefault();
@@ -1330,9 +1343,59 @@ export default function Convencion() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased overflow-x-hidden selection:bg-yellow-500 selection:text-blue-955 pb-24 relative">
+    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased overflow-x-clip selection:bg-yellow-500 selection:text-blue-955 pb-24 relative">
+      {/* BARRA INTERNA FLOTANTE FIJA (Never Lost In Scroll) */}
+      <nav 
+        aria-label="Navegación rápida de secciones de la convención"
+        className="fixed top-20 left-0 right-0 z-40 bg-[#081329]/95 backdrop-blur-xl border-b border-yellow-500/30 shadow-[0_10px_25px_rgba(0,0,0,0.6)] transition-all duration-300"
+      >
+        <div className="max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8 flex items-center justify-between gap-2 h-11 sm:h-13">
+          {/* Carrusel de Pestañas (Horizontal Scrollable en Móvil) */}
+          <div 
+            ref={navScrollRef}
+            className="flex items-center space-x-1 sm:space-x-1.5 overflow-x-auto no-scrollbar py-1 scroll-smooth w-full md:w-auto"
+          >
+            {CONVENCION_NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeNavSection === item.id;
+              return (
+                <button
+                  key={item.id}
+                  data-nav-id={item.id}
+                  type="button"
+                  onClick={(e) => scrollToSection(item.id, e)}
+                  className={`inline-flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider shrink-0 transition-all duration-200 cursor-pointer ${
+                    isActive
+                      ? 'bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-400 text-blue-955 shadow-md shadow-yellow-400/30 scale-[1.02]'
+                      : 'text-slate-300 hover:text-white hover:bg-white/10 active:scale-95'
+                  }`}
+                >
+                  <Icon size={13} className={isActive ? 'text-blue-955' : 'text-yellow-400 shrink-0'} />
+                  <span>
+                    <span className="sm:hidden">{item.shortLabel}</span>
+                    <span className="hidden sm:inline">{item.label}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Botón CTA Rápido de Pre-registro (visible en tablet y escritorio) */}
+          <div className="hidden md:flex items-center space-x-2 shrink-0">
+            <button
+              type="button"
+              onClick={(e) => scrollToSection('pre-inscripcion', e)}
+              className="inline-flex items-center space-x-1.5 bg-gradient-to-r from-yellow-500/20 via-amber-500/20 to-yellow-500/20 hover:from-yellow-400 hover:to-amber-400 hover:text-blue-955 text-yellow-300 border border-yellow-400/50 px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-sm active:scale-95 group"
+            >
+              <ShieldCheck size={14} className="group-hover:scale-110 transition-transform text-yellow-400 group-hover:text-blue-955" />
+              <span>Inscribirme Ahora</span>
+            </button>
+          </div>
+        </div>
+      </nav>
+
       {/* Dynamic Hero Header Section Block - Floating Royal Banner */}
-      <div id="inicio" className="pt-2 sm:pt-8 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8 scroll-mt-36">
+      <div id="inicio" className="pt-14 sm:pt-16 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8 scroll-mt-36">
         <header className="relative w-full py-10 sm:py-16 lg:py-20 px-3 sm:px-6 lg:px-8 overflow-hidden text-center z-10 rounded-2xl sm:rounded-[2.5rem] bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border sm:border-2 border-yellow-500/40 shadow-2xl">
           {/* Custom Header Background Image with Gradient Overlay */}
           {config.headerBgUrl && (
@@ -1543,49 +1606,6 @@ export default function Convencion() {
           </div>
         </header>
       </div>
-
-      {/* SUB-NAVBAR INTERNO STICKY DE NAVEGACIÓN Y DESPLAZAMIENTO */}
-      <nav 
-        aria-label="Navegación rápida de secciones de la convención"
-        className="sticky top-20 z-40 bg-[#09152e]/95 backdrop-blur-xl border-y border-yellow-500/30 shadow-2xl transition-all duration-300"
-      >
-        <div className="max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8 flex items-center justify-between gap-3 h-14">
-          {/* Carrusel de Enlaces Rápidos (Swipable en móvil sin scrollbars) */}
-          <div className="flex items-center space-x-1 sm:space-x-2 overflow-x-auto no-scrollbar py-1 scroll-smooth w-full sm:w-auto">
-            {CONVENCION_NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeNavSection === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={(e) => scrollToSection(item.id, e)}
-                  className={`inline-flex items-center space-x-1.5 px-3 sm:px-4 py-2 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider shrink-0 transition-all duration-200 cursor-pointer ${
-                    isActive
-                      ? 'bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-400 text-blue-955 shadow-md shadow-yellow-400/25 scale-[1.02]'
-                      : 'text-slate-300 hover:text-white hover:bg-white/10 active:scale-95'
-                  }`}
-                >
-                  <Icon size={14} className={isActive ? 'text-blue-955' : 'text-yellow-400'} />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Botón CTA Rápido de Pre-registro (en pantallas medianas y grandes) */}
-          <div className="hidden md:flex items-center space-x-2 shrink-0">
-            <button
-              type="button"
-              onClick={(e) => scrollToSection('pre-inscripcion', e)}
-              className="inline-flex items-center space-x-1.5 bg-yellow-400/20 hover:bg-yellow-400 hover:text-blue-955 text-yellow-300 border border-yellow-400/50 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-sm active:scale-95 group"
-            >
-              <ShieldCheck size={14} className="group-hover:scale-110 transition-transform" />
-              <span>Inscribirme Ahora</span>
-            </button>
-          </div>
-        </div>
-      </nav>
 
       {/* BANNER FLOTANTE: Conoce la Sede Virtualmente (Colina Country Club) */}
       <section id="instalaciones" className="my-6 sm:my-10 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8 scroll-mt-36">
