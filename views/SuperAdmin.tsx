@@ -93,8 +93,14 @@ import {
   Key,
   ClipboardList,
   Refrigerator,
-  Sparkles
+  Sparkles,
+  MessageCircle,
+  CheckCircle2,
+  ExternalLink,
+  Eye,
+  Copy
 } from 'lucide-react';
+import { getSafeAvatarUrl, handleAvatarError } from '../utils/imageFallback';
 import { generateActaPDF, generateActaCode, generateReciboPagoPDF, generateAgendaPDF } from '../utils/pdfGenerator';
 import { FormattedActa } from '../components/FormattedActa';
 import { compressImageFile, validateImageFile } from '../utils/imageCompressor';
@@ -585,6 +591,10 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     return result;
   }, [voluntarios, voluntarioFilterActividad, voluntarioFilterEstado, voluntarioSearch]);
   const [roleFilter, setRoleFilter] = useState('Todos');
+  const [socioEstatusFilter, setSocioEstatusFilter] = useState<'todos' | 'activos' | 'directiva' | 'inactivos'>('todos');
+  const [socioSolvenciaFilter, setSocioSolvenciaFilter] = useState<'todos' | 'Al día' | 'Pendiente' | 'En mora'>('todos');
+  const [socioViewMode, setSocioViewMode] = useState<'cards' | 'table'>('cards');
+  const [selectedSocioDetail, setSelectedSocioDetail] = useState<Socio | null>(null);
   const [isLoadingSocios, setIsLoadingSocios] = useState(false);
 
   // Cuotas Redesign States
@@ -4372,47 +4382,94 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     });
   }, [socios, socioSearch, cuotasFilterStatus]);
 
+  // Helpers y Métricas de Socios
+  const isDirectivaSocio = (s: Socio) => {
+    return s.rol === UserRole.SUPER_ADMIN ||
+      s.rol === UserRole.SECRETARIO ||
+      s.rol === UserRole.TESORERO ||
+      s.rol === UserRole.ASESOR_SERVICIOS ||
+      s.rol === UserRole.PRESIDENTE_AFILIACION ||
+      (!!s.puesto && s.puesto.trim() !== '' && s.puesto.toLowerCase() !== 'socio' && s.puesto.toLowerCase() !== 'socio regular');
+  };
+
+  const socioMetrics = useMemo(() => {
+    const total = socios.length;
+    const directiva = socios.filter(s => isDirectivaSocio(s)).length;
+    const alDia = socios.filter(s => s.estadoCuotas === 'Al día').length;
+    const enMora = socios.filter(s => s.estadoCuotas === 'En mora' || s.estadoCuotas === 'Pendiente').length;
+    const inactivos = socios.filter(s => s.estatus === 'Inactive' || s.activo === false).length;
+    const activos = total - inactivos;
+    return { total, directiva, alDia, enMora, inactivos, activos };
+  }, [socios]);
+
+  const getSocioWhatsAppUrl = (socio: Socio) => {
+    if (!socio.telefono) return null;
+    const cleanDigits = socio.telefono.replace(/\D/g, '');
+    if (!cleanDigits || cleanDigits.length < 8) return null;
+    const phone = cleanDigits.length === 8 ? `502${cleanDigits}` : cleanDigits;
+    const shareUrl = `${window.location.origin}${window.location.pathname}#/completar-ficha-socio/${socio.id}`;
+    const text = encodeURIComponent(
+      `¡Hola estimado León ${socio.nombre}! 🦁 Le compartimos su enlace oficial para consultar y actualizar su ficha leonística: ${shareUrl}`
+    );
+    return `https://wa.me/${phone}?text=${text}`;
+  };
+
+  const getSocioComisionesList = (socioId: string) => {
+    return comisiones.filter(c => (c.miembros || []).includes(socioId) || c.coordinador === socioId);
+  };
+
   const filteredSociosAdmin = useMemo(() => {
     const list = socios.filter(s => {
-      const matchesSearch = 
-        s.nombre.toLowerCase().includes(socioSearch.toLowerCase()) ||
-        s.correo.toLowerCase().includes(socioSearch.toLowerCase());
-      
-      const matchesRole = roleFilter === 'Todos' || s.rol === roleFilter;
-      
-      return matchesSearch && matchesRole;
+      // 1. Búsqueda inteligente por texto en múltiples campos
+      if (socioSearch.trim()) {
+        const term = socioSearch.toLowerCase().trim();
+        const inNombre = (s.nombre || '').toLowerCase().includes(term);
+        const inCorreo = (s.correo || '').toLowerCase().includes(term);
+        const inCodigo = (s.codigoSocio || '').toLowerCase().includes(term);
+        const inPuesto = (s.puesto || '').toLowerCase().includes(term);
+        const inProfesion = (s.profesion || '').toLowerCase().includes(term);
+        const inTelefono = (s.telefono || '').toLowerCase().includes(term);
+        const inPuestosAdic = (s.puestosAdicionales || []).some(pa => pa.toLowerCase().includes(term));
+        if (!inNombre && !inCorreo && !inCodigo && !inPuesto && !inProfesion && !inTelefono && !inPuestosAdic) {
+          return false;
+        }
+      }
+
+      // 2. Filtro por Rol del Sistema
+      if (roleFilter !== 'Todos' && s.rol !== roleFilter) {
+        return false;
+      }
+
+      // 3. Filtro por Estatus de Membresía (Activos / Directiva / Inactivos)
+      const isInactive = s.estatus === 'Inactive' || s.activo === false;
+      const isDir = isDirectivaSocio(s);
+      if (socioEstatusFilter === 'activos' && isInactive) return false;
+      if (socioEstatusFilter === 'inactivos' && !isInactive) return false;
+      if (socioEstatusFilter === 'directiva' && !isDir) return false;
+
+      // 4. Filtro por Solvencia de Cuotas
+      if (socioSolvenciaFilter !== 'todos' && s.estadoCuotas !== socioSolvenciaFilter) {
+        return false;
+      }
+
+      return true;
     });
 
-    // Sort: Directiva first, then standard socios, alphabetically
+    // Ordenamiento: Directiva primero, luego activos, luego inactivos, alfabéticamente
     return list.sort((a, b) => {
-      const aDirectiva = 
-        a.rol === UserRole.SUPER_ADMIN ||
-        a.rol === UserRole.SECRETARIO ||
-        a.rol === UserRole.TESORERO ||
-        a.rol === UserRole.ASESOR_SERVICIOS ||
-        a.rol === UserRole.PRESIDENTE_AFILIACION ||
-        (a.puesto && a.puesto.trim() !== '' && a.puesto.toLowerCase() !== 'socio' && a.puesto.toLowerCase() !== 'socio regular');
-      
-      const bDirectiva = 
-        b.rol === UserRole.SUPER_ADMIN ||
-        b.rol === UserRole.SECRETARIO ||
-        b.rol === UserRole.TESORERO ||
-        b.rol === UserRole.ASESOR_SERVICIOS ||
-        b.rol === UserRole.PRESIDENTE_AFILIACION ||
-        (b.puesto && b.puesto.trim() !== '' && b.puesto.toLowerCase() !== 'socio' && b.puesto.toLowerCase() !== 'socio regular');
+      const aInactive = a.estatus === 'Inactive' || a.activo === false;
+      const bInactive = b.estatus === 'Inactive' || b.activo === false;
+      if (aInactive !== bInactive) return aInactive ? 1 : -1;
 
-      // Directiva = 1, regular = 2
+      const aDirectiva = isDirectivaSocio(a);
+      const bDirectiva = isDirectivaSocio(b);
       const aRank = aDirectiva ? 1 : 2;
       const bRank = bDirectiva ? 1 : 2;
-      
-      if (aRank !== bRank) {
-        return aRank - bRank;
-      }
-      
-      // Fallback alphabetical by name
-      return a.nombre.localeCompare(b.nombre);
+      if (aRank !== bRank) return aRank - bRank;
+
+      return (a.nombre || '').localeCompare(b.nombre || '');
     });
-  }, [socios, socioSearch, roleFilter]);
+  }, [socios, socioSearch, roleFilter, socioEstatusFilter, socioSolvenciaFilter]);
 
   const filteredActas = actas.filter(a => {
     const matchesSearch = a.titulo.toLowerCase().includes(actaSearch.toLowerCase()) || 
@@ -4732,213 +4789,676 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           )}
           {/* TAB: GESTIÓN DE SOCIOS */}
           {activeTab === 'socios' && (
-            <div className="space-y-10 animate-in fade-in duration-500">
+            <div className="space-y-8 animate-in fade-in duration-500">
               
-              {/* Legend visual card */}
-              <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-semibold">
-                <div className="flex items-center space-x-3 p-3 bg-amber-50/60 rounded-2xl border border-amber-100">
-                  <div className="w-4 h-4 rounded-full bg-amber-500 border border-amber-600 flex-shrink-0" />
-                  <div>
-                    <p className="font-extrabold text-amber-900">Junta Directiva</p>
-                    <p className="text-[10px] text-amber-700">Miembros con cargos directivos activos.</p>
+              {/* Header del Módulo con Switcher de Vista y Registro */}
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/80 backdrop-blur-md p-6 rounded-[2.5rem] border border-slate-200/80 shadow-sm">
+                <div>
+                  <div className="flex items-center space-x-3 mb-1">
+                    <span className="p-2.5 bg-blue-50 text-blue-900 rounded-2xl">
+                      <Users size={24} />
+                    </span>
+                    <h2 className="text-3xl font-black text-blue-950 tracking-tight">Gestión de Socios</h2>
                   </div>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">
+                    Directorio Oficial • Junta Directiva, Membresía y Solvencia Leonística
+                  </p>
                 </div>
-                <div className="flex items-center space-x-3 p-3 bg-blue-50/60 rounded-2xl border border-blue-100">
-                  <div className="w-4 h-4 rounded-full bg-blue-900 border border-blue-800 flex-shrink-0" />
-                  <div>
-                    <p className="font-extrabold text-blue-900">Socio Activo</p>
-                    <p className="text-[10px] text-blue-700">Miembros activos con rol estándar.</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3 p-3 bg-slate-100/60 rounded-2xl border border-slate-200 flex-shrink-0 bg-slate-50">
-                  <div className="w-4 h-4 rounded-full bg-slate-400 border border-slate-500 flex-shrink-0" />
-                  <div>
-                    <p className="font-extrabold text-slate-800">Inactivo</p>
-                    <p className="text-[10px] text-slate-600">Miembros retirados u ocultos del directorio.</p>
-                  </div>
-                </div>
-              </div>
 
-              {/* Filters card */}
-              <div className="bg-white rounded-3xl border border-slate-200/80 p-8 shadow-sm space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="text-xs font-bold text-slate-450 uppercase tracking-widest flex items-center">
-                    <Filter size={14} className="mr-1.5 text-slate-400" />
-                    Búsqueda y Filtros de Directorio
+                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                  {/* Selector de Modo: Cuadrícula de Tarjetas vs Tabla Compacta */}
+                  <div className="flex items-center bg-slate-100 p-1.5 rounded-2xl border border-slate-200/80">
+                    <button
+                      type="button"
+                      onClick={() => setSocioViewMode('cards')}
+                      className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                        socioViewMode === 'cards'
+                          ? 'bg-white text-blue-900 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-900'
+                      }`}
+                    >
+                      <Grid size={15} />
+                      <span>Tarjetas ({filteredSociosAdmin.length})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSocioViewMode('table')}
+                      className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                        socioViewMode === 'table'
+                          ? 'bg-white text-blue-900 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-900'
+                      }`}
+                    >
+                      <ClipboardList size={15} />
+                      <span>Directorio Lista</span>
+                    </button>
                   </div>
+
                   <button
                     type="button"
                     onClick={handleCreateSocioClick}
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white font-black px-5 py-2.5 rounded-xl text-sm transition-all shadow-md hover:shadow-lg flex items-center justify-center space-x-2 w-full sm:w-auto"
+                    className="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black px-5 py-2.5 rounded-2xl text-xs transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center space-x-2 cursor-pointer ml-auto md:ml-0"
                   >
                     <Plus size={16} />
                     <span>Registrar Socio</span>
                   </button>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Text Search */}
-                  <div className="relative">
-                    <Search size={18} className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-slate-400" />
+              {/* Tarjetas KPI Superiores (Filtros Interactivos) */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                {/* Total Socios */}
+                <div 
+                  onClick={() => { setSocioEstatusFilter('todos'); setSocioSolvenciaFilter('todos'); setRoleFilter('Todos'); }}
+                  className={`p-5 sm:p-6 rounded-[2rem] border transition-all cursor-pointer group hover:-translate-y-1 hover:shadow-lg ${
+                    socioEstatusFilter === 'todos' && socioSolvenciaFilter === 'todos'
+                      ? 'bg-gradient-to-br from-blue-900 to-slate-900 text-white border-blue-950 shadow-md shadow-blue-950/20' 
+                      : 'bg-white border-slate-200/80 text-slate-800 hover:border-blue-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${socioEstatusFilter === 'todos' && socioSolvenciaFilter === 'todos' ? 'text-blue-200' : 'text-slate-400'}`}>
+                      Membresía Total
+                    </span>
+                    <span className={`p-2 rounded-xl ${socioEstatusFilter === 'todos' && socioSolvenciaFilter === 'todos' ? 'bg-white/10 text-white' : 'bg-blue-50 text-blue-600'}`}>
+                      <Users size={18} />
+                    </span>
+                  </div>
+                  <div className="text-3xl font-black tracking-tight">{socioMetrics.total}</div>
+                  <p className={`text-[11px] font-bold mt-1 ${socioEstatusFilter === 'todos' && socioSolvenciaFilter === 'todos' ? 'text-blue-200' : 'text-slate-400'}`}>
+                    {socioMetrics.activos} activos • {socioMetrics.inactivos} inactivos
+                  </p>
+                </div>
+
+                {/* Junta Directiva */}
+                <div 
+                  onClick={() => { setSocioEstatusFilter('directiva'); setSocioSolvenciaFilter('todos'); }}
+                  className={`p-5 sm:p-6 rounded-[2rem] border transition-all cursor-pointer group hover:-translate-y-1 hover:shadow-lg ${
+                    socioEstatusFilter === 'directiva'
+                      ? 'bg-gradient-to-br from-amber-500 to-yellow-600 text-amber-950 border-amber-600 shadow-md shadow-amber-500/20' 
+                      : 'bg-white border-slate-200/80 text-slate-800 hover:border-amber-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${socioEstatusFilter === 'directiva' ? 'text-amber-950/80' : 'text-slate-400'}`}>
+                      Junta Directiva
+                    </span>
+                    <span className={`p-2 rounded-xl ${socioEstatusFilter === 'directiva' ? 'bg-amber-950/15 text-amber-950' : 'bg-amber-50 text-amber-600'}`}>
+                      <Star size={18} className="fill-current" />
+                    </span>
+                  </div>
+                  <div className="flex items-baseline space-x-2">
+                    <span className={`text-3xl font-black tracking-tight ${socioEstatusFilter === 'directiva' ? 'text-amber-950' : 'text-amber-600'}`}>
+                      {socioMetrics.directiva}
+                    </span>
+                    <span className={`text-xs font-black uppercase ${socioEstatusFilter === 'directiva' ? 'text-amber-950/80' : 'text-slate-400'}`}>
+                      Cargos
+                    </span>
+                  </div>
+                  <p className={`text-[11px] font-bold mt-1 ${socioEstatusFilter === 'directiva' ? 'text-amber-950/80' : 'text-slate-400'}`}>
+                    Liderazgo leonístico activo
+                  </p>
+                </div>
+
+                {/* Solventes / Al Día */}
+                <div 
+                  onClick={() => { setSocioSolvenciaFilter('Al día'); }}
+                  className={`p-5 sm:p-6 rounded-[2rem] border transition-all cursor-pointer group hover:-translate-y-1 hover:shadow-lg ${
+                    socioSolvenciaFilter === 'Al día'
+                      ? 'bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-emerald-800 shadow-md shadow-emerald-700/20' 
+                      : 'bg-white border-slate-200/80 text-slate-800 hover:border-emerald-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${socioSolvenciaFilter === 'Al día' ? 'text-emerald-100' : 'text-slate-400'}`}>
+                      Solvencia Cuotas
+                    </span>
+                    <span className={`p-2 rounded-xl ${socioSolvenciaFilter === 'Al día' ? 'bg-white/10 text-white' : 'bg-emerald-50 text-emerald-600'}`}>
+                      <CheckCircle2 size={18} />
+                    </span>
+                  </div>
+                  <div className="flex items-baseline space-x-2">
+                    <span className={`text-3xl font-black tracking-tight ${socioSolvenciaFilter === 'Al día' ? 'text-white' : 'text-emerald-600'}`}>
+                      {socioMetrics.alDia}
+                    </span>
+                    <span className={`text-xs font-black uppercase ${socioSolvenciaFilter === 'Al día' ? 'text-emerald-100' : 'text-slate-400'}`}>
+                      Al día
+                    </span>
+                  </div>
+                  <p className={`text-[11px] font-bold mt-1 ${socioSolvenciaFilter === 'Al día' ? 'text-emerald-100' : 'text-slate-400'}`}>
+                    {socioMetrics.total > 0 ? Math.round((socioMetrics.alDia / socioMetrics.total) * 100) : 0}% de la membresía
+                  </p>
+                </div>
+
+                {/* Inactivos / Observación */}
+                <div 
+                  onClick={() => { setSocioEstatusFilter(socioEstatusFilter === 'inactivos' ? 'todos' : 'inactivos'); }}
+                  className={`p-5 sm:p-6 rounded-[2rem] border transition-all cursor-pointer group hover:-translate-y-1 hover:shadow-lg ${
+                    socioEstatusFilter === 'inactivos'
+                      ? 'bg-gradient-to-br from-slate-700 to-slate-900 text-white border-slate-800 shadow-md shadow-slate-900/20' 
+                      : 'bg-white border-slate-200/80 text-slate-800 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${socioEstatusFilter === 'inactivos' ? 'text-slate-200' : 'text-slate-400'}`}>
+                      Inactivos / Retirados
+                    </span>
+                    <span className={`p-2 rounded-xl ${socioEstatusFilter === 'inactivos' ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                      <Clock size={18} />
+                    </span>
+                  </div>
+                  <div className="flex items-baseline space-x-2">
+                    <span className={`text-3xl font-black tracking-tight ${socioEstatusFilter === 'inactivos' ? 'text-white' : 'text-slate-700'}`}>
+                      {socioMetrics.inactivos}
+                    </span>
+                    <span className={`text-xs font-black uppercase ${socioEstatusFilter === 'inactivos' ? 'text-slate-200' : 'text-slate-400'}`}>
+                      Inactivos
+                    </span>
+                  </div>
+                  <p className={`text-[11px] font-bold mt-1 ${socioEstatusFilter === 'inactivos' ? 'text-slate-200' : 'text-slate-400'}`}>
+                    {socioMetrics.enMora} con cuotas pendientes
+                  </p>
+                </div>
+              </div>
+
+              {/* Barra de Búsqueda y Filtros Enriquecidos */}
+              <div className="bg-white rounded-[2.2rem] border border-slate-200/80 p-6 shadow-sm space-y-4">
+                <div className="flex flex-col lg:flex-row gap-4 justify-between items-center">
+                  {/* Buscador inteligente */}
+                  <div className="relative w-full lg:max-w-md">
+                    <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input 
                       type="text"
-                      placeholder="Buscar por nombre o correo..."
+                      placeholder="Buscar por nombre, código CLQ, cargo, profesión, correo..."
                       value={socioSearch}
                       onChange={e => setSocioSearch(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold"
+                      className="w-full pl-11 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-900/10 focus:border-blue-900 outline-none transition-all text-sm font-bold text-slate-800 placeholder-slate-400"
                     />
+                    {socioSearch && (
+                      <button
+                        onClick={() => setSocioSearch('')}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                      >
+                        <XIcon size={14} />
+                      </button>
+                    )}
                   </div>
 
-                  {/* Role filter */}
-                  <div>
+                  {/* Filtro por Membresía (Píldoras) */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto w-full lg:w-auto pb-1 lg:pb-0 scrollbar-none">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 mr-1 hidden sm:inline">
+                      Membresía:
+                    </span>
+                    {(['todos', 'activos', 'directiva', 'inactivos'] as const).map(st => {
+                      const isActive = socioEstatusFilter === st;
+                      const label = st === 'todos' ? 'Todos' : st === 'activos' ? '🟢 Activos' : st === 'directiva' ? '⭐ Directiva' : '⚪ Inactivos';
+                      return (
+                        <button
+                          key={st}
+                          onClick={() => setSocioEstatusFilter(st)}
+                          className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
+                            isActive
+                              ? 'bg-blue-900 text-white shadow-sm'
+                              : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Filtro secundario: Solvencia y Rol */}
+                <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-slate-100 text-xs">
+                  <div className="flex items-center gap-1.5 overflow-x-auto">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 mr-1">
+                      Solvencia:
+                    </span>
+                    {(['todos', 'Al día', 'Pendiente', 'En mora'] as const).map(sol => {
+                      const isActive = socioSolvenciaFilter === sol;
+                      const label = sol === 'todos' ? 'Todas las cuotas' : sol === 'Al día' ? '🟢 Al día' : sol === 'Pendiente' ? '🟡 Pendiente' : '🔴 En mora';
+                      return (
+                        <button
+                          key={sol}
+                          onClick={() => setSocioSolvenciaFilter(sol)}
+                          className={`px-3 py-1.5 rounded-xl text-[11px] font-black transition-all cursor-pointer whitespace-nowrap ${
+                            isActive
+                              ? 'bg-slate-800 text-white shadow-sm'
+                              : 'bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-slate-600'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Selector de Rol */}
+                  <div className="ml-auto flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 hidden sm:inline">
+                      Rol:
+                    </span>
                     <select 
                       value={roleFilter}
                       onChange={e => setRoleFilter(e.target.value)}
-                      className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold bg-white"
+                      className="px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-black text-slate-700 bg-slate-50 outline-none focus:ring-2 focus:ring-blue-900 cursor-pointer"
                     >
-                      <option value="Todos">Rol: Todos</option>
+                      <option value="Todos">Todos los Roles</option>
                       {rolesConfig.map(r => (
                         <option key={r.id} value={r.id}>{r.label}</option>
                       ))}
                     </select>
                   </div>
+
+                  {(socioSearch || socioEstatusFilter !== 'todos' || socioSolvenciaFilter !== 'todos' || roleFilter !== 'Todos') && (
+                    <button
+                      onClick={() => {
+                        setSocioSearch('');
+                        setSocioEstatusFilter('todos');
+                        setSocioSolvenciaFilter('todos');
+                        setRoleFilter('Todos');
+                      }}
+                      className="text-[11px] font-black text-blue-600 hover:text-blue-800 underline cursor-pointer whitespace-nowrap"
+                    >
+                      Limpiar filtros
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* List display */}
-              <div className="bg-white rounded-[2rem] border border-slate-200/80 shadow-sm overflow-hidden">
+              {/* Listado de Socios (Modo Tarjetas o Tabla) */}
+              <div className="bg-transparent">
                 {isLoadingSocios ? (
-                  <div className="flex flex-col items-center justify-center py-20 space-y-4">
-                    <Loader2 className="animate-spin text-blue-900" size={36} />
-                    <p className="text-slate-500 font-bold text-sm">Cargando directorio de socios...</p>
+                  <div className="bg-white rounded-[2rem] border border-slate-200/80 p-20 flex flex-col items-center justify-center space-y-4">
+                    <Loader2 className="animate-spin text-blue-900" size={40} />
+                    <p className="text-slate-600 font-extrabold text-sm">Cargando directorio de socios leonísticos...</p>
                   </div>
                 ) : filteredSociosAdmin.length === 0 ? (
-                  <div className="text-center py-16 space-y-4">
-                    <Users className="mx-auto text-slate-300" size={48} />
-                    <h4 className="text-lg font-bold text-slate-700">No se encontraron socios</h4>
-                    <p className="text-xs text-slate-500 max-w-sm mx-auto">Prueba cambiando los filtros o el texto del buscador.</p>
+                  <div className="bg-white rounded-[2.5rem] border-2 border-dashed border-slate-200 p-16 text-center space-y-4">
+                    <Users className="mx-auto text-slate-300" size={54} />
+                    <h4 className="text-xl font-black text-slate-700">No se encontraron socios</h4>
+                    <p className="text-xs text-slate-500 max-w-sm mx-auto">Prueba cambiando los filtros de membresía, solvencia o el texto del buscador.</p>
+                    <button
+                      onClick={() => {
+                        setSocioSearch('');
+                        setSocioEstatusFilter('todos');
+                        setSocioSolvenciaFilter('todos');
+                        setRoleFilter('Todos');
+                      }}
+                      className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-black transition-all cursor-pointer"
+                    >
+                      Restablecer filtros
+                    </button>
                   </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
+                ) : socioViewMode === 'cards' ? (
+                  /* MODO TARJETAS (2 COLUMNAS) */
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {filteredSociosAdmin.map(socio => {
-                      const isDirectiva = 
-                        socio.rol === UserRole.SUPER_ADMIN ||
-                        socio.rol === UserRole.SECRETARIO ||
-                        socio.rol === UserRole.TESORERO ||
-                        socio.rol === UserRole.ASESOR_SERVICIOS ||
-                        socio.rol === UserRole.PRESIDENTE_AFILIACION ||
-                        (socio.puesto && socio.puesto.trim() !== '' && socio.puesto.toLowerCase() !== 'socio' && socio.puesto.toLowerCase() !== 'socio regular');
+                      const isDirectiva = isDirectivaSocio(socio);
+                      const isInactive = socio.estatus === 'Inactive' || socio.activo === false;
+                      const comisionesSocio = getSocioComisionesList(socio.id);
+                      const whatsappUrl = getSocioWhatsAppUrl(socio);
 
-                      // Layout color definitions
-                      const cardBgColor = isDirectiva ? 'bg-amber-50/10' : 'bg-white';
-                      const cardBorderColor = isDirectiva ? 'border-amber-200' : 'border-blue-100';
-                      const leftBorderAccent = isDirectiva ? 'border-l-8 border-l-amber-500' : 'border-l-8 border-l-blue-900';
-                      const avatarBorder = isDirectiva ? 'border-amber-400' : 'border-blue-900';
+                      // Estilos temáticos según estado
+                      const cardBgColor = isInactive 
+                        ? 'bg-slate-50/70 opacity-90' 
+                        : isDirectiva 
+                        ? 'bg-gradient-to-br from-amber-50/20 via-white to-white' 
+                        : 'bg-white';
+
+                      const cardBorderColor = isInactive 
+                        ? 'border-slate-300' 
+                        : isDirectiva 
+                        ? 'border-amber-250 shadow-amber-500/5' 
+                        : 'border-slate-200/90';
+
+                      const leftBorderAccent = isInactive 
+                        ? 'border-l-8 border-l-slate-400' 
+                        : isDirectiva 
+                        ? 'border-l-8 border-l-amber-500' 
+                        : 'border-l-8 border-l-blue-900';
+
+                      const avatarBorder = isInactive 
+                        ? 'ring-2 ring-slate-300' 
+                        : isDirectiva 
+                        ? 'ring-2 ring-amber-400' 
+                        : 'ring-2 ring-blue-900/40';
 
                       return (
                         <div 
                           key={socio.id}
-                          className={`bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-xl border ${cardBorderColor} ${leftBorderAccent} ${cardBgColor} transition-all duration-300 flex flex-col justify-between p-6 space-y-4`}
+                          className={`rounded-[2.2rem] overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 border ${cardBorderColor} ${leftBorderAccent} ${cardBgColor} transition-all duration-300 flex flex-col justify-between p-6 sm:p-7 space-y-5 group relative`}
                         >
-                          {/* Top Info Header */}
+                          {/* Cabecera de la Tarjeta */}
                           <div className="flex items-start space-x-4">
-                            <img 
-                              src={socio.foto || `https://picsum.photos/seed/${socio.id}/100/100`} 
-                              alt={socio.nombre} 
-                              className={`w-16 h-16 rounded-full object-cover border-2 shadow-sm cursor-zoom-in ${avatarBorder}`}
-                              onClick={() => setSelectedPhoto({ url: socio.foto, title: socio.nombre })}
-                            />
-                            <div className="min-w-0 flex-1 text-left">
-                              <h4 className="font-extrabold text-slate-900 text-base leading-snug break-words flex flex-wrap items-center gap-1.5">
-                                {socio.nombre || <span className="text-slate-400 italic">Sin nombre</span>}
-                              </h4>
-                              {socio.codigoSocio && (
-                                <span className="inline-block text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded mt-1 border border-blue-100/60">
-                                  # {socio.codigoSocio}
-                                </span>
+                            <div className="relative flex-shrink-0">
+                              <img 
+                                src={getSafeAvatarUrl(socio.foto, socio.nombre)} 
+                                alt={socio.nombre} 
+                                onError={(e) => handleAvatarError(e, socio.nombre)}
+                                className={`w-16 h-16 rounded-full object-cover border-2 border-white shadow-md cursor-pointer hover:scale-105 transition-transform ${avatarBorder}`}
+                                onClick={() => setSelectedPhoto({ url: getSafeAvatarUrl(socio.foto, socio.nombre), title: socio.nombre })}
+                              />
+                              {isDirectiva && !isInactive && (
+                                <div className="absolute -bottom-1 -right-1 bg-amber-400 text-amber-950 p-1 rounded-full border border-white shadow-sm flex items-center justify-center" title="Junta Directiva">
+                                  <Star size={11} className="fill-current" />
+                                </div>
                               )}
-                              <p className="text-xs text-slate-450 font-semibold mt-1">Ingresó: {socio.fechaIngreso}</p>
+                            </div>
+
+                            <div className="min-w-0 flex-1 text-left">
+                              <div className="flex items-start justify-between gap-2">
+                                <h4 
+                                  onClick={() => setSelectedSocioDetail(socio)}
+                                  className="font-black text-slate-900 text-lg leading-snug group-hover:text-blue-900 transition-colors line-clamp-1 cursor-pointer"
+                                  title={socio.nombre}
+                                >
+                                  {socio.nombre || <span className="text-slate-400 italic">Sin nombre</span>}
+                                </h4>
+                              </div>
+
+                              <div className="flex items-center gap-2 flex-wrap mt-1">
+                                {socio.codigoSocio && (
+                                  <span className="inline-block text-[10px] font-mono font-black text-blue-800 bg-blue-50/80 px-2 py-0.5 rounded-lg border border-blue-200/60">
+                                    # {socio.codigoSocio}
+                                  </span>
+                                )}
+                                <span className="text-[11px] text-slate-400 font-bold">
+                                  Ingreso: {socio.fechaIngreso || 'N/D'}
+                                </span>
+                              </div>
                             </div>
                           </div>
 
-                          {/* Badges / Roles */}
-                          <div className="flex flex-wrap gap-1.5 pt-1 text-left">
-                            <span className="text-[10px] font-bold text-slate-800 bg-slate-100/80 px-2.5 py-0.5 rounded-lg border border-slate-200/50">
+                          {/* Insignias de Cargo, Directiva y Solvencia */}
+                          <div className="flex flex-wrap items-center gap-1.5 pt-1 text-left">
+                            {/* Puesto Principal */}
+                            <span className="text-[11px] font-black text-slate-800 bg-slate-100 px-3 py-1 rounded-xl border border-slate-200">
                               {socio.puesto || 'Socio Regular'}
                             </span>
+
+                            {/* Puestos adicionales */}
                             {(socio.puestosAdicionales || []).map((pa, pi) => (
-                              <span key={pi} className="text-[9px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200/60">
+                              <span key={pi} className="text-[10px] font-bold text-amber-900 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200/60">
                                 + {pa}
                               </span>
                             ))}
-                            
-                            {isDirectiva && (
-                              <div className="w-full flex items-center space-x-1.5 mt-1">
-                                <span className="bg-amber-100 text-amber-800 border border-amber-250 text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center">
-                                  <Star size={8} className="mr-1 text-amber-600 fill-amber-600 animate-pulse" />
-                                  Junta Directiva
-                                </span>
-                              </div>
+
+                            {/* Badge Junta Directiva */}
+                            {isDirectiva && !isInactive && (
+                              <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black px-2.5 py-0.5 rounded-lg uppercase tracking-wider flex items-center">
+                                <Star size={10} className="mr-1 text-amber-600 fill-amber-600" />
+                                Directiva
+                              </span>
                             )}
+
+                            {/* Badge Inactivo */}
+                            {isInactive && (
+                              <span className="bg-slate-200 text-slate-700 border border-slate-300 text-[10px] font-black px-2.5 py-0.5 rounded-lg uppercase tracking-wider">
+                                Inactivo / Retirado
+                              </span>
+                            )}
+
+                            {/* Badge de Solvencia */}
+                            <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-lg uppercase tracking-wider ml-auto flex items-center space-x-1 ${
+                              socio.estadoCuotas === 'Al día'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : socio.estadoCuotas === 'Pendiente'
+                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                : 'bg-red-50 text-red-700 border border-red-200'
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${
+                                socio.estadoCuotas === 'Al día' ? 'bg-emerald-500' : socio.estadoCuotas === 'Pendiente' ? 'bg-amber-500' : 'bg-red-500'
+                              }`} />
+                              <span>{socio.estadoCuotas || 'Al día'}</span>
+                            </span>
                           </div>
 
-                          {/* Contact Info Section */}
-                          <div className="bg-slate-50/50 p-3 rounded-2xl border border-slate-100/50 space-y-2 text-xs font-semibold text-left">
+                          {/* Comisiones Asignadas (si aplica) */}
+                          {comisionesSocio.length > 0 && (
+                            <div className="bg-blue-50/40 p-2.5 rounded-2xl border border-blue-100/70">
+                              <span className="text-[9px] font-black uppercase tracking-wider text-blue-700 block mb-1">
+                                Equipos de Trabajo / Comisiones:
+                              </span>
+                              <div className="flex flex-wrap gap-1">
+                                {comisionesSocio.map(c => {
+                                  const isCoord = c.coordinador === socio.id;
+                                  return (
+                                    <span 
+                                      key={c.id}
+                                      className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center space-x-1 ${
+                                        isCoord 
+                                          ? 'bg-amber-100/80 text-amber-950 border-amber-300' 
+                                          : 'bg-white text-slate-700 border-slate-200'
+                                      }`}
+                                    >
+                                      <span>{c.nombre}</span>
+                                      {isCoord && <span className="text-[8px] font-black text-amber-800 uppercase">(Coord.)</span>}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Datos de Contacto y Profesión */}
+                          <div className="bg-slate-50/70 p-3.5 rounded-2xl border border-slate-100 space-y-2 text-xs font-semibold text-left">
                             {socio.profesion && (
                               <div className="flex items-center text-slate-700">
-                                <Briefcase size={12} className="mr-2 text-slate-405 flex-shrink-0" />
-                                <span className="truncate" title={socio.profesion}>{socio.profesion}</span>
+                                <Briefcase size={13} className="mr-2 text-slate-400 flex-shrink-0" />
+                                <span className="truncate font-bold" title={socio.profesion}>{socio.profesion}</span>
                               </div>
                             )}
                             <div className="flex items-center text-slate-700">
-                              <Mail size={12} className="mr-2 text-slate-405 flex-shrink-0" />
-                              <span className="truncate" title={socio.correo}>{socio.correo}</span>
+                              <Mail size={13} className="mr-2 text-slate-400 flex-shrink-0" />
+                              <a href={`mailto:${socio.correo}`} className="truncate hover:text-blue-900 transition-colors" title={socio.correo}>
+                                {socio.correo}
+                              </a>
                             </div>
-                            <div className="flex items-center text-slate-600">
-                              <Phone size={12} className="mr-2 text-slate-405 flex-shrink-0" />
-                              <span>{socio.telefono || 'Sin teléfono'}</span>
+                            <div className="flex items-center justify-between text-slate-700">
+                              <div className="flex items-center">
+                                <Phone size={13} className="mr-2 text-slate-400 flex-shrink-0" />
+                                {socio.telefono && socio.telefono !== 'Sin teléfono' ? (
+                                  <a href={`tel:${socio.telefono}`} className="hover:text-blue-900 font-bold">
+                                    {socio.telefono}
+                                  </a>
+                                ) : (
+                                  <span className="text-slate-400 italic font-medium">Sin teléfono</span>
+                                )}
+                              </div>
                             </div>
                           </div>
 
-                          {/* Card Footer Actions */}
-                          <div className="flex flex-wrap items-center justify-end gap-1.5 pt-3 border-t border-slate-100">
+                          {/* Acciones de la Tarjeta */}
+                          <div className="flex flex-wrap items-center justify-between gap-1.5 pt-3 border-t border-slate-100">
+                            {/* Botón Ver Ficha Completa */}
+                            <button
+                              onClick={() => setSelectedSocioDetail(socio)}
+                              className="bg-white hover:bg-blue-50 text-blue-900 border border-slate-200/80 hover:border-blue-300 px-3 py-2 rounded-xl font-black text-xs transition-all flex items-center justify-center shadow-sm cursor-pointer"
+                              title="Ver Ficha Técnica Completa"
+                            >
+                              <Eye size={13} className="mr-1.5 text-blue-600" />
+                              <span>Ficha</span>
+                            </button>
+
+                            {/* Botón WhatsApp */}
+                            {whatsappUrl && (
+                              <a
+                                href={whatsappUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-3 py-2 rounded-xl font-black text-xs transition-all flex items-center justify-center shadow-sm cursor-pointer"
+                                title="Enviar mensaje leonístico o enlace por WhatsApp"
+                              >
+                                <MessageCircle size={13} className="mr-1.5 text-emerald-600" />
+                                <span>WhatsApp</span>
+                              </a>
+                            )}
+
+                            {/* Botón Enlace de Autogestión */}
                             <button
                               onClick={() => handleShareSocioLink(socio.id)}
-                              className="bg-white hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700 border border-slate-200/60 px-3 py-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm"
+                              className="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200/80 px-2.5 py-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm cursor-pointer"
                               title="Copiar enlace de autogestión para el socio"
                             >
-                              <Share2 size={13} className="mr-1.5" />
+                              <Share2 size={13} className="mr-1" />
                               <span>Enlace</span>
                             </button>
+
+                            {/* Botón Carnet QR */}
                             <button
                               onClick={() => handleQrClick(socio)}
-                              className="bg-white hover:bg-yellow-50 text-amber-600 hover:text-amber-700 border border-slate-200/60 px-3 py-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm disabled:opacity-50"
-                              title="Generar código QR de acceso"
+                              className="bg-white hover:bg-amber-50 text-amber-700 border border-slate-200/80 px-2.5 py-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm disabled:opacity-50 cursor-pointer"
+                              title="Generar carnet QR de acceso"
                               disabled={isGeneratingQr}
                             >
-                              <QrCode size={13} className="mr-1.5" />
+                              <QrCode size={13} className="mr-1" />
                               <span>QR</span>
                             </button>
+
+                            {/* Botón Editar */}
                             <button
                               onClick={() => handleEditSocioClick(socio)}
-                              className="bg-white hover:bg-blue-50 text-slate-650 hover:text-blue-900 border border-slate-200/60 px-3 py-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm"
+                              className="bg-white hover:bg-blue-50 text-blue-700 border border-slate-200/80 px-2.5 py-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm cursor-pointer"
                               title="Editar Ficha"
                             >
-                              <Pencil size={13} className="mr-1.5" />
-                              <span>Editar</span>
+                              <Pencil size={13} />
                             </button>
+
+                            {/* Botón Eliminar */}
                             <button
                               onClick={() => handleDeleteSocio(socio)}
-                              className="bg-white hover:bg-red-50 text-slate-650 hover:text-red-650 border border-slate-200/60 px-3 py-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm"
+                              className="bg-white hover:bg-red-50 text-slate-400 hover:text-red-600 border border-slate-200/80 px-2.5 py-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center shadow-sm cursor-pointer"
                               title="Eliminar Socio"
                             >
-                              <Trash2 size={13} className="mr-1.5" />
-                              <span>Eliminar</span>
+                              <Trash2 size={13} />
                             </button>
                           </div>
                         </div>
                       );
                     })}
+                  </div>
+                ) : (
+                  /* MODO TABLA COMPACTA */
+                  <div className="bg-white rounded-[2rem] border border-slate-200/80 shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-50 text-slate-400 uppercase font-black tracking-wider border-b border-slate-100">
+                          <tr>
+                            <th className="py-4 px-6">Socio Leonístico</th>
+                            <th className="py-4 px-6">Cargo / Rol</th>
+                            <th className="py-4 px-6">Contacto</th>
+                            <th className="py-4 px-6">Solvencia</th>
+                            <th className="py-4 px-6 text-right">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 font-semibold">
+                          {filteredSociosAdmin.map(socio => {
+                            const isDirectiva = isDirectivaSocio(socio);
+                            const isInactive = socio.estatus === 'Inactive' || socio.activo === false;
+                            const whatsappUrl = getSocioWhatsAppUrl(socio);
+
+                            return (
+                              <tr key={socio.id} className="hover:bg-slate-50/80 transition-colors">
+                                <td className="py-3 px-6">
+                                  <div className="flex items-center space-x-3">
+                                    <img 
+                                      src={getSafeAvatarUrl(socio.foto, socio.nombre)} 
+                                      alt={socio.nombre}
+                                      onError={(e) => handleAvatarError(e, socio.nombre)}
+                                      className="w-10 h-10 rounded-full object-cover border" 
+                                    />
+                                    <div>
+                                      <p 
+                                        onClick={() => setSelectedSocioDetail(socio)}
+                                        className="font-black text-slate-900 hover:text-blue-900 cursor-pointer text-sm"
+                                      >
+                                        {socio.nombre}
+                                      </p>
+                                      {socio.codigoSocio && (
+                                        <span className="text-[10px] font-mono font-bold text-blue-700">
+                                          #{socio.codigoSocio}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="py-3 px-6">
+                                  <span className="font-bold text-slate-800 block">{socio.puesto || 'Socio Regular'}</span>
+                                  {isDirectiva && !isInactive && (
+                                    <span className="text-[9px] font-black text-amber-700 uppercase bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                      Junta Directiva
+                                    </span>
+                                  )}
+                                  {isInactive && (
+                                    <span className="text-[9px] font-black text-slate-600 uppercase bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                      Inactivo
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="py-3 px-6">
+                                  <p className="text-slate-600">{socio.correo}</p>
+                                  <p className="text-slate-400 text-[11px]">{socio.telefono || 'Sin teléfono'}</p>
+                                </td>
+                                <td className="py-3 px-6">
+                                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${
+                                    socio.estadoCuotas === 'Al día' 
+                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                                      : 'bg-amber-50 text-amber-700 border border-amber-200'
+                                  }`}>
+                                    {socio.estadoCuotas || 'Al día'}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-6 text-right">
+                                  <div className="flex items-center justify-end space-x-1.5">
+                                    <button
+                                      onClick={() => setSelectedSocioDetail(socio)}
+                                      className="p-2 hover:bg-blue-50 text-blue-700 rounded-lg transition-colors cursor-pointer"
+                                      title="Ver Ficha"
+                                    >
+                                      <Eye size={15} />
+                                    </button>
+                                    {whatsappUrl && (
+                                      <a
+                                        href={whatsappUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="p-2 hover:bg-emerald-50 text-emerald-700 rounded-lg transition-colors cursor-pointer"
+                                        title="WhatsApp"
+                                      >
+                                        <MessageCircle size={15} />
+                                      </a>
+                                    )}
+                                    <button
+                                      onClick={() => handleQrClick(socio)}
+                                      className="p-2 hover:bg-amber-50 text-amber-700 rounded-lg transition-colors cursor-pointer"
+                                      title="QR"
+                                    >
+                                      <QrCode size={15} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleEditSocioClick(socio)}
+                                      className="p-2 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors cursor-pointer"
+                                      title="Editar"
+                                    >
+                                      <Pencil size={15} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteSocio(socio)}
+                                      className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors cursor-pointer"
+                                      title="Eliminar"
+                                    >
+                                      <Trash2 size={15} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
               </div>
@@ -6636,6 +7156,235 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
             </div>
           </div>
         )}
+
+        {/* MODAL: Ficha Técnica Completa de Socio (Quick View) */}
+        {selectedSocioDetail && (() => {
+          const isDirectiva = isDirectivaSocio(selectedSocioDetail);
+          const isInactive = selectedSocioDetail.estatus === 'Inactive' || selectedSocioDetail.activo === false;
+          const comisionesSocio = getSocioComisionesList(selectedSocioDetail.id);
+          const whatsappUrl = getSocioWhatsAppUrl(selectedSocioDetail);
+
+          return (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200">
+              <div className="bg-white rounded-[2.5rem] max-w-lg w-full overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 shadow-2xl border border-slate-100 max-h-[92vh]">
+                {/* Header Decoration */}
+                <div className="h-32 bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 relative flex-shrink-0">
+                  <div className="absolute top-0 left-0 w-full h-1.5 bg-yellow-400" />
+                  <button 
+                    onClick={() => setSelectedSocioDetail(null)} 
+                    className="absolute top-4 right-4 p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors cursor-pointer flex items-center justify-center"
+                    title="Cerrar Ficha"
+                  >
+                    <XIcon size={16} />
+                  </button>
+
+                  {/* Avatar flotante */}
+                  <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 z-10">
+                    <img 
+                      src={getSafeAvatarUrl(selectedSocioDetail.foto, selectedSocioDetail.nombre)} 
+                      alt={selectedSocioDetail.nombre} 
+                      onError={(e) => handleAvatarError(e, selectedSocioDetail.nombre)}
+                      className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-xl ring-4 ring-blue-900/40 cursor-zoom-in"
+                      onClick={() => setSelectedPhoto({ url: getSafeAvatarUrl(selectedSocioDetail.foto, selectedSocioDetail.nombre), title: selectedSocioDetail.nombre })}
+                    />
+                    {isDirectiva && !isInactive && (
+                      <div className="absolute -bottom-1 -right-1 bg-amber-400 text-amber-950 p-1.5 rounded-full border-2 border-white shadow-md flex items-center justify-center" title="Junta Directiva">
+                        <Star size={12} className="fill-current" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="px-6 pb-6 pt-12 flex flex-col items-center text-center overflow-y-auto space-y-5">
+                  <div>
+                    <h3 className="font-black text-2xl text-slate-900 leading-tight">
+                      {selectedSocioDetail.nombre}
+                    </h3>
+                    <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
+                      <span className="text-xs font-black uppercase tracking-wider px-3.5 py-1 rounded-full border bg-blue-50 text-blue-900 border-blue-200">
+                        {selectedSocioDetail.puesto || 'Socio Regular'}
+                      </span>
+                      {selectedSocioDetail.codigoSocio && (
+                        <span className="text-xs font-mono font-black text-blue-700 bg-blue-50/60 px-3 py-1 rounded-full border border-blue-100">
+                          # {selectedSocioDetail.codigoSocio}
+                        </span>
+                      )}
+                      {isDirectiva && !isInactive && (
+                        <span className="text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                          <Star size={11} className="fill-current text-amber-600" />
+                          <span>Directiva</span>
+                        </span>
+                      )}
+                      {isInactive && (
+                        <span className="text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full bg-slate-200 text-slate-700 border border-slate-300">
+                          Inactivo
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Estado de Solvencia */}
+                  <div className="w-full flex items-center justify-between p-3.5 bg-slate-50 rounded-2xl border border-slate-100 text-xs font-bold">
+                    <span className="text-slate-400 uppercase tracking-wider text-[10px] font-black">Estado de Cuotas</span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-black uppercase flex items-center space-x-1.5 ${
+                      selectedSocioDetail.estadoCuotas === 'Al día'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : selectedSocioDetail.estadoCuotas === 'Pendiente'
+                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                        : 'bg-red-50 text-red-700 border border-red-200'
+                    }`}>
+                      <span className={`w-2 h-2 rounded-full ${
+                        selectedSocioDetail.estadoCuotas === 'Al día' ? 'bg-emerald-500' : selectedSocioDetail.estadoCuotas === 'Pendiente' ? 'bg-amber-500' : 'bg-red-500'
+                      }`} />
+                      <span>{selectedSocioDetail.estadoCuotas || 'Al día'}</span>
+                      {selectedSocioDetail.montoPendiente > 0 && (
+                        <span>(Q{selectedSocioDetail.montoPendiente})</span>
+                      )}
+                    </span>
+                  </div>
+
+                  {/* Comisiones del Socio */}
+                  {comisionesSocio.length > 0 && (
+                    <div className="w-full bg-blue-50/40 p-4 rounded-2xl border border-blue-100/70 text-left">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-blue-800 block mb-2">
+                        Participación en Comisiones ({comisionesSocio.length})
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {comisionesSocio.map(c => {
+                          const isCoord = c.coordinador === selectedSocioDetail.id;
+                          return (
+                            <span 
+                              key={c.id}
+                              className={`text-xs font-extrabold px-3 py-1 rounded-xl border flex items-center gap-1.5 ${
+                                isCoord 
+                                  ? 'bg-amber-100 text-amber-950 border-amber-300' 
+                                  : 'bg-white text-slate-800 border-slate-200 shadow-sm'
+                              }`}
+                            >
+                              <span>{c.nombre}</span>
+                              {isCoord && <span className="text-[9px] font-black text-amber-800 uppercase">(Coordinador)</span>}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Datos Personales y de Contacto */}
+                  <div className="w-full bg-slate-50/70 rounded-2xl p-4 border border-slate-100 text-left text-xs font-bold text-slate-700 space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
+                      <span className="text-slate-400 font-medium">Correo Electrónico</span>
+                      <a href={`mailto:${selectedSocioDetail.correo}`} className="font-black text-blue-900 hover:underline truncate max-w-[220px]">
+                        {selectedSocioDetail.correo}
+                      </a>
+                    </div>
+
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
+                      <span className="text-slate-400 font-medium">Teléfono Celular</span>
+                      {selectedSocioDetail.telefono && selectedSocioDetail.telefono !== 'Sin teléfono' ? (
+                        <a href={`tel:${selectedSocioDetail.telefono}`} className="font-black text-slate-800 hover:text-blue-900">
+                          {selectedSocioDetail.telefono}
+                        </a>
+                      ) : (
+                        <span className="text-slate-400 italic font-medium">Sin registrar</span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
+                      <span className="text-slate-400 font-medium">Profesión u Oficio</span>
+                      <span className="font-black text-slate-800">{selectedSocioDetail.profesion || 'No especificada'}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
+                      <span className="text-slate-400 font-medium">DPI / Identificación</span>
+                      <span className="font-black text-slate-800">{selectedSocioDetail.dpi || 'Pendiente de registrar'}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
+                      <span className="text-slate-400 font-medium">Fecha de Nacimiento</span>
+                      <span className="font-black text-slate-800">{selectedSocioDetail.fechaNacimiento || 'No registrada'}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
+                      <span className="text-slate-400 font-medium">Fecha de Ingreso</span>
+                      <span className="font-black text-slate-800">{selectedSocioDetail.fechaIngreso || 'No registrada'}</span>
+                    </div>
+
+                    {selectedSocioDetail.direccion && (
+                      <div className="pt-1">
+                        <span className="text-slate-400 font-medium block mb-1">Dirección de Residencia</span>
+                        <span className="font-black text-slate-800 block text-xs leading-relaxed">{selectedSocioDetail.direccion}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Footer del Modal */}
+                <div className="py-4 px-6 border-t border-slate-100 bg-slate-50 flex flex-wrap gap-2 justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    {whatsappUrl && (
+                      <a
+                        href={whatsappUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                        title="Abrir WhatsApp"
+                      >
+                        <MessageCircle size={15} />
+                        <span>WhatsApp</span>
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleShareSocioLink(selectedSocioDetail.id)}
+                      className="p-2.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer"
+                      title="Copiar enlace de autogestión"
+                    >
+                      <Share2 size={15} />
+                      <span>Enlace</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const s = selectedSocioDetail;
+                        setSelectedSocioDetail(null);
+                        handleQrClick(s);
+                      }}
+                      className="p-2.5 bg-white hover:bg-amber-50 text-amber-700 border border-slate-200 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer"
+                      title="Ver Carnet QR"
+                    >
+                      <QrCode size={15} />
+                      <span>QR</span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const s = selectedSocioDetail;
+                        setSelectedSocioDetail(null);
+                        handleEditSocioClick(s);
+                      }}
+                      className="px-4 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+                    >
+                      <Pencil size={14} />
+                      <span>Editar</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSocioDetail(null)}
+                      className="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-black transition-all cursor-pointer"
+                    >
+                      Cerrar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     );
   };
