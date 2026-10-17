@@ -325,6 +325,9 @@ export interface AsignacionComision {
   fechaCreacion: string;
 }
 
+export type TipoComision = 'permanente' | 'temporal' | 'proyecto';
+export type EstadoComision = 'Activa' | 'Inactiva' | 'Concluida';
+
 export interface Comision {
   id: string;
   nombre: string;
@@ -333,7 +336,10 @@ export interface Comision {
   coordinador?: string; // ID del socio coordinador
   actasVinculadas?: string[]; // IDs o Títulos de actas
   fechaCreacion: string;
-  estado: 'Activa' | 'Inactiva';
+  estado: EstadoComision;
+  tipo?: TipoComision;
+  progresoObjetivo?: number; // 0 - 100%
+  fechaFin?: string;
 }
 
 export interface MinutaPunto {
