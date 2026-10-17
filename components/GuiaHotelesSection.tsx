@@ -117,7 +117,7 @@ export const HOTELES_CONVENCION: HotelGuia[] = [
       telefono: '7926 8123',
       sitioWeb: 'https://hotelbellaluna.com/'
     },
-    indicacionesReserva: 'Al momento de solicitar su reserva vía telefónica o web, informe que asiste a la 75 Convención Nacional del Distrito D-3 para aplicar su tarifa especial.',
+    indicacionesReserva: 'Al momento de solicitar su reserva vía telefónica o web, informe que asiste a la 75 Convención Nacional de Leones para aplicar su tarifa especial.',
     notaEspecial: 'Tarifa especial sujeta a disponibilidad de cupos.'
   },
   {
@@ -461,9 +461,9 @@ export const GuiaHotelesSection: React.FC = () => {
       
       {/* Encabezado Principal */}
       <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4 mb-8 sm:mb-10">
-        <div className="inline-flex items-center space-x-2 bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider shadow-sm">
-          <Building2 size={15} className="text-yellow-400" />
-          <span>Guía Oficial de Hospedaje • Distrito D-3</span>
+        <div className="inline-flex items-center space-x-2 bg-amber-100/90 border border-amber-300 text-amber-950 px-4.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider shadow-xs">
+          <Building2 size={15} className="text-amber-700" />
+          <span>Guía Oficial de Hospedaje</span>
         </div>
         
         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight text-slate-900">
@@ -471,14 +471,14 @@ export const GuiaHotelesSection: React.FC = () => {
         </h2>
         
         <p className="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed font-medium">
-          El Comité Organizador preparó esta guía para facilitar tu estadía durante la <strong>75.ª Convención Distrital (Marzo 2027)</strong>. Haz clic en cualquier ficha para desplegar sus tarifas oficiales, fotografías y contactos directos.
+          El Comité Organizador preparó esta guía para facilitar tu estadía durante la <strong>75.ª Convención Nacional (Marzo 2027)</strong>. Haz clic en cualquier ficha para desplegar sus tarifas oficiales, fotografías y contactos directos.
         </p>
 
         {/* Banner Descarga PDF + Nota Oficial */}
         <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
           <a
             href="./pdfs/Guía de Hoteles 75 Convención D-3.pdf"
-            download="Guia_Hoteles_75_Convencion_Leones_D3.pdf"
+            download="Guia_Hoteles_75_Convencion_Leones.pdf"
             className="inline-flex items-center space-x-2 bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-400 hover:from-yellow-400 hover:to-amber-300 text-blue-955 font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all duration-300 shadow-lg shadow-yellow-500/20 cursor-pointer active:scale-95"
           >
             <Download size={15} />

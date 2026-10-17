@@ -1670,6 +1670,9 @@ export default function Convencion() {
         </div>
       </section>
 
+      {/* SECCIÓN INTERACTIVA: Guía Oficial de Hospedaje */}
+      <GuiaHotelesSection />
+
       {/* SECCIÓN 4: Actividades Culturales y Sociales — CONTENEDORES FLOTANTES */}
       <section className="my-8 sm:my-16 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto space-y-3 sm:space-y-4 mb-8 sm:mb-12">
@@ -1746,9 +1749,6 @@ export default function Convencion() {
           ))}
         </div>
       </section>
-
-      {/* SECCIÓN INTERACTIVA: Guía de Hoteles y Hospedaje Oficial (D-3 Quetzaltenango) */}
-      <GuiaHotelesSection />
 
       {/* SECCIÓN 7: Formulario de Pre-registro Digital Guiado (4 Pasos) — GALA & CONVERSIÓN FLOTANTE */}
       <section id="pre-inscripcion" className="my-6 sm:my-20 max-w-[1440px] mx-auto px-2 sm:px-6 lg:px-8 scroll-mt-10">
