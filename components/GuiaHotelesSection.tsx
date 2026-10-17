@@ -583,8 +583,8 @@ export const GuiaHotelesSection: React.FC = () => {
         </div>
       </div>
 
-      {/* Lista Desplegable de Fichas de Hoteles (Acordeón Ultra Limpio y Compacto) */}
-      <div className="space-y-4 sm:space-y-5">
+      {/* Grid Desplegable: 2 Columnas en Escritorio (lg:grid-cols-2) y 1 Columna Optimizada en Móvil */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-start">
         {filteredHoteles.map((hotel) => {
           const isExpanded = expandedHotelIds.has(hotel.id);
           const estimatedCost = hotel.precioMinimo * selectedNights;
@@ -593,22 +593,22 @@ export const GuiaHotelesSection: React.FC = () => {
           return (
             <div
               key={hotel.id}
-              className={`bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border rounded-2xl sm:rounded-3xl shadow-xl transition-all duration-300 overflow-hidden ${
+              className={`bg-gradient-to-br from-[#0c1a38] via-[#09152e] to-[#060e1d] text-white border rounded-2xl sm:rounded-3xl shadow-xl transition-all duration-300 overflow-hidden flex flex-col justify-start ${
                 isExpanded 
                   ? 'border-yellow-400/80 shadow-[0_15px_35px_rgba(0,0,0,0.45)] ring-1 ring-yellow-400/30' 
                   : 'border-yellow-500/30 hover:border-yellow-400/60 hover:shadow-2xl hover:shadow-yellow-500/10'
               }`}
             >
-              {/* ENCABEZADO RESUMEN COMPACTO (Siempre visible, cliqueable para abrir/cerrar) */}
+              {/* ENCABEZADO RESUMEN COMPACTO (Optimizado para móvil y web, cliqueable) */}
               <div
                 onClick={() => toggleHotel(hotel.id)}
-                className="p-4 sm:p-6 cursor-pointer select-none transition-colors hover:bg-white/[0.03] flex flex-col md:flex-row md:items-center justify-between gap-4"
+                className="p-3.5 sm:p-5 cursor-pointer select-none transition-colors hover:bg-white/[0.03] flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4"
               >
                 {/* Lado Izquierdo: Foto miniatura + Nombre + Ubicación + Badges */}
-                <div className="flex items-start sm:items-center space-x-3.5 sm:space-x-5 flex-1 min-w-0">
+                <div className="flex items-start sm:items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
                   {/* Miniatura de la foto */}
                   {hotel.fotos && hotel.fotos[0] && (
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden shrink-0 border border-yellow-500/40 shadow-md relative bg-slate-900">
+                    <div className="w-14 h-14 sm:w-18 sm:h-18 rounded-xl sm:rounded-2xl overflow-hidden shrink-0 border border-yellow-500/40 shadow-md relative bg-slate-900">
                       <img 
                         src={hotel.fotos[0]} 
                         alt={hotel.nombre}
@@ -616,75 +616,75 @@ export const GuiaHotelesSection: React.FC = () => {
                         loading="lazy"
                       />
                       {hotel.tarifaEspecialLeon && (
-                        <div className="absolute top-1 left-1 bg-yellow-400 text-blue-955 text-[8px] font-black px-1 rounded shadow">
+                        <div className="absolute top-0.5 left-0.5 bg-yellow-400 text-blue-955 text-[7.5px] font-black px-1 rounded shadow">
                           LEÓN
                         </div>
                       )}
                     </div>
                   )}
 
-                  <div className="space-y-1 min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border shadow-2xs ${hotel.badge.bgClass} ${hotel.badge.textClass} ${hotel.badge.borderClass}`}>
+                  <div className="space-y-0.5 sm:space-y-1 min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className={`text-[8.5px] sm:text-[9.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border shadow-2xs ${hotel.badge.bgClass} ${hotel.badge.textClass} ${hotel.badge.borderClass}`}>
                         {hotel.badge.texto}
                       </span>
 
-                      <span className="inline-flex items-center space-x-1 text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30">
-                        <Car size={11} className="text-amber-400" />
-                        <span>{hotel.distanciaMinutos} min a Sede</span>
+                      <span className="inline-flex items-center space-x-1 text-[10px] sm:text-[11px] font-extrabold px-1.5 sm:px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30">
+                        <Car size={10} className="text-amber-400" />
+                        <span>{hotel.distanciaMinutos} min</span>
                       </span>
                     </div>
 
-                    <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight truncate hover:text-yellow-300 transition-colors">
+                    <h3 className="text-lg sm:text-xl font-black text-white tracking-tight truncate hover:text-yellow-300 transition-colors">
                       {hotel.nombre}
                     </h3>
 
-                    <div className="flex items-center space-x-1 text-slate-300 text-xs font-medium truncate">
-                      <MapPin size={12} className="text-yellow-400 shrink-0" />
+                    <div className="flex items-center space-x-1 text-slate-300 text-[11px] sm:text-xs font-medium truncate">
+                      <MapPin size={11} className="text-yellow-400 shrink-0" />
                       <span className="truncate">{hotel.subtitulo}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Lado Derecho: Tarifa Base + Estimado de Noches + Acciones Rápidas */}
-                <div className="flex items-center justify-between md:justify-end gap-3 sm:gap-5 border-t md:border-t-0 pt-3 md:pt-0 border-white/10 shrink-0">
-                  <div className="text-left md:text-right">
-                    <span className="text-[10px] uppercase tracking-wider text-slate-400 block font-bold">Tarifa desde</span>
-                    <div className="text-lg sm:text-2xl font-black text-yellow-400 leading-tight">
+                <div className="flex items-center justify-between sm:justify-end gap-2.5 sm:gap-4 border-t sm:border-t-0 pt-2.5 sm:pt-0 border-white/10 shrink-0">
+                  <div className="text-left sm:text-right">
+                    <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-bold">Desde</span>
+                    <div className="text-base sm:text-xl font-black text-yellow-400 leading-tight">
                       {hotel.precioMinimoTexto}
                     </div>
-                    <span className="text-[10px] text-yellow-300/80 font-semibold block">
-                      ~Q.{estimatedCost.toLocaleString()} ({selectedNights} {selectedNights === 1 ? 'noche' : 'noches'})
+                    <span className="text-[9.5px] text-yellow-300/80 font-semibold block">
+                      ~Q.{estimatedCost.toLocaleString()} ({selectedNights}n)
                     </span>
                   </div>
 
-                  {/* Botón WhatsApp Rápido (siempre accesible desde el resumen) */}
+                  {/* Botón WhatsApp Rápido en Resumen */}
                   {hotel.contacto.whatsapp ? (
                     <a
                       href={`https://wa.me/502${hotel.contacto.whatsapp.replace(/\s+/g, '')}?text=${encodeURIComponent(`Hola, me comunico para consultar disponibilidad de hospedaje con motivo de la 75 Convención de Leones en Quetzaltenango.`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="hidden sm:inline-flex items-center justify-center p-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition-all active:scale-95"
+                      className="inline-flex items-center justify-center p-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition-all active:scale-95"
                       title={`WhatsApp directo con ${hotel.nombre}`}
                     >
-                      <MessageCircle size={16} />
+                      <MessageCircle size={15} />
                     </a>
                   ) : hotel.contacto.telefono ? (
                     <a
                       href={`tel:${hotel.contacto.telefono.replace(/\s+/g, '')}`}
                       onClick={(e) => e.stopPropagation()}
-                      className="hidden sm:inline-flex items-center justify-center p-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-md transition-all active:scale-95"
+                      className="inline-flex items-center justify-center p-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-md transition-all active:scale-95"
                       title={`Llamar a ${hotel.nombre}`}
                     >
-                      <Phone size={16} />
+                      <Phone size={15} />
                     </a>
                   ) : null}
 
                   {/* Indicador de Apertura / Cierre */}
-                  <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-black text-yellow-300 transition-all">
-                    <span className="hidden sm:inline">{isExpanded ? 'Ocultar' : 'Ver Detalles'}</span>
-                    {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  <div className="flex items-center space-x-1 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-[11px] font-black text-yellow-300 transition-all">
+                    <span>{isExpanded ? 'Cerrar' : 'Detalles'}</span>
+                    {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                   </div>
                 </div>
               </div>
@@ -835,7 +835,7 @@ export const GuiaHotelesSection: React.FC = () => {
 
                   {/* Acciones Directas de Contacto */}
                   <div className="pt-2 space-y-2.5">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
                       {/* Botón WhatsApp */}
                       {hotel.contacto.whatsapp ? (
                         <a
@@ -866,7 +866,9 @@ export const GuiaHotelesSection: React.FC = () => {
                           href={hotel.contacto.sitioWeb}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center space-x-1.5 bg-white/10 hover:bg-white/20 text-white font-bold px-4 py-3 rounded-xl text-xs border border-white/15 transition-all cursor-pointer"
+                          className={`inline-flex items-center justify-center space-x-1.5 bg-white/10 hover:bg-white/20 text-white font-bold px-4 py-3 rounded-xl text-xs border border-white/15 transition-all cursor-pointer ${
+                            !hotel.contacto.whatsapp || !hotel.contacto.telefono ? '' : 'sm:col-span-2'
+                          }`}
                         >
                           <Globe size={14} />
                           <span>Sitio Oficial</span>
@@ -877,7 +879,9 @@ export const GuiaHotelesSection: React.FC = () => {
                           href={hotel.contacto.facebook}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center space-x-1.5 bg-blue-700/60 hover:bg-blue-600 text-white font-bold px-4 py-3 rounded-xl text-xs border border-white/15 transition-all cursor-pointer"
+                          className={`inline-flex items-center justify-center space-x-1.5 bg-blue-700/60 hover:bg-blue-600 text-white font-bold px-4 py-3 rounded-xl text-xs border border-white/15 transition-all cursor-pointer ${
+                            !hotel.contacto.whatsapp || !hotel.contacto.telefono ? '' : 'sm:col-span-2'
+                          }`}
                         >
                           <Globe size={14} />
                           <span>Página Facebook</span>
