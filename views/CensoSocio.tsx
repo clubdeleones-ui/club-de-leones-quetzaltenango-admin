@@ -171,12 +171,6 @@ export default function CensoSocio() {
     }
   };
 
-  // Bypass verification if user says number changed
-  const handleBypassVerify = () => {
-    setVerificationError(null);
-    setStep('form');
-  };
-
   // Start new registration
   const handleStartNewRegistration = () => {
     setSelectedSocio(null);
@@ -668,13 +662,17 @@ export default function CensoSocio() {
               </button>
 
               <div className="text-center pt-2">
-                <button
-                  type="button"
-                  onClick={handleBypassVerify}
-                  className="text-[11px] font-bold text-slate-500 hover:text-slate-800 underline decoration-slate-300 transition-colors"
-                >
-                  ¿No recuerdas tus datos previos o cambiaron? Continuar de todos modos
-                </button>
+                <p className="text-[11px] font-medium text-slate-400">
+                  ¿Cambiaron tus datos o necesitas ayuda?{' '}
+                  <a
+                    href="https://wa.me/50277612345?text=Hola,%20necesito%20actualizar%20mis%20datos%20en%20el%20Censo%20de%20Socios%20del%20Club%20de%20Leones"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-bold text-blue-900 hover:text-blue-700 underline decoration-blue-300"
+                  >
+                    Contactar a Secretaría
+                  </a>
+                </p>
               </div>
             </form>
           </div>

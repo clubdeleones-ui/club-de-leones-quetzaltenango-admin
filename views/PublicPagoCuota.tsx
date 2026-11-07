@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Search, DollarSign, Calendar, CreditCard, Image, Upload, X, Check, Building, AlertCircle, Sparkles, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { Search, DollarSign, Calendar, CreditCard, Image, Upload, X, Check, Building, AlertCircle, Sparkles, CheckCircle2, ShieldCheck, Download, Receipt } from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
 import { Socio, PagoCuota } from '../types';
 import { useToast } from '../context/ToastContext';
 import { validateImageFile, compressImageFile } from '../utils/imageCompressor';
 import { CyberSourcePaymentModal } from '../components/CyberSourcePaymentModal';
 import { CyberSourcePaymentResult } from '../services/cybersourceService';
+import { generateReciboPagoPDF } from '../utils/pdfGenerator';
 
 export const PublicPagoCuota: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -16,6 +17,7 @@ export const PublicPagoCuota: React.FC = () => {
   const [socios, setSocios] = useState<Socio[]>([]);
   const [loading, setLoading] = useState(true);
   const [success, setSuccess] = useState(false);
+  const [lastCyberSourcePayment, setLastCyberSourcePayment] = useState<{ result: CyberSourcePaymentResult; pago: PagoCuota; socio: Socio } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [processingRecurrenteReturn, setProcessingRecurrenteReturn] = useState(false);
   const [isCyberSourceModalOpen, setIsCyberSourceModalOpen] = useState(false);
@@ -400,6 +402,7 @@ export const PublicPagoCuota: React.FC = () => {
       await firebaseService.saveSocio(updatedSocio);
       setSelectedSocio(updatedSocio);
       setSocios(prev => prev.map(s => s.id === updatedSocio.id ? updatedSocio : s));
+      setLastCyberSourcePayment({ result, pago: nuevoPago, socio: updatedSocio });
       setSuccess(true);
       showToast('¡Pago con tarjeta procesado y registrado con éxito!', 'success');
     } catch (err: any) {
@@ -670,18 +673,70 @@ export const PublicPagoCuota: React.FC = () => {
         </div>
 
         {success ? (
-          <div className="text-center py-10 space-y-4 animate-in zoom-in-95 duration-300">
+          <div className="text-center py-8 space-y-5 animate-in zoom-in-95 duration-300">
             <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100 flex items-center justify-center mx-auto shadow-md">
               <Check className="stroke-[3]" size={32} />
             </div>
-            <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">¡Reporte Enviado!</h3>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
-              Hemos registrado el comprobante de tu aportación correctamente. El tesorero verificará la transferencia/depósito a la brevedad. ¡Muchas gracias por tu compromiso!
-            </p>
-            <div className="pt-6">
+            
+            <div>
+              <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">
+                {lastCyberSourcePayment ? '¡Pago Autorizado y Registrado!' : '¡Reporte Enviado!'}
+              </h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed mt-1">
+                {lastCyberSourcePayment ? (
+                  <>Tu aportación fue cobrada y conciliada en el sistema mediante <strong>BAC Credomatic (CyberSource)</strong>. El estado de tus cuotas ha sido actualizado en tiempo real.</>
+                ) : (
+                  <>Hemos registrado el comprobante de tu aportación correctamente. El tesorero verificará la transferencia/depósito a la brevedad. ¡Muchas gracias por tu compromiso!</>
+                )}
+              </p>
+            </div>
+
+            {lastCyberSourcePayment && (
+              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 text-left max-w-sm mx-auto space-y-2 text-xs font-medium text-slate-700">
+                <div className="flex justify-between items-center pb-2 border-b border-slate-200/80">
+                  <span className="text-slate-400 font-bold uppercase text-[10px]">Socio:</span>
+                  <span className="font-bold text-slate-900">{lastCyberSourcePayment.socio.nombre}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Concepto / Periodo:</span>
+                  <span className="font-bold text-slate-800">{lastCyberSourcePayment.pago.periodo}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Monto Acreditado:</span>
+                  <span className="font-bold text-emerald-700 text-sm">Q{lastCyberSourcePayment.pago.monto.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Referencia CyberSource:</span>
+                  <span className="font-mono font-bold text-slate-800 text-[11px]">{lastCyberSourcePayment.result.transactionId}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Código de Aprobación:</span>
+                  <span className="font-mono font-bold text-blue-900">{lastCyberSourcePayment.result.approvalCode}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Tarjeta:</span>
+                  <span className="font-bold text-slate-700">{lastCyberSourcePayment.result.brand} •••• {lastCyberSourcePayment.result.last4}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-4">
+              {lastCyberSourcePayment && (
+                <button
+                  type="button"
+                  onClick={() => generateReciboPagoPDF(lastCyberSourcePayment.socio, lastCyberSourcePayment.pago)}
+                  className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-750 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center justify-center space-x-2"
+                >
+                  <Download size={16} />
+                  <span>Descargar Recibo Oficial (PDF)</span>
+                </button>
+              )}
+
               <button
+                type="button"
                 onClick={() => {
                   setSuccess(false);
+                  setLastCyberSourcePayment(null);
                   setSelectedSocio(null);
                   setSearchQuery('');
                   setFormState(prev => ({
@@ -691,9 +746,9 @@ export const PublicPagoCuota: React.FC = () => {
                     bancoReferencia: ''
                   }));
                 }}
-                className="px-6 py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95"
+                className="w-full sm:w-auto px-5 py-2.5 bg-blue-900 hover:bg-blue-950 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95"
               >
-                Reportar Otro Pago
+                Reportar Otra Aportación
               </button>
             </div>
           </div>
@@ -720,7 +775,7 @@ export const PublicPagoCuota: React.FC = () => {
                     <div>
                       <p className="text-xs font-black leading-tight">Tarjeta de Crédito / Débito</p>
                       <p className={`text-[10px] mt-0.5 ${formState.metodo === 'Tarjeta' ? 'text-blue-200' : 'text-slate-400'}`}>
-                        Vía Recurrente GT (Visa/Mastercard)
+                        BAC Credomatic / CyberSource (Visa, MC, AMEX, Cuotas)
                       </p>
                     </div>
                   </div>

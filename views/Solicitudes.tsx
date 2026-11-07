@@ -50,7 +50,8 @@ import {
   Square,
   CreditCard,
   ExternalLink,
-  Edit3
+  Edit3,
+  CheckCircle2
 } from 'lucide-react';
 import { recurrenteService, RecurrenteItem } from '../services/recurrenteService';
 import { generateCartaOficialPDF, formatFechaCarta } from '../utils/pdfGenerator';
@@ -293,6 +294,13 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
     plazasParqueo?: number;
     costoTotal: number;
     esSocio: boolean;
+    pagado?: boolean;
+    pagoInfo?: {
+      transactionId: string;
+      approvalCode: string;
+      brand?: string;
+      last4?: string;
+    };
   } | null>(null);
   const [trackingCode, setTrackingCode] = useState('');
   const [searchedSolicitud, setSearchedSolicitud] = useState<Solicitud | null>(null);
@@ -702,6 +710,16 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
       safeSetItem('club_leones_solicitudes', JSON.stringify(updatedList));
 
       setCreatedSolicitudId(updatedSol.id);
+      setCreatedSolicitudData(prev => prev ? {
+        ...prev,
+        pagado: true,
+        pagoInfo: {
+          transactionId: result.transactionId,
+          approvalCode: result.approvalCode,
+          brand: result.brand,
+          last4: result.last4
+        }
+      } : null);
       setSaveSuccess(true);
       showToast('¡Pago de reservación procesado y confirmado con éxito!', 'success');
     } catch (err: any) {
@@ -3814,10 +3832,14 @@ Club de Leones de Quetzaltenango`;
                 {createdSolicitudData.esSocio && (
                   <span className="text-[10px] font-black text-blue-900 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-lg uppercase tracking-wide">Socio</span>
                 )}
-                {createdSolicitudData.costoTotal === 0 && (
+                {createdSolicitudData.pagado ? (
+                  <span className="text-[10px] font-black text-emerald-800 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded-lg uppercase tracking-wide flex items-center space-x-1">
+                    <CheckCircle2 size={12} className="inline mr-1 text-emerald-600" />
+                    <span>Pagado con Tarjeta (BAC)</span>
+                  </span>
+                ) : createdSolicitudData.costoTotal === 0 ? (
                   <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg uppercase tracking-wide">Exonerado</span>
-                )}
-                {createdSolicitudData.costoTotal > 0 && (
+                ) : (
                   <span className="text-[10px] font-black text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg uppercase tracking-wide">Por Pagar</span>
                 )}
               </div>
@@ -3826,6 +3848,21 @@ Club de Leones de Quetzaltenango`;
                 <span className="text-2xl font-black text-blue-900">Q {createdSolicitudData.costoTotal.toFixed(2)}</span>
               </div>
             </div>
+
+            {createdSolicitudData.pagoInfo && (
+              <div className="mt-3 pt-3 border-t border-slate-100 bg-emerald-50/60 rounded-xl p-3 text-[11px] text-slate-700 space-y-1">
+                <div className="flex items-center justify-between font-bold text-emerald-800">
+                  <span>Pago Confirmado CyberSource (BAC)</span>
+                  <span className="font-mono text-[10px]">Aut: {createdSolicitudData.pagoInfo.approvalCode}</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-500 font-mono text-[10px]">
+                  <span>Ref: {createdSolicitudData.pagoInfo.transactionId}</span>
+                  {createdSolicitudData.pagoInfo.brand && (
+                    <span>{createdSolicitudData.pagoInfo.brand} •••• {createdSolicitudData.pagoInfo.last4}</span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
