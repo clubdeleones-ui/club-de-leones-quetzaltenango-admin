@@ -26,7 +26,10 @@ import {
   Zap,
   ZapOff,
   FlipHorizontal,
-  Filter
+  Filter,
+  Wifi,
+  WifiOff,
+  CloudUpload
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
@@ -36,6 +39,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, addDoc, limit, where } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { firebaseService } from '../services/firebaseService';
+import { parqueoOfflineService } from '../services/parqueoOfflineService';
+import { PlateAiModal } from './PlateAiModal';
 import { VehiculoParqueo, RegistroBano, TipoRentaParqueo } from '../types';
 import { useModal } from '../context/ModalContext';
 
@@ -417,6 +422,18 @@ export const ParqueoManager: React.FC = () => {
       recientesMap.forEach((v, id) => allVehsMap.set(id, v));
       activosMap.forEach((v, id) => allVehsMap.set(id, v));
 
+      // Recuperar e incorporar registros pendientes en memoria local (persisten aunque recarguen sin red)
+      const pendingLocal = parqueoOfflineService.getPendingQueue();
+      pendingLocal.forEach(p => {
+        if (p.tipo === 'ingreso' && p.data) {
+          if (!allVehsMap.has(p.id)) {
+            allVehsMap.set(p.id, p.data);
+          }
+        } else if (p.tipo === 'salida' && p.data) {
+          allVehsMap.set(p.id, p.data);
+        }
+      });
+
       const vehList = Array.from(allVehsMap.values());
       vehList.sort((a, b) => new Date(b.horaEntrada || 0).getTime() - new Date(a.horaEntrada || 0).getTime());
 
@@ -525,15 +542,17 @@ export const ParqueoManager: React.FC = () => {
       horaSalida: now.toISOString()
     };
 
-    try {
-      // Guardar directamente en la colección banos
-      await setDoc(doc(db, 'banos', docId), banoDocPayload);
-    } catch (err) {
-      console.error("Error al registrar uso de baño en banos Firestore, intentando respaldo:", err);
+    if (!navigator.onLine) {
+      parqueoOfflineService.addToQueue(docId, 'bano', banoDocPayload);
+      setPendingOfflineCount(parqueoOfflineService.getPendingQueue().length);
+    } else {
       try {
-        await setDoc(doc(db, 'parqueo', docId), banoDocPayload);
-      } catch (err2) {
-        console.error("Error secundario al guardar uso de baño:", err2);
+        // Guardar directamente en la colección banos
+        await setDoc(doc(db, 'banos', docId), banoDocPayload);
+      } catch (err) {
+        console.error("Error al registrar uso de baño en banos Firestore, archivando en cola offline:", err);
+        parqueoOfflineService.addToQueue(docId, 'bano', banoDocPayload);
+        setPendingOfflineCount(parqueoOfflineService.getPendingQueue().length);
       }
     }
   };
@@ -604,11 +623,110 @@ export const ParqueoManager: React.FC = () => {
   const [showQrScanner, setShowQrScanner] = useState(false);
   const [scannerToast, setScannerToast] = useState<{ tipo: 'warning' | 'error' | 'info'; mensaje: string } | null>(null);
 
+  // States for AI Plate Scanner & Offline Synchronization
+  const [showPlateAiModal, setShowPlateAiModal] = useState(false);
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
+  const [pendingOfflineCount, setPendingOfflineCount] = useState(() => parqueoOfflineService.getPendingQueue().length);
+  const [isSyncingOffline, setIsSyncingOffline] = useState(false);
+  const [offlineToast, setOfflineToast] = useState<{ tipo: 'info' | 'success' | 'warning'; mensaje: string } | null>(null);
+
   // States for History date filters
   type FiltroFecha = 'hoy' | 'ayer' | 'semana' | 'mes' | 'todos' | 'personalizado';
   const [filtroFechaHistorial, setFiltroFechaHistorial] = useState<FiltroFecha>('hoy');
   const [fechaInicioHistorial, setFechaInicioHistorial] = useState<string>('');
   const [fechaFinHistorial, setFechaFinHistorial] = useState<string>('');
+
+  // Disparador de sincronización de registros pendientes con Firestore
+  const handleTriggerSync = async () => {
+    if (isSyncingOffline) return;
+    setIsSyncingOffline(true);
+    try {
+      const res = await parqueoOfflineService.syncQueue();
+      const remaining = parqueoOfflineService.getPendingQueue().length;
+      setPendingOfflineCount(remaining);
+
+      if (res.syncedCount > 0) {
+        setOfflineToast({
+          tipo: 'success',
+          mensaje: `✅ Sincronizados ${res.syncedCount} registro(s) pendientes con la nube.`
+        });
+        setTimeout(() => setOfflineToast(null), 4000);
+      } else if (res.failedCount > 0) {
+        setOfflineToast({
+          tipo: 'warning',
+          mensaje: `⚠️ No se pudieron sincronizar ${res.failedCount} registros. Verifique su señal.`
+        });
+        setTimeout(() => setOfflineToast(null), 4000);
+      }
+    } catch (e) {
+      console.error("Error en sincronización manual:", e);
+    } finally {
+      setIsSyncingOffline(false);
+    }
+  };
+
+  // Listener para estado de red online/offline y sincronización automática
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      setOfflineToast({
+        tipo: 'info',
+        mensaje: '📶 Conexión restablecida. Sincronizando registros locales...'
+      });
+      setTimeout(() => setOfflineToast(null), 3500);
+      handleTriggerSync();
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      setOfflineToast({
+        tipo: 'warning',
+        mensaje: '📡 Modo sin conexión. Sus registros se guardarán en este dispositivo.'
+      });
+      setTimeout(() => setOfflineToast(null), 4000);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    const interval = setInterval(() => {
+      if (typeof navigator !== 'undefined' && navigator.onLine && parqueoOfflineService.getPendingQueue().length > 0) {
+        handleTriggerSync();
+      }
+    }, 20000);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Manejador cuando la IA reconoce exitosamente una placa
+  const handlePlateRecognized = (result: {
+    tipoPlaca: string;
+    numeroPlaca: string;
+    colorLabel: string;
+    isExtranjera: boolean;
+  }) => {
+    playBeepSuccess();
+    setTipoPlaca(result.tipoPlaca);
+    setNumeroPlaca(result.numeroPlaca);
+    setIsExtranjera(result.isExtranjera);
+
+    const matchColor = PALETA_COLORES.find(
+      c => c.name.toLowerCase() === result.colorLabel.toLowerCase()
+    );
+    if (matchColor) {
+      setColorSeleccionado(matchColor);
+    }
+
+    setOfflineToast({
+      tipo: 'success',
+      mensaje: `✨ Placa [${result.tipoPlaca}-${result.numeroPlaca}] y color ${result.colorLabel} detectados con IA.`
+    });
+    setTimeout(() => setOfflineToast(null), 4000);
+  };
 
   const DEFAULT_PRECIOS_RENTA: Record<TipoRentaParqueo, number> = {
     horario: 0,
@@ -782,10 +900,30 @@ export const ParqueoManager: React.FC = () => {
       fechaVencimiento: fechaVencDate ? fechaVencDate.toISOString() : undefined
     };
 
-    firebaseService.saveVehiculoParqueo(nuevoVehiculo).catch(e => {
-      console.error(e);
-      alert("Error al registrar vehículo en la base de datos.");
-    });
+    // Optimistic UI state update so vehicle appears immediately in list
+    setVehiculos(prev => [nuevoVehiculo, ...prev]);
+
+    if (!navigator.onLine) {
+      parqueoOfflineService.addToQueue(nuevoVehiculo.id, 'ingreso', nuevoVehiculo);
+      setPendingOfflineCount(parqueoOfflineService.getPendingQueue().length);
+      setOfflineToast({
+        tipo: 'warning',
+        mensaje: `💾 Ticket [${nuevoVehiculo.tipoPlaca === 'Extranjera' ? '' : nuevoVehiculo.tipoPlaca + '-'}${nuevoVehiculo.numeroPlaca}] guardado sin conexión. Se subirá al volver la red.`
+      });
+      setTimeout(() => setOfflineToast(null), 4000);
+    } else {
+      firebaseService.saveVehiculoParqueo(nuevoVehiculo).catch(e => {
+        console.warn("Fallo guardado en Firestore, archivando en cola offline:", e);
+        parqueoOfflineService.addToQueue(nuevoVehiculo.id, 'ingreso', nuevoVehiculo);
+        setPendingOfflineCount(parqueoOfflineService.getPendingQueue().length);
+        setOfflineToast({
+          tipo: 'warning',
+          mensaje: `💾 Guardado en memoria local por intermitencia de red.`
+        });
+        setTimeout(() => setOfflineToast(null), 4000);
+      });
+    }
+
     setTicketVehiculo(nuevoVehiculo);
     
     // Reset form
@@ -932,10 +1070,25 @@ export const ParqueoManager: React.FC = () => {
   const confirmExit = () => {
     if (!showExitModal) return;
 
-    firebaseService.saveVehiculoParqueo(showExitModal).catch(e => {
-      console.error(e);
-      alert("Error al guardar la salida.");
-    });
+    // Optimistic local state update
+    setVehiculos(prev => prev.map(v => v.id === showExitModal.id ? showExitModal : v));
+
+    if (!navigator.onLine) {
+      parqueoOfflineService.addToQueue(showExitModal.id, 'salida', showExitModal);
+      setPendingOfflineCount(parqueoOfflineService.getPendingQueue().length);
+      setOfflineToast({
+        tipo: 'warning',
+        mensaje: `💾 Salida [${showExitModal.tipoPlaca === 'Extranjera' ? '' : showExitModal.tipoPlaca + '-'}${showExitModal.numeroPlaca}] guardada sin internet. Se subirá al reconectar.`
+      });
+      setTimeout(() => setOfflineToast(null), 4000);
+    } else {
+      firebaseService.saveVehiculoParqueo(showExitModal).catch(e => {
+        console.warn("Fallo guardado de salida en Firestore, agregando a cola offline:", e);
+        parqueoOfflineService.addToQueue(showExitModal.id, 'salida', showExitModal);
+        setPendingOfflineCount(parqueoOfflineService.getPendingQueue().length);
+      });
+    }
+
     setShowExitModal(null);
   };
 
@@ -1371,6 +1524,58 @@ export const ParqueoManager: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Toast flotante de estado de red / IA / guardado local */}
+      {offlineToast && (
+        <div className="w-full max-w-2xl mx-auto mb-4 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className={`p-3 rounded-2xl text-xs font-black text-center flex items-center justify-between shadow-lg ${
+            offlineToast.tipo === 'success' ? 'bg-emerald-600 text-white border border-emerald-400' :
+            offlineToast.tipo === 'warning' ? 'bg-amber-500 text-slate-950 border border-amber-300' :
+            'bg-blue-600 text-white border border-blue-400'
+          }`}>
+            <span className="flex-1 text-center">{offlineToast.mensaje}</span>
+            <button type="button" onClick={() => setOfflineToast(null)} className="p-1 hover:opacity-75 cursor-pointer">
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Banner de Estado Offline o Pendientes de Sincronización */}
+      {(!isOnline || pendingOfflineCount > 0) && (
+        <div className="w-full max-w-2xl mx-auto mb-5 p-3.5 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shadow-sm bg-amber-50 border-amber-200 text-amber-950">
+          <div className="flex items-center gap-2.5">
+            {!isOnline ? (
+              <WifiOff size={18} className="text-amber-600 animate-pulse shrink-0" />
+            ) : (
+              <CloudUpload size={18} className="text-blue-600 shrink-0" />
+            )}
+            <div>
+              <p className="font-black">
+                {!isOnline ? 'Modo sin conexión activo' : `${pendingOfflineCount} registro(s) pendientes de subir a la nube`}
+              </p>
+              <p className="text-[11px] text-amber-800 font-medium">
+                {!isOnline
+                  ? 'Puede registrar e imprimir tickets normalmente. Todo se guarda temporalmente en este teléfono.'
+                  : 'Se sincronizarán automáticamente al confirmar conexión o puede forzar la subida ahora.'}
+              </p>
+            </div>
+          </div>
+
+          {isOnline && pendingOfflineCount > 0 && (
+            <button
+              type="button"
+              onClick={handleTriggerSync}
+              disabled={isSyncingOffline}
+              className="w-full sm:w-auto px-3.5 py-1.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50 shrink-0"
+            >
+              <RefreshCw size={12} className={isSyncingOffline ? 'animate-spin' : ''} />
+              <span>{isSyncingOffline ? 'Subiendo...' : 'Subir Ahora'}</span>
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row bg-slate-100/80 backdrop-blur-md p-2 rounded-[1.5rem] w-full max-w-2xl mx-auto shadow-inner border border-slate-200/50 mb-8 gap-2 sm:gap-0">
         <button 
           onClick={() => setActiveTab('ingreso')}
@@ -1460,11 +1665,22 @@ export const ParqueoManager: React.FC = () => {
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                   Número de Placa
                 </label>
-                {!isExtranjera && (
-                  <span className="text-[10px] font-black text-blue-900 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                    Tipo: {tipoPlaca}
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {!isExtranjera && (
+                    <span className="text-[10px] font-black text-blue-900 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                      Tipo: {tipoPlaca}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowPlateAiModal(true)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-slate-950 text-[10px] font-black rounded-lg shadow-xs cursor-pointer transition-all active:scale-95"
+                    title="Tomar foto a la placa del vehículo y auto-llenar los datos con Inteligencia Artificial"
+                  >
+                    <Sparkles size={12} className="text-blue-950" />
+                    <span>Foto con IA</span>
+                  </button>
+                </div>
               </div>
 
               <div className="relative flex items-center">
@@ -2859,6 +3075,13 @@ export const ParqueoManager: React.FC = () => {
         onScan={handleScanQrResult}
         toast={scannerToast}
         onClearToast={() => setScannerToast(null)}
+      />
+
+      {/* Modal de Lectura de Placas con IA (Gemini Flash Vision) */}
+      <PlateAiModal
+        isOpen={showPlateAiModal}
+        onClose={() => setShowPlateAiModal(false)}
+        onPlateRecognized={handlePlateRecognized}
       />
     </div>
   );

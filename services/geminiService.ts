@@ -326,6 +326,133 @@ Devuelve únicamente el arreglo JSON con la corrección ortográfica profunda y 
       error: lastErrorMsg || 'API_CALL_FAILED'
     };
   }
+
+  /**
+   * Reconoce placa de circulación y color de vehículo a partir de una imagen (Base64 JPEG/PNG)
+   * utilizando Gemini Vision con fallback a múltiples modelos para máxima disponibilidad.
+   */
+  async recognizeLicensePlate(base64Image: string): Promise<LicensePlateRecognitionResult> {
+    const apiKey = this.getApiKey();
+    if (!apiKey) {
+      return {
+        success: false,
+        error: 'NO_API_KEY'
+      };
+    }
+
+    // Limpiar data URL si viene con data:image/...;base64,
+    let mimeType = 'image/jpeg';
+    let cleanBase64 = base64Image;
+    if (base64Image.includes(';base64,')) {
+      const parts = base64Image.split(';base64,');
+      cleanBase64 = parts[1];
+      const mimeMatch = parts[0].match(/data:(image\/[a-zA-Z+]+)/);
+      if (mimeMatch) {
+        mimeType = mimeMatch[1];
+      }
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
+
+    const prompt = `Analiza detalladamente esta fotografía de un vehículo tomada en el parqueo del Club de Leones de Quetzaltenango, Guatemala.
+Tu objetivo es identificar la placa de circulación y el color de la carrocería del vehículo.
+
+REGLAS PARA GUATEMALA:
+1. Prefijo de tipo de placa:
+   - 'P' (Particular / automóvil personal)
+   - 'C' (Comercial / pick-up o camión de carga)
+   - 'M' (Motocicleta)
+   - 'A' (Alquiler / taxi)
+   - 'O' (Oficial de gobierno)
+   - 'CD' (Cuerpo Diplomático)
+   - 'Extranjera' (si la placa es de México, El Salvador u otro país)
+2. Formato del número de placa:
+   - En automóviles suele tener 3 números seguidos de 3 letras (ejemplo: 123ABC).
+   - En motocicletas puede tener 3 o 4 números y 2 o 3 letras.
+   - En placas oficiales suele tener números (ejemplo: 12345).
+   - En 'numeroPlaca' coloca ÚNICAMENTE los números y letras de la placa, SIN el prefijo de tipo si ya fue extraído en 'tipoPlaca', y SIN guiones ni espacios.
+3. Color del vehículo:
+   - Debe coincidir EXACTAMENTE con una de las siguientes opciones de la paleta oficial:
+     ["Blanco", "Negro", "Gris / Plata", "Rojo", "Azul", "Amarillo", "Verde", "Café", "Beige", "Naranja", "Corinto", "Azul Marino"]
+4. Si la imagen no muestra un vehículo con placa legible, devuelve "placaLegible": false.
+
+Responde ÚNICAMENTE con un JSON válido con esta estructura:
+{
+  "placaLegible": true,
+  "tipoPlaca": "P",
+  "numeroPlaca": "123ABC",
+  "color": "Gris / Plata",
+  "esExtranjera": false,
+  "confianza": 0.95
+}`;
+
+    const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+    let lastError = '';
+
+    for (const model of modelsToTry) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: [
+            {
+              inlineData: {
+                mimeType,
+                data: cleanBase64
+              }
+            },
+            prompt
+          ],
+          config: {
+            temperature: 0.1,
+            responseMimeType: "application/json"
+          }
+        });
+
+        const text = response.text || '';
+        let jsonStr = text.trim();
+        const firstBrace = jsonStr.indexOf('{');
+        const lastBrace = jsonStr.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1) {
+          jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
+        }
+
+        const parsed = JSON.parse(jsonStr);
+        if (parsed.placaLegible === false || !parsed.numeroPlaca) {
+          return {
+            success: false,
+            error: 'PLACA_NO_LEGIBLE'
+          };
+        }
+
+        return {
+          success: true,
+          tipoPlaca: parsed.tipoPlaca || 'P',
+          numeroPlaca: String(parsed.numeroPlaca).toUpperCase().replace(/[\s-]/g, ''),
+          color: parsed.color || 'Blanco',
+          esExtranjera: Boolean(parsed.esExtranjera || parsed.tipoPlaca === 'Extranjera'),
+          confianza: typeof parsed.confianza === 'number' ? parsed.confianza : 0.9
+        };
+      } catch (err: any) {
+        lastError = err?.message || String(err);
+        console.warn(`Intento recognizeLicensePlate con ${model} falló:`, lastError);
+      }
+    }
+
+    return {
+      success: false,
+      error: lastError || 'NETWORK_OR_API_ERROR'
+    };
+  }
+}
+
+export interface LicensePlateRecognitionResult {
+  success: boolean;
+  tipoPlaca?: string;
+  numeroPlaca?: string;
+  color?: string;
+  esExtranjera?: boolean;
+  confianza?: number;
+  error?: string;
 }
 
 export const geminiService = new GeminiService();
