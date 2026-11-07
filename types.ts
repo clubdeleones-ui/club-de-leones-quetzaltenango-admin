@@ -295,6 +295,9 @@ export interface VehiculoParqueo {
   tipoRenta?: TipoRentaParqueo;
   montoRenta?: number;
   fechaVencimiento?: string;
+  pagadoAlIngreso?: boolean;
+  fechaCobro?: string;
+  costoExtraVencido?: number;
 }
 
 export interface RubroPresupuesto {

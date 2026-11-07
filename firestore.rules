@@ -170,9 +170,10 @@ service cloud.firestore {
 
     match /parqueo/{document} {
       allow read: if true;
-      allow write: if isValidString(request.resource.data, 'numeroPlaca', false)
+      allow create, update: if isValidString(request.resource.data, 'numeroPlaca', false)
                    && isValidBool(request.resource.data, 'isExtranjera', false)
                    && (request.resource.data.estado in ['Activo', 'Completado']);
+      allow delete: if true;
     }
 
     match /convencion_config/{document} {

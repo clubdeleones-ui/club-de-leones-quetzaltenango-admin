@@ -310,8 +310,28 @@ export const ParqueoManager: React.FC = () => {
   
   // States for ticket and active vehicle interactions
   const [ticketVehiculo, setTicketVehiculo] = useState<VehiculoParqueo | null>(null);
+  const [ticketQrDataUrl, setTicketQrDataUrl] = useState<string>('');
   const [showExitModal, setShowExitModal] = useState<VehiculoParqueo | null>(null);
   const [duplicateVehiculoModal, setDuplicateVehiculoModal] = useState<VehiculoParqueo | null>(null);
+
+  // Generar QR de manera local y offline cuando se selecciona o crea un ticket
+  useEffect(() => {
+    let isMounted = true;
+    if (ticketVehiculo) {
+      QRCode.toDataURL(ticketVehiculo.id, {
+        width: 180,
+        margin: 1,
+        color: { dark: '#000000', light: '#ffffff' }
+      }).then(url => {
+        if (isMounted) setTicketQrDataUrl(url);
+      }).catch(err => {
+        console.error("Error generando QR local del ticket:", err);
+      });
+    } else {
+      setTicketQrDataUrl('');
+    }
+    return () => { isMounted = false; };
+  }, [ticketVehiculo]);
   
   // State for parking spots
   const [espacioSeleccionado, setEspacioSeleccionado] = useState<number | null>(null);
@@ -369,6 +389,9 @@ export const ParqueoManager: React.FC = () => {
     }
 
     const fechaVencDate = getFechaVencimientoDate(tipoRenta);
+    const esRentaEspecial = tipoRenta !== 'horario';
+    const montoRentaNum = esRentaEspecial ? Number(montoRentaInput) : 0;
+    const nowIso = new Date().toISOString();
 
     const nuevoVehiculo: VehiculoParqueo = {
       id: `parq-${Date.now()}`,
@@ -377,11 +400,15 @@ export const ParqueoManager: React.FC = () => {
       isExtranjera,
       color: colorSeleccionado.hex,
       colorLabel: colorSeleccionado.name,
-      horaEntrada: new Date().toISOString(),
+      horaEntrada: nowIso,
       estado: 'Activo',
       numeroEspacio: espacioSeleccionado || undefined,
       tipoRenta,
-      montoRenta: tipoRenta !== 'horario' ? Number(montoRentaInput) : 0,
+      montoRenta: montoRentaNum,
+      costo: esRentaEspecial ? montoRentaNum : undefined,
+      pagadoAlIngreso: esRentaEspecial,
+      fechaCobro: esRentaEspecial ? nowIso : undefined,
+      metodoPago: esRentaEspecial ? 'Efectivo' : undefined,
       fechaVencimiento: fechaVencDate ? fechaVencDate.toISOString() : undefined
     };
 
@@ -418,29 +445,77 @@ export const ParqueoManager: React.FC = () => {
     return `${pad(diffHrs)}:${pad(diffMins)}:${pad(diffSecs)}`;
   };
 
-  // Pricing Rule: Q5.00 for every 30 minutes (or fraction).
-  // Optional toleranciaMinutos (0, 5, 10): Subtracts tolerance minutes from total duration before calculating.
-  const calcularCosto = (entradaStr: string, salidaStr: string, toleranciaMinutos: number = 0) => {
-    const entrada = new Date(entradaStr).getTime();
-    const salida = new Date(salidaStr).getTime();
-    const diffMs = salida - entrada;
-    const totalMins = Math.max(0, diffMs / 60000);
-    const minsAjustados = Math.max(0, totalMins - toleranciaMinutos);
+  // Regla de Precios:
+  // - Horario estándar: Q5.00 cada 30 minutos (o fracción).
+  // - Rentas especiales ('noche', 'dia', 'semana', 'quincena', 'mes'):
+  //   Monto acordado (montoRenta). Si excede la fecha/hora de vencimiento,
+  //   se calcula recargo por tiempo extra a razón de Q5.00 cada 30 min.
+  const calcularCostoVehiculo = (
+    vehiculo: VehiculoParqueo,
+    horaSalidaStr: string = new Date().toISOString(),
+    toleranciaMinutos: number = 0
+  ) => {
+    const isSpecialRent = vehiculo.tipoRenta && vehiculo.tipoRenta !== 'horario';
 
-    return Math.floor(minsAjustados / 30) * 5.00 + 5.00;
+    if (!isSpecialRent) {
+      const entrada = new Date(vehiculo.horaEntrada).getTime();
+      const salida = new Date(horaSalidaStr).getTime();
+      const diffMs = Math.max(0, salida - entrada);
+      const totalMins = diffMs / 60000;
+      const minsAjustados = Math.max(0, totalMins - toleranciaMinutos);
+      const costo = Math.floor(minsAjustados / 30) * 5.00 + 5.00;
+      return {
+        total: costo,
+        baseRenta: 0,
+        extraOvertime: 0,
+        porCobrar: costo,
+        isVencido: false
+      };
+    }
+
+    const baseRenta = vehiculo.montoRenta || DEFAULT_PRECIOS_RENTA[vehiculo.tipoRenta!] || 0;
+    const salidaTime = new Date(horaSalidaStr).getTime();
+    const vencimientoTime = vehiculo.fechaVencimiento ? new Date(vehiculo.fechaVencimiento).getTime() : null;
+
+    let extraOvertime = 0;
+    let isVencido = false;
+
+    if (vencimientoTime && salidaTime > vencimientoTime) {
+      isVencido = true;
+      const extraMs = salidaTime - vencimientoTime;
+      const extraMins = Math.max(0, extraMs / 60000);
+      const extraMinsAjustados = Math.max(0, extraMins - toleranciaMinutos);
+      if (extraMinsAjustados > 0) {
+        extraOvertime = Math.floor(extraMinsAjustados / 30) * 5.00 + 5.00;
+      }
+    }
+
+    const yaPagado = !!vehiculo.pagadoAlIngreso;
+    const totalServicio = baseRenta + extraOvertime;
+    // Si ya pagó la renta al ingresar, a la salida solo se cobra el recargo extra (si existe)
+    const porCobrar = yaPagado ? extraOvertime : totalServicio;
+
+    return {
+      total: totalServicio,
+      baseRenta,
+      extraOvertime,
+      porCobrar,
+      isVencido
+    };
   };
 
   const handleProcessExit = (vehiculo: VehiculoParqueo) => {
     const horaSalida = new Date().toISOString();
-    const costo = calcularCosto(vehiculo.horaEntrada, horaSalida, 0);
+    const { total, extraOvertime } = calcularCostoVehiculo(vehiculo, horaSalida, 0);
     
-    const vehiculoSalida = {
+    const vehiculoSalida: VehiculoParqueo = {
       ...vehiculo,
       horaSalida,
       estado: 'Completado' as const,
-      costo,
+      costo: total,
+      costoExtraVencido: extraOvertime,
       toleranciaMinutos: 0,
-      metodoPago: 'Efectivo' as const
+      metodoPago: vehiculo.metodoPago || 'Efectivo'
     };
     
     setShowExitModal(vehiculoSalida);
@@ -448,11 +523,13 @@ export const ParqueoManager: React.FC = () => {
 
   const handleApplyTolerancia = (tol: number) => {
     if (!showExitModal) return;
-    const nuevoCosto = calcularCosto(showExitModal.horaEntrada, showExitModal.horaSalida || new Date().toISOString(), tol);
+    const horaSalida = showExitModal.horaSalida || new Date().toISOString();
+    const { total, extraOvertime } = calcularCostoVehiculo(showExitModal, horaSalida, tol);
     setShowExitModal({
       ...showExitModal,
       toleranciaMinutos: tol,
-      costo: nuevoCosto
+      costo: total,
+      costoExtraVencido: extraOvertime
     });
   };
 
@@ -1507,11 +1584,17 @@ export const ParqueoManager: React.FC = () => {
 
             <div className="my-6 bg-slate-50 border border-slate-200/80 rounded-2xl p-5 inline-block space-y-4">
               <div className="bg-white p-3.5 rounded-xl border border-slate-200 inline-block shadow-sm">
-                <img 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${ticketVehiculo.id}`} 
-                  alt="QR Ticket" 
-                  className="w-36 h-36 mx-auto object-contain"
-                />
+                {ticketQrDataUrl ? (
+                  <img 
+                    src={ticketQrDataUrl} 
+                    alt="QR Ticket" 
+                    className="w-36 h-36 mx-auto object-contain"
+                  />
+                ) : (
+                  <div className="w-36 h-36 mx-auto flex items-center justify-center bg-slate-100 rounded-xl text-slate-400 text-xs font-bold animate-pulse">
+                    Generando QR...
+                  </div>
+                )}
               </div>
               <div className="text-left space-y-2 border-t border-dashed border-slate-200 pt-3">
                 <div className="flex justify-between text-xs">
@@ -1598,16 +1681,40 @@ export const ParqueoManager: React.FC = () => {
               </div>
 
               {showExitModal.tipoRenta && showExitModal.tipoRenta !== 'horario' && (
-                <div className="bg-amber-50 p-2.5 rounded-xl border border-amber-200 text-xs space-y-1 text-amber-950">
-                  <div className="flex justify-between font-black">
-                    <span>Servicio Contratado:</span>
-                    <span className="capitalize">Renta Por {showExitModal.tipoRenta}</span>
+                <div className="bg-amber-50 p-3 rounded-2xl border border-amber-200 text-xs space-y-2 text-amber-950">
+                  <div className="flex justify-between items-center font-black">
+                    <span className="flex items-center gap-1.5 uppercase tracking-wide">
+                      <Tag size={13} className="text-amber-700" />
+                      Renta Por {showExitModal.tipoRenta}
+                    </span>
+                    <span className="bg-amber-200/90 text-amber-950 px-2.5 py-0.5 rounded-lg border border-amber-300 font-mono font-bold">
+                      Tarifa: Q.{(showExitModal.montoRenta || 0).toFixed(2)}
+                    </span>
                   </div>
+
                   {showExitModal.fechaVencimiento && (
-                    <div className="flex justify-between text-[11px]">
-                      <span className="font-semibold text-amber-800">Vencía:</span>
-                      <span className="font-bold">
+                    <div className="flex justify-between items-center text-[11px] pt-1 border-t border-amber-200/60">
+                      <span className="text-slate-500 font-semibold">Vencimiento Acordado:</span>
+                      <span className="font-bold text-slate-800 font-mono">
                         {new Date(showExitModal.fechaVencimiento).toLocaleString('es-GT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  )}
+
+                  {showExitModal.pagadoAlIngreso && (
+                    <div className="flex items-center justify-between text-[11px] pt-1 border-t border-amber-200/60 text-emerald-800 font-bold">
+                      <span>Estado Pago Renta:</span>
+                      <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md border border-emerald-200">
+                        ✓ Pagado al ingreso (Q.{(showExitModal.montoRenta || 0).toFixed(2)})
+                      </span>
+                    </div>
+                  )}
+
+                  {(showExitModal.costoExtraVencido || 0) > 0 && (
+                    <div className="flex items-center justify-between text-[11px] pt-1 border-t border-amber-200/60 text-red-700 font-black">
+                      <span>Recargo por Retraso:</span>
+                      <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded-md border border-red-200">
+                        +Q.{(showExitModal.costoExtraVencido || 0).toFixed(2)}
                       </span>
                     </div>
                   )}
@@ -1668,12 +1775,39 @@ export const ParqueoManager: React.FC = () => {
                 </div>
               </div>
 
-              <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-100 flex justify-between items-center mt-2">
-                <span className="text-xs font-black uppercase text-emerald-800">Total a Cobrar</span>
-                <span className="text-lg font-black text-emerald-600">
-                  Q. {(showExitModal.costo || 0).toLocaleString('es-GT', { minimumFractionDigits: 2 })}
-                </span>
-              </div>
+              {/* Box de Monto a Cobrar al Salir */}
+              {(() => {
+                const yaPagado = !!showExitModal.pagadoAlIngreso;
+                const recargo = showExitModal.costoExtraVencido || 0;
+                const montoACobrar = yaPagado ? recargo : (showExitModal.costo || 0);
+
+                return (
+                  <div className={`p-3.5 rounded-2xl border flex justify-between items-center mt-2 ${
+                    montoACobrar === 0 
+                      ? 'bg-blue-50/90 border-blue-200 text-blue-950'
+                      : 'bg-emerald-50 border-emerald-200 text-emerald-950'
+                  }`}>
+                    <div>
+                      <span className="text-xs font-black uppercase tracking-wider block">
+                        {montoACobrar === 0 ? 'Total Pendiente' : 'Total a Cobrar al Salir'}
+                      </span>
+                      {yaPagado && montoACobrar === 0 && (
+                        <span className="text-[10px] text-blue-700 font-bold block mt-0.5">
+                          ✓ Renta cancelada al ingresar
+                        </span>
+                      )}
+                      {yaPagado && montoACobrar > 0 && (
+                        <span className="text-[10px] text-red-600 font-bold block mt-0.5">
+                          Renta pagada al ingreso. Solo recargo extra.
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xl font-black font-mono">
+                      Q. {montoACobrar.toLocaleString('es-GT', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                );
+              })()}
 
               <div className="pt-2">
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Método de Pago</label>
@@ -1727,32 +1861,56 @@ export const ParqueoManager: React.FC = () => {
           mes: { total: 0, efectivo: 0, tarjeta: 0, transferencia: 0, count: 0 },
         };
 
-        vehiculosHistorial.forEach(v => {
-          if (!v.horaSalida) return;
-          const date = new Date(v.horaSalida);
-          const costo = v.costo || 0;
-          const metodo = v.metodoPago || 'Efectivo';
+        const addPago = (amount: number, dateStr?: string, metodo: string = 'Efectivo') => {
+          if (!dateStr || amount <= 0) return;
+          const date = new Date(dateStr);
+          if (isNaN(date.getTime())) return;
 
           if (date >= monthStart) {
-            stats.mes.total += costo;
+            stats.mes.total += amount;
             stats.mes.count++;
-            if (metodo === 'Efectivo') stats.mes.efectivo += costo;
-            else if (metodo === 'Tarjeta') stats.mes.tarjeta += costo;
-            else stats.mes.transferencia += costo;
+            if (metodo === 'Efectivo') stats.mes.efectivo += amount;
+            else if (metodo === 'Tarjeta') stats.mes.tarjeta += amount;
+            else stats.mes.transferencia += amount;
           }
           if (date >= weekStart) {
-            stats.semana.total += costo;
+            stats.semana.total += amount;
             stats.semana.count++;
-            if (metodo === 'Efectivo') stats.semana.efectivo += costo;
-            else if (metodo === 'Tarjeta') stats.semana.tarjeta += costo;
-            else stats.semana.transferencia += costo;
+            if (metodo === 'Efectivo') stats.semana.efectivo += amount;
+            else if (metodo === 'Tarjeta') stats.semana.tarjeta += amount;
+            else stats.semana.transferencia += amount;
           }
           if (date >= today) {
-            stats.hoy.total += costo;
+            stats.hoy.total += amount;
             stats.hoy.count++;
-            if (metodo === 'Efectivo') stats.hoy.efectivo += costo;
-            else if (metodo === 'Tarjeta') stats.hoy.tarjeta += costo;
-            else stats.hoy.transferencia += costo;
+            if (metodo === 'Efectivo') stats.hoy.efectivo += amount;
+            else if (metodo === 'Tarjeta') stats.hoy.tarjeta += amount;
+            else stats.hoy.transferencia += amount;
+          }
+        };
+
+        // 1. Vehículos en historial (salidas completadas)
+        vehiculosHistorial.forEach(v => {
+          const metodo = v.metodoPago || 'Efectivo';
+          if (v.pagadoAlIngreso) {
+            // La renta base se cobró al ingreso
+            addPago(v.montoRenta || 0, v.fechaCobro || v.horaEntrada, metodo);
+            // El recargo extra por retraso (si existió) se cobró en la hora de salida
+            if ((v.costoExtraVencido || 0) > 0) {
+              addPago(v.costoExtraVencido || 0, v.horaSalida, metodo);
+            }
+          } else {
+            // Se cobró el total al registrar la salida
+            addPago(v.costo || 0, v.horaSalida, metodo);
+          }
+        });
+
+        // 2. Vehículos actualmente activos que pagaron renta al ingresar (Noche, Día, Mes, etc.)
+        vehiculosActivos.forEach(v => {
+          if (v.pagadoAlIngreso || (v.tipoRenta && v.tipoRenta !== 'horario')) {
+            const monto = v.montoRenta || v.costo || 0;
+            const metodo = v.metodoPago || 'Efectivo';
+            addPago(monto, v.fechaCobro || v.horaEntrada, metodo);
           }
         });
 
