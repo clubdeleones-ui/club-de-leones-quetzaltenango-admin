@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Gift, Heart, ArrowLeft, CreditCard, ShieldCheck, Sparkles, Check } from 'lucide-react';
-import { recurrenteService } from '../services/recurrenteService';
+import { Gift, Heart, ArrowLeft, CreditCard, ShieldCheck, Sparkles, Check, CheckCircle2 } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
+import { CyberSourcePaymentModal } from '../components/CyberSourcePaymentModal';
+import { CyberSourcePaymentResult } from '../services/cybersourceService';
 
 const Donar: React.FC = () => {
   const { showToast } = useToast();
@@ -10,11 +11,12 @@ const Donar: React.FC = () => {
   const [montoPersonalizado, setMontoPersonalizado] = useState<string>('');
   const [nombreDonante, setNombreDonante] = useState<string>('');
   const [correoDonante, setCorreoDonante] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [donationResult, setDonationResult] = useState<CyberSourcePaymentResult | null>(null);
 
   const presetAmounts = [50, 100, 250, 500];
 
-  const handleDonate = async (e: React.FormEvent) => {
+  const handleStartDonation = (e: React.FormEvent) => {
     e.preventDefault();
     const finalAmount = montoPersonalizado ? parseFloat(montoPersonalizado) : monto;
 
@@ -23,44 +25,21 @@ const Donar: React.FC = () => {
       return;
     }
 
-    setLoading(true);
-    try {
-      const currentOrigin = window.location.origin + window.location.pathname;
-      const cleanOrigin = currentOrigin.endsWith('/') ? currentOrigin.slice(0, -1) : currentOrigin;
-
-      const successUrl = `${cleanOrigin}#/donar?status=success&monto=${finalAmount}`;
-      const cancelUrl = `${cleanOrigin}#/donar?status=cancel`;
-
-      const checkout = await recurrenteService.createCheckout({
-        items: [
-          {
-            name: `Donación al Club de Leones de Quetzaltenango ${nombreDonante ? `(${nombreDonante})` : ''}`,
-            amount_in_cents: Math.round(finalAmount * 100),
-            currency: 'GTQ',
-            quantity: 1,
-          }
-        ],
-        userEmail: correoDonante || undefined,
-        successUrl,
-        cancelUrl,
-        metadata: {
-          tipo: 'donacion_general',
-          donanteNombre: nombreDonante || 'Anónimo',
-          donanteCorreo: correoDonante || 'N/A'
-        }
-      });
-
-      if (checkout.checkout_url) {
-        window.location.href = checkout.checkout_url;
-      } else {
-        throw new Error('No se pudo generar el enlace de pago.');
-      }
-    } catch (err: any) {
-      console.error('Error al iniciar donación en Recurrente:', err);
-      showToast(err.message || 'Error al conectar con la pasarela de Recurrente GT.', 'error');
-      setLoading(false);
+    if (!correoDonante || !/\S+@\S+\.\S+/.test(correoDonante)) {
+      showToast('Por favor ingresa un correo electrónico válido para tu comprobante oficial.', 'error');
+      return;
     }
+
+    setIsModalOpen(true);
   };
+
+  const handlePaymentSuccess = (result: CyberSourcePaymentResult) => {
+    setDonationResult(result);
+    setIsModalOpen(false);
+    showToast('¡Gracias por tu donación! Tu aporte fue procesado con éxito.', 'success');
+  };
+
+  const currentAmount = montoPersonalizado ? parseFloat(montoPersonalizado) || 0 : monto;
 
   return (
     <div className="max-w-3xl mx-auto my-12 p-6 md:p-12 bg-white rounded-[2.5rem] border border-slate-100/90 shadow-2xl text-center space-y-8 animate-in zoom-in-95 duration-500">
@@ -77,126 +56,171 @@ const Donar: React.FC = () => {
           </span>
           <h1 className="text-3xl font-black text-slate-800 tracking-tight mt-3">Haz tu Donación en Línea</h1>
           <p className="text-slate-500 text-xs sm:text-sm max-w-lg mx-auto leading-relaxed font-medium mt-1">
-            Cada aporte impulsa nuestras jornadas de salud, visión y asistencia comunitaria en Quetzaltenango. Pago seguro en Quetzales (GTQ) vía Tarjeta de Crédito/Débito.
+            Cada aporte impulsa nuestras jornadas de salud, visión y asistencia comunitaria en Quetzaltenango. Pago seguro en Quetzales (GTQ) vía Tarjeta de Crédito/Débito con BAC Credomatic.
           </p>
         </div>
       </div>
 
-      {/* Donation Form */}
-      <form onSubmit={handleDonate} className="bg-slate-50 border border-slate-200/80 rounded-3xl p-6 sm:p-8 space-y-6 text-left max-w-xl mx-auto shadow-sm">
-        
-        {/* Preset Amounts */}
-        <div className="space-y-2">
-          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">1. Selecciona el Monto (GTQ)</label>
-          <div className="grid grid-cols-4 gap-2">
-            {presetAmounts.map((amt) => (
-              <button
-                key={amt}
-                type="button"
-                onClick={() => {
-                  setMonto(amt);
-                  setMontoPersonalizado('');
-                }}
-                className={`py-3 rounded-2xl font-black text-sm transition-all border ${
-                  monto === amt && !montoPersonalizado
-                    ? 'bg-blue-900 text-white border-blue-950 shadow-md shadow-blue-900/20'
-                    : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
-                }`}
-              >
-                Q{amt}
-              </button>
-            ))}
+      {donationResult ? (
+        <div className="bg-emerald-50/80 border border-emerald-200 rounded-3xl p-8 max-w-xl mx-auto text-center space-y-5 animate-in zoom-in-95 duration-300">
+          <div className="w-16 h-16 bg-emerald-600 text-white rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-emerald-600/20">
+            <CheckCircle2 size={36} />
           </div>
-        </div>
 
-        {/* Custom Amount */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">O ingresa un monto personalizado (Q)</label>
-          <input
-            type="number"
-            placeholder="Ej. 150"
-            min="5"
-            value={montoPersonalizado}
-            onChange={(e) => setMontoPersonalizado(e.target.value)}
-            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-900 outline-none font-bold text-sm text-slate-800"
-          />
-        </div>
-
-        {/* Donor Info (Optional) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tu Nombre (Opcional)</label>
-            <input
-              type="text"
-              placeholder="Nombre para el agradecimiento"
-              value={nombreDonante}
-              onChange={(e) => setNombreDonante(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs font-semibold text-slate-700"
-            />
+          <div>
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">¡Muchas Gracias por tu Solidaridad!</h2>
+            <p className="text-xs text-slate-600 mt-1">
+              Tu donación de <strong>Q{donationResult.amount.toFixed(2)}</strong> ha sido autorizada correctamente.
+            </p>
           </div>
-          <div className="space-y-1.5">
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Correo Electrónico (Opcional)</label>
-            <input
-              type="email"
-              placeholder="Para enviarte el recibo"
-              value={correoDonante}
-              onChange={(e) => setCorreoDonante(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs font-semibold text-slate-700"
-            />
+
+          <div className="bg-white rounded-2xl p-4 border border-emerald-200/80 text-left space-y-2 text-xs text-slate-700 font-medium">
+            <div className="flex justify-between">
+              <span className="text-slate-400">Referencia Bancaria:</span>
+              <span className="font-mono font-bold text-slate-900">{donationResult.transactionId}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">Código de Aprobación:</span>
+              <span className="font-mono font-bold text-emerald-700">{donationResult.approvalCode}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">Donante:</span>
+              <span className="font-bold text-slate-900">{nombreDonante || 'Amigo León Solidario'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">Correo Electrónico:</span>
+              <span className="text-slate-900 font-bold">{correoDonante}</span>
+            </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setDonationResult(null);
+              setNombreDonante('');
+              setCorreoDonante('');
+            }}
+            className="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl transition-all shadow-md"
+          >
+            Realizar otra donación
+          </button>
         </div>
+      ) : (
+        /* Donation Form */
+        <form onSubmit={handleStartDonation} className="bg-slate-50 border border-slate-200/80 rounded-3xl p-6 sm:p-8 space-y-6 text-left max-w-xl mx-auto shadow-sm">
+          
+          {/* Preset Amounts */}
+          <div className="space-y-2">
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">1. Selecciona el Monto (GTQ)</label>
+            <div className="grid grid-cols-4 gap-2">
+              {presetAmounts.map((amt) => (
+                <button
+                  key={amt}
+                  type="button"
+                  onClick={() => {
+                    setMonto(amt);
+                    setMontoPersonalizado('');
+                  }}
+                  className={`py-3 rounded-2xl font-black text-sm transition-all border ${
+                    monto === amt && !montoPersonalizado
+                      ? 'bg-blue-900 text-white border-blue-900 shadow-md scale-[1.02]'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-100/50'
+                  }`}
+                >
+                  Q{amt}
+                </button>
+              ))}
+            </div>
+          </div>
 
-        {/* Security badge */}
-        <div className="bg-blue-900/5 border border-blue-900/10 rounded-2xl p-3.5 flex items-center space-x-3 text-xs text-blue-900 font-semibold">
-          <ShieldCheck className="text-blue-900 flex-shrink-0" size={20} />
-          <p className="leading-snug text-[11px]">
-            Procesado de forma 100% segura por <strong>Recurrente Guatemala</strong> con encriptación bancaria SSL. Acepta Visa y Mastercard.
-          </p>
-        </div>
+          {/* Custom Amount */}
+          <div className="space-y-1">
+            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">O escribe un monto personalizado</label>
+            <div className="relative">
+              <span className="absolute left-4 top-3 text-slate-400 font-bold text-sm">Q</span>
+              <input
+                type="number"
+                min="5"
+                step="any"
+                value={montoPersonalizado}
+                onChange={(e) => setMontoPersonalizado(e.target.value)}
+                placeholder="Ej. 150.00"
+                className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl font-bold text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder:font-normal placeholder:text-slate-350"
+              />
+            </div>
+          </div>
 
-        {/* Submit button */}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-4 bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 hover:from-blue-950 hover:to-slate-950 text-white font-black rounded-2xl transition-all shadow-xl shadow-blue-900/20 text-xs uppercase tracking-wider flex items-center justify-center space-x-2 active:scale-95 disabled:opacity-50"
-        >
-          {loading ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              <span>Conectando con pasarela Recurrente...</span>
-            </>
-          ) : (
-            <>
-              <CreditCard size={18} />
-              <span>Donar Q{montoPersonalizado || monto} con Tarjeta</span>
-            </>
-          )}
-        </button>
-      </form>
+          {/* Donor Info */}
+          <div className="space-y-3 pt-2 border-t border-slate-200/60">
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">2. Datos de Contacto</label>
+            
+            <div>
+              <input
+                type="text"
+                value={nombreDonante}
+                onChange={(e) => setNombreDonante(e.target.value)}
+                placeholder="Nombre Completo (Opcional si deseas ser anónimo)"
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400"
+              />
+            </div>
 
-      {/* Info card of ongoing projects */}
-      <div className="bg-slate-50/50 rounded-3xl p-6 border border-slate-100 text-left space-y-4 max-w-xl mx-auto">
-        <h3 className="font-bold text-slate-800 flex items-center space-x-2 text-xs uppercase tracking-wider">
-          <Heart size={16} className="text-red-500 fill-red-500" />
-          <span>Tus aportes harán posible:</span>
-        </h3>
-        <ul className="text-xs text-slate-600 space-y-2 font-medium">
-          <li>✨ Jornadas de Oftalmología y donación de lentes graduados.</li>
-          <li>✨ Campañas médicas pediátricas gratuitas en comunidades rurales.</li>
-          <li>✨ Kits de víveres y apoyo alimenticio a adultos mayores.</li>
-          <li>✨ Equipamiento y útiles escolares para escuelas locales.</li>
-        </ul>
-      </div>
+            <div>
+              <input
+                type="email"
+                value={correoDonante}
+                onChange={(e) => setCorreoDonante(e.target.value)}
+                placeholder="Correo Electrónico (para enviarte tu comprobante)"
+                required
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400"
+              />
+            </div>
+          </div>
+
+          {/* Security Banner */}
+          <div className="bg-blue-50/60 border border-blue-150 rounded-2xl p-4 flex items-center space-x-3 text-left">
+            <div className="w-10 h-10 rounded-xl bg-blue-900 text-yellow-400 flex items-center justify-center shrink-0">
+              <ShieldCheck size={20} />
+            </div>
+            <p className="text-[11px] text-slate-600 leading-tight">
+              Procesado de forma 100% segura por <strong>CyberSource / BAC Credomatic</strong> con autenticación 3D Secure 2.0 y cifrado SSL bancario. Acepta Visa, Mastercard y AMEX.
+            </p>
+          </div>
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            className="w-full py-4 bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-800 hover:to-indigo-800 text-white font-black text-sm rounded-2xl transition-all shadow-xl shadow-blue-900/20 active:scale-[0.98] flex items-center justify-center space-x-2"
+          >
+            <CreditCard size={18} />
+            <span>Donar Q{currentAmount > 0 ? currentAmount.toLocaleString() : '0.00'} con Tarjeta (BAC)</span>
+          </button>
+        </form>
+      )}
+
+      {/* CyberSource Modal */}
+      <CyberSourcePaymentModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={handlePaymentSuccess}
+        amount={currentAmount}
+        currency="GTQ"
+        orderCode={`DON-${Date.now()}`}
+        concept={`Donación Obras Sociales: ${nombreDonante || 'Donante Anónimo'}`}
+        customer={{
+          firstName: nombreDonante.split(' ')[0] || 'Donante',
+          lastName: nombreDonante.split(' ').slice(1).join(' ') || 'Solidario',
+          email: correoDonante || 'donante@clubdeleonesquetzaltenango.org'
+        }}
+        allowCuotas={false}
+      />
 
       <div className="pt-2">
-        <Link 
-          to="/" 
-          className="inline-flex items-center space-x-2 text-slate-500 hover:text-blue-900 font-bold text-xs transition-all"
-        >
-          <ArrowLeft size={16} />
-          <span>Volver al Inicio</span>
+        <Link to="/" className="inline-flex items-center space-x-2 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors">
+          <ArrowLeft size={14} />
+          <span>Regresar a la página principal</span>
         </Link>
       </div>
+
     </div>
   );
 };

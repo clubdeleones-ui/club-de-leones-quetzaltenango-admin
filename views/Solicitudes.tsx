@@ -55,6 +55,8 @@ import {
 import { recurrenteService, RecurrenteItem } from '../services/recurrenteService';
 import { generateCartaOficialPDF, formatFechaCarta } from '../utils/pdfGenerator';
 import { formatDisplayDate } from '../utils/dateSpanishFormatter';
+import { CyberSourcePaymentModal } from '../components/CyberSourcePaymentModal';
+import { CyberSourcePaymentResult } from '../services/cybersourceService';
 
 
 interface SolicitudesProps {
@@ -680,6 +682,33 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
   const [createdSolicitudCheckoutUrl, setCreatedSolicitudCheckoutUrl] = useState('');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isCyberSourceModalOpen, setIsCyberSourceModalOpen] = useState(false);
+  const [pendingSalonSolicitud, setPendingSalonSolicitud] = useState<Solicitud | null>(null);
+
+  const handleCyberSourceSalonSuccess = async (result: CyberSourcePaymentResult) => {
+    if (!pendingSalonSolicitud) return;
+    setIsCyberSourceModalOpen(false);
+    try {
+      const updatedSol: Solicitud = {
+        ...pendingSalonSolicitud,
+        estadoPago: 'Pagado',
+        recurrenteCheckoutId: result.transactionId,
+        descripcion: `Pago de reservación autorizado con tarjeta vía CyberSource (BAC). ID: ${result.transactionId} | Aut: ${result.approvalCode}`
+      };
+
+      await firebaseService.saveSolicitud(updatedSol);
+      const updatedList = [updatedSol, ...solicitudes.filter(s => s.id !== updatedSol.id)];
+      setSolicitudes(updatedList);
+      safeSetItem('club_leones_solicitudes', JSON.stringify(updatedList));
+
+      setCreatedSolicitudId(updatedSol.id);
+      setSaveSuccess(true);
+      showToast('¡Pago de reservación procesado y confirmado con éxito!', 'success');
+    } catch (err: any) {
+      console.error('Error actualizando pago de solicitud con CyberSource:', err);
+      showToast('Error al confirmar pago de solicitud: ' + err.message, 'error');
+    }
+  };
 
   // Escuchar retornos de pasarela de pago Recurrente GT
   useEffect(() => {
@@ -1994,141 +2023,34 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
         nuevaSolicitud.documentoNombre = docFileName || 'Documento adjunto';
       }
 
-      // Si seleccionó pago con Recurrente GT y hay un costo mayor a 0
+      // Si seleccionó pago con Tarjeta (CyberSource / BAC) y hay un costo mayor a 0
       if (metodo === 'recurrente' && salonCostoTotal > 0) {
-        setIsRedirectingPayment(true);
-        const checkoutItems: RecurrenteItem[] = [];
+        nuevaSolicitud.estadoPago = 'Pendiente';
+        await firebaseService.saveSolicitud(nuevaSolicitud);
+        const updatedList = [nuevaSolicitud, ...solicitudes];
+        setSolicitudes(updatedList);
+        safeSetItem('club_leones_solicitudes', JSON.stringify(updatedList));
 
-        // 1. Producto principal según la instalación seleccionada
-        if (salonTipoAlquiler === 'salon') {
-          const baseAmount = (salonExoneracion || isSocio) ? 0 : (salonDuracion === '4_horas' ? 700 : 1200);
-          if (baseAmount > 0) {
-            checkoutItems.push({
-              name: `Alquiler Salón de Eventos y Capacitaciones (${salonDuracion === '8_horas' ? '8 Horas' : '4 Horas'})`,
-              amount_in_cents: baseAmount * 100,
-              currency: 'GTQ',
-              quantity: 1
-            });
-          }
-        } else if (salonTipoAlquiler === 'salon_plazas') {
-          const salonBaseAmount = (salonExoneracion || isSocio) ? 0 : (salonDuracion === '4_horas' ? 700 : 1200);
-          if (salonBaseAmount > 0) {
-            checkoutItems.push({
-              name: `Alquiler Salón de Eventos y Capacitaciones (${salonDuracion === '8_horas' ? '8 Horas' : '4 Horas'})`,
-              amount_in_cents: salonBaseAmount * 100,
-              currency: 'GTQ',
-              quantity: 1
-            });
-          }
-          const qty = salonPlazasParqueo || 1;
-          checkoutItems.push({
-            name: `Reserva de Plazas de Parqueo (${qty} Plazas / Día)`,
-            amount_in_cents: qty * 50 * 100,
-            currency: 'GTQ',
-            quantity: 1
-          });
-        } else if (salonTipoAlquiler === 'parqueo') {
-          // Parqueo completo no tiene exoneración
-          checkoutItems.push({
-            name: 'Alquiler de Parqueo Privado Completo (Todo el Día)',
-            amount_in_cents: 1500 * 100,
-            currency: 'GTQ',
-            quantity: 1
-          });
-        } else if (salonTipoAlquiler === 'parqueo_plazas') {
-          // Parqueo por plazas: Q50 por plaza por día
-          const qty = salonPlazasParqueo || 1;
-          checkoutItems.push({
-            name: `Reserva de Plazas de Parqueo (${qty} Plazas / Día)`,
-            amount_in_cents: qty * 50 * 100,
-            currency: 'GTQ',
-            quantity: 1
-          });
-        } else if (salonTipoAlquiler === 'ambos') {
-          // Combo: si hay exoneración se exonera el salón pero se cobra el parqueo (Q1,500)
-          if (salonExoneracion) {
-            checkoutItems.push({
-              name: `Combo: Salón Exonerado + Parqueo Completo (Día)`,
-              amount_in_cents: 1500 * 100,
-              currency: 'GTQ',
-              quantity: 1
-            });
-          } else {
-            const baseAmount = isSocio ? 1500 : (salonDuracion === '4_horas' ? 2000 : 2500);
-            checkoutItems.push({
-              name: `Combo Salón (${salonDuracion === '8_horas' ? '8h' : '4h'}) y Parqueo Completo`,
-              amount_in_cents: baseAmount * 100,
-              currency: 'GTQ',
-              quantity: 1
-            });
-          }
-        }
+        setCreatedSolicitudId(nuevaSolicitud.id);
+        setCreatedSolicitudData({
+          nombreActividad: salonNombreActividad.trim(),
+          nombreSolicitante: (user ? user.nombre : salonNombreSolicitante).trim(),
+          dia: salonDia,
+          horaInicio: salonHoraInicio,
+          horaFin: salonHoraFin,
+          tipoAlquiler: salonTipoAlquiler,
+          duracion: salonDuracion,
+          asistentes: asistentesNum,
+          plazasParqueo: salonPlazasParqueo,
+          costoTotal: salonCostoTotal,
+          esSocio: isSocio
+        });
 
-        // 2. Producto de Servicio de Limpieza Post-Evento
-        if (salonCompromisoLimpieza === 'pagar_limpieza') {
-          checkoutItems.push({
-            name: 'Servicio Integral de Limpieza Post-Evento',
-            amount_in_cents: 300 * 100,
-            currency: 'GTQ',
-            quantity: 1
-          });
-        }
-
-        const validItems = checkoutItems.filter(item => item.amount_in_cents > 0);
-        if (validItems.length > 0) {
-          try {
-            const currentBaseUrl = window.location.href.split('#')[0].split('?')[0];
-            const checkoutResponse = await recurrenteService.createCheckout({
-              items: validItems,
-              userEmail: (nuevaSolicitud.salonEmail || user?.correo || '').trim(),
-              successUrl: `${currentBaseUrl}#solicitudes?pago_salon=exitoso&id=${nuevaSolicitud.id}`,
-              cancelUrl: `${currentBaseUrl}#solicitudes?pago_salon=cancelado&id=${nuevaSolicitud.id}`,
-              metadata: {
-                solicitudId: nuevaSolicitud.id,
-                tipo: 'alquiler_salon',
-                nombreSolicitante: nuevaSolicitud.nombreSolicitante,
-                dia: salonDia,
-                horario: `${salonHoraInicio} - ${salonHoraFin}`,
-                total: salonCostoTotal
-              }
-            });
-
-            if (checkoutResponse && checkoutResponse.checkout_url) {
-              nuevaSolicitud.recurrenteCheckoutUrl = checkoutResponse.checkout_url;
-              nuevaSolicitud.recurrenteCheckoutId = checkoutResponse.id;
-              nuevaSolicitud.estadoPago = 'Checkout_Creado';
-              setCreatedSolicitudCheckoutUrl(checkoutResponse.checkout_url);
-
-              await firebaseService.saveSolicitud(nuevaSolicitud);
-              const updatedList = [nuevaSolicitud, ...solicitudes];
-              setSolicitudes(updatedList);
-              safeSetItem('club_leones_solicitudes', JSON.stringify(updatedList));
-
-              setCreatedSolicitudId(nuevaSolicitud.id);
-              setCreatedSolicitudData({
-                nombreActividad: salonNombreActividad.trim(),
-                nombreSolicitante: (user ? user.nombre : salonNombreSolicitante).trim(),
-                dia: salonDia,
-                horaInicio: salonHoraInicio,
-                horaFin: salonHoraFin,
-                tipoAlquiler: salonTipoAlquiler,
-                duracion: salonDuracion,
-                asistentes: asistentesNum,
-                plazasParqueo: salonPlazasParqueo,
-                costoTotal: salonCostoTotal,
-                esSocio: isSocio
-              });
-              setSaveSuccess(true);
-
-              // Redireccionar inmediatamente a la pasarela de Recurrente GT
-              window.location.href = checkoutResponse.checkout_url;
-              return;
-            }
-          } catch (payErr: any) {
-            console.error("Error al conectar con la pasarela Recurrente GT:", payErr);
-            alert(`ℹ️ Tu solicitud fue guardada con éxito (Código: ${nuevaSolicitud.id}).\n\nNotificación de Recurrente GT:\n${payErr?.message || 'No se pudo abrir automáticamente la pasarela.'}\n\nPuedes realizar tu pago por transferencia bancaria o en sede.`);
-          }
-        }
+        setPendingSalonSolicitud(nuevaSolicitud);
+        setIsCyberSourceModalOpen(true);
+        setIsSaving(false);
+        setIsRedirectingPayment(false);
+        return;
       }
 
       // Registro estándar (Transferencia / Exonerado / En Sede)
@@ -3218,12 +3140,12 @@ const Solicitudes: React.FC<SolicitudesProps> = ({ user }) => {
                   {isRedirectingPayment ? (
                     <>
                       <RefreshCw size={15} className="animate-spin text-amber-400" />
-                      <span>Conectando con Recurrente GT...</span>
+                      <span>Conectando con CyberSource / BAC...</span>
                     </>
                   ) : (
                     <>
                       <CreditCard size={16} className="text-amber-400" />
-                      <span>Realizar Pago en Línea Q{salonCostoTotal}.00 (Recurrente GT)</span>
+                      <span>Realizar Pago en Línea Q{salonCostoTotal}.00 (BAC)</span>
                     </>
                   )}
                 </button>
@@ -5017,6 +4939,25 @@ Club de Leones de Quetzaltenango`;
             </form>
           </div>
         </div>
+      )}
+      {/* CyberSource / BAC Payment Modal for Salon Bookings */}
+      {pendingSalonSolicitud && (
+        <CyberSourcePaymentModal
+          isOpen={isCyberSourceModalOpen}
+          onClose={() => setIsCyberSourceModalOpen(false)}
+          onSuccess={handleCyberSourceSalonSuccess}
+          amount={pendingSalonSolicitud.salonCostoTotal || salonCostoTotal}
+          currency="GTQ"
+          orderCode={`SALON-${pendingSalonSolicitud.id}`}
+          concept={`Alquiler Instalaciones: ${pendingSalonSolicitud.salonNombreActividad || pendingSalonSolicitud.nombre}`}
+          customer={{
+            firstName: (pendingSalonSolicitud.salonNombreSolicitante || user?.nombre || 'Solicitante').split(' ')[0],
+            lastName: (pendingSalonSolicitud.salonNombreSolicitante || user?.nombre || 'General').split(' ').slice(1).join(' ') || 'Solicitud',
+            email: pendingSalonSolicitud.salonEmail || user?.correo || 'solicitante@clubdeleonesquetzaltenango.org',
+            phoneNumber: pendingSalonSolicitud.salonTelefono || user?.telefono
+          }}
+          allowCuotas={(pendingSalonSolicitud.salonCostoTotal || salonCostoTotal) >= 500}
+        />
       )}
     </div>
   );

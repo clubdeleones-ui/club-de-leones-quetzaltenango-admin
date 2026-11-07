@@ -3658,7 +3658,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                                   </select>
 
                                   <span className="text-[10px] text-slate-400 font-semibold block">
-                                    {reg.metodoPago === 'tarjeta' ? '💳 En línea (Recurrente)' : '🏦 Banrural Depósito'}
+                                    {reg.metodoPago === 'tarjeta' ? '💳 En línea (CyberSource BAC)' : '🏦 Banrural Depósito'}
                                   </span>
                                 </div>
                               </td>
@@ -4401,7 +4401,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                           {pagoTarjeta}
                         </p>
                         <span className="text-[10px] text-slate-500 block">
-                          {totalInscritos > 0 ? Math.round((pagoTarjeta/totalInscritos)*100) : 0}% vía Recurrente GT
+                          {totalInscritos > 0 ? Math.round((pagoTarjeta/totalInscritos)*100) : 0}% vía CyberSource BAC
                         </span>
                       </div>
 

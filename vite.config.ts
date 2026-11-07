@@ -25,6 +25,7 @@ export default defineConfig(({ mode }) => {
               charts: ['recharts'],
               pdf: ['jspdf'],
               icons: ['lucide-react'],
+              excel: ['xlsx'],
             }
           }
         }

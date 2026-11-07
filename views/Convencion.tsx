@@ -53,6 +53,8 @@ import { gmailService } from '../services/gmailService';
 import { recurrenteService } from '../services/recurrenteService';
 import { ConvencionConfig, ConvencionRegistro } from '../types';
 import { GuiaHotelesSection } from '../components/GuiaHotelesSection';
+import { CyberSourcePaymentModal } from '../components/CyberSourcePaymentModal';
+import { CyberSourcePaymentResult } from '../services/cybersourceService';
 
 interface CountdownState {
   days: number;
@@ -578,6 +580,8 @@ export default function Convencion() {
   const [fetching, setFetching] = useState(true);
 
   const [searchParams] = useSearchParams();
+  const [isCyberSourceModalOpen, setIsCyberSourceModalOpen] = useState(false);
+  const [pendingConvencionRegistro, setPendingConvencionRegistro] = useState<ConvencionRegistro | null>(null);
   const [paymentSuccessData, setPaymentSuccessData] = useState<{
     id: string;
     nombre: string;
@@ -587,6 +591,64 @@ export default function Convencion() {
     metodo: 'recurrente' | 'transferencia';
     estadoPago: string;
   } | null>(null);
+
+  const handleCyberSourceSuccess = async (result: CyberSourcePaymentResult) => {
+    if (!pendingConvencionRegistro) return;
+    setIsCyberSourceModalOpen(false);
+    setLoading(true);
+    try {
+      const updatedReg: ConvencionRegistro = {
+        ...pendingConvencionRegistro,
+        estadoPago: 'Pagado',
+        recurrenteCheckoutId: result.transactionId,
+        ultimoTipoNotificacion: 'pago_confirmado',
+        ultimoMensajeEnviado: `🦁 Pago Confirmado: LXXV Convención Nacional (Ref: ${result.transactionId})`,
+        fechaUltimoMensaje: new Date().toISOString()
+      };
+
+      await firebaseService.saveConvencionRegistro(updatedReg);
+
+      // Enviar correo de pago confirmado oficial con Entrada QR
+      gmailService.sendRegistrationEmail(updatedReg, 'pago_confirmado', undefined, config?.googleScriptUrl).catch(err => {
+        console.warn("No se pudo enviar correo de confirmación de pago por Gmail:", err);
+      });
+
+      try {
+        localStorage.removeItem(CONVENCION_DRAFT_KEY);
+      } catch (e) {}
+
+      setForm({
+        nombre: updatedReg.nombre,
+        email: updatedReg.email,
+        telefono: updatedReg.telefono,
+        club: updatedReg.club,
+        cargo: updatedReg.cargo,
+        distrito: updatedReg.distrito
+      });
+
+      setPaymentSuccessData({
+        id: updatedReg.id,
+        nombre: updatedReg.nombre,
+        club: updatedReg.club,
+        paquete: updatedReg.paquete || 'Inscripción Convención',
+        monto: updatedReg.montoPagar || montoTotal,
+        metodo: 'recurrente',
+        estadoPago: 'Pagado'
+      });
+      setIsSubmitted(true);
+      showToast("¡Pago completado con éxito! Tu inscripción oficial a la Convención está confirmada.", "success");
+
+      setTimeout(() => {
+        const el = document.getElementById('pre-inscripcion');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 400);
+    } catch (err: any) {
+      console.error("Error confirmando pago en Convencion:", err);
+      showToast("Error al confirmar registro: " + err.message, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Custom dropdown states
   const [openDropdown, setOpenDropdown] = useState<'cargo' | 'zona' | 'club' | null>(null);
@@ -1267,32 +1329,11 @@ export default function Convencion() {
       });
 
       if (metodo === 'recurrente') {
-        setIsRedirectingPayment(true);
-        try {
-          const currentUrl = window.location.href.split('#')[0];
-          const checkoutResponse = await recurrenteService.createCheckout({
-            items: checkoutItems,
-            userEmail: form.email.trim(),
-            successUrl: `${currentUrl}#/convencion?pago=exitoso&id=${nuevoRegistro.id}`,
-            cancelUrl: `${currentUrl}#/convencion?pago=cancelado`,
-            metadata: {
-              registroId: nuevoRegistro.id,
-              nombre: form.nombre,
-              club: finalClub,
-              paquete: paqueteNombre
-            }
-          });
-
-          if (checkoutResponse && checkoutResponse.checkout_url) {
-            nuevoRegistro.recurrenteCheckoutUrl = checkoutResponse.checkout_url;
-            await firebaseService.saveConvencionRegistro(nuevoRegistro);
-            window.location.href = checkoutResponse.checkout_url;
-            return;
-          }
-        } catch (payErr: any) {
-          console.error("Error al conectar con la pasarela de pagos Recurrente GT:", payErr);
-          showToast(`Tu pre-registro fue guardado con éxito. ${payErr?.message || 'No se pudo generar el enlace directo de pago.'} Puedes realizar tu pago por transferencia bancaria.`, "info");
-        }
+        setPendingConvencionRegistro(nuevoRegistro);
+        setIsCyberSourceModalOpen(true);
+        setLoading(false);
+        setIsRedirectingPayment(false);
+        return;
       }
 
       try {
@@ -3231,6 +3272,26 @@ export default function Convencion() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* CyberSource / BAC Credomatic Payment Modal */}
+      {pendingConvencionRegistro && (
+        <CyberSourcePaymentModal
+          isOpen={isCyberSourceModalOpen}
+          onClose={() => setIsCyberSourceModalOpen(false)}
+          onSuccess={handleCyberSourceSuccess}
+          amount={pendingConvencionRegistro.montoPagar || montoTotal}
+          currency="GTQ"
+          orderCode={`CONV-${pendingConvencionRegistro.id}`}
+          concept={`Inscripción 75 Convención D-3: ${pendingConvencionRegistro.nombre} (${pendingConvencionRegistro.club})`}
+          customer={{
+            firstName: pendingConvencionRegistro.nombre.split(' ')[0] || 'León',
+            lastName: pendingConvencionRegistro.nombre.split(' ').slice(1).join(' ') || 'Convencionista',
+            email: pendingConvencionRegistro.email,
+            phoneNumber: pendingConvencionRegistro.telefono
+          }}
+          allowCuotas={true}
+        />
       )}
     </div>
   );

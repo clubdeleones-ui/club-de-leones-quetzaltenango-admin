@@ -2,10 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Search, DollarSign, Calendar, CreditCard, Image, Upload, X, Check, Building, AlertCircle, Sparkles, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
-import { recurrenteService } from '../services/recurrenteService';
 import { Socio, PagoCuota } from '../types';
 import { useToast } from '../context/ToastContext';
 import { validateImageFile, compressImageFile } from '../utils/imageCompressor';
+import { CyberSourcePaymentModal } from '../components/CyberSourcePaymentModal';
+import { CyberSourcePaymentResult } from '../services/cybersourceService';
 
 export const PublicPagoCuota: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -17,6 +18,7 @@ export const PublicPagoCuota: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [processingRecurrenteReturn, setProcessingRecurrenteReturn] = useState(false);
+  const [isCyberSourceModalOpen, setIsCyberSourceModalOpen] = useState(false);
 
   // Form State
   const [selectedSocio, setSelectedSocio] = useState<Socio | null>(null);
@@ -343,6 +345,71 @@ export const PublicPagoCuota: React.FC = () => {
     }
   };
 
+  const handleCyberSourceSuccess = async (result: CyberSourcePaymentResult) => {
+    if (!selectedSocio) return;
+    setIsCyberSourceModalOpen(false);
+    setSubmitting(true);
+    try {
+      const { tipoCuota, tipoPeriodo, mes, año, monto } = formState;
+      let periodLabel = `${mes} ${año}`;
+      if (tipoCuota === 'ordinaria' && tipoPeriodo !== 'Mensual') {
+        const startMonth = mes || 'Enero';
+        const startYear = año || 2026;
+        let monthsToAdd = 2;
+        if (tipoPeriodo === 'Semestral') monthsToAdd = 5;
+        else if (tipoPeriodo === 'Anual') monthsToAdd = 11;
+        const end = getEndMonthAndYear(startMonth, startYear, monthsToAdd);
+        periodLabel = `${tipoPeriodo}: ${startMonth} ${startYear} - ${end.month} ${end.year}`;
+      } else if (tipoCuota === 'inscripcion') {
+        periodLabel = 'Cuota de Inscripción';
+      } else if (tipoCuota === 'extraordinaria') {
+        periodLabel = 'Cuota Extraordinaria';
+      } else if (tipoCuota === 'donacion') {
+        periodLabel = 'Donación';
+      }
+
+      const nuevoPago: PagoCuota = {
+        id: `pago-bac-${Date.now()}`,
+        fechaPago: new Date().toISOString().split('T')[0],
+        monto: monto,
+        periodo: periodLabel,
+        tipoPeriodo: tipoPeriodo,
+        metodo: 'Tarjeta',
+        bancoReferencia: 'BAC Credomatic (CyberSource)',
+        numeroReferencia: result.transactionId,
+        tipoCuota: tipoCuota,
+        descripcion: `Pago en línea con tarjeta vía CyberSource (BAC). ID: ${result.transactionId} | Aut: ${result.approvalCode}`,
+        comprobanteUrl: ''
+      };
+
+      const updatedHistorial = [nuevoPago, ...(selectedSocio.historialPagos || [])];
+      const tempSocio = { ...selectedSocio, historialPagos: updatedHistorial };
+      const unpaid = getSocioUnpaidMonths(tempSocio);
+      const unpaidCount = unpaid.length;
+      const amountDue = unpaidCount * 125;
+      const newStatus = unpaidCount === 0 ? 'Al día' : (unpaidCount > 3 ? 'En mora' : 'Pendiente');
+
+      const updatedSocio: Socio = {
+        ...selectedSocio,
+        estadoCuotas: newStatus as any,
+        montoPendiente: amountDue,
+        fechaUltimoPago: nuevoPago.fechaPago,
+        historialPagos: updatedHistorial
+      };
+
+      await firebaseService.saveSocio(updatedSocio);
+      setSelectedSocio(updatedSocio);
+      setSocios(prev => prev.map(s => s.id === updatedSocio.id ? updatedSocio : s));
+      setSuccess(true);
+      showToast('¡Pago con tarjeta procesado y registrado con éxito!', 'success');
+    } catch (err: any) {
+      console.error('Error registrando pago de cuota con CyberSource:', err);
+      showToast('Error registrando pago: ' + err.message, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // Adjust amount and periods according to selections
 
   useEffect(() => {
@@ -455,63 +522,9 @@ export const PublicPagoCuota: React.FC = () => {
       }
     }
 
-    // ONLINE RECURRENTE PAYMENT FLOW
+    // ONLINE CYBERSOURCE / BAC PAYMENT FLOW
     if (metodo === 'Tarjeta') {
-      setSubmitting(true);
-      try {
-        const currentOrigin = window.location.origin + window.location.pathname;
-        const cleanOrigin = currentOrigin.endsWith('/') ? currentOrigin.slice(0, -1) : currentOrigin;
-
-        let periodLabel = `${mes} ${año}`;
-        if (tipoCuota === 'ordinaria' && tipoPeriodo !== 'Mensual') {
-          const startMonth = mes || 'Enero';
-          const startYear = año || 2026;
-          let monthsToAdd = 2;
-          if (tipoPeriodo === 'Semestral') monthsToAdd = 5;
-          else if (tipoPeriodo === 'Anual') monthsToAdd = 11;
-          const end = getEndMonthAndYear(startMonth, startYear, monthsToAdd);
-          periodLabel = `${tipoPeriodo}: ${startMonth} ${startYear} - ${end.month} ${end.year}`;
-        } else if (tipoCuota === 'inscripcion') {
-          periodLabel = 'Cuota de Inscripción';
-        } else if (tipoCuota === 'extraordinaria') {
-          periodLabel = 'Cuota Extraordinaria';
-        } else if (tipoCuota === 'donacion') {
-          periodLabel = 'Donación';
-        }
-
-        const successUrl = `${cleanOrigin}#/pago-cuota?status=success&checkout_id={CHECKOUT_ID}&socioId=${selectedSocio.id}&tipoCuota=${tipoCuota}&periodo=${encodeURIComponent(periodLabel)}&monto=${monto}`;
-        const cancelUrl = `${cleanOrigin}#/pago-cuota?status=cancel`;
-
-        const checkoutResponse = await recurrenteService.createCheckout({
-          items: [
-            {
-              name: `Aportación ${tipoCuota.toUpperCase()} (${periodLabel}) - ${selectedSocio.nombre}`,
-              amount_in_cents: Math.round(Number(monto) * 100),
-              currency: 'GTQ',
-              quantity: 1,
-            }
-          ],
-          userEmail: selectedSocio.correo || undefined,
-          successUrl,
-          cancelUrl,
-          metadata: {
-            socioId: selectedSocio.id,
-            socioNombre: selectedSocio.nombre,
-            tipoCuota,
-            periodo: periodLabel
-          }
-        });
-
-        if (checkoutResponse.checkout_url) {
-          window.location.href = checkoutResponse.checkout_url;
-        } else {
-          throw new Error('No se obtuvo la dirección de pago de Recurrente GT.');
-        }
-      } catch (err: any) {
-        console.error('Error al iniciar checkout Recurrente:', err);
-        showToast(err.message || 'Error al conectar con la pasarela de pago Recurrente GT.', 'error');
-        setSubmitting(false);
-      }
+      setIsCyberSourceModalOpen(true);
       return;
     }
 
@@ -747,20 +760,20 @@ export const PublicPagoCuota: React.FC = () => {
               </div>
             </div>
 
-            {/* Recurrente GT Payment Banner */}
+            {/* CyberSource / BAC Payment Banner */}
             {formState.metodo === 'Tarjeta' && (
-              <div className="bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 text-white rounded-2xl p-4 space-y-3 shadow-lg relative overflow-hidden">
+              <div className="bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white rounded-2xl p-4 space-y-3 shadow-lg relative overflow-hidden">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <ShieldCheck className="text-emerald-400" size={18} />
-                    <span className="text-xs font-black tracking-wide text-blue-100">Pasarela Segura Recurrente GT</span>
+                    <ShieldCheck className="text-yellow-400" size={18} />
+                    <span className="text-xs font-black tracking-wide text-blue-100">Pasarela Segura CyberSource / BAC Credomatic</span>
                   </div>
-                  <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                    {recurrenteService.getTestMode() ? 'Modo Pruebas (TEST)' : 'Producción (LIVE)'}
+                  <span className="text-[9px] bg-yellow-400/20 text-yellow-300 border border-yellow-400/30 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                    3D Secure 2.0
                   </span>
                 </div>
                 <p className="text-[11px] text-blue-100/90 leading-relaxed font-medium">
-                  Al presionar <strong className="text-amber-300">Pagar con Tarjeta</strong> serás redirigido a la pasarela segura en quetzales (GTQ). Acepta todas las tarjetas de crédito o débito Visa y Mastercard. Tu pago quedará aprobado automáticamente.
+                  Al presionar <strong className="text-yellow-300">Pagar con Tarjeta</strong> se abrirá la pasarela segura bancaria en quetzales (GTQ). Acepta todas las tarjetas Visa, Mastercard y American Express con opción de <strong className="text-white">Cuotas BAC</strong>. Tu cuota se acredita al instante.
                 </p>
               </div>
             )}
@@ -1129,7 +1142,7 @@ export const PublicPagoCuota: React.FC = () => {
                         {formState.metodo === 'Tarjeta' ? (
                           <>
                             <CreditCard size={16} />
-                            <span>Pagar Q{formState.monto.toLocaleString()} con Tarjeta (Recurrente)</span>
+                            <span>Pagar Q{formState.monto.toLocaleString()} con Tarjeta (BAC)</span>
                           </>
                         ) : (
                           <>
@@ -1145,6 +1158,26 @@ export const PublicPagoCuota: React.FC = () => {
             )}
 
           </form>
+        )}
+
+        {/* CyberSource / BAC Credomatic Modal */}
+        {selectedSocio && (
+          <CyberSourcePaymentModal
+            isOpen={isCyberSourceModalOpen}
+            onClose={() => setIsCyberSourceModalOpen(false)}
+            onSuccess={handleCyberSourceSuccess}
+            amount={formState.monto}
+            currency="GTQ"
+            orderCode={`CUOTA-${selectedSocio.id}-${Date.now()}`}
+            concept={`Aportación ${formState.tipoCuota.toUpperCase()}: ${selectedSocio.nombre}`}
+            customer={{
+              firstName: selectedSocio.nombre.split(' ')[0] || 'Socio',
+              lastName: selectedSocio.nombre.split(' ').slice(1).join(' ') || 'León',
+              email: selectedSocio.correo || 'socio@clubdeleonesquetzaltenango.org',
+              phoneNumber: selectedSocio.telefono || ''
+            }}
+            allowCuotas={formState.monto >= 300}
+          />
         )}
       </div>
     </div>

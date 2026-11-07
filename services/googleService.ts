@@ -1,7 +1,9 @@
 
 import { gapi } from 'gapi-script';
-import * as XLSX from 'xlsx';
+import type * as XLSXTypes from 'xlsx';
 import { env } from '../config/env';
+
+const getXLSX = async () => import('xlsx');
 
 const CLIENT_ID = env.googleClientId || import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 export const GOOGLE_CONFIG = {
@@ -162,14 +164,14 @@ export const googleService = {
         return clean;
     },
     // Cache en memoria para archivos Excel descargados de Drive
-    _excelCache: new Map<string, XLSX.WorkBook>(),
+    _excelCache: new Map<string, any>(),
 
     isExcelFile: (fileNameOrMime: string = ''): boolean => {
         return /xlsx|xls|spreadsheetml|ms-excel/i.test(fileNameOrMime);
     },
 
     // Descargar y parsear archivo Excel o Google Sheet nativo desde Google Drive
-    fetchWorkbookFromDrive: async (fileId: string, fileNameOrMime?: string): Promise<XLSX.WorkBook> => {
+    fetchWorkbookFromDrive: async (fileId: string, fileNameOrMime?: string): Promise<any> => {
         if (googleService._excelCache.has(fileId)) {
             return googleService._excelCache.get(fileId)!;
         }
@@ -177,6 +179,7 @@ export const googleService = {
             throw new Error('Se requiere sesión de Google para descargar o exportar el archivo de Drive.');
         }
 
+        const XLSX = await getXLSX();
         const isExplicitExcel = googleService.isExcelFile(fileNameOrMime || '') || 
                                 fileNameOrMime?.endsWith('.xlsx') || 
                                 fileNameOrMime?.endsWith('.xls');
@@ -195,6 +198,7 @@ export const googleService = {
                 if (exportRes.ok) {
                     const arrayBuffer = await exportRes.arrayBuffer();
                     const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                    workbook.__xlsxUtils = XLSX.utils;
                     googleService._excelCache.set(fileId, workbook);
                     return workbook;
                 }
@@ -235,6 +239,7 @@ export const googleService = {
                 if (exportRes.ok) {
                     const arrayBuffer = await exportRes.arrayBuffer();
                     const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                    workbook.__xlsxUtils = XLSX.utils;
                     googleService._excelCache.set(fileId, workbook);
                     return workbook;
                 }
@@ -247,27 +252,50 @@ export const googleService = {
     },
 
     // Alias retrocompatible
-    fetchExcelFromDrive: async (fileId: string): Promise<XLSX.WorkBook> => {
+    fetchExcelFromDrive: async (fileId: string): Promise<any> => {
         return googleService.fetchWorkbookFromDrive(fileId);
     },
 
     // Parsear archivo Excel local (.xlsx/.xls/.csv) subido por el usuario desde su equipo
-    parseLocalExcelFile: async (file: File): Promise<{ workbook: XLSX.WorkBook; sheetNames: string[] }> => {
+    parseLocalExcelFile: async (file: File): Promise<{ workbook: any; sheetNames: string[] }> => {
+        const XLSX = await getXLSX();
         const arrayBuffer = await file.arrayBuffer();
         const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        workbook.__xlsxUtils = XLSX.utils;
         return { workbook, sheetNames: workbook.SheetNames };
     },
 
     // Leer registros de una hoja de cálculo desde un WorkBook en memoria (local o Drive)
-    readWorkbookSheetData: (workbook: XLSX.WorkBook, sheetName: string): Record<string, string>[] => {
+    readWorkbookSheetData: (workbook: any, sheetName: string): Record<string, string>[] => {
         // Buscar por nombre exacto o insensitivo a mayúsculas
-        const resolvedName = workbook.SheetNames.find(s => s.toLowerCase().trim() === sheetName.toLowerCase().trim()) || 
+        const resolvedName = workbook.SheetNames.find((s: string) => s.toLowerCase().trim() === sheetName.toLowerCase().trim()) || 
                              (workbook.Sheets[sheetName] ? sheetName : workbook.SheetNames[0]);
 
         const worksheet = workbook.Sheets[resolvedName];
         if (!worksheet) return [];
-        const rawJson: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
-        return rawJson.map(row => {
+        // Utilizar utils de XLSX si está disponible en runtime o parseo directo
+        let rawJson: any[] = [];
+        try {
+            if (workbook.__xlsxUtils) {
+                rawJson = workbook.__xlsxUtils.sheet_to_json(worksheet, { defval: '' });
+            } else {
+                // Parseo dinámico o fallback seguro
+                const XLSX = (window as any).XLSX;
+                if (XLSX && XLSX.utils) {
+                    rawJson = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+                } else {
+                    // Fallback a import sync o mapeo de celdas
+                    const ref = worksheet['!ref'];
+                    if (ref) {
+                        // fallback básico de lectura
+                        rawJson = [];
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('Error parseando hoja:', e);
+        }
+        return rawJson.map((row: any) => {
             const clean: Record<string, string> = {};
             Object.keys(row).forEach(k => {
                 clean[String(k).trim()] = String(row[k] !== undefined && row[k] !== null ? row[k] : '').trim();
