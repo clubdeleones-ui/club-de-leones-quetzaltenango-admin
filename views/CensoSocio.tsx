@@ -25,7 +25,8 @@ import {
   Sparkles,
   Lock,
   RefreshCw,
-  X
+  X,
+  MessageCircle
 } from 'lucide-react';
 
 export default function CensoSocio() {
@@ -255,6 +256,7 @@ export default function CensoSocio() {
           estatus: 'Pendiente', // Marcado como pendiente para validación del admin
           activo: true,
           club: 'QUETZALTENANGO',
+          qrToken: Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10),
           editadoPor: 'Socio (Censo - Nuevo Registro)',
           fechaEdicion: new Date().toISOString()
         };
@@ -265,6 +267,11 @@ export default function CensoSocio() {
         showToast("¡Ficha registrada con éxito!", "success");
       } else {
         // Update existing socio
+        let token = selectedSocio?.qrToken;
+        if (!token) {
+          token = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+        }
+
         const updatedSocio: Socio = {
           ...selectedSocio!,
           nombre: nombre.trim(),
@@ -275,6 +282,7 @@ export default function CensoSocio() {
           profesion: profesion.trim(),
           direccion: direccion.trim(),
           foto: foto || selectedSocio?.foto || '',
+          qrToken: token,
           fechaEdicion: new Date().toISOString(),
           editadoPor: 'Socio (Censo - Autogestión)'
         };
@@ -985,6 +993,40 @@ export default function CensoSocio() {
                 )}
               </div>
             </div>
+
+            {/* Acceso Directo por WhatsApp (Autoenvío Seguro) */}
+            {(() => {
+              const cleanDigits = (savedDataSummary.telefono || '').replace(/\D/g, '');
+              const phone8 = cleanDigits.slice(-8);
+              const token = savedDataSummary.qrToken;
+              if (phone8.length !== 8 || !token) return null;
+
+              const baseUrl = window.location.origin + window.location.pathname;
+              const magicUrl = `${baseUrl}#/login?qr_token=${token}`;
+              const message = `🦁 *Club de Leones Quetzaltenango*\n\nEstimado(a) C.L. *${savedDataSummary.nombre}*,\n\nEste es su enlace personal para ingresar a su cuenta:\n👉 ${magicUrl}\n\n(Al presionar el enlace azul entrará directamente sin necesidad de contraseña. Guarde este mensaje en su chat para futuros ingresos).`;
+              const waUrl = `https://wa.me/502${phone8}?text=${encodeURIComponent(message)}`;
+
+              return (
+                <div className="p-5 rounded-2xl bg-emerald-50/90 border border-emerald-200 text-left space-y-3 shadow-sm">
+                  <div className="flex items-center space-x-2 text-emerald-950 font-bold">
+                    <MessageCircle className="text-emerald-600 shrink-0" size={20} />
+                    <span className="text-sm">Guarda tu acceso directo en WhatsApp</span>
+                  </div>
+                  <p className="text-xs text-emerald-850 font-medium leading-relaxed">
+                    Te vas a enviar el enlace a ti mismo por WhatsApp. Es una manera práctica y completamente segura de ingresar: al presionar el botón verde abajo, presiona <strong>"Enviar"</strong> en WhatsApp y luego toca el <strong>enlace azul</strong> que queda en tu propio chat para ingresar directamente sin contraseña.
+                  </p>
+                  <a
+                    href={waUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center space-x-2 w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all active:scale-[0.98]"
+                  >
+                    <MessageCircle size={18} />
+                    <span>📲 Guardar mi enlace de acceso en mi WhatsApp</span>
+                  </a>
+                </div>
+              );
+            })()}
 
             <div className="pt-2 flex flex-col sm:flex-row gap-3">
               <button

@@ -1,6 +1,23 @@
 
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Lock, Briefcase, ArrowRight, Loader2, QrCode, AlertCircle, Eye, EyeOff, Mail, User } from 'lucide-react';
+import { 
+  ShieldCheck, 
+  Lock, 
+  Briefcase, 
+  ArrowRight, 
+  Loader2, 
+  QrCode, 
+  AlertCircle, 
+  Eye, 
+  EyeOff, 
+  Mail, 
+  User, 
+  MessageCircle, 
+  ExternalLink, 
+  CheckCircle2, 
+  Smartphone, 
+  Sparkles 
+} from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Socio, UserRole } from '../types';
 import { firebaseService } from '../services/firebaseService';
@@ -27,7 +44,14 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [loginMethod, setLoginMethod] = useState<'cargo' | 'correo'>('cargo');
+  const [loginMethod, setLoginMethod] = useState<'whatsapp' | 'cargo' | 'correo'>('whatsapp');
+  const [whatsappPhone, setWhatsappPhone] = useState('');
+  const [whatsappMode, setWhatsappMode] = useState<'phone' | 'name'>('phone');
+  const [selectedWhatsappSocioId, setSelectedWhatsappSocioId] = useState('');
+  const [verifiedSocio, setVerifiedSocio] = useState<Socio | null>(null);
+  const [phoneNotFound, setPhoneNotFound] = useState(false);
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const [whatsappSent, setWhatsappSent] = useState(false);
   const [puesto, setPuesto] = useState('');
   const [selectedSocioId, setSelectedSocioId] = useState('');
   const [correoOrCodigo, setCorreoOrCodigo] = useState('');
@@ -95,6 +119,97 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       return sPuesto === selPuesto || sPuesto.startsWith(selPuesto) || selPuesto.startsWith(sPuesto);
     });
   }, [allSocios, puesto]);
+
+  // Socios que tienen número de teléfono registrado (ordenados alfabéticamente)
+  const sociosWithPhone = React.useMemo(() => {
+    return allSocios
+      .filter(s => {
+        const clean = (s.telefono || '').replace(/\D/g, '');
+        return clean.length >= 8;
+      })
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }, [allSocios]);
+
+  const handleWhatsappPhoneChange = (val: string) => {
+    setWhatsappSent(false);
+    setError('');
+    const digits = val.replace(/\D/g, '').slice(0, 8);
+    const formatted = digits.length > 4 ? `${digits.slice(0, 4)}-${digits.slice(4)}` : digits;
+    setWhatsappPhone(formatted);
+
+    if (digits.length === 8) {
+      const match = allSocios.find(s => {
+        if (!s.telefono) return false;
+        const sDigits = s.telefono.replace(/\D/g, '');
+        const sLast8 = sDigits.length >= 8 ? sDigits.slice(-8) : sDigits;
+        return sLast8 === digits;
+      });
+
+      if (match) {
+        setVerifiedSocio(match);
+        setPhoneNotFound(false);
+      } else {
+        setVerifiedSocio(null);
+        setPhoneNotFound(true);
+      }
+    } else {
+      setVerifiedSocio(null);
+      setPhoneNotFound(false);
+    }
+  };
+
+  const handleSelectWhatsappSocio = (socioId: string) => {
+    setSelectedWhatsappSocioId(socioId);
+    setWhatsappSent(false);
+    setError('');
+    const socio = allSocios.find(s => s.id === socioId);
+    if (!socio) {
+      setVerifiedSocio(null);
+      return;
+    }
+    const clean = (socio.telefono || '').replace(/\D/g, '');
+    if (clean.length >= 8) {
+      const phone8 = clean.slice(-8);
+      setWhatsappPhone(`${phone8.slice(0, 4)}-${phone8.slice(4)}`);
+      setVerifiedSocio(socio);
+      setPhoneNotFound(false);
+    } else {
+      setVerifiedSocio(null);
+      setPhoneNotFound(true);
+    }
+  };
+
+  const handleOpenWhatsAppMagicLink = async () => {
+    if (!verifiedSocio) return;
+    setIsGeneratingLink(true);
+    setError('');
+    try {
+      let token = verifiedSocio.qrToken;
+      if (!token) {
+        token = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+        const updatedSocio = { ...verifiedSocio, qrToken: token };
+        await firebaseService.saveSocio(updatedSocio);
+        setAllSocios(prev => prev.map(s => s.id === updatedSocio.id ? updatedSocio : s));
+        setVerifiedSocio(updatedSocio);
+      }
+
+      const cleanDigits = (verifiedSocio.telefono || whatsappPhone).replace(/\D/g, '');
+      const phone8 = cleanDigits.slice(-8);
+
+      const baseUrl = window.location.origin + window.location.pathname;
+      const magicUrl = `${baseUrl}#/login?qr_token=${token}`;
+      const message = `🦁 *Club de Leones Quetzaltenango*\n\nEstimado(a) C.L. *${verifiedSocio.nombre}*,\n\nEste es su enlace personal para ingresar a su cuenta:\n👉 ${magicUrl}\n\n(Al presionar el enlace azul entrará directamente sin necesidad de contraseña. Guarde este mensaje en su chat para futuros ingresos).`;
+      const waUrl = `https://wa.me/502${phone8}?text=${encodeURIComponent(message)}`;
+
+      window.open(waUrl, '_blank');
+      setWhatsappSent(true);
+    } catch (err) {
+      console.error("Error al preparar enlace de WhatsApp:", err);
+      setError("Ocurrió un error al preparar el enlace de WhatsApp. Por favor intenta de nuevo.");
+    } finally {
+      setIsGeneratingLink(false);
+    }
+  };
 
   useEffect(() => {
     const hashQuery = window.location.hash.split('?')[1];
@@ -274,8 +389,20 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         <h2 className="text-2xl md:text-3xl font-bold text-blue-900 tracking-tight">Acceso Socios</h2>
         <p className="text-sm text-slate-550 mt-1 font-medium">Club de Leones Quetzaltenango</p>
 
-        {/* Tab switch between Cargo and Correo */}
+        {/* Tab switch between WhatsApp, Cargo and Correo */}
         <div className="flex bg-slate-100 p-1 rounded-xl mt-6 border border-slate-200">
+          <button
+            type="button"
+            onClick={() => { setLoginMethod('whatsapp'); setError(''); }}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center space-x-1.5 ${
+              loginMethod === 'whatsapp'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <MessageCircle size={14} />
+            <span>Por WhatsApp</span>
+          </button>
           <button
             type="button"
             onClick={() => { setLoginMethod('cargo'); setError(''); }}
@@ -298,7 +425,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             }`}
           >
             <Mail size={14} />
-            <span>Por Correo o Código</span>
+            <span>Por Correo</span>
           </button>
         </div>
       </div>
@@ -317,7 +444,215 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      {loginMethod === 'whatsapp' ? (
+        <div className="space-y-5 animate-in fade-in duration-200">
+          <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-2xl p-4 text-center">
+            <div className="inline-flex items-center space-x-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-black uppercase tracking-wider rounded-full mb-2">
+              <Sparkles size={12} className="text-emerald-600" />
+              <span>Acceso Rápido Sin Contraseña</span>
+            </div>
+            <h3 className="text-base font-bold text-emerald-950">
+              Ingresa con tu WhatsApp
+            </h3>
+            <p className="text-xs text-emerald-800/80 font-medium mt-1">
+              {whatsappMode === 'phone' 
+                ? 'Escribe tu número de teléfono celular registrado' 
+                : 'Selecciona tu nombre de la lista de socios'}
+            </p>
+
+            <div className="flex justify-center mt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setWhatsappMode(whatsappMode === 'phone' ? 'name' : 'phone');
+                  setVerifiedSocio(null);
+                  setPhoneNotFound(false);
+                  setWhatsappSent(false);
+                  setError('');
+                }}
+                className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 underline flex items-center space-x-1 cursor-pointer"
+              >
+                {whatsappMode === 'phone' ? (
+                  <>
+                    <User size={13} />
+                    <span>¿Prefieres buscar tu nombre en la lista?</span>
+                  </>
+                ) : (
+                  <>
+                    <Smartphone size={13} />
+                    <span>¿Prefieres escribir tu número de teléfono?</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {whatsappMode === 'phone' ? (
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 text-center">
+                Número de Celular / WhatsApp
+              </label>
+              <div className="relative max-w-xs mx-auto">
+                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center space-x-1 text-slate-500 font-bold text-sm pointer-events-none">
+                  <span>🇬🇹</span>
+                  <span>+502</span>
+                </div>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  value={whatsappPhone}
+                  onChange={(e) => handleWhatsappPhoneChange(e.target.value)}
+                  maxLength={9}
+                  placeholder="5555-1234"
+                  autoFocus
+                  className="w-full pl-24 pr-4 py-3 border-2 border-emerald-300 focus:border-emerald-500 rounded-2xl outline-none transition-all text-xl font-black text-slate-800 text-center tracking-widest shadow-inner bg-emerald-50/20"
+                />
+              </div>
+              <p className="text-[11px] text-slate-400 text-center mt-1.5 font-medium">
+                Escribe los 8 dígitos de tu número celular de Guatemala
+              </p>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                Selecciona tu Nombre
+              </label>
+              <div className="relative">
+                <User className="absolute left-3.5 top-3 text-slate-400" size={18} />
+                <select
+                  value={selectedWhatsappSocioId}
+                  onChange={(e) => handleSelectWhatsappSocio(e.target.value)}
+                  className="w-full pl-11 pr-10 py-3 border-2 border-emerald-300 focus:border-emerald-500 rounded-xl outline-none transition-all bg-white text-slate-800 text-sm font-bold appearance-none cursor-pointer"
+                >
+                  <option value="" disabled>Selecciona tu nombre...</option>
+                  {sociosWithPhone.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.nombre} ({s.puesto || 'Socio'})
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+                  <span className="text-xs">▼</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Socio Encontrado y Verificado */}
+          {verifiedSocio && (
+            <div className="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-4 sm:p-5 text-center space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+              {/* Tarjeta del Socio */}
+              <div className="flex items-center space-x-3 text-left bg-white p-3 rounded-xl border border-emerald-100 shadow-sm">
+                {verifiedSocio.foto ? (
+                  <img
+                    src={verifiedSocio.foto}
+                    alt={verifiedSocio.nombre}
+                    className="w-12 h-12 rounded-xl object-cover border border-emerald-200 flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-xl bg-emerald-600 text-white font-black flex items-center justify-center text-lg flex-shrink-0">
+                    {verifiedSocio.nombre.charAt(0)}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <span className="inline-block text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                    ✓ Socio Verificado
+                  </span>
+                  <h4 className="text-sm font-bold text-slate-900 truncate mt-0.5">
+                    {verifiedSocio.nombre}
+                  </h4>
+                  <p className="text-xs text-slate-500 truncate">
+                    {verifiedSocio.puesto || 'Socio Regular'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Mensaje de Explicación y Advertencia Reaseguradora */}
+              <div className="bg-amber-50/90 border border-amber-200 rounded-2xl p-4 text-left text-amber-950 text-xs sm:text-sm leading-relaxed space-y-2">
+                <div className="font-bold flex items-center space-x-2 text-amber-900">
+                  <ShieldCheck size={18} className="text-amber-600 shrink-0" />
+                  <span>Acceso Práctico y 100% Seguro</span>
+                </div>
+                <p className="font-medium text-amber-900">
+                  Te vas a enviar el enlace a ti mismo por WhatsApp. Es una manera práctica y completamente segura de ingresar:
+                </p>
+                <div className="bg-white/85 p-3 rounded-xl border border-amber-200/60 space-y-1.5 text-xs text-slate-700 font-medium">
+                  <p>1️⃣ Al presionar el botón verde abajo, se abrirá tu propio chat de WhatsApp.</p>
+                  <p>2️⃣ Presiona <strong>Enviar</strong> (la flecha verde en WhatsApp).</p>
+                  <p>3️⃣ Toca el <strong>enlace azul</strong> que queda en tu propio chat para ingresar directamente sin contraseña.</p>
+                </div>
+              </div>
+
+              {/* Botón Principal de WhatsApp */}
+              <button
+                type="button"
+                onClick={handleOpenWhatsAppMagicLink}
+                disabled={isGeneratingLink}
+                className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm uppercase tracking-wider rounded-xl shadow-lg shadow-emerald-600/30 active:scale-[0.98] transition-all flex items-center justify-center space-x-2.5 cursor-pointer disabled:opacity-50"
+              >
+                {isGeneratingLink ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    <span>Preparando enlace...</span>
+                  </>
+                ) : (
+                  <>
+                    <MessageCircle size={20} className="fill-white/20" />
+                    <span>Abrir mi WhatsApp y Enviar mi Enlace</span>
+                    <ExternalLink size={16} />
+                  </>
+                )}
+              </button>
+
+              {whatsappSent && (
+                <div className="p-3 bg-emerald-100 text-emerald-900 rounded-xl text-xs font-bold border border-emerald-300 flex items-center justify-center space-x-2 animate-in fade-in">
+                  <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                  <span>¡WhatsApp abierto! Presiona Enviar y toca tu enlace azul para ingresar.</span>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setWhatsappPhone('');
+                  setSelectedWhatsappSocioId('');
+                  setVerifiedSocio(null);
+                  setPhoneNotFound(false);
+                  setWhatsappSent(false);
+                }}
+                className="text-xs text-slate-500 hover:text-slate-800 underline font-medium pt-1 cursor-pointer"
+              >
+                Probar con otro número de teléfono
+              </button>
+            </div>
+          )}
+
+          {/* Teléfono No Encontrado */}
+          {phoneNotFound && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-center space-y-3 animate-in fade-in">
+              <div className="text-amber-700 font-bold text-xs flex items-center justify-center space-x-1.5">
+                <AlertCircle size={16} className="shrink-0" />
+                <span>Número no registrado</span>
+              </div>
+              <p className="text-xs text-amber-950 leading-relaxed font-medium">
+                No encontramos ningún socio registrado con el teléfono <strong>{whatsappPhone}</strong>.
+              </p>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Si aún no has registrado tu número de WhatsApp o cambiaste de número telefónico, puedes actualizar tus datos en el Censo Digital:
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate('/censo')}
+                className="w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-blue-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer"
+              >
+                <span>Actualizar mis datos en el Censo</span>
+                <ArrowRight size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-5">
         {loginMethod === 'cargo' ? (
           <>
             <div>
@@ -424,6 +759,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <ArrowRight size={16} />
         </button>
       </form>
+      )}
     </div>
   );
 };
