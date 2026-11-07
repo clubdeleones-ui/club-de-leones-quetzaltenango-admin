@@ -437,16 +437,17 @@ export const firebaseService = {
   // PARQUEO (ESTACIONAMIENTO) METHODS
   
   // Fetch all vehicles
-  getVehiculosParqueo: async (): Promise<VehiculoParqueo[]> => {
+  getVehiculosParqueo: async (limitCount: number = 300): Promise<VehiculoParqueo[]> => {
     try {
       const colRef = collection(db, "parqueo");
-      const snapshot = await getDocs(colRef);
+      const q = limitCount > 0 ? query(colRef, limit(limitCount)) : colRef;
+      const snapshot = await getDocs(q);
       const list: VehiculoParqueo[] = [];
       snapshot.forEach(doc => {
         list.push(doc.data() as VehiculoParqueo);
       });
       // Sort descending by horaEntrada
-      return list.sort((a, b) => new Date(b.horaEntrada).getTime() - new Date(a.horaEntrada).getTime());
+      return list.sort((a, b) => new Date(b.horaEntrada || 0).getTime() - new Date(a.horaEntrada || 0).getTime());
     } catch (error) {
       console.error("Error fetching vehiculos from Firestore:", error);
       throw error;

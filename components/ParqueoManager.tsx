@@ -27,7 +27,7 @@ import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
-import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, addDoc, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, addDoc, limit, where } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { firebaseService } from '../services/firebaseService';
 import { VehiculoParqueo, RegistroBano, TipoRentaParqueo } from '../types';
@@ -57,6 +57,53 @@ const TIPOS_PLACA = [
   { value: 'CD', label: 'Cuerpo Diplomático (CD)' }
 ];
 
+// Cálculo de tiempo transcurrido (soporta horas, minutos, segundos y días)
+export const getTiempoTranscurrido = (entradaStr: string, salidaStr?: string): string => {
+  const entrada = new Date(entradaStr).getTime();
+  const salida = salidaStr ? new Date(salidaStr).getTime() : Date.now();
+  const diffMs = salida - entrada;
+  
+  if (diffMs < 0 || isNaN(diffMs)) return '00:00:00';
+
+  const totalSecs = Math.floor(diffMs / 1000);
+  const diffHrs = Math.floor(totalSecs / 3600);
+  const diffMins = Math.floor((totalSecs % 3600) / 60);
+  const diffSecs = totalSecs % 60;
+
+  const pad = (n: number) => n.toString().padStart(2, '0');
+
+  if (diffHrs >= 24) {
+    const days = Math.floor(diffHrs / 24);
+    const remHrs = diffHrs % 24;
+    return `${days}d ${pad(remHrs)}:${pad(diffMins)}:${pad(diffSecs)}`;
+  }
+
+  return `${pad(diffHrs)}:${pad(diffMins)}:${pad(diffSecs)}`;
+};
+
+// Componente memoizado para el reloj en vivo: sólo este sub-nodo se actualiza cada segundo,
+// evitando re-renderizar todo el ParqueoManager y sus listas completas.
+export const LiveTimer: React.FC<{ horaEntrada: string; horaSalida?: string; className?: string }> = React.memo(({
+  horaEntrada,
+  horaSalida,
+  className = "text-sm font-black text-slate-800 font-mono tracking-wider"
+}) => {
+  const [elapsed, setElapsed] = useState(() => getTiempoTranscurrido(horaEntrada, horaSalida));
+
+  useEffect(() => {
+    if (horaSalida) {
+      setElapsed(getTiempoTranscurrido(horaEntrada, horaSalida));
+      return;
+    }
+    const timer = setInterval(() => {
+      setElapsed(getTiempoTranscurrido(horaEntrada));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [horaEntrada, horaSalida]);
+
+  return <span className={className}>{elapsed}</span>;
+});
+
 export const ParqueoManager: React.FC = () => {
   const { showAlert, showConfirm } = useModal();
   const alert = (msg: string) => {
@@ -73,29 +120,63 @@ export const ParqueoManager: React.FC = () => {
   const [showBanosReportModal, setShowBanosReportModal] = useState(false);
 
   useEffect(() => {
-    // Consulta acotada con límite para evitar saturar memoria en horas o días de alta afluencia
-    const qParqueo = query(collection(db, 'parqueo'), limit(400));
-    const qBanos = query(collection(db, 'banos'), limit(400));
+    // 1. Consulta en tiempo real de TODOS los vehículos activos en el predio (garantiza que ninguno se pierda)
+    const qActivos = query(
+      collection(db, 'parqueo'),
+      where('estado', '==', 'Activo')
+    );
 
-    let vehList: VehiculoParqueo[] = [];
+    // 2. Consulta de historial reciente
+    const qRecientes = query(
+      collection(db, 'parqueo'),
+      limit(300)
+    );
+
+    // 3. Consulta de registros de baños
+    const qBanos = query(
+      collection(db, 'banos'),
+      limit(300)
+    );
+
+    let activosMap = new Map<string, VehiculoParqueo>();
+    let recientesMap = new Map<string, VehiculoParqueo>();
     let banoParqueoList: RegistroBano[] = [];
     let banosDirectList: RegistroBano[] = [];
 
     const mergeAndSet = () => {
-      // Unir registros de baños de ambas fuentes (migración gradual transparente sin perder histórico)
+      // Unir vehículos activos y recientes sin duplicados (los activos tienen prioridad)
+      const allVehsMap = new Map<string, VehiculoParqueo>();
+      recientesMap.forEach((v, id) => allVehsMap.set(id, v));
+      activosMap.forEach((v, id) => allVehsMap.set(id, v));
+
+      const vehList = Array.from(allVehsMap.values());
+      vehList.sort((a, b) => new Date(b.horaEntrada || 0).getTime() - new Date(a.horaEntrada || 0).getTime());
+
+      // Unir registros de baños
       const allBanos = [...banosDirectList, ...banoParqueoList];
       const uniqueBanos = Array.from(new Map(allBanos.map(b => [b.id, b])).values());
       uniqueBanos.sort((a, b) => new Date(b.fecha || 0).getTime() - new Date(a.fecha || 0).getTime());
 
-      vehList.sort((a, b) => new Date(b.horaEntrada || 0).getTime() - new Date(a.horaEntrada || 0).getTime());
-
-      setVehiculos([...vehList]);
+      setVehiculos(vehList);
       setRegistrosBanos(uniqueBanos);
       setIsLoading(false);
     };
 
-    const unsubParqueo = onSnapshot(qParqueo, (snapshot) => {
-      vehList = [];
+    const unsubActivos = onSnapshot(qActivos, (snapshot) => {
+      activosMap = new Map();
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.tipoEntrada !== 'bano' && (!data.numeroPlaca || !String(data.numeroPlaca).startsWith('BAÑO-'))) {
+          activosMap.set(docSnap.id, data as VehiculoParqueo);
+        }
+      });
+      mergeAndSet();
+    }, (err) => {
+      console.warn("Aviso al consultar vehículos activos:", err);
+    });
+
+    const unsubRecientes = onSnapshot(qRecientes, (snapshot) => {
+      recientesMap = new Map();
       banoParqueoList = [];
 
       snapshot.forEach(docSnap => {
@@ -109,13 +190,13 @@ export const ParqueoManager: React.FC = () => {
             fechaCorta: data.fechaCorta || (data.fecha ? String(data.fecha).split('T')[0] : '')
           } as RegistroBano);
         } else {
-          vehList.push(data as VehiculoParqueo);
+          recientesMap.set(docSnap.id, data as VehiculoParqueo);
         }
       });
 
       mergeAndSet();
     }, (error) => {
-      console.error("Error fetching parqueo in real-time:", error);
+      console.error("Error fetching parqueo recientes in real-time:", error);
       setIsLoading(false);
     });
 
@@ -138,7 +219,8 @@ export const ParqueoManager: React.FC = () => {
     });
 
     return () => {
-      unsubParqueo();
+      unsubActivos();
+      unsubRecientes();
       unsubBanos();
     };
   }, []);
@@ -336,17 +418,7 @@ export const ParqueoManager: React.FC = () => {
   // State for parking spots
   const [espacioSeleccionado, setEspacioSeleccionado] = useState<number | null>(null);
   const [showEspaciosModal, setShowEspaciosModal] = useState(false);
-  
-  // Real-time elapsed time trigger
-  const [timeTrigger, setTimeTrigger] = useState(0);
 
-  // Live timer tick
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTimeTrigger(prev => prev + 1);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
   const validatePlacaGuatemala = (val: string) => {
     const regex = /^\d{3}[A-Z]{3}$/;
     return regex.test(val.toUpperCase().replace(/[\s-]/g, ''));
@@ -427,22 +499,6 @@ export const ParqueoManager: React.FC = () => {
     setEspacioSeleccionado(null);
     setTipoRenta('horario');
     setMontoRentaInput(25);
-  };
-
-  // Calculate elapsed time formatted (HH:MM:SS)
-  const getTiempoTranscurrido = (entradaStr: string, salidaStr?: string) => {
-    const entrada = new Date(entradaStr).getTime();
-    const salida = salidaStr ? new Date(salidaStr).getTime() : Date.now();
-    const diffMs = salida - entrada;
-    
-    if (diffMs < 0) return '00:00:00';
-
-    const diffHrs = Math.floor(diffMs / 3600000);
-    const diffMins = Math.floor((diffMs % 3600000) / 60000);
-    const diffSecs = Math.floor((diffMs % 60000) / 1000);
-
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    return `${pad(diffHrs)}:${pad(diffMins)}:${pad(diffSecs)}`;
   };
 
   // Regla de Precios:
@@ -639,11 +695,27 @@ export const ParqueoManager: React.FC = () => {
         
         iframe.onload = () => {
           setTimeout(() => {
-            iframe.contentWindow?.focus();
-            iframe.contentWindow?.print();
+            try {
+              iframe.contentWindow?.focus();
+              iframe.contentWindow?.print();
+            } catch (printErr) {
+              console.warn("Impresión directa por iframe no disponible en el navegador:", printErr);
+            }
+            // Limpieza del iframe y revocación de memoria blob para evitar fugas
+            setTimeout(() => {
+              if (document.body.contains(iframe)) {
+                document.body.removeChild(iframe);
+              }
+              try { URL.revokeObjectURL(iframeUrl.toString()); } catch (_) {}
+            }, 30000);
           }, 300);
         };
       }
+
+      // Revocar blob móvil tras 30 segundos
+      setTimeout(() => {
+        try { URL.revokeObjectURL(pdfUrl); } catch (_) {}
+      }, 30000);
     } catch (error) {
       console.error('Error generando QR o Ticket local:', error);
       alert('Error al procesar el ticket de impresión.');
@@ -1397,9 +1469,7 @@ export const ParqueoManager: React.FC = () => {
                       <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 group-hover:bg-slate-100/50 transition-colors">
                         <div className="flex items-center space-x-2.5 w-full sm:w-auto justify-center sm:justify-start">
                           <Clock size={16} className="text-blue-500 animate-pulse" />
-                          <span className="text-sm font-black text-slate-800 font-mono tracking-wider">
-                            {getTiempoTranscurrido(v.horaEntrada)}
-                          </span>
+                          <LiveTimer horaEntrada={v.horaEntrada} />
                         </div>
                         <button
                           onClick={() => handleProcessExit(v)}
@@ -1980,7 +2050,14 @@ export const ParqueoManager: React.FC = () => {
                       docPdf.text(`GRAN TOTAL DEL CORTE DEL DÍA: Q. ${(stats.hoy.total + banosStats.totalMontoHoy).toFixed(2)}`, 15, 104);
 
                       docPdf.autoPrint();
-                      window.open(docPdf.output('bloburl'), '_blank');
+                      const blobUrl = docPdf.output('bloburl');
+                      const printWin = window.open(blobUrl, '_blank');
+                      if (!printWin) {
+                        docPdf.save(`corte-caja-${new Date().toISOString().split('T')[0]}.pdf`);
+                      }
+                      setTimeout(() => {
+                        try { URL.revokeObjectURL(blobUrl.toString()); } catch (_) {}
+                      }, 45000);
                     }}
                     className="px-5 py-3 bg-white text-emerald-900 hover:bg-emerald-50 font-black text-xs rounded-2xl shadow-md transition-all flex items-center space-x-2 shrink-0 cursor-pointer active:scale-95"
                   >
@@ -2171,7 +2248,14 @@ export const ParqueoManager: React.FC = () => {
                   docPdf.text(`Mujeres: ${banosStats.mujeresHoy} personas (Q. ${(banosStats.mujeresHoy * 3).toFixed(2)})`, 15, 52);
                   docPdf.text(`Total Ingresos Baños: Q. ${banosStats.totalMontoHoy.toFixed(2)}`, 15, 62);
                   docPdf.autoPrint();
-                  window.open(docPdf.output('bloburl'), '_blank');
+                  const blobUrl = docPdf.output('bloburl');
+                  const printWin = window.open(blobUrl, '_blank');
+                  if (!printWin) {
+                    docPdf.save(`reporte-sanitarios-${new Date().toISOString().split('T')[0]}.pdf`);
+                  }
+                  setTimeout(() => {
+                    try { URL.revokeObjectURL(blobUrl.toString()); } catch (_) {}
+                  }, 45000);
                 }}
                 className="px-3.5 py-2 bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs rounded-xl flex items-center space-x-1.5 cursor-pointer shadow-md"
               >
