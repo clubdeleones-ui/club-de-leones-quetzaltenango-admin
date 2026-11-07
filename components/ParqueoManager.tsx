@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Car, 
   Plus, 
@@ -21,10 +21,16 @@ import {
   User,
   FileText,
   Undo2,
-  AlertTriangle
+  AlertTriangle,
+  Camera,
+  Zap,
+  ZapOff,
+  FlipHorizontal,
+  Filter
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
+import jsQR from 'jsqr';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, addDoc, limit, where } from 'firebase/firestore';
@@ -103,6 +109,268 @@ export const LiveTimer: React.FC<{ horaEntrada: string; horaSalida?: string; cla
 
   return <span className={className}>{elapsed}</span>;
 });
+
+// Reproductor de pitido auditivo de confirmación (Web Audio API nativa sin dependencias externas)
+export const playBeepSuccess = () => {
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.18);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.18);
+    if (navigator.vibrate) navigator.vibrate([40, 30, 60]);
+  } catch (e) {
+    // Silently ignore if audio permissions are blocked
+  }
+};
+
+interface QrScannerModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onScan: (code: string) => void;
+  toast: { tipo: 'warning' | 'error' | 'info'; mensaje: string } | null;
+  onClearToast: () => void;
+}
+
+export const QrScannerModal: React.FC<QrScannerModalProps> = ({ isOpen, onClose, onScan, toast, onClearToast }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+  const [hasTorch, setHasTorch] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
+  const streamRef = useRef<MediaStream | null>(null);
+  const lastScannedRef = useRef<string>('');
+  const lastScanTimeRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (!isOpen) {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+      return;
+    }
+
+    let active = true;
+    let animId: number;
+
+    const startCamera = async () => {
+      setErrorMsg(null);
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('La cámara no está disponible o requiere navegación segura HTTPS.');
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: facingMode },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        });
+
+        if (!active) {
+          stream.getTracks().forEach(t => t.stop());
+          return;
+        }
+
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play().catch(() => {});
+        }
+
+        // Detect torch support
+        const track = stream.getVideoTracks()[0];
+        if (track && (track.getCapabilities as any)?.().torch) {
+          setHasTorch(true);
+        } else {
+          setHasTorch(false);
+        }
+
+        // Scanning loop with throttling to avoid UI freeze
+        const scan = () => {
+          if (!active) return;
+          const video = videoRef.current;
+          const canvas = canvasRef.current;
+          if (video && canvas && video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            if (ctx) {
+              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+              const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+              const qr = jsQR(imgData.data, imgData.width, imgData.height, {
+                inversionAttempts: 'dontInvert'
+              });
+              if (qr && qr.data && qr.data.trim()) {
+                const now = Date.now();
+                // Prevent duplicate scanning in rapid succession (1.5s debounce)
+                if (qr.data.trim() !== lastScannedRef.current || now - lastScanTimeRef.current > 1500) {
+                  lastScannedRef.current = qr.data.trim();
+                  lastScanTimeRef.current = now;
+                  onScan(qr.data.trim());
+                }
+              }
+            }
+          }
+          animId = requestAnimationFrame(scan);
+        };
+        animId = requestAnimationFrame(scan);
+      } catch (err: any) {
+        console.error("Camera error:", err);
+        setErrorMsg(err.message || 'No se pudo acceder a la cámara del dispositivo.');
+      }
+    };
+
+    startCamera();
+
+    return () => {
+      active = false;
+      if (animId) cancelAnimationFrame(animId);
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+    };
+  }, [isOpen, facingMode]);
+
+  const toggleTorch = async () => {
+    if (!streamRef.current) return;
+    const track = streamRef.current.getVideoTracks()[0];
+    if (track && (track.applyConstraints as any)) {
+      try {
+        const nextState = !torchOn;
+        await (track as any).applyConstraints({ advanced: [{ torch: nextState }] });
+        setTorchOn(nextState);
+      } catch (e) {
+        console.error("Torch error:", e);
+      }
+    }
+  };
+
+  const toggleFacing = () => {
+    setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex flex-col justify-between items-center p-4 animate-in fade-in duration-200">
+      {/* Top Header */}
+      <div className="w-full max-w-md flex justify-between items-center text-white pt-2 z-10">
+        <div className="flex items-center gap-2">
+          <div className="p-2 bg-white/10 rounded-xl backdrop-blur-xs">
+            <Camera size={20} className="text-yellow-400" />
+          </div>
+          <div>
+            <h3 className="font-black text-sm tracking-tight">Escanear Ticket QR</h3>
+            <p className="text-[10px] text-slate-300 font-medium">Alinee el código del boleto</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {hasTorch && (
+            <button
+              type="button"
+              onClick={toggleTorch}
+              className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
+                torchOn ? 'bg-yellow-400 text-slate-900 border-yellow-300 shadow-lg' : 'bg-white/10 text-white border-white/20'
+              }`}
+              title="Linterna"
+            >
+              {torchOn ? <Zap size={18} /> : <ZapOff size={18} />}
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={toggleFacing}
+            className="p-2.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-xl transition-all cursor-pointer"
+            title="Cambiar Cámara"
+          >
+            <FlipHorizontal size={18} />
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2.5 bg-white/10 hover:bg-red-600 border border-white/20 text-white rounded-xl transition-all cursor-pointer"
+            title="Cerrar"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* Camera Viewport */}
+      <div className="relative w-full max-w-sm aspect-square my-auto rounded-3xl overflow-hidden border-2 border-white/20 shadow-2xl flex items-center justify-center bg-slate-950">
+        {errorMsg ? (
+          <div className="p-6 text-center text-white space-y-3">
+            <AlertCircle size={36} className="text-red-400 mx-auto" />
+            <p className="text-xs font-bold text-red-200">{errorMsg}</p>
+            <p className="text-[11px] text-slate-400">Verifique los permisos de cámara en el navegador o use la búsqueda por placa.</p>
+          </div>
+        ) : (
+          <>
+            <video
+              ref={videoRef}
+              playsInline
+              muted
+              autoPlay
+              className="w-full h-full object-cover"
+            />
+            <canvas ref={canvasRef} className="hidden" />
+
+            {/* Target Viewfinder Overlay */}
+            <div className="absolute inset-8 border-2 border-yellow-400/80 rounded-2xl pointer-events-none shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]">
+              {/* Corner Accents */}
+              <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-yellow-400 rounded-tl-lg" />
+              <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-yellow-400 rounded-tr-lg" />
+              <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-yellow-400 rounded-bl-lg" />
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-yellow-400 rounded-br-lg" />
+
+              {/* Laser line animated */}
+              <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-yellow-400 to-transparent shadow-[0_0_12px_#facc15] animate-pulse absolute top-1/2 -translate-y-1/2" />
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Feedback Toast / Instructions */}
+      <div className="w-full max-w-md pb-4 z-10 space-y-2">
+        {toast && (
+          <div className={`p-3 rounded-2xl text-xs font-black text-center flex items-center justify-between shadow-xl animate-in slide-in-from-bottom duration-200 ${
+            toast.tipo === 'error' ? 'bg-red-600 text-white border border-red-400' :
+            toast.tipo === 'warning' ? 'bg-amber-500 text-slate-950 border border-amber-300' :
+            'bg-blue-600 text-white border border-blue-400'
+          }`}>
+            <span className="flex-1 text-center">{toast.mensaje}</span>
+            <button type="button" onClick={onClearToast} className="p-1 hover:opacity-75 cursor-pointer">
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
+        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/15 text-center">
+          <p className="text-[11px] font-bold text-slate-200">
+            Escanea el código QR impreso en el ticket para dar salida inmediata
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export const ParqueoManager: React.FC = () => {
   const { showAlert, showConfirm } = useModal();
@@ -325,13 +593,22 @@ export const ParqueoManager: React.FC = () => {
   const [showCierreModal, setShowCierreModal] = useState(false);
   const [tipoPlaca, setTipoPlaca] = useState('P');
   const [numeroPlaca, setNumeroPlaca] = useState('');
-  const [placaNumeros, setPlacaNumeros] = useState('');
-  const [placaLetras, setPlacaLetras] = useState('');
   const [isExtranjera, setIsExtranjera] = useState(false);
   const [colorSeleccionado, setColorSeleccionado] = useState(PALETA_COLORES[0]);
+  
   // States for Long-term & Special Rental Modes
   const [tipoRenta, setTipoRenta] = useState<TipoRentaParqueo>('horario');
   const [montoRentaInput, setMontoRentaInput] = useState<number>(25);
+
+  // States for QR Camera Scanner
+  const [showQrScanner, setShowQrScanner] = useState(false);
+  const [scannerToast, setScannerToast] = useState<{ tipo: 'warning' | 'error' | 'info'; mensaje: string } | null>(null);
+
+  // States for History date filters
+  type FiltroFecha = 'hoy' | 'ayer' | 'semana' | 'mes' | 'todos' | 'personalizado';
+  const [filtroFechaHistorial, setFiltroFechaHistorial] = useState<FiltroFecha>('hoy');
+  const [fechaInicioHistorial, setFechaInicioHistorial] = useState<string>('');
+  const [fechaFinHistorial, setFechaFinHistorial] = useState<string>('');
 
   const DEFAULT_PRECIOS_RENTA: Record<TipoRentaParqueo, number> = {
     horario: 0,
@@ -419,26 +696,47 @@ export const ParqueoManager: React.FC = () => {
   const [espacioSeleccionado, setEspacioSeleccionado] = useState<number | null>(null);
   const [showEspaciosModal, setShowEspaciosModal] = useState(false);
 
-  const validatePlacaGuatemala = (val: string) => {
-    const regex = /^\d{3}[A-Z]{3}$/;
-    return regex.test(val.toUpperCase().replace(/[\s-]/g, ''));
+  // Manejador del campo unificado de placa con detección inteligente de prefijo
+  const handleNumeroPlacaChange = (val: string) => {
+    let clean = val.toUpperCase().trimStart();
+    if (isExtranjera) {
+      setNumeroPlaca(clean);
+      return;
+    }
+
+    // Si el usuario escribe o pega prefijos como "P-123ABC", "M 456XYZ", "C-999ZZZ", "O12345"
+    const matchPrefix = clean.match(/^([PMCOpmco]|CD|cd)[\s-]?([0-9A-Z]*)$/i);
+    if (matchPrefix && matchPrefix[2]) {
+      const detected = matchPrefix[1].toUpperCase();
+      if (TIPOS_PLACA.some(t => t.value === detected)) {
+        setTipoPlaca(detected);
+        clean = matchPrefix[2].toUpperCase();
+      }
+    }
+
+    // Permitir alfanumérico y un guion separador opcional
+    clean = clean.replace(/[^0-9A-Z-]/g, '').slice(0, 10);
+    setNumeroPlaca(clean);
   };
 
   const handleCreateTicket = (e: React.FormEvent) => {
     e.preventDefault();
     
-    let placaLimpia = '';
+    let placaLimpia = numeroPlaca.trim().toUpperCase().replace(/[\s-]/g, '');
     
-    if (isExtranjera) {
-      placaLimpia = numeroPlaca.trim().toUpperCase().replace(/[\s-]/g, '');
-      if (placaLimpia === '') {
-        alert('Error: El número de placa es obligatorio.');
-        return;
+    if (placaLimpia === '') {
+      alert('Error: El número de placa es obligatorio.');
+      return;
+    }
+
+    if (!isExtranjera) {
+      // Si el usuario incluyó el prefijo al inicio, normalizarlo
+      if (placaLimpia.startsWith(tipoPlaca) && placaLimpia.length > tipoPlaca.length) {
+        placaLimpia = placaLimpia.substring(tipoPlaca.length);
       }
-    } else {
-      placaLimpia = `${placaNumeros}${placaLetras}`.toUpperCase();
-      if (!validatePlacaGuatemala(placaLimpia)) {
-        alert('Error: La placa estándar de Guatemala debe tener 3 números seguidos de 3 letras (Ej: 123ABC).');
+
+      if (placaLimpia.length < 3) {
+        alert('Error: La placa ingresada debe tener al menos 3 caracteres (ej. 123ABC para automóvil o 123XYZ para moto).');
         return;
       }
     }
@@ -492,13 +790,55 @@ export const ParqueoManager: React.FC = () => {
     
     // Reset form
     setNumeroPlaca('');
-    setPlacaNumeros('');
-    setPlacaLetras('');
     setIsExtranjera(false);
     setColorSeleccionado(PALETA_COLORES[0]);
     setEspacioSeleccionado(null);
     setTipoRenta('horario');
     setMontoRentaInput(25);
+  };
+
+  // Manejador de escaneo de QR para dar salida instantánea
+  const handleScanQrResult = (scannedCode: string) => {
+    const raw = scannedCode.trim();
+    const clean = raw.toUpperCase().replace(/[\s-]/g, '');
+
+    // 1. Buscar en vehículos activos por ID directo o por coincidencia de placa
+    const vehiculoEncontrado = vehiculosActivos.find(v => {
+      const idMatch = v.id === raw;
+      const placaClean = (v.numeroPlaca || '').toUpperCase().replace(/[\s-]/g, '');
+      const fullPlacaClean = ((v.tipoPlaca || '') + (v.numeroPlaca || '')).toUpperCase().replace(/[\s-]/g, '');
+      return idMatch || placaClean === clean || fullPlacaClean === clean;
+    });
+
+    if (vehiculoEncontrado) {
+      playBeepSuccess();
+      setShowQrScanner(false);
+      setScannerToast(null);
+      setShowExitModal(vehiculoEncontrado);
+      return;
+    }
+
+    // 2. Buscar en historial de vehículos ya retirados
+    const yaRetirado = vehiculosHistorial.find(v => {
+      const idMatch = v.id === raw;
+      const placaClean = (v.numeroPlaca || '').toUpperCase().replace(/[\s-]/g, '');
+      const fullPlacaClean = ((v.tipoPlaca || '') + (v.numeroPlaca || '')).toUpperCase().replace(/[\s-]/g, '');
+      return idMatch || placaClean === clean || fullPlacaClean === clean;
+    });
+
+    if (yaRetirado) {
+      const hora = yaRetirado.horaSalida ? new Date(yaRetirado.horaSalida).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+      setScannerToast({
+        tipo: 'warning',
+        mensaje: `El vehículo (${yaRetirado.tipoPlaca === 'Extranjera' ? '' : yaRetirado.tipoPlaca + '-'}${yaRetirado.numeroPlaca}) ya fue retirado${hora ? ` a las ${hora}` : ''}.`
+      });
+      return;
+    }
+
+    setScannerToast({
+      tipo: 'error',
+      mensaje: `Código "${raw.length > 20 ? raw.slice(0, 20) + '...' : raw}" no encontrado entre los vehículos activos.`
+    });
   };
 
   // Regla de Precios:
@@ -753,17 +1093,56 @@ export const ParqueoManager: React.FC = () => {
     );
   });
 
-  const filteredHistorial = vehiculosHistorial.filter(v => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase().trim();
-    return (
-      v.numeroPlaca.toLowerCase().includes(q) ||
-      v.colorLabel.toLowerCase().includes(q) ||
-      v.tipoPlaca.toLowerCase().includes(q) ||
-      (v.metodoPago && v.metodoPago.toLowerCase().includes(q)) ||
-      (v.costo && String(v.costo).includes(q))
-    );
-  });
+  const filteredHistorial = useMemo(() => {
+    return vehiculosHistorial.filter(v => {
+      const dateToEvaluate = v.horaSalida ? new Date(v.horaSalida) : new Date(v.horaEntrada);
+      const now = new Date();
+
+      if (filtroFechaHistorial === 'hoy') {
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+        const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        if (dateToEvaluate < start || dateToEvaluate > end) return false;
+      } else if (filtroFechaHistorial === 'ayer') {
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const start = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 0, 0, 0);
+        const end = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999);
+        if (dateToEvaluate < start || dateToEvaluate > end) return false;
+      } else if (filtroFechaHistorial === 'semana') {
+        const weekAgo = new Date(now);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        weekAgo.setHours(0, 0, 0, 0);
+        if (dateToEvaluate < weekAgo) return false;
+      } else if (filtroFechaHistorial === 'mes') {
+        if (dateToEvaluate.getMonth() !== now.getMonth() || dateToEvaluate.getFullYear() !== now.getFullYear()) {
+          return false;
+        }
+      } else if (filtroFechaHistorial === 'personalizado') {
+        if (fechaInicioHistorial) {
+          const start = new Date(fechaInicioHistorial + 'T00:00:00');
+          if (dateToEvaluate < start) return false;
+        }
+        if (fechaFinHistorial) {
+          const end = new Date(fechaFinHistorial + 'T23:59:59.999');
+          if (dateToEvaluate > end) return false;
+        }
+      }
+
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase().trim();
+      return (
+        v.numeroPlaca.toLowerCase().includes(q) ||
+        v.colorLabel.toLowerCase().includes(q) ||
+        v.tipoPlaca.toLowerCase().includes(q) ||
+        (v.metodoPago && v.metodoPago.toLowerCase().includes(q)) ||
+        (v.costo && String(v.costo).includes(q))
+      );
+    });
+  }, [vehiculosHistorial, filtroFechaHistorial, fechaInicioHistorial, fechaFinHistorial, searchQuery]);
+
+  const totalHistorialFiltrado = useMemo(() => {
+    return filteredHistorial.reduce((acc, curr) => acc + (curr.costo || 0), 0);
+  }, [filteredHistorial]);
 
   const renderEspaciosModal = () => {
     if (!showEspaciosModal) return null;
@@ -1075,50 +1454,77 @@ export const ParqueoManager: React.FC = () => {
               </div>
             )}
 
-            {/* Plate Number */}
+            {/* Plate Number (Campo Unificado e Inteligente) */}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Número de Placa</label>
-              {isExtranjera ? (
+              <div className="flex justify-between items-center">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Número de Placa
+                </label>
+                {!isExtranjera && (
+                  <span className="text-[10px] font-black text-blue-900 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                    Tipo: {tipoPlaca}
+                  </span>
+                )}
+              </div>
+
+              <div className="relative flex items-center">
+                {!isExtranjera && (
+                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none select-none">
+                    <span className="bg-blue-900 text-white text-xs font-black px-2 py-0.5 rounded-md shadow-xs">
+                      {tipoPlaca}
+                    </span>
+                    <span className="text-slate-300 font-black">-</span>
+                  </div>
+                )}
                 <input
                   type="text"
                   required
                   value={numeroPlaca}
-                  onChange={(e) => setNumeroPlaca(e.target.value)}
-                  placeholder="Ej. MEX-789-Z"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-blue-900 focus:border-blue-900 transition-all outline-none"
+                  onChange={(e) => handleNumeroPlacaChange(e.target.value)}
+                  placeholder={
+                    isExtranjera
+                      ? "Ej. MEX-789-Z"
+                      : tipoPlaca === 'M'
+                      ? "123ABC ó 1234XYZ"
+                      : tipoPlaca === 'O'
+                      ? "12345 ó 123ABC"
+                      : "123ABC ó 123-ABC"
+                  }
+                  className={`w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 text-lg font-black tracking-widest text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-blue-900 focus:border-blue-900 transition-all outline-none uppercase ${
+                    !isExtranjera ? 'pl-16 pr-4' : 'px-4'
+                  }`}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck="false"
                 />
-              ) : (
-                <div className="flex gap-3">
-                  <div className="flex-1 relative">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      required
-                      value={placaNumeros}
-                      onChange={(e) => setPlacaNumeros(e.target.value.replace(/[^0-9]/g, '').substring(0, 3))}
-                      placeholder="123"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-center text-lg tracking-widest font-black text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-blue-900 focus:border-blue-900 transition-all outline-none uppercase"
-                    />
-                    <span className="absolute -top-2 left-3 bg-white px-1 text-[9px] font-bold text-slate-400">Números</span>
+              </div>
+
+              {/* Vista previa en tiempo real estilo placa metálica */}
+              {numeroPlaca.trim() && (
+                <div className="mt-2 flex items-center justify-between p-2.5 bg-gradient-to-r from-slate-50 to-blue-50/50 rounded-xl border border-slate-200/90 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black text-slate-400 uppercase">Vista previa:</span>
+                    <div className="inline-flex items-center bg-white px-2.5 py-1 rounded-lg border-2 border-slate-800 shadow-xs">
+                      <span className="text-[9px] font-black text-blue-900 mr-1.5 border-r border-slate-300 pr-1.5">
+                        {isExtranjera ? 'EXT' : tipoPlaca}
+                      </span>
+                      <span className="font-mono font-black text-slate-900 tracking-wider">
+                        {numeroPlaca.toUpperCase().replace(/[\s]/g, '')}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex-1 relative">
-                    <input
-                      type="text"
-                      required
-                      value={placaLetras}
-                      onChange={(e) => setPlacaLetras(e.target.value.replace(/[^A-Za-z]/g, '').toUpperCase().substring(0, 3))}
-                      placeholder="ABC"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-center text-lg tracking-widest font-black text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-blue-900 focus:border-blue-900 transition-all outline-none uppercase"
-                    />
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600">
+                    <span className="w-2.5 h-2.5 rounded-full border border-slate-300" style={{ backgroundColor: colorSeleccionado.hex }} />
+                    <span>{colorSeleccionado.name}</span>
                   </div>
                 </div>
               )}
-              {!isExtranjera && (
-                <p className="text-[9px] font-semibold text-slate-450 mt-1">
-                  Formato de Guatemala: 3 números seguidos de 3 letras.
-                </p>
-              )}
+
+              <p className="text-[10px] font-medium text-slate-450 mt-1">
+                {isExtranjera
+                  ? 'Placa internacional: escriba el código completo con estado/país.'
+                  : 'Escriba números y letras de corrido. El prefijo de tipo se detecta automáticamente.'}
+              </p>
             </div>
 
             {/* Modalidad de Servicio / Renta */}
@@ -1275,9 +1681,23 @@ export const ParqueoManager: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto">
+              {/* Botón de Escaneo de Ticket con Cámara */}
+              <button
+                type="button"
+                onClick={() => {
+                  setScannerToast(null);
+                  setShowQrScanner(true);
+                }}
+                className="px-4 py-2 bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-800 hover:to-indigo-800 text-white text-xs font-black rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                title="Escanear código QR del ticket con la cámara del teléfono"
+              >
+                <Camera size={16} className="text-yellow-400" />
+                <span>Escanear QR</span>
+              </button>
+
               {/* Buscador de Placa en Dar Salida */}
-              <div className="relative w-full sm:w-64">
+              <div className="relative w-full sm:w-60">
                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
                   <Search size={15} />
                 </span>
@@ -1491,32 +1911,94 @@ export const ParqueoManager: React.FC = () => {
       {/* History and Logs panel */}
       {activeTab === 'historial' && (
       <div className="bg-white border border-slate-200/80 rounded-[2.5rem] p-7 shadow-sm space-y-6 animate-in slide-in-from-bottom-4 duration-300">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-5">
-          <div>
-            <h3 className="font-black text-slate-850 text-base">Historial de Parqueo</h3>
-            <p className="text-[10px] text-slate-450 font-bold">Listado completo de vehículos que han salido del estacionamiento</p>
+        <div className="space-y-4 border-b border-slate-100 pb-5">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h3 className="font-black text-slate-850 text-base">Historial de Parqueo</h3>
+                <span className="bg-blue-50 text-blue-900 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-blue-200">
+                  {filteredHistorial.length} registros
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-500 font-bold mt-0.5">
+                Total cobrado en este período: <span className="text-emerald-700 font-black">Q. {totalHistorialFiltrado.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</span>
+              </p>
+            </div>
+            
+            {/* Search input with clear button */}
+            <div className="relative w-full md:w-72">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                <Search size={16} />
+              </span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar por placa, color o tipo..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2.5 text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none transition-all"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
           </div>
-          
-          {/* Search input with clear button */}
-          <div className="relative w-full md:w-72">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-              <Search size={16} />
+
+          {/* Quick Date Filter Buttons */}
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1 mr-1">
+              <Filter size={12} /> Período:
             </span>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar por placa, color o tipo..."
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-8 py-2.5 text-xs font-semibold focus:ring-2 focus:ring-blue-900 focus:border-blue-900 outline-none transition-all"
-            />
-            {searchQuery && (
+            {(
+              [
+                { id: 'hoy', label: 'Hoy' },
+                { id: 'ayer', label: 'Ayer' },
+                { id: 'semana', label: 'Esta Semana' },
+                { id: 'mes', label: 'Este Mes' },
+                { id: 'todos', label: 'Todos' },
+                { id: 'personalizado', label: 'Personalizado' },
+              ] as const
+            ).map((f) => (
               <button
+                key={f.id}
                 type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+                onClick={() => setFiltroFechaHistorial(f.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer border ${
+                  filtroFechaHistorial === f.id
+                    ? 'bg-blue-900 border-blue-950 text-white shadow-xs'
+                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                }`}
               >
-                <X size={14} />
+                {f.label}
               </button>
+            ))}
+
+            {filtroFechaHistorial === 'personalizado' && (
+              <div className="flex items-center gap-2 ml-auto w-full sm:w-auto mt-2 sm:mt-0 bg-slate-50 p-1.5 rounded-xl border border-slate-200">
+                <div className="flex items-center gap-1 text-[11px] font-bold text-slate-600">
+                  <span>Desde:</span>
+                  <input
+                    type="date"
+                    value={fechaInicioHistorial}
+                    onChange={(e) => setFechaInicioHistorial(e.target.value)}
+                    className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs outline-none"
+                  />
+                </div>
+                <div className="flex items-center gap-1 text-[11px] font-bold text-slate-600">
+                  <span>Hasta:</span>
+                  <input
+                    type="date"
+                    value={fechaFinHistorial}
+                    onChange={(e) => setFechaFinHistorial(e.target.value)}
+                    className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs outline-none"
+                  />
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -2366,6 +2848,18 @@ export const ParqueoManager: React.FC = () => {
       )}
 
       {renderEspaciosModal()}
+
+      {/* Modal de Escáner QR de Tickets por Cámara */}
+      <QrScannerModal
+        isOpen={showQrScanner}
+        onClose={() => {
+          setShowQrScanner(false);
+          setScannerToast(null);
+        }}
+        onScan={handleScanQrResult}
+        toast={scannerToast}
+        onClearToast={() => setScannerToast(null)}
+      />
     </div>
   );
 };
