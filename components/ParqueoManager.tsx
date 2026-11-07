@@ -612,8 +612,24 @@ export const ParqueoManager: React.FC = () => {
   const [showCierreModal, setShowCierreModal] = useState(false);
   const [tipoPlaca, setTipoPlaca] = useState('P');
   const [numeroPlaca, setNumeroPlaca] = useState('');
+  const [placaNumeros, setPlacaNumeros] = useState('');
+  const [placaLetras, setPlacaLetras] = useState('');
   const [isExtranjera, setIsExtranjera] = useState(false);
   const [colorSeleccionado, setColorSeleccionado] = useState(PALETA_COLORES[0]);
+  const placaLetrasInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePlacaNumerosChange = (val: string) => {
+    const clean = val.replace(/[^0-9]/g, '').slice(0, 3);
+    setPlacaNumeros(clean);
+    if (clean.length === 3 && placaLetrasInputRef.current) {
+      placaLetrasInputRef.current.focus();
+    }
+  };
+
+  const handlePlacaLetrasChange = (val: string) => {
+    const clean = val.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 3);
+    setPlacaLetras(clean);
+  };
   
   // States for Long-term & Special Rental Modes
   const [tipoRenta, setTipoRenta] = useState<TipoRentaParqueo>('horario');
@@ -711,8 +727,21 @@ export const ParqueoManager: React.FC = () => {
   }) => {
     playBeepSuccess();
     setTipoPlaca(result.tipoPlaca);
-    setNumeroPlaca(result.numeroPlaca);
     setIsExtranjera(result.isExtranjera);
+
+    if (result.isExtranjera) {
+      setNumeroPlaca(result.numeroPlaca);
+      setPlacaNumeros('');
+      setPlacaLetras('');
+    } else {
+      // Separar automáticamente en 3 números y 3 letras para el formato guatemalteco
+      const clean = result.numeroPlaca.toUpperCase().replace(/[\s-]/g, '');
+      const digits = clean.replace(/[^0-9]/g, '').slice(0, 3);
+      const letters = clean.replace(/[^A-Z]/g, '').slice(0, 3);
+      setPlacaNumeros(digits);
+      setPlacaLetras(letters);
+      setNumeroPlaca(clean);
+    }
 
     const matchColor = PALETA_COLORES.find(
       c => c.name.toLowerCase() === result.colorLabel.toLowerCase()
@@ -814,47 +843,26 @@ export const ParqueoManager: React.FC = () => {
   const [espacioSeleccionado, setEspacioSeleccionado] = useState<number | null>(null);
   const [showEspaciosModal, setShowEspaciosModal] = useState(false);
 
-  // Manejador del campo unificado de placa con detección inteligente de prefijo
-  const handleNumeroPlacaChange = (val: string) => {
-    let clean = val.toUpperCase().trimStart();
-    if (isExtranjera) {
-      setNumeroPlaca(clean);
-      return;
-    }
-
-    // Si el usuario escribe o pega prefijos como "P-123ABC", "M 456XYZ", "C-999ZZZ", "O12345"
-    const matchPrefix = clean.match(/^([PMCOpmco]|CD|cd)[\s-]?([0-9A-Z]*)$/i);
-    if (matchPrefix && matchPrefix[2]) {
-      const detected = matchPrefix[1].toUpperCase();
-      if (TIPOS_PLACA.some(t => t.value === detected)) {
-        setTipoPlaca(detected);
-        clean = matchPrefix[2].toUpperCase();
-      }
-    }
-
-    // Permitir alfanumérico y un guion separador opcional
-    clean = clean.replace(/[^0-9A-Z-]/g, '').slice(0, 10);
-    setNumeroPlaca(clean);
-  };
 
   const handleCreateTicket = (e: React.FormEvent) => {
     e.preventDefault();
     
-    let placaLimpia = numeroPlaca.trim().toUpperCase().replace(/[\s-]/g, '');
+    let placaLimpia = '';
     
-    if (placaLimpia === '') {
-      alert('Error: El número de placa es obligatorio.');
-      return;
-    }
-
-    if (!isExtranjera) {
-      // Si el usuario incluyó el prefijo al inicio, normalizarlo
-      if (placaLimpia.startsWith(tipoPlaca) && placaLimpia.length > tipoPlaca.length) {
-        placaLimpia = placaLimpia.substring(tipoPlaca.length);
+    if (isExtranjera) {
+      placaLimpia = numeroPlaca.trim().toUpperCase().replace(/[\s-]/g, '');
+      if (placaLimpia === '') {
+        alert('Error: El número de placa es obligatorio.');
+        return;
       }
-
-      if (placaLimpia.length < 3) {
-        alert('Error: La placa ingresada debe tener al menos 3 caracteres (ej. 123ABC para automóvil o 123XYZ para moto).');
+    } else {
+      placaLimpia = `${placaNumeros}${placaLetras}`.toUpperCase().trim();
+      if (!placaNumeros.trim() || !placaLetras.trim()) {
+        alert('Error: Por favor complete los 3 números y las 3 letras de la placa.');
+        return;
+      }
+      if (placaNumeros.length < 3 || placaLetras.length < 2) {
+        alert('Error: La placa de Guatemala debe tener 3 números seguidos de sus letras correspondientes (Ej: 123ABC).');
         return;
       }
     }
@@ -928,6 +936,8 @@ export const ParqueoManager: React.FC = () => {
     
     // Reset form
     setNumeroPlaca('');
+    setPlacaNumeros('');
+    setPlacaLetras('');
     setIsExtranjera(false);
     setColorSeleccionado(PALETA_COLORES[0]);
     setEspacioSeleccionado(null);
@@ -1659,7 +1669,7 @@ export const ParqueoManager: React.FC = () => {
               </div>
             )}
 
-            {/* Plate Number (Campo Unificado e Inteligente) */}
+            {/* Plate Number (Separado en Números y Letras para Guatemala) */}
             <div className="space-y-1.5">
               <div className="flex justify-between items-center">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
@@ -1674,49 +1684,57 @@ export const ParqueoManager: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowPlateAiModal(true)}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-slate-950 text-[10px] font-black rounded-lg shadow-xs cursor-pointer transition-all active:scale-95"
-                    title="Tomar foto a la placa del vehículo y auto-llenar los datos con Inteligencia Artificial"
+                    className="p-1.5 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-slate-950 rounded-xl shadow-xs cursor-pointer transition-all active:scale-95 flex items-center justify-center"
+                    title="Escanear placa con cámara (IA)"
                   >
-                    <Sparkles size={12} className="text-blue-950" />
-                    <span>Foto con IA</span>
+                    <Camera size={15} />
                   </button>
                 </div>
               </div>
 
-              <div className="relative flex items-center">
-                {!isExtranjera && (
-                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none select-none">
-                    <span className="bg-blue-900 text-white text-xs font-black px-2 py-0.5 rounded-md shadow-xs">
-                      {tipoPlaca}
-                    </span>
-                    <span className="text-slate-300 font-black">-</span>
-                  </div>
-                )}
+              {isExtranjera ? (
                 <input
                   type="text"
                   required
                   value={numeroPlaca}
-                  onChange={(e) => handleNumeroPlacaChange(e.target.value)}
-                  placeholder={
-                    isExtranjera
-                      ? "Ej. MEX-789-Z"
-                      : tipoPlaca === 'M'
-                      ? "123ABC ó 1234XYZ"
-                      : tipoPlaca === 'O'
-                      ? "12345 ó 123ABC"
-                      : "123ABC ó 123-ABC"
-                  }
-                  className={`w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 text-lg font-black tracking-widest text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-blue-900 focus:border-blue-900 transition-all outline-none uppercase ${
-                    !isExtranjera ? 'pl-16 pr-4' : 'px-4'
-                  }`}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  spellCheck="false"
+                  onChange={(e) => setNumeroPlaca(e.target.value.toUpperCase())}
+                  placeholder="Ej. MEX-789-Z"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-lg font-black text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-blue-900 focus:border-blue-900 transition-all outline-none uppercase tracking-widest"
                 />
-              </div>
+              ) : (
+                <div className="flex gap-3">
+                  <div className="flex-1 relative">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      required
+                      value={placaNumeros}
+                      onChange={(e) => handlePlacaNumerosChange(e.target.value)}
+                      placeholder="123"
+                      maxLength={3}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-center text-xl tracking-widest font-black text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-blue-900 focus:border-blue-900 transition-all outline-none uppercase"
+                    />
+                    <span className="absolute -top-2 left-3 bg-white px-1 text-[9px] font-bold text-slate-400">3 Números</span>
+                  </div>
+                  <div className="flex-1 relative">
+                    <input
+                      ref={placaLetrasInputRef}
+                      type="text"
+                      required
+                      value={placaLetras}
+                      onChange={(e) => handlePlacaLetrasChange(e.target.value)}
+                      placeholder="ABC"
+                      maxLength={3}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-center text-xl tracking-widest font-black text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-blue-900 focus:border-blue-900 transition-all outline-none uppercase"
+                    />
+                    <span className="absolute -top-2 left-3 bg-white px-1 text-[9px] font-bold text-slate-400">3 Letras</span>
+                  </div>
+                </div>
+              )}
 
               {/* Vista previa en tiempo real estilo placa metálica */}
-              {numeroPlaca.trim() && (
+              {(placaNumeros.trim() || placaLetras.trim() || (isExtranjera && numeroPlaca.trim())) && (
                 <div className="mt-2 flex items-center justify-between p-2.5 bg-gradient-to-r from-slate-50 to-blue-50/50 rounded-xl border border-slate-200/90 text-xs">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-black text-slate-400 uppercase">Vista previa:</span>
@@ -1725,7 +1743,7 @@ export const ParqueoManager: React.FC = () => {
                         {isExtranjera ? 'EXT' : tipoPlaca}
                       </span>
                       <span className="font-mono font-black text-slate-900 tracking-wider">
-                        {numeroPlaca.toUpperCase().replace(/[\s]/g, '')}
+                        {isExtranjera ? numeroPlaca.toUpperCase() : `${placaNumeros || '---'}-${placaLetras || '---'}`}
                       </span>
                     </div>
                   </div>
@@ -1739,7 +1757,7 @@ export const ParqueoManager: React.FC = () => {
               <p className="text-[10px] font-medium text-slate-450 mt-1">
                 {isExtranjera
                   ? 'Placa internacional: escriba el código completo con estado/país.'
-                  : 'Escriba números y letras de corrido. El prefijo de tipo se detecta automáticamente.'}
+                  : 'Formato estándar de Guatemala: 3 números seguidos de 3 letras.'}
               </p>
             </div>
 
