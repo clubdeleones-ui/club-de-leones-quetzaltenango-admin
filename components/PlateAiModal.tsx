@@ -305,3 +305,4 @@ export const PlateAiModal: React.FC<PlateAiModalProps> = ({ isOpen, onClose, onP
     </div>
   );
 };
+

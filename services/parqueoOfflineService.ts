@@ -113,3 +113,4 @@ export const parqueoOfflineService = {
     return { syncedCount, failedCount };
   }
 };
+
