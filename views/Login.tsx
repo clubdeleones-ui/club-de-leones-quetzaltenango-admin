@@ -16,11 +16,61 @@ import {
   ExternalLink, 
   CheckCircle2, 
   Smartphone, 
-  Sparkles 
+  Sparkles,
+  Calendar
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Socio, UserRole } from '../types';
 import { firebaseService } from '../services/firebaseService';
+
+// Helpers para normalización y cotejo seguro de fecha de nacimiento
+const normalizeDateDigits = (val?: string) => {
+  if (!val) return null;
+  const clean = val.trim();
+  // Formato YYYY-MM-DD (estándar HTML5/Firestore)
+  const ymdMatch = clean.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (ymdMatch) {
+    const y = ymdMatch[1];
+    const m = ymdMatch[2].padStart(2, '0');
+    const d = ymdMatch[3].padStart(2, '0');
+    return { y, m, d };
+  }
+  // Formato DD-MM-YYYY o DD/MM/YYYY
+  const dmyMatch = clean.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  if (dmyMatch) {
+    const d = dmyMatch[1].padStart(2, '0');
+    const m = dmyMatch[2].padStart(2, '0');
+    const y = dmyMatch[3];
+    return { y, m, d };
+  }
+  // Año solo (19xx o 20xx)
+  const yearMatch = clean.match(/\b(19\d{2}|20\d{2})\b/);
+  if (yearMatch) {
+    return { y: yearMatch[1], m: '', d: '' };
+  }
+  return null;
+};
+
+const isBirthdateMatching = (inputBirthdate: string, storedBirthdate?: string) => {
+  if (!storedBirthdate) return false;
+  const normStored = normalizeDateDigits(storedBirthdate);
+  const normInput = normalizeDateDigits(inputBirthdate);
+
+  if (!normStored || !normInput) {
+    const inputDigits = inputBirthdate.replace(/\D/g, '');
+    const storedDigits = storedBirthdate.replace(/\D/g, '');
+    if (inputDigits.length >= 4 && storedDigits.includes(inputDigits)) return true;
+    return false;
+  }
+
+  // Si ambos tienen día, mes y año completos, comparar coincidencia exacta
+  if (normInput.d && normInput.m && normInput.y && normStored.d && normStored.m && normStored.y) {
+    return normInput.y === normStored.y && normInput.m === normStored.m && normInput.d === normStored.d;
+  }
+
+  // Si se ingresó solo el año de nacimiento o la base solo tiene año
+  return normInput.y === normStored.y;
+};
 
 const PUESTOS_LOGIN = [
   'Presidente',
@@ -46,10 +96,12 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [loginMethod, setLoginMethod] = useState<'whatsapp' | 'cargo' | 'correo'>('whatsapp');
   const [whatsappPhone, setWhatsappPhone] = useState('');
+  const [whatsappBirthdate, setWhatsappBirthdate] = useState('');
   const [whatsappMode, setWhatsappMode] = useState<'phone' | 'name'>('phone');
   const [selectedWhatsappSocioId, setSelectedWhatsappSocioId] = useState('');
   const [verifiedSocio, setVerifiedSocio] = useState<Socio | null>(null);
   const [phoneNotFound, setPhoneNotFound] = useState(false);
+  const [birthdateError, setBirthdateError] = useState<'fecha_incorrecta' | 'socio_sin_fecha' | null>(null);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [whatsappSent, setWhatsappSent] = useState(false);
   const [puesto, setPuesto] = useState('');
@@ -130,32 +182,80 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       .sort((a, b) => a.nombre.localeCompare(b.nombre));
   }, [allSocios]);
 
+  // Validación y Cotejo Automático de Teléfono + Fecha de Nacimiento
+  useEffect(() => {
+    if (loginMethod !== 'whatsapp') return;
+    const phoneDigits = whatsappPhone.replace(/\D/g, '').slice(-8);
+    const birthDigits = whatsappBirthdate.replace(/\D/g, '');
+
+    if (phoneDigits.length < 8) {
+      setVerifiedSocio(null);
+      setPhoneNotFound(false);
+      setBirthdateError(null);
+      return;
+    }
+
+    const candidate = allSocios.find(s => {
+      if (!s.telefono) return false;
+      const sDigits = s.telefono.replace(/\D/g, '');
+      const sLast8 = sDigits.length >= 8 ? sDigits.slice(-8) : sDigits;
+      return sLast8 === phoneDigits;
+    });
+
+    if (!candidate) {
+      setPhoneNotFound(true);
+      setVerifiedSocio(null);
+      setBirthdateError(null);
+      return;
+    }
+
+    setPhoneNotFound(false);
+
+    // Requiere al menos 4 dígitos para fecha/año de nacimiento
+    if (birthDigits.length < 4) {
+      setVerifiedSocio(null);
+      setBirthdateError(null);
+      return;
+    }
+
+    if (!candidate.fechaNacimiento) {
+      setBirthdateError('socio_sin_fecha');
+      setVerifiedSocio(null);
+      return;
+    }
+
+    if (isBirthdateMatching(whatsappBirthdate, candidate.fechaNacimiento)) {
+      setVerifiedSocio(candidate);
+      setBirthdateError(null);
+    } else {
+      setVerifiedSocio(null);
+      if (birthDigits.length >= 8 || birthDigits.length === 4) {
+        setBirthdateError('fecha_incorrecta');
+      } else {
+        setBirthdateError(null);
+      }
+    }
+  }, [whatsappPhone, whatsappBirthdate, allSocios, loginMethod]);
+
   const handleWhatsappPhoneChange = (val: string) => {
     setWhatsappSent(false);
     setError('');
     const digits = val.replace(/\D/g, '').slice(0, 8);
     const formatted = digits.length > 4 ? `${digits.slice(0, 4)}-${digits.slice(4)}` : digits;
     setWhatsappPhone(formatted);
+  };
 
-    if (digits.length === 8) {
-      const match = allSocios.find(s => {
-        if (!s.telefono) return false;
-        const sDigits = s.telefono.replace(/\D/g, '');
-        const sLast8 = sDigits.length >= 8 ? sDigits.slice(-8) : sDigits;
-        return sLast8 === digits;
-      });
-
-      if (match) {
-        setVerifiedSocio(match);
-        setPhoneNotFound(false);
-      } else {
-        setVerifiedSocio(null);
-        setPhoneNotFound(true);
-      }
-    } else {
-      setVerifiedSocio(null);
-      setPhoneNotFound(false);
+  const handleBirthdateChange = (raw: string) => {
+    setWhatsappSent(false);
+    setError('');
+    const digits = raw.replace(/\D/g, '').slice(0, 8);
+    let formatted = digits;
+    if (digits.length > 4) {
+      formatted = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+    } else if (digits.length > 2) {
+      formatted = `${digits.slice(0, 2)}/${digits.slice(2)}`;
     }
+    setWhatsappBirthdate(formatted);
   };
 
   const handleSelectWhatsappSocio = (socioId: string) => {
@@ -171,10 +271,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     if (clean.length >= 8) {
       const phone8 = clean.slice(-8);
       setWhatsappPhone(`${phone8.slice(0, 4)}-${phone8.slice(4)}`);
-      setVerifiedSocio(socio);
       setPhoneNotFound(false);
     } else {
-      setVerifiedSocio(null);
+      setWhatsappPhone('');
       setPhoneNotFound(true);
     }
   };
@@ -374,126 +473,123 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   }
 
   return (
-    <div className="max-w-md mx-auto mt-12 mb-20 bg-white/80 backdrop-blur-xl rounded-[2rem] shadow-2xl p-8 sm:p-10 border border-white/20 relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-900 via-yellow-500 to-blue-900" />
+    <div className="max-w-md mx-auto my-1 sm:my-6 bg-white/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-xl p-4 sm:p-7 border border-slate-200/90 relative overflow-hidden">
+      <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-900 via-yellow-500 to-blue-900" />
 
-      <div className="text-center mb-8">
-        <div className="relative inline-block mb-4">
-          <div className="absolute inset-0 bg-yellow-400 blur-2xl opacity-20 rounded-full" />
+      {/* Header Compacto para Evitar Scroll en Pantallas de Móviles */}
+      <div className="text-center mb-3">
+        <div className="flex items-center justify-center space-x-2.5 mb-1.5">
           <img
             src="images/logo.png"
             alt="Club Logo"
-            className="relative w-20 h-20 mx-auto object-contain drop-shadow-lg"
+            className="w-10 h-10 sm:w-12 sm:h-12 object-contain drop-shadow"
           />
+          <div className="text-left">
+            <h2 className="text-lg sm:text-xl font-black text-blue-950 tracking-tight leading-tight">
+              Acceso Socios
+            </h2>
+            <p className="text-[11px] text-slate-500 font-semibold leading-none">
+              Club de Leones Quetzaltenango
+            </p>
+          </div>
         </div>
-        <h2 className="text-2xl md:text-3xl font-bold text-blue-900 tracking-tight">Acceso Socios</h2>
-        <p className="text-sm text-slate-550 mt-1 font-medium">Club de Leones Quetzaltenango</p>
 
         {/* Tab switch between WhatsApp, Cargo and Correo */}
-        <div className="flex bg-slate-100 p-1 rounded-xl mt-6 border border-slate-200">
+        <div className="flex bg-slate-100 p-1 rounded-xl mt-2.5 border border-slate-200 text-xs">
           <button
             type="button"
             onClick={() => { setLoginMethod('whatsapp'); setError(''); }}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center space-x-1.5 ${
+            className={`flex-1 py-1.5 px-1 font-bold rounded-lg transition-all flex items-center justify-center space-x-1 cursor-pointer ${
               loginMethod === 'whatsapp'
                 ? 'bg-emerald-600 text-white shadow-sm'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <MessageCircle size={14} />
+            <MessageCircle size={13} />
             <span>Por WhatsApp</span>
           </button>
           <button
             type="button"
             onClick={() => { setLoginMethod('cargo'); setError(''); }}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center space-x-1.5 ${
+            className={`flex-1 py-1.5 px-1 font-bold rounded-lg transition-all flex items-center justify-center space-x-1 cursor-pointer ${
               loginMethod === 'cargo'
                 ? 'bg-blue-900 text-white shadow-sm'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Briefcase size={14} />
+            <Briefcase size={13} />
             <span>Por Cargo</span>
           </button>
           <button
             type="button"
             onClick={() => { setLoginMethod('correo'); setError(''); }}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center space-x-1.5 ${
+            className={`flex-1 py-1.5 px-1 font-bold rounded-lg transition-all flex items-center justify-center space-x-1 cursor-pointer ${
               loginMethod === 'correo'
                 ? 'bg-blue-900 text-white shadow-sm'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Mail size={14} />
+            <Mail size={13} />
             <span>Por Correo</span>
           </button>
         </div>
       </div>
 
       {qrLoginError && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-2xl text-xs mb-6 border border-red-100 font-semibold flex items-start space-x-2 animate-in fade-in">
+        <div className="bg-red-50 text-red-700 p-2.5 rounded-xl text-xs mb-3 border border-red-100 font-semibold flex items-start space-x-2 animate-in fade-in">
           <AlertCircle className="flex-shrink-0 mt-0.5 text-red-500" size={14} />
           <span>{qrLoginError}</span>
         </div>
       )}
 
       {error && (
-        <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm mb-6 border border-red-100 flex items-start space-x-2">
-          <AlertCircle className="flex-shrink-0 mt-0.5 text-red-500" size={15} />
+        <div className="bg-red-50 text-red-600 p-2.5 rounded-xl text-xs mb-3 border border-red-100 flex items-start space-x-2">
+          <AlertCircle className="flex-shrink-0 mt-0.5 text-red-500" size={14} />
           <span>{error}</span>
         </div>
       )}
 
       {loginMethod === 'whatsapp' ? (
-        <div className="space-y-5 animate-in fade-in duration-200">
-          <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-2xl p-4 text-center">
-            <div className="inline-flex items-center space-x-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-black uppercase tracking-wider rounded-full mb-2">
-              <Sparkles size={12} className="text-emerald-600" />
-              <span>Acceso Rápido Sin Contraseña</span>
-            </div>
-            <h3 className="text-base font-bold text-emerald-950">
-              Ingresa con tu WhatsApp
-            </h3>
-            <p className="text-xs text-emerald-800/80 font-medium mt-1">
-              {whatsappMode === 'phone' 
-                ? 'Escribe tu número de teléfono celular registrado' 
-                : 'Selecciona tu nombre de la lista de socios'}
-            </p>
-
-            <div className="flex justify-center mt-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setWhatsappMode(whatsappMode === 'phone' ? 'name' : 'phone');
-                  setVerifiedSocio(null);
-                  setPhoneNotFound(false);
-                  setWhatsappSent(false);
-                  setError('');
-                }}
-                className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 underline flex items-center space-x-1 cursor-pointer"
-              >
-                {whatsappMode === 'phone' ? (
-                  <>
-                    <User size={13} />
-                    <span>¿Prefieres buscar tu nombre en la lista?</span>
-                  </>
-                ) : (
-                  <>
-                    <Smartphone size={13} />
-                    <span>¿Prefieres escribir tu número de teléfono?</span>
-                  </>
-                )}
-              </button>
-            </div>
+        <div className="space-y-3 animate-in fade-in duration-200">
+          {/* Subheader / Selector de Modo */}
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              {whatsappMode === 'phone' ? 'Identificación por Celular' : 'Buscar por Nombre'}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setWhatsappMode(whatsappMode === 'phone' ? 'name' : 'phone');
+                setVerifiedSocio(null);
+                setPhoneNotFound(false);
+                setBirthdateError(null);
+                setWhatsappSent(false);
+                setError('');
+              }}
+              className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 underline flex items-center space-x-1 cursor-pointer"
+            >
+              {whatsappMode === 'phone' ? (
+                <>
+                  <User size={11} />
+                  <span>¿Buscar mi nombre?</span>
+                </>
+              ) : (
+                <>
+                  <Smartphone size={11} />
+                  <span>¿Escribir mi celular?</span>
+                </>
+              )}
+            </button>
           </div>
 
+          {/* Campo 1: Teléfono o Nombre */}
           {whatsappMode === 'phone' ? (
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 text-center">
-                Número de Celular / WhatsApp
+              <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                1. Número de Celular / WhatsApp
               </label>
-              <div className="relative max-w-xs mx-auto">
-                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center space-x-1 text-slate-500 font-bold text-sm pointer-events-none">
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center space-x-1 text-slate-500 font-bold text-xs pointer-events-none">
                   <span>🇬🇹</span>
                   <span>+502</span>
                 </div>
@@ -504,25 +600,21 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   onChange={(e) => handleWhatsappPhoneChange(e.target.value)}
                   maxLength={9}
                   placeholder="5555-1234"
-                  autoFocus
-                  className="w-full pl-24 pr-4 py-3 border-2 border-emerald-300 focus:border-emerald-500 rounded-2xl outline-none transition-all text-xl font-black text-slate-800 text-center tracking-widest shadow-inner bg-emerald-50/20"
+                  className="w-full pl-20 pr-3 py-2 border-2 border-slate-200 focus:border-emerald-500 rounded-xl outline-none transition-all text-base font-bold text-slate-800 tracking-wider shadow-sm bg-slate-50 focus:bg-white"
                 />
               </div>
-              <p className="text-[11px] text-slate-400 text-center mt-1.5 font-medium">
-                Escribe los 8 dígitos de tu número celular de Guatemala
-              </p>
             </div>
           ) : (
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Selecciona tu Nombre
+              <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                1. Selecciona tu Nombre
               </label>
               <div className="relative">
-                <User className="absolute left-3.5 top-3 text-slate-400" size={18} />
+                <User className="absolute left-3 top-2.5 text-slate-400" size={16} />
                 <select
                   value={selectedWhatsappSocioId}
                   onChange={(e) => handleSelectWhatsappSocio(e.target.value)}
-                  className="w-full pl-11 pr-10 py-3 border-2 border-emerald-300 focus:border-emerald-500 rounded-xl outline-none transition-all bg-white text-slate-800 text-sm font-bold appearance-none cursor-pointer"
+                  className="w-full pl-9 pr-8 py-2 border-2 border-slate-200 focus:border-emerald-500 rounded-xl outline-none transition-all bg-white text-slate-800 text-xs font-bold appearance-none cursor-pointer"
                 >
                   <option value="" disabled>Selecciona tu nombre...</option>
                   {sociosWithPhone.map((s) => (
@@ -531,55 +623,110 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                     </option>
                   ))}
                 </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
                   <span className="text-xs">▼</span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Socio Encontrado y Verificado */}
+          {/* Campo 2: Fecha de Nacimiento (Factor de Seguridad Personal) */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center space-x-1">
+                <span>2. Fecha de Nacimiento</span>
+                <span className="text-[10px] text-amber-600 font-semibold">(Seguridad)</span>
+              </label>
+              <span className="text-[10px] text-slate-400 font-medium">DD/MM/AAAA</span>
+            </div>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <input
+                type="text"
+                inputMode="numeric"
+                value={whatsappBirthdate}
+                onChange={(e) => handleBirthdateChange(e.target.value)}
+                maxLength={10}
+                placeholder="Ej. 15/08/1954"
+                className="w-full pl-9 pr-3 py-2 border-2 border-slate-200 focus:border-emerald-500 rounded-xl outline-none transition-all text-base font-bold text-slate-800 tracking-wider shadow-sm bg-slate-50 focus:bg-white"
+              />
+            </div>
+          </div>
+
+          {/* Estado de Error: Número no registrado */}
+          {phoneNotFound && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center space-y-1.5 animate-in fade-in">
+              <p className="text-xs text-amber-900 font-bold">
+                Número no registrado en el padrón
+              </p>
+              <p className="text-[11px] text-slate-600 leading-tight">
+                Si aún no has registrado tu número, actualiza tu ficha en el Censo:
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate('/censo')}
+                className="py-1.5 px-3 bg-yellow-500 hover:bg-yellow-400 text-blue-950 font-bold text-xs uppercase tracking-wider rounded-lg transition-all inline-flex items-center space-x-1.5 cursor-pointer shadow-sm"
+              >
+                <span>Ir al Censo Digital</span>
+                <ArrowRight size={12} />
+              </button>
+            </div>
+          )}
+
+          {/* Estado de Error: Socio sin fecha registrada en base de datos */}
+          {birthdateError === 'socio_sin_fecha' && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center space-y-1.5 animate-in fade-in">
+              <p className="text-xs text-amber-900 font-bold">
+                Tu ficha aún no tiene fecha de nacimiento
+              </p>
+              <p className="text-[11px] text-slate-600 leading-tight">
+                Para proteger tu cuenta, completa tu fecha en el Censo Digital:
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate('/censo')}
+                className="py-1.5 px-3 bg-yellow-500 hover:bg-yellow-400 text-blue-950 font-bold text-xs uppercase tracking-wider rounded-lg transition-all inline-flex items-center space-x-1.5 cursor-pointer shadow-sm"
+              >
+                <span>Actualizar en el Censo</span>
+                <ArrowRight size={12} />
+              </button>
+            </div>
+          )}
+
+          {/* Estado de Error: Fecha no coincide */}
+          {birthdateError === 'fecha_incorrecta' && (
+            <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-2.5 text-center text-xs font-semibold animate-in fade-in flex items-center justify-center space-x-1.5">
+              <AlertCircle size={14} className="shrink-0 text-red-500" />
+              <span>La fecha de nacimiento no coincide con los registros.</span>
+            </div>
+          )}
+
+          {/* Socio Verificado con éxito (Ambos datos coincidieron) */}
           {verifiedSocio && (
-            <div className="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-4 sm:p-5 text-center space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-              {/* Tarjeta del Socio */}
-              <div className="flex items-center space-x-3 text-left bg-white p-3 rounded-xl border border-emerald-100 shadow-sm">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center space-y-2.5 animate-in fade-in duration-200">
+              {/* Tarjeta compacta del socio */}
+              <div className="flex items-center space-x-2.5 text-left bg-white p-2 rounded-lg border border-emerald-100 shadow-xs">
                 {verifiedSocio.foto ? (
                   <img
                     src={verifiedSocio.foto}
                     alt={verifiedSocio.nombre}
-                    className="w-12 h-12 rounded-xl object-cover border border-emerald-200 flex-shrink-0"
+                    className="w-9 h-9 rounded-lg object-cover border border-emerald-200 shrink-0"
                   />
                 ) : (
-                  <div className="w-12 h-12 rounded-xl bg-emerald-600 text-white font-black flex items-center justify-center text-lg flex-shrink-0">
+                  <div className="w-9 h-9 rounded-lg bg-emerald-600 text-white font-black flex items-center justify-center text-sm shrink-0">
                     {verifiedSocio.nombre.charAt(0)}
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <span className="inline-block text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
-                    ✓ Socio Verificado
+                  <span className="text-[9px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded">
+                    ✓ Identidad Verificada
                   </span>
-                  <h4 className="text-sm font-bold text-slate-900 truncate mt-0.5">
+                  <h4 className="text-xs font-black text-slate-900 truncate leading-tight">
                     {verifiedSocio.nombre}
                   </h4>
-                  <p className="text-xs text-slate-500 truncate">
+                  <p className="text-[10px] text-slate-500 truncate">
                     {verifiedSocio.puesto || 'Socio Regular'}
                   </p>
-                </div>
-              </div>
-
-              {/* Mensaje de Explicación y Advertencia Reaseguradora */}
-              <div className="bg-amber-50/90 border border-amber-200 rounded-2xl p-4 text-left text-amber-950 text-xs sm:text-sm leading-relaxed space-y-2">
-                <div className="font-bold flex items-center space-x-2 text-amber-900">
-                  <ShieldCheck size={18} className="text-amber-600 shrink-0" />
-                  <span>Acceso Práctico y 100% Seguro</span>
-                </div>
-                <p className="font-medium text-amber-900">
-                  Te vas a enviar el enlace a ti mismo por WhatsApp. Es una manera práctica y completamente segura de ingresar:
-                </p>
-                <div className="bg-white/85 p-3 rounded-xl border border-amber-200/60 space-y-1.5 text-xs text-slate-700 font-medium">
-                  <p>1️⃣ Al presionar el botón verde abajo, se abrirá tu propio chat de WhatsApp.</p>
-                  <p>2️⃣ Presiona <strong>Enviar</strong> (la flecha verde en WhatsApp).</p>
-                  <p>3️⃣ Toca el <strong>enlace azul</strong> que queda en tu propio chat para ingresar directamente sin contraseña.</p>
                 </div>
               </div>
 
@@ -588,177 +735,146 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 type="button"
                 onClick={handleOpenWhatsAppMagicLink}
                 disabled={isGeneratingLink}
-                className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm uppercase tracking-wider rounded-xl shadow-lg shadow-emerald-600/30 active:scale-[0.98] transition-all flex items-center justify-center space-x-2.5 cursor-pointer disabled:opacity-50"
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md active:scale-98 transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
               >
                 {isGeneratingLink ? (
                   <>
-                    <Loader2 size={18} className="animate-spin" />
+                    <Loader2 size={15} className="animate-spin" />
                     <span>Preparando enlace...</span>
                   </>
                 ) : (
                   <>
-                    <MessageCircle size={20} className="fill-white/20" />
+                    <MessageCircle size={16} />
                     <span>Abrir mi WhatsApp y Enviar mi Enlace</span>
-                    <ExternalLink size={16} />
+                    <ExternalLink size={14} />
                   </>
                 )}
               </button>
 
+              <p className="text-[10px] text-emerald-800 font-medium leading-tight">
+                ℹ️ Al abrir WhatsApp, presiona <strong>"Enviar"</strong> y toca el <strong>enlace azul</strong> en tu chat.
+              </p>
+
               {whatsappSent && (
-                <div className="p-3 bg-emerald-100 text-emerald-900 rounded-xl text-xs font-bold border border-emerald-300 flex items-center justify-center space-x-2 animate-in fade-in">
-                  <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-                  <span>¡WhatsApp abierto! Presiona Enviar y toca tu enlace azul para ingresar.</span>
+                <div className="p-2 bg-emerald-100 text-emerald-900 rounded-lg text-[11px] font-bold border border-emerald-300 flex items-center justify-center space-x-1.5">
+                  <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+                  <span>¡Listo! Toca el enlace azul en tu WhatsApp para entrar.</span>
                 </div>
               )}
-
-              <button
-                type="button"
-                onClick={() => {
-                  setWhatsappPhone('');
-                  setSelectedWhatsappSocioId('');
-                  setVerifiedSocio(null);
-                  setPhoneNotFound(false);
-                  setWhatsappSent(false);
-                }}
-                className="text-xs text-slate-500 hover:text-slate-800 underline font-medium pt-1 cursor-pointer"
-              >
-                Probar con otro número de teléfono
-              </button>
-            </div>
-          )}
-
-          {/* Teléfono No Encontrado */}
-          {phoneNotFound && (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-center space-y-3 animate-in fade-in">
-              <div className="text-amber-700 font-bold text-xs flex items-center justify-center space-x-1.5">
-                <AlertCircle size={16} className="shrink-0" />
-                <span>Número no registrado</span>
-              </div>
-              <p className="text-xs text-amber-950 leading-relaxed font-medium">
-                No encontramos ningún socio registrado con el teléfono <strong>{whatsappPhone}</strong>.
-              </p>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Si aún no has registrado tu número de WhatsApp o cambiaste de número telefónico, puedes actualizar tus datos en el Censo Digital:
-              </p>
-              <button
-                type="button"
-                onClick={() => navigate('/censo')}
-                className="w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-blue-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center space-x-2 cursor-pointer"
-              >
-                <span>Actualizar mis datos en el Censo</span>
-                <ArrowRight size={14} />
-              </button>
             </div>
           )}
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-5">
-        {loginMethod === 'cargo' ? (
-          <>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Cargo Administrativo</label>
-              <div className="relative">
-                <Briefcase className="absolute left-3.5 top-3 text-slate-400" size={18} />
-                <select
-                  value={puesto}
-                  onChange={(e) => {
-                    setPuesto(e.target.value);
-                    setSelectedSocioId('');
-                  }}
-                  className="w-full pl-11 pr-10 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white text-slate-800 text-sm font-medium appearance-none cursor-pointer"
-                  required
-                >
-                  <option value="" disabled>Seleccione su cargo...</option>
-                  {availablePuestos.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
-                  <span className="text-xs">▼</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Si más de un socio tiene el mismo cargo (ej. Socio Regular), permitir seleccionar el nombre del socio */}
-            {matchingSociosForPuesto.length > 1 && (
-              <div className="animate-in fade-in slide-in-from-top-1 duration-200">
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Seleccione su Nombre
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {loginMethod === 'cargo' ? (
+            <>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Cargo Administrativo
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3.5 top-3 text-slate-400" size={18} />
+                  <Briefcase className="absolute left-3 top-2.5 text-slate-400" size={16} />
                   <select
-                    value={selectedSocioId}
-                    onChange={(e) => setSelectedSocioId(e.target.value)}
-                    className="w-full pl-11 pr-10 py-2.5 border border-blue-200 bg-blue-50/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-slate-800 text-sm font-medium appearance-none cursor-pointer"
+                    value={puesto}
+                    onChange={(e) => {
+                      setPuesto(e.target.value);
+                      setSelectedSocioId('');
+                    }}
+                    className="w-full pl-9 pr-8 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white text-slate-800 text-xs font-semibold appearance-none cursor-pointer"
                     required
                   >
-                    <option value="" disabled>¿Quién eres?</option>
-                    {matchingSociosForPuesto.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.nombre} {s.codigoSocio ? `(${s.codigoSocio})` : ''}
+                    <option value="" disabled>Seleccione su cargo...</option>
+                    {availablePuestos.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
                       </option>
                     ))}
                   </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
                     <span className="text-xs">▼</span>
                   </div>
                 </div>
               </div>
-            )}
-          </>
-        ) : (
+
+              {matchingSociosForPuesto.length > 1 && (
+                <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                    Seleccione su Nombre
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                    <select
+                      value={selectedSocioId}
+                      onChange={(e) => setSelectedSocioId(e.target.value)}
+                      className="w-full pl-9 pr-8 py-2 border border-blue-200 bg-blue-50/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-slate-800 text-xs font-semibold appearance-none cursor-pointer"
+                      required
+                    >
+                      <option value="" disabled>¿Quién eres?</option>
+                      {matchingSociosForPuesto.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.nombre} {s.codigoSocio ? `(${s.codigoSocio})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                      <span className="text-xs">▼</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div>
+              <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Correo Electrónico o Código
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                <input
+                  type="text"
+                  value={correoOrCodigo}
+                  onChange={(e) => setCorreoOrCodigo(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-xs font-semibold text-slate-800"
+                  placeholder="ej. socio@leonesxela.com o CLQ-2026-001"
+                  required
+                />
+              </div>
+            </div>
+          )}
+
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-              Correo Electrónico o Código
+            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+              Contraseña
             </label>
             <div className="relative">
-              <Mail className="absolute left-3.5 top-3 text-slate-400" size={18} />
+              <Lock className="absolute left-3 top-2.5 text-slate-400" size={16} />
               <input
-                type="text"
-                value={correoOrCodigo}
-                onChange={(e) => setCorreoOrCodigo(e.target.value)}
-                className="w-full pl-11 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm font-medium text-slate-800"
-                placeholder="ej. socio@leonesxela.com o CLQ-2026-001"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-9 pr-10 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-xs"
+                placeholder="••••••••"
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2.5 top-2 p-0.5 text-slate-400 hover:text-blue-900 transition-colors bg-white rounded-full focus:outline-none cursor-pointer"
+                title={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
           </div>
-        )}
 
-        <div>
-          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Contraseña</label>
-          <div className="relative">
-            <Lock className="absolute left-3.5 top-3 text-slate-400" size={18} />
-            <input
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-11 pr-12 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-sm"
-              placeholder="••••••••"
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3.5 top-3 p-0.5 text-slate-400 hover:text-blue-900 transition-colors bg-white rounded-full focus:outline-none"
-              title={showPassword ? "Ocultar contraseña" : "Ver contraseña"}
-            >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          className="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold py-3.5 text-sm rounded-xl transition-all shadow-lg shadow-blue-900/20 active:scale-[0.98] flex items-center justify-center space-x-2 mt-2"
-        >
-          <span>Ingresar ahora</span>
-          <ArrowRight size={16} />
-        </button>
-      </form>
+          <button
+            type="submit"
+            className="w-full bg-blue-900 hover:bg-blue-800 text-white font-black py-2.5 text-xs uppercase tracking-wider rounded-xl transition-all shadow-md shadow-blue-900/20 active:scale-98 flex items-center justify-center space-x-1.5 cursor-pointer mt-1"
+          >
+            <span>Ingresar ahora</span>
+            <ArrowRight size={14} />
+          </button>
+        </form>
       )}
     </div>
   );
