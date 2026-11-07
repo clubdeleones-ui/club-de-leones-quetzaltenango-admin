@@ -587,5 +587,89 @@ Correo Oficial: ${DEFAULT_GMAIL_SENDER}
     }
 
     return result;
+  },
+
+  /**
+   * Envía el enlace mágico de inicio de sesión directo al correo registrado del socio
+   */
+  sendMagicLinkEmail: async (
+    toEmail: string, 
+    nombreSocio: string, 
+    magicUrl: string, 
+    customScriptUrl?: string
+  ): Promise<{ ok: boolean; message?: string }> => {
+    const scriptUrl = customScriptUrl || 
+      (import.meta as any).env?.VITE_GOOGLE_SCRIPT_URL || 
+      DEFAULT_GOOGLE_SCRIPT_URL;
+
+    if (!scriptUrl || !toEmail || !toEmail.includes('@')) {
+      return { ok: false, message: 'Correo de destino inválido o no configurado.' };
+    }
+
+    const asunto = `🦁 Tu Enlace de Acceso al Portal - Club de Leones Quetzaltenango`;
+    const cuerpoTexto = `Estimado(a) C.L. ${nombreSocio}:\n\nHas solicitado ingresar al Portal del Club de Leones de Quetzaltenango.\n\nPara ingresar directamente a tu cuenta sin necesidad de contraseña, haz clic o toca el siguiente enlace:\n${magicUrl}\n\nSi tú no solicitaste este acceso, puedes ignorar este mensaje de forma segura.\n\nClub de Leones Quetzaltenango\n"Nosotros Servimos"`;
+
+    const htmlBody = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; padding: 30px 15px; text-align: center;">
+        <div style="max-width: 520px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; text-align: left;">
+          
+          <!-- Banner Superior -->
+          <div style="background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%); padding: 25px 20px; text-align: center;">
+            <img src="https://clubdeleonesquetzaltenango.org/images/logo.png" alt="Club Logo" style="width: 55px; height: 55px; margin-bottom: 10px;" />
+            <h1 style="color: #ffffff; font-size: 20px; font-weight: 800; margin: 0; letter-spacing: -0.5px;">Club de Leones Quetzaltenango</h1>
+            <p style="color: #fbbf24; font-size: 12px; margin: 4px 0 0; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Acceso Seguro al Portal</p>
+          </div>
+
+          <!-- Contenido -->
+          <div style="padding: 30px 25px;">
+            <h2 style="color: #0f172a; font-size: 17px; font-weight: 700; margin-top: 0;">¡Hola, C.L. ${nombreSocio}!</h2>
+            <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 25px;">
+              Has solicitado ingresar a tu cuenta de socio en el portal oficial del Club de Leones de Quetzaltenango. Para entrar directamente <strong>sin necesidad de recordar o escribir contraseñas</strong>, presiona el botón abajo:
+            </p>
+
+            <!-- Botón Mágico -->
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${magicUrl}" target="_blank" style="display: inline-block; background-color: #1e3a8a; color: #ffffff; font-weight: 800; font-size: 14px; text-decoration: none; padding: 14px 28px; border-radius: 12px; box-shadow: 0 4px 12px rgba(30, 58, 138, 0.25); text-transform: uppercase; letter-spacing: 0.5px;">
+                Ingresar a mi Cuenta
+              </a>
+            </div>
+
+            <div style="background-color: #f1f5f9; border-radius: 10px; padding: 12px 15px; font-size: 12px; color: #64748b; line-height: 1.5; margin-top: 25px;">
+              🔒 <strong>Seguridad:</strong> Este enlace es personal e intransferible. Si tú no solicitaste este acceso, puedes ignorar este correo; tu cuenta permanece segura.
+            </div>
+
+            <p style="color: #94a3b8; font-size: 11px; margin-top: 25px; border-top: 1px solid #f1f5f9; padding-top: 15px; text-align: center;">
+              Si el botón no funciona, copia y pega este enlace en tu navegador:<br />
+              <a href="${magicUrl}" style="color: #2563eb; word-break: break-all;">${magicUrl}</a>
+            </p>
+          </div>
+
+          <!-- Footer -->
+          <div style="background-color: #f8fafc; padding: 15px 20px; text-align: center; border-top: 1px solid #f1f5f9; font-size: 11px; color: #94a3b8;">
+            Club de Leones de Quetzaltenango · Distrito B-4 · Guatemala<br />
+            <em>"Nosotros Servimos"</em>
+          </div>
+        </div>
+      </div>
+    `;
+
+    try {
+      await fetch(scriptUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'send_email',
+          email: toEmail,
+          asunto: asunto,
+          mensajeBienvenida: cuerpoTexto,
+          htmlBody: htmlBody
+        })
+      });
+      return { ok: true };
+    } catch (e: any) {
+      console.error("Error al enviar Magic Link por correo vía Google Apps Script:", e);
+      return { ok: false, message: e.message || 'Error de conexión' };
+    }
   }
 };

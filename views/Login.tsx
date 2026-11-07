@@ -17,11 +17,13 @@ import {
   CheckCircle2, 
   Smartphone, 
   Sparkles,
-  Calendar
+  Calendar,
+  Send
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Socio, UserRole } from '../types';
 import { firebaseService } from '../services/firebaseService';
+import { gmailService } from '../services/gmailService';
 
 // Helpers para normalización y cotejo seguro de fecha de nacimiento
 const normalizeDateDigits = (val?: string) => {
@@ -104,6 +106,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [birthdateError, setBirthdateError] = useState<'fecha_incorrecta' | 'socio_sin_fecha' | null>(null);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [whatsappSent, setWhatsappSent] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailSentSuccess, setEmailSentSuccess] = useState(false);
+  const [emailSentTo, setEmailSentTo] = useState('');
   const [puesto, setPuesto] = useState('');
   const [selectedSocioId, setSelectedSocioId] = useState('');
   const [correoOrCodigo, setCorreoOrCodigo] = useState('');
@@ -310,6 +315,70 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     }
   };
 
+  const handleSendMagicEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    const q = correoOrCodigo.trim().toLowerCase();
+    if (!q) {
+      setError('Por favor ingresa tu correo electrónico o código de socio.');
+      return;
+    }
+
+    setIsSendingEmail(true);
+    try {
+      let sociosList = allSocios;
+      if (sociosList.length === 0) {
+        sociosList = await firebaseService.getSocios();
+        setAllSocios(sociosList);
+      }
+
+      const matchingSocio = sociosList.find(s => 
+        (s.correo && s.correo.trim().toLowerCase() === q) || 
+        (s.codigoSocio && s.codigoSocio.trim().toLowerCase() === q)
+      );
+
+      if (!matchingSocio) {
+        setError('El correo o código ingresado no coincide con ningún socio registrado en el padrón.');
+        return;
+      }
+
+      if (!matchingSocio.correo || !matchingSocio.correo.includes('@')) {
+        setError(`El socio ${matchingSocio.nombre} no tiene un correo válido registrado. Por favor actualiza tu correo en el Censo Digital.`);
+        return;
+      }
+
+      // Asegurar que el socio tenga qrToken generado y persistido
+      let token = matchingSocio.qrToken;
+      if (!token) {
+        token = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+        const updatedSocio = { ...matchingSocio, qrToken: token };
+        await firebaseService.saveSocio(updatedSocio);
+        setAllSocios(prev => prev.map(s => s.id === updatedSocio.id ? updatedSocio : s));
+      }
+
+      const baseUrl = window.location.origin + window.location.pathname;
+      const magicUrl = `${baseUrl}#/login?qr_token=${token}`;
+
+      const res = await gmailService.sendMagicLinkEmail(
+        matchingSocio.correo,
+        matchingSocio.nombre,
+        magicUrl
+      );
+
+      if (res.ok) {
+        setEmailSentTo(matchingSocio.correo);
+        setEmailSentSuccess(true);
+      } else {
+        setError(res.message || 'Error al enviar el correo. Por favor intenta de nuevo.');
+      }
+    } catch (err: any) {
+      console.error("Error al enviar enlace mágico por correo:", err);
+      setError('Ocurrió un error al procesar el envío de correo. Por favor intenta de nuevo.');
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
   useEffect(() => {
     const hashQuery = window.location.hash.split('?')[1];
     const searchParams = new URLSearchParams(hashQuery || window.location.search);
@@ -498,7 +567,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         <div className="flex bg-slate-100 p-1 rounded-xl mt-2.5 border border-slate-200 text-xs">
           <button
             type="button"
-            onClick={() => { setLoginMethod('whatsapp'); setError(''); }}
+            onClick={() => { setLoginMethod('whatsapp'); setError(''); setEmailSentSuccess(false); }}
             className={`flex-1 py-1.5 px-1 font-bold rounded-lg transition-all flex items-center justify-center space-x-1 cursor-pointer ${
               loginMethod === 'whatsapp'
                 ? 'bg-emerald-600 text-white shadow-sm'
@@ -510,7 +579,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           </button>
           <button
             type="button"
-            onClick={() => { setLoginMethod('cargo'); setError(''); }}
+            onClick={() => { setLoginMethod('cargo'); setError(''); setEmailSentSuccess(false); }}
             className={`flex-1 py-1.5 px-1 font-bold rounded-lg transition-all flex items-center justify-center space-x-1 cursor-pointer ${
               loginMethod === 'cargo'
                 ? 'bg-blue-900 text-white shadow-sm'
@@ -522,7 +591,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           </button>
           <button
             type="button"
-            onClick={() => { setLoginMethod('correo'); setError(''); }}
+            onClick={() => { setLoginMethod('correo'); setError(''); setEmailSentSuccess(false); }}
             className={`flex-1 py-1.5 px-1 font-bold rounded-lg transition-all flex items-center justify-center space-x-1 cursor-pointer ${
               loginMethod === 'correo'
                 ? 'bg-blue-900 text-white shadow-sm'
@@ -764,69 +833,56 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </div>
           )}
         </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="space-y-3">
-          {loginMethod === 'cargo' ? (
-            <>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Cargo Administrativo
-                </label>
-                <div className="relative">
-                  <Briefcase className="absolute left-3 top-2.5 text-slate-400" size={16} />
-                  <select
-                    value={puesto}
-                    onChange={(e) => {
-                      setPuesto(e.target.value);
-                      setSelectedSocioId('');
-                    }}
-                    className="w-full pl-9 pr-8 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white text-slate-800 text-xs font-semibold appearance-none cursor-pointer"
-                    required
-                  >
-                    <option value="" disabled>Seleccione su cargo...</option>
-                    {availablePuestos.map((p) => (
-                      <option key={p} value={p}>
-                        {p}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
-                    <span className="text-xs">▼</span>
-                  </div>
-                </div>
+      ) : loginMethod === 'correo' ? (
+        emailSentSuccess ? (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center space-y-2.5 animate-in fade-in duration-200">
+            <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-xs">
+              <CheckCircle2 size={24} />
+            </div>
+            <div>
+              <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wider">
+                ¡Enlace de Acceso Enviado!
+              </h4>
+              <p className="text-xs text-emerald-850 font-medium mt-1 leading-relaxed">
+                Hemos enviado tu enlace directo sin contraseña a:
+                <br />
+                <span className="font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-emerald-200 inline-block mt-1">
+                  {emailSentTo}
+                </span>
+              </p>
+            </div>
+            <p className="text-[11px] text-slate-500 leading-tight">
+              Revisa tu bandeja de entrada (o carpeta de spam) y toca el enlace para entrar de inmediato a tu cuenta.
+            </p>
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setEmailSentSuccess(false);
+                  setCorreoOrCodigo('');
+                  setError('');
+                }}
+                className="text-xs text-blue-900 font-bold underline hover:text-blue-950 cursor-pointer"
+              >
+                Enviar a otro correo o código
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSendMagicEmail} className="space-y-3 animate-in fade-in duration-200">
+            <div className="bg-blue-50/60 border border-blue-200/80 rounded-xl p-2.5 text-center">
+              <div className="inline-flex items-center space-x-1 text-blue-900 font-bold text-[11px] mb-0.5">
+                <Sparkles size={12} className="text-blue-600" />
+                <span>Acceso por Correo Sin Contraseña</span>
               </div>
+              <p className="text-[11px] text-blue-800 leading-tight font-medium">
+                Escribe tu correo o código CLQ y te enviaremos tu enlace de acceso directo.
+              </p>
+            </div>
 
-              {matchingSociosForPuesto.length > 1 && (
-                <div className="animate-in fade-in slide-in-from-top-1 duration-200">
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Seleccione su Nombre
-                  </label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-2.5 text-slate-400" size={16} />
-                    <select
-                      value={selectedSocioId}
-                      onChange={(e) => setSelectedSocioId(e.target.value)}
-                      className="w-full pl-9 pr-8 py-2 border border-blue-200 bg-blue-50/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-slate-800 text-xs font-semibold appearance-none cursor-pointer"
-                      required
-                    >
-                      <option value="" disabled>¿Quién eres?</option>
-                      {matchingSociosForPuesto.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.nombre} {s.codigoSocio ? `(${s.codigoSocio})` : ''}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
-                      <span className="text-xs">▼</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
-          ) : (
             <div>
               <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Correo Electrónico o Código
+                Correo Electrónico o Código CLQ
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-2.5 text-slate-400" size={16} />
@@ -834,10 +890,86 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   type="text"
                   value={correoOrCodigo}
                   onChange={(e) => setCorreoOrCodigo(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-xs font-semibold text-slate-800"
+                  className="w-full pl-9 pr-3 py-2 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl outline-none transition-all text-xs font-semibold text-slate-800 bg-slate-50"
                   placeholder="ej. socio@leonesxela.com o CLQ-2026-001"
                   required
+                  autoFocus
                 />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSendingEmail}
+              className="w-full bg-blue-900 hover:bg-blue-800 text-white font-black py-2.5 text-xs uppercase tracking-wider rounded-xl transition-all shadow-md shadow-blue-900/20 active:scale-98 flex items-center justify-center space-x-1.5 cursor-pointer disabled:opacity-50 mt-1"
+            >
+              {isSendingEmail ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" />
+                  <span>Enviando enlace a tu correo...</span>
+                </>
+              ) : (
+                <>
+                  <Send size={14} />
+                  <span>Enviar Enlace de Acceso a mi Correo</span>
+                </>
+              )}
+            </button>
+          </form>
+        )
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-3 animate-in fade-in duration-200">
+          <div>
+            <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+              Cargo Administrativo
+            </label>
+            <div className="relative">
+              <Briefcase className="absolute left-3 top-2.5 text-slate-400" size={16} />
+              <select
+                value={puesto}
+                onChange={(e) => {
+                  setPuesto(e.target.value);
+                  setSelectedSocioId('');
+                }}
+                className="w-full pl-9 pr-8 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white text-slate-800 text-xs font-semibold appearance-none cursor-pointer"
+                required
+              >
+                <option value="" disabled>Seleccione su cargo...</option>
+                {availablePuestos.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                <span className="text-xs">▼</span>
+              </div>
+            </div>
+          </div>
+
+          {matchingSociosForPuesto.length > 1 && (
+            <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+              <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Seleccione su Nombre
+              </label>
+              <div className="relative">
+                <User className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                <select
+                  value={selectedSocioId}
+                  onChange={(e) => setSelectedSocioId(e.target.value)}
+                  className="w-full pl-9 pr-8 py-2 border border-blue-200 bg-blue-50/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-slate-800 text-xs font-semibold appearance-none cursor-pointer"
+                  required
+                >
+                  <option value="" disabled>¿Quién eres?</option>
+                  {matchingSociosForPuesto.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.nombre} {s.codigoSocio ? `(${s.codigoSocio})` : ''}
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                  <span className="text-xs">▼</span>
+                </div>
               </div>
             </div>
           )}
