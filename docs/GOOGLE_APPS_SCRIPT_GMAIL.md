@@ -166,14 +166,52 @@ function handleCyberSourcePayment(data) {
   var authRes = callCyberSource(host, "/risk/v1/authentications", authPayload, merchantId, keyId, sharedSecret);
   var authBody = authRes.body;
 
-  // PASO 3: Payment Authorization & Capture
-  var commerceIndicator = "internet";
-  var authTxnId = null;
-  if (authBody.consumerAuthenticationInformation) {
-    authTxnId = authBody.consumerAuthenticationInformation.authenticationTransactionId;
-    if (authBody.consumerAuthenticationInformation.ecommerceIndicator) {
-      commerceIndicator = authBody.consumerAuthenticationInformation.ecommerceIndicator;
-    }
+  // PASO 3: Payment Authorization & Capture con herencia completa de 3DS (ECI, CAVV, UCAF)
+  var cai = (authBody && authBody.consumerAuthenticationInformation) ? authBody.consumerAuthenticationInformation : {};
+
+  // Determinar commerceIndicator oficial según marca de tarjeta y respuesta de 3DS
+  var cardType = String(card.type || "001");
+  var cardNumber = String(card.number || "");
+  var commerceIndicator = cai.ecommerceIndicator || cai.indicator;
+  var fallbackEci = "05";
+
+  if (cardType === "001" || /^4/.test(cardNumber)) {
+    if (!commerceIndicator) commerceIndicator = "vbv";
+    fallbackEci = "05"; // Visa
+  } else if (cardType === "002" || /^(5[1-5]|2[2-7])/.test(cardNumber)) {
+    if (!commerceIndicator) commerceIndicator = "spa";
+    fallbackEci = "02"; // Mastercard
+  } else if (cardType === "003" || /^3[47]/.test(cardNumber)) {
+    if (!commerceIndicator) commerceIndicator = "aesk";
+    fallbackEci = "05"; // American Express
+  } else {
+    if (!commerceIndicator) commerceIndicator = "internet";
+  }
+
+  // Extraer valores criptográficos de autenticación requeridos por BAC y CyberSource
+  var payConsumerAuth = {};
+  if (cai.authenticationTransactionId) {
+    payConsumerAuth.authenticationTransactionId = cai.authenticationTransactionId;
+  }
+  if (cai.cavv) {
+    payConsumerAuth.cavv = cai.cavv;
+  }
+  if (cai.ucafAuthenticationData) {
+    payConsumerAuth.ucafAuthenticationData = cai.ucafAuthenticationData;
+  }
+  if (cai.ucafCollectionIndicator) {
+    payConsumerAuth.ucafCollectionIndicator = cai.ucafCollectionIndicator;
+  }
+  // ECI (05 para Visa/AMEX, 02 para Mastercard)
+  payConsumerAuth.eciRaw = String(cai.eciRaw || cai.eci || fallbackEci);
+  if (cai.xid) {
+    payConsumerAuth.xid = cai.xid;
+  }
+  if (cai.directoryServerTransactionId) {
+    payConsumerAuth.directoryServerTransactionId = cai.directoryServerTransactionId;
+  }
+  if (cai.specificationVersion) {
+    payConsumerAuth.specificationVersion = cai.specificationVersion;
   }
 
   var payPayload = {
@@ -206,9 +244,7 @@ function handleCyberSourcePayment(data) {
         phoneNumber: customer.phoneNumber || "50200000000"
       }
     },
-    consumerAuthenticationInformation: {
-      authenticationTransactionId: authTxnId
-    }
+    consumerAuthenticationInformation: payConsumerAuth
   };
 
   var payRes = callCyberSource(host, "/pts/v2/payments", payPayload, merchantId, keyId, sharedSecret);

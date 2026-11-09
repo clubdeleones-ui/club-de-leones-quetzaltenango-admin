@@ -57,6 +57,25 @@ export const CyberSourcePaymentModal: React.FC<CyberSourcePaymentModalProps> = (
 
   // Detect card brand
   const detectedBrand = cybersourceService.detectCardBrand(cardNumber);
+  const isTestMode = cybersourceService.getTestMode();
+
+  const fillTestCard = (brandType: 'visa' | 'mastercard' | 'amex') => {
+    if (brandType === 'visa') {
+      setCardNumber('4000 0000 0000 2701');
+      setExpiry('01/28');
+      setCvv('123');
+    } else if (brandType === 'mastercard') {
+      setCardNumber('5200 0000 0000 2235');
+      setExpiry('01/28');
+      setCvv('123');
+    } else if (brandType === 'amex') {
+      setCardNumber('3400 0000 0002 708');
+      setExpiry('01/28');
+      setCvv('1234');
+    }
+    setErrorMsg(null);
+    setCuotasWarning(null);
+  };
 
   // Reset states on open
   useEffect(() => {
@@ -294,6 +313,47 @@ export const CyberSourcePaymentModal: React.FC<CyberSourcePaymentModalProps> = (
                       ⚠️ {cuotasWarning}
                     </p>
                   )}
+                </div>
+              )}
+
+              {/* Selector de Tarjetas de Certificación 3DS (Solo Modo Sandbox) */}
+              {isTestMode && (
+                <div className="p-3 bg-amber-50/90 border border-amber-200/90 rounded-2xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+                      <Sparkles size={13} className="text-amber-600" />
+                      Pruebas de Certificación 3DS BAC
+                    </span>
+                    <span className="text-[9px] bg-amber-200/70 text-amber-900 font-extrabold px-1.5 py-0.5 rounded">
+                      Sandbox EBC
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => fillTestCard('visa')}
+                      className="px-2 py-1.5 bg-white hover:bg-blue-50 border border-amber-200 hover:border-blue-500 rounded-xl text-[10px] font-bold text-slate-700 hover:text-blue-900 shadow-xs transition-all text-center flex flex-col items-center"
+                    >
+                      <span className="text-blue-700 font-black">Visa</span>
+                      <span className="text-[9px] text-slate-500 font-mono">ECI 05</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fillTestCard('mastercard')}
+                      className="px-2 py-1.5 bg-white hover:bg-orange-50 border border-amber-200 hover:border-orange-500 rounded-xl text-[10px] font-bold text-slate-700 hover:text-orange-900 shadow-xs transition-all text-center flex flex-col items-center"
+                    >
+                      <span className="text-orange-700 font-black">Mastercard</span>
+                      <span className="text-[9px] text-slate-500 font-mono">ECI 02</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fillTestCard('amex')}
+                      className="px-2 py-1.5 bg-white hover:bg-cyan-50 border border-amber-200 hover:border-cyan-600 rounded-xl text-[10px] font-bold text-slate-700 hover:text-cyan-900 shadow-xs transition-all text-center flex flex-col items-center"
+                    >
+                      <span className="text-cyan-800 font-black">AMEX</span>
+                      <span className="text-[9px] text-slate-500 font-mono">ECI 05</span>
+                    </button>
+                  </div>
                 </div>
               )}
 
