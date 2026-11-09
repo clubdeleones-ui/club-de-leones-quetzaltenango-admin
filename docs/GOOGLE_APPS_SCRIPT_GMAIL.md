@@ -291,7 +291,8 @@ function callCyberSource(host, resource, payloadObj, merchantId, keyId, sharedSe
                         "v-c-merchant-id: " + merchantId;
 
   var decodedSecret = Utilities.base64Decode(sharedSecret);
-  var hmacBytes = Utilities.computeHmacSha256Signature(signatureString, decodedSecret);
+  var signatureBytes = Utilities.newBlob(signatureString).getBytes();
+  var hmacBytes = Utilities.computeHmacSha256Signature(signatureBytes, decodedSecret);
   var signature = Utilities.base64Encode(hmacBytes);
 
   var signatureHeaderValue = 'keyid="' + keyId + '", algorithm="HmacSHA256", headers="' + signatureHeaders + '", signature="' + signature + '"';
@@ -302,7 +303,6 @@ function callCyberSource(host, resource, payloadObj, merchantId, keyId, sharedSe
     headers: {
       "v-c-merchant-id": merchantId,
       "date": date,
-      "host": host,
       "digest": digest,
       "signature": signatureHeaderValue
     },
