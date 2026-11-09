@@ -1,7 +1,7 @@
 import { ConvencionRegistro } from '../types';
 
-export const DEFAULT_GMAIL_SENDER = 'convencionleones27@gmail.com';
-export const DEFAULT_GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwN-mwP87KpWN7AFjNL5W6bfi_Cc0h2RtZzufyOo15kHlEW-G_sRB7DSW2P1vJujV3V/exec';
+export const DEFAULT_GMAIL_SENDER = 'clubdeleonesquetzaltenango@gmail.com';
+export const DEFAULT_GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxHavZC9GLdknX0shmNBOyElfg75WPeJfqnHePpP1i9I2raAsMruyWj37SXdJppMOk/exec';
 
 export type TipoCorreoConvencion = 
   | 'pre_registro' 

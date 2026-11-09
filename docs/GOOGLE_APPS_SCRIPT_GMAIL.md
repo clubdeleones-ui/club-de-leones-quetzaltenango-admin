@@ -1,7 +1,10 @@
 # Backend Serverless: Google Apps Script (Gmail + Pasarela CyberSource / BAC)
 
-Este script se instala en [script.google.com](https://script.google.com/) con la cuenta oficial:
-`convencionleones27@gmail.com`
+Este script está instalado y activo en [script.google.com](https://script.google.com/) con la cuenta oficial:
+`clubdeleonesquetzaltenango@gmail.com`
+
+**URL de producción activa de la Web App:**
+`https://script.google.com/macros/s/AKfycbxHavZC9GLdknX0shmNBOyElfg75WPeJfqnHePpP1i9I2raAsMruyWj37SXdJppMOk/exec`
 
 Cumple una doble función fundamental sin costos de infraestructura:
 1. **Envío de correos oficiales mediante Gmail**: Notificaciones, confirmaciones de pre-registro, comprobantes de pago con Entrada QR y recordatorios masivos.
