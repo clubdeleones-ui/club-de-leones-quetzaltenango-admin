@@ -443,6 +443,111 @@ Responde ÚNICAMENTE con un JSON válido con esta estructura:
       error: lastError || 'NETWORK_OR_API_ERROR'
     };
   }
+
+  /**
+   * Analiza una etiqueta nutricional o lista de ingredientes con Gemini Vision
+   * según los criterios de prevención y cuidado de diabetes 2025-2026 (ADA/EASD, OMS, FDA).
+   */
+  async analyzeNutritionLabel(base64Image: string, mimeType = 'image/jpeg'): Promise<NutritionLabelAnalysisResult> {
+    const apiKey = this.getApiKey();
+    if (!apiKey) {
+      throw new Error('NO_API_KEY');
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
+    const cleanBase64 = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
+
+    const prompt = `Eres un asistente de nutrición clínica basado en los Estándares ADA/EASD 2026, directrices de la OMS y alertas de la FDA sobre diabetes y salud cardiometabólica.
+Analiza la imagen de esta etiqueta nutricional, tabla de ingredientes o empaque de producto/suplemento.
+
+Evalúa específicamente si contiene:
+1. Azúcares libres / añadidos, jarabe de maíz de alta fructosa o carbohidratos simples elevados.
+2. Grasas trans industriales o aceites parcialmente hidrogenados.
+3. Polioles cuestionados: Eritritol o Xilitol (vinculados a reactividad plaquetaria/riesgo cardiovascular en dosis frecuentes).
+4. Edulcorantes no calóricos (aspartamo, sucralosa, acesulfame K, estevia en prevención).
+5. Sodio elevado (la OMS recomienda <2,000 mg/día y ADA <2,300 mg/día).
+6. Si es un suplemento "milagro" para bajar de peso o diabetes (alerta FDA por posible contaminación o falta de respaldo).
+
+Si la imagen NO muestra una etiqueta, tabla nutricional, ingredientes o producto alimenticio/suplemento legible, devuelve "legible": false.
+
+Responde ÚNICAMENTE con un JSON válido con esta estructura:
+{
+  "legible": true,
+  "productoDetectado": "Nombre o tipo de producto",
+  "veredicto": "recomendado",
+  "alertasDetectadas": ["Alerta 1", "Alerta 2"],
+  "analisisDetallado": "Explicación clara y práctica en 2-3 oraciones.",
+  "alternativaSaludable": "Sugerencia práctica de reemplazo o consumo moderado."
+}
+Nota: "veredicto" solo puede ser "recomendado", "precaucion" o "evitar".`;
+
+    const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+    let lastError = '';
+
+    for (const model of modelsToTry) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: [
+            {
+              inlineData: {
+                mimeType,
+                data: cleanBase64
+              }
+            },
+            prompt
+          ],
+          config: {
+            temperature: 0.2,
+            responseMimeType: "application/json"
+          }
+        });
+
+        const text = response.text || '';
+        let jsonStr = text.trim();
+        const firstBrace = jsonStr.indexOf('{');
+        const lastBrace = jsonStr.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1) {
+          jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
+        }
+
+        const parsed = JSON.parse(jsonStr);
+        if (parsed.legible === false) {
+          return {
+            success: false,
+            error: 'ETIQUETA_NO_LEGIBLE'
+          };
+        }
+
+        return {
+          success: true,
+          productoDetectado: parsed.productoDetectado || 'Producto analizado',
+          veredicto: ['recomendado', 'precaucion', 'evitar'].includes(parsed.veredicto) ? parsed.veredicto : 'precaucion',
+          alertasDetectadas: Array.isArray(parsed.alertasDetectadas) ? parsed.alertasDetectadas : [],
+          analisisDetallado: parsed.analisisDetallado || '',
+          alternativaSaludable: parsed.alternativaSaludable || ''
+        };
+      } catch (err: any) {
+        lastError = err?.message || String(err);
+        console.warn(`Intento analyzeNutritionLabel con ${model} falló:`, lastError);
+      }
+    }
+
+    return {
+      success: false,
+      error: lastError || 'NETWORK_OR_API_ERROR'
+    };
+  }
+}
+
+export interface NutritionLabelAnalysisResult {
+  success: boolean;
+  productoDetectado?: string;
+  veredicto?: 'recomendado' | 'precaucion' | 'evitar';
+  alertasDetectadas?: string[];
+  analisisDetallado?: string;
+  alternativaSaludable?: string;
+  error?: string;
 }
 
 export interface LicensePlateRecognitionResult {

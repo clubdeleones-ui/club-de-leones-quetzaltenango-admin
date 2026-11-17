@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   HeartPulse,
@@ -24,18 +24,36 @@ import {
   Activity,
   Scale,
   Droplets,
-  Pill,
-  Info,
   ArrowLeft,
   Flame,
   Coffee,
   Utensils,
-  Stethoscope
+  Stethoscope,
+  Camera,
+  Loader2,
+  Plus,
+  Trash2,
+  Calendar,
+  PhoneCall,
+  Type,
+  UtensilsCrossed,
+  TrendingUp
 } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ReferenceLine
+} from 'recharts';
 import { safeSetItem } from '../utils/storage';
+import { geminiService, NutritionLabelAnalysisResult } from '../services/geminiService';
 
 type ProfileMode = 'prevencion' | 'cuidado';
-type MainTab = 'planificador' | 'calculadoras' | 'semaforo' | 'avances';
+type MainTab = 'planificador' | 'mi_plato' | 'bitacora' | 'calculadoras' | 'semaforo' | 'avances';
 
 interface RoutineTask {
   id: string;
@@ -43,6 +61,16 @@ interface RoutineTask {
   title: string;
   detail: string;
   mode: 'both' | 'prevencion' | 'cuidado';
+}
+
+interface GlucoseLogEntry {
+  id: string;
+  dateTime: string;
+  moment: 'Ayunas' | '1h Post-comida' | '2h Post-comida' | 'Antes de dormir';
+  glucose: number;
+  systolic?: number;
+  diastolic?: number;
+  note?: string;
 }
 
 const ROUTINE_TASKS: RoutineTask[] = [
@@ -206,11 +234,40 @@ const PRODUCTS_LIST: ProductItem[] = [
   }
 ];
 
+const LOCAL_PLATE_OPTIONS = {
+  fibra: [
+    'Ensalada fresca de berro, pepino y tomate con limón',
+    'Hierbas cocidas (quilete/macuy, acelga o espinaca)',
+    'Ejotes, güicoy y brócoli al vapor',
+    'Chirmol asado con cebolla, cilantro y rábano'
+  ],
+  proteina: [
+    'Pechuga de pollo o pavo asada (tamaño de la palma)',
+    '2 huevos revueltos o duros con queso fresco',
+    'Filete de pescado a la plancha con ajo y limón',
+    '½ taza de frijol negro parado (fibra prebiótica + proteína)'
+  ],
+  carbohidrato: [
+    '1 o 2 tortillas de maíz nixtamalizado (máximo)',
+    '½ taza de arroz integral o camote cocido',
+    '¼ de aguacate (grasa cardiosaludable) + 1 tortilla',
+    '1 cucharadita de pepitoria molida + 1 tortilla'
+  ],
+  bebida: [
+    'Agua pura fría o al tiempo',
+    'Té de jamaica o manzanilla natural sin azúcar ni edulcorantes',
+    'Agua con rodajas de limón y menta'
+  ]
+};
+
 const STORAGE_KEY = 'club_leones_diabetes_planner_v1';
+const LOGS_STORAGE_KEY = 'club_leones_diabetes_logs_v1';
 
 const HerramientasDiabetes: React.FC = () => {
   const [profileMode, setProfileMode] = useState<ProfileMode>('prevencion');
   const [activeTab, setActiveTab] = useState<MainTab>('planificador');
+  const [largeText, setLargeText] = useState<boolean>(false);
+  const [showEmergencyCard, setShowEmergencyCard] = useState<boolean>(false);
 
   // Planificador State
   const [completedIds, setCompletedIds] = useState<string[]>([]);
@@ -221,6 +278,20 @@ const HerramientasDiabetes: React.FC = () => {
   const [dinnerTime, setDinnerTime] = useState<string>('18:30');
   const [sleepTime, setSleepTime] = useState<string>('22:00');
   const [usesInsulinOrSulfonylurea, setUsesInsulinOrSulfonylurea] = useState<boolean>(false);
+
+  // Mi Plato Guatemalteco State
+  const [selectedFibra, setSelectedFibra] = useState<string>(LOCAL_PLATE_OPTIONS.fibra[0]);
+  const [selectedProteina, setSelectedProteina] = useState<string>(LOCAL_PLATE_OPTIONS.proteina[0]);
+  const [selectedCarb, setSelectedCarb] = useState<string>(LOCAL_PLATE_OPTIONS.carbohidrato[2]);
+  const [selectedBebida, setSelectedBebida] = useState<string>(LOCAL_PLATE_OPTIONS.bebida[0]);
+
+  // Bitácora Histórica State
+  const [logs, setLogs] = useState<GlucoseLogEntry[]>([]);
+  const [newLogMoment, setNewLogMoment] = useState<GlucoseLogEntry['moment']>('Ayunas');
+  const [newLogGlucose, setNewLogGlucose] = useState<string>('');
+  const [newLogSys, setNewLogSys] = useState<string>('');
+  const [newLogDia, setNewLogDia] = useState<string>('');
+  const [newLogNote, setNewLogNote] = useState<string>('');
 
   // Calculadoras State
   const [weightUnit, setWeightUnit] = useState<'kg' | 'lb'>('lb');
@@ -245,9 +316,13 @@ const HerramientasDiabetes: React.FC = () => {
     age50: false
   });
 
-  // Semáforo State
+  // Semáforo + Escáner IA Etiquetas
   const [productQuery, setProductQuery] = useState<string>('');
   const [productFilter, setProductFilter] = useState<'all' | 'peligro' | 'evitar' | 'vigilar'>('all');
+  const labelInputRef = useRef<HTMLInputElement>(null);
+  const [analyzingLabel, setAnalyzingLabel] = useState<boolean>(false);
+  const [labelResult, setLabelResult] = useState<NutritionLabelAnalysisResult | null>(null);
+  const [labelError, setLabelError] = useState<string | null>(null);
 
   // Avances Acordeón
   const [openAdvanceId, setOpenAdvanceId] = useState<string>('tipo5');
@@ -266,6 +341,12 @@ const HerramientasDiabetes: React.FC = () => {
         if (parsed.lunchTime) setLunchTime(parsed.lunchTime);
         if (parsed.dinnerTime) setDinnerTime(parsed.dinnerTime);
         if (parsed.sleepTime) setSleepTime(parsed.sleepTime);
+      }
+
+      const savedLogs = localStorage.getItem(LOGS_STORAGE_KEY);
+      if (savedLogs) {
+        const parsedLogs = JSON.parse(savedLogs);
+        if (Array.isArray(parsedLogs)) setLogs(parsedLogs);
       }
     } catch (_) {}
   }, []);
@@ -287,6 +368,10 @@ const HerramientasDiabetes: React.FC = () => {
     );
   }, [profileMode, completedIds, aerobicMinutes, strengthSessions, breakfastTime, lunchTime, dinnerTime, sleepTime]);
 
+  useEffect(() => {
+    safeSetItem(LOGS_STORAGE_KEY, JSON.stringify(logs));
+  }, [logs]);
+
   const visibleTasks = useMemo(
     () => ROUTINE_TASKS.filter(t => t.mode === 'both' || t.mode === profileMode),
     [profileMode]
@@ -302,13 +387,108 @@ const HerramientasDiabetes: React.FC = () => {
     return Math.round((done / visibleTasks.length) * 100);
   }, [visibleTasks, completedIds]);
 
-  // Calcular hora límite de cafeína (12 horas antes de dormir según ADA 2026)
   const caffeineCutoff = useMemo(() => {
     const [h, m] = sleepTime.split(':').map(Number);
     if (isNaN(h) || isNaN(m)) return '10:00';
     const cutoffH = (h - 12 + 24) % 24;
     return `${String(cutoffH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   }, [sleepTime]);
+
+  // Bitácora handlers
+  const handleAddLog = (e: React.FormEvent) => {
+    e.preventDefault();
+    const g = parseFloat(newLogGlucose);
+    if (isNaN(g) || g < 20 || g > 650) return;
+
+    const entry: GlucoseLogEntry = {
+      id: `log-${Date.now()}`,
+      dateTime: new Date().toISOString(),
+      moment: newLogMoment,
+      glucose: Math.round(g),
+      systolic: newLogSys ? parseInt(newLogSys, 10) : undefined,
+      diastolic: newLogDia ? parseInt(newLogDia, 10) : undefined,
+      note: newLogNote.trim() || undefined
+    };
+
+    setLogs(prev => [entry, ...prev].slice(0, 90));
+    setNewLogGlucose('');
+    setNewLogSys('');
+    setNewLogDia('');
+    setNewLogNote('');
+  };
+
+  const handleDeleteLog = (id: string) => {
+    setLogs(prev => prev.filter(l => l.id !== id));
+  };
+
+  const logStats = useMemo(() => {
+    if (logs.length === 0) return null;
+    const avgGlucose = Math.round(logs.reduce((acc, l) => acc + l.glucose, 0) / logs.length);
+    const inRange = logs.filter(l => l.glucose >= 70 && l.glucose <= 180).length;
+    const belowRange = logs.filter(l => l.glucose < 70).length;
+    return {
+      count: logs.length,
+      avgGlucose,
+      tirPct: Math.round((inRange / logs.length) * 100),
+      tbrPct: Number(((belowRange / logs.length) * 100).toFixed(1))
+    };
+  }, [logs]);
+
+  const chartData = useMemo(() => {
+    return [...logs]
+      .slice(0, 20)
+      .reverse()
+      .map(l => {
+        const d = new Date(l.dateTime);
+        return {
+          label: `${d.getDate()}/${d.getMonth() + 1} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
+          glucose: l.glucose,
+          moment: l.moment
+        };
+      });
+  }, [logs]);
+
+  // Escáner IA de Etiquetas
+  const handleLabelImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAnalyzingLabel(true);
+    setLabelResult(null);
+    setLabelError(null);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result as string;
+        try {
+          const res = await geminiService.analyzeNutritionLabel(base64, file.type || 'image/jpeg');
+          if (!res.success) {
+            setLabelError(
+              res.error === 'ETIQUETA_NO_LEGIBLE'
+                ? 'No logramos leer una tabla nutricional o lista de ingredientes clara. Acerca un poco más la cámara con buena luz.'
+                : 'No se pudo completar el análisis en este momento. Verifica tu conexión o intenta con otra foto.'
+            );
+          } else {
+            setLabelResult(res);
+          }
+        } catch (err: any) {
+          setLabelError(
+            err?.message === 'NO_API_KEY'
+              ? 'El servicio de análisis IA no está configurado en este entorno.'
+              : 'Ocurrió un error al analizar la etiqueta.'
+          );
+        } finally {
+          setAnalyzingLabel(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      setAnalyzingLabel(false);
+      setLabelError('No se pudo leer el archivo seleccionado.');
+    } finally {
+      e.target.value = '';
+    }
+  };
 
   // Cálculos Antropométricos
   const weightKg = useMemo(() => {
@@ -344,7 +524,6 @@ const HerramientasDiabetes: React.FC = () => {
     return Math.round(weightKg * 1.1);
   }, [weightKg, rapidWeightLoss]);
 
-  // Evaluación metas clínicas
   const hba1cNum = parseFloat(hba1c) || 0;
   const tirNum = parseFloat(tir) || 0;
   const tbrNum = parseFloat(tbr) || 0;
@@ -371,7 +550,8 @@ const HerramientasDiabetes: React.FC = () => {
 
   const handleShareWhatsApp = () => {
     const modeLabel = profileMode === 'prevencion' ? 'Prevención' : 'Cuidado Activo';
-    const text = `Mi Plan Diario de Salud (${modeLabel} - Guía ADA 2026 Club de Leones Xela):\n` +
+    const text =
+      `Mi Plan Diario de Salud (${modeLabel} - Guía ADA 2026 Club de Leones Xela):\n` +
       `• Cumplimiento de hoy: ${progressPct}%\n` +
       `• Actividad aeróbica semanal: ${aerobicMinutes}/150 min\n` +
       `• Sesiones de fuerza: ${strengthSessions}/3\n` +
@@ -382,12 +562,12 @@ const HerramientasDiabetes: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-16 print:bg-white">
+    <div className={`min-h-screen bg-slate-50 pb-16 print:bg-white ${largeText ? 'text-[17px]' : ''}`}>
       {/* Hero Header */}
       <section className="bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white pt-8 pb-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden print:hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.16),transparent_45%)]" />
         <div className="max-w-[1240px] mx-auto relative z-10 space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2.5">
             <Link
               to="/herramientas"
               className="inline-flex items-center space-x-2 text-xs font-bold text-blue-200 hover:text-yellow-300 transition-colors"
@@ -396,15 +576,40 @@ const HerramientasDiabetes: React.FC = () => {
               <span>Volver a Herramientas</span>
             </Link>
 
-            <a
-              href="/docs/Avances%20Recientes%20Sobre%20la%20Diabetes.pdf"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center space-x-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all"
-            >
-              <FileDown size={15} className="text-yellow-300" />
-              <span>Descargar Guía Científica PDF (2025–2026)</span>
-            </a>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setLargeText(v => !v)}
+                className={`inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-black border transition-all ${
+                  largeText
+                    ? 'bg-yellow-400 text-blue-950 border-yellow-300'
+                    : 'bg-white/10 hover:bg-white/20 text-white border-white/20'
+                }`}
+                title="Aumentar tamaño de letra para lectura cómoda"
+              >
+                <Type size={14} />
+                <span>{largeText ? 'Letra Normal' : 'Letra Grande'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowEmergencyCard(v => !v)}
+                className="inline-flex items-center space-x-1.5 bg-rose-600/90 hover:bg-rose-500 border border-rose-400/50 text-white px-3 py-2 rounded-xl text-xs font-black transition-all"
+              >
+                <PhoneCall size={14} />
+                <span>Emergencia (&lt;70 mg/dL)</span>
+              </button>
+
+              <a
+                href="/docs/Avances%20Recientes%20Sobre%20la%20Diabetes.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center space-x-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all"
+              >
+                <FileDown size={15} className="text-yellow-300" />
+                <span>Guía PDF (2025–2026)</span>
+              </a>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
@@ -417,7 +622,7 @@ const HerramientasDiabetes: React.FC = () => {
                 Diabetes: Prevención y Cuidado Interactivo
               </h1>
               <p className="text-slate-200 text-sm sm:text-base leading-relaxed max-w-2xl">
-                Planifica tus rutinas diarias de alimentación, ejercicio y sueño, evalúa tus metas clínicas y consulta alertas sanitarias actualizadas en un solo lugar.
+                Planifica tus rutinas diarias de alimentación, ejercicio y sueño, registra tu bitácora para tu médico, escanea etiquetas con IA y consulta alertas sanitarias 2026.
               </p>
             </div>
 
@@ -465,14 +670,61 @@ const HerramientasDiabetes: React.FC = () => {
         </div>
       </section>
 
+      {/* Tarjeta de Emergencia Desplegable */}
+      {showEmergencyCard && (
+        <div className="max-w-[1240px] mx-auto px-3 sm:px-6 lg:px-8 pt-6">
+          <div className="bg-rose-50 border-2 border-rose-300 rounded-3xl p-5 sm:p-6 space-y-4 shadow-lg">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-lg font-black text-rose-900 flex items-center space-x-2">
+                <AlertTriangle size={22} className="text-rose-600" />
+                <span>Tarjeta de Emergencia: ¿Qué hacer ante Hipoglucemia (&lt;70 mg/dL)?</span>
+              </h2>
+              <div className="flex gap-2 print:hidden">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-3 py-1.5 bg-rose-700 text-white rounded-xl text-xs font-black inline-flex items-center space-x-1"
+                >
+                  <Printer size={14} />
+                  <span>Imprimir Tarjeta</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowEmergencyCard(false)}
+                  className="px-3 py-1.5 bg-white text-rose-900 border border-rose-200 rounded-xl text-xs font-bold"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-rose-950">
+              <div className="bg-white p-4 rounded-2xl border border-rose-200 space-y-1.5">
+                <div className="font-black text-sm text-rose-700">1. Señales de Alerta</div>
+                <p>Temblor, sudor frío, mareo, palpitaciones, confusión repentina o visión borrosa. Mide tu glucosa si es posible.</p>
+              </div>
+              <div className="bg-white p-4 rounded-2xl border border-rose-200 space-y-1.5">
+                <div className="font-black text-sm text-rose-700">2. Regla de los 15 (Si está consciente)</div>
+                <p>Consume 15 g de azúcar rápida (½ vaso de jugo o agua con 1 cda de azúcar/miel). Espera 15 min y vuelve a medir.</p>
+              </div>
+              <div className="bg-white p-4 rounded-2xl border border-rose-200 space-y-1.5">
+                <div className="font-black text-sm text-rose-700">3. Emergencias Quetzaltenango</div>
+                <p>Si hay pérdida de conciencia NO des líquidos. Llama de inmediato: <strong>Bomberos Voluntarios: 122</strong> | <strong>Bomberos Municipales: 123</strong> | <strong>Cruz Roja: 125</strong>.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Navegación de Herramientas */}
       <div className="sticky top-20 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs print:hidden">
         <div className="max-w-[1240px] mx-auto px-3 sm:px-6 lg:px-8">
           <div className="flex overflow-x-auto no-scrollbar py-2.5 gap-2">
             {[
-              { id: 'planificador', label: 'Planificador 5S & Rutina', icon: CalendarCheck },
-              { id: 'calculadoras', label: 'Calculadoras & Metas', icon: Calculator },
-              { id: 'semaforo', label: 'Productos a Evitar', icon: AlertTriangle },
+              { id: 'planificador', label: 'Planificador 5S', icon: CalendarCheck },
+              { id: 'mi_plato', label: 'Mi Plato Saludable', icon: UtensilsCrossed },
+              { id: 'bitacora', label: 'Bitácora & Gráfica', icon: TrendingUp },
+              { id: 'calculadoras', label: 'Calculadoras 2026', icon: Calculator },
+              { id: 'semaforo', label: 'Etiquetas IA & Alertas', icon: AlertTriangle },
               { id: 'avances', label: 'Avances 2025–2026', icon: Sparkles }
             ].map(tab => {
               const Icon = tab.icon;
@@ -482,7 +734,7 @@ const HerramientasDiabetes: React.FC = () => {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id as MainTab)}
-                  className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-black whitespace-nowrap transition-all shrink-0 ${
+                  className={`flex items-center space-x-2 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-black whitespace-nowrap transition-all shrink-0 ${
                     active
                       ? 'bg-blue-900 text-white shadow-md'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
@@ -500,7 +752,7 @@ const HerramientasDiabetes: React.FC = () => {
       {/* Contenido Principal */}
       <div className="max-w-[1240px] mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-8">
         {/* Aviso Médico */}
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-start space-x-3 text-xs text-blue-950">
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-start space-x-3 text-xs text-blue-950 print:hidden">
           <Stethoscope size={20} className="text-blue-700 shrink-0 mt-0.5" />
           <p className="leading-relaxed font-medium">
             <strong>Aviso de Salud Comunitaria:</strong> Esta herramienta interactiva resume evidencia médica 2025–2026 (ADA/EASD, OMS, IDF) para ayudarte a organizar tus hábitos. <strong>No sustituye el criterio de tu médico</strong>; nunca cambies dosis ni suspendas medicamentos sin supervisión profesional.
@@ -510,7 +762,6 @@ const HerramientasDiabetes: React.FC = () => {
         {/* TAB 1: PLANIFICADOR 5S Y CRONONUTRICIÓN */}
         {activeTab === 'planificador' && (
           <div className="space-y-6 animate-in fade-in duration-200">
-            {/* Progreso del día + Botones de acción */}
             <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-7 flex flex-col md:flex-row md:items-center justify-between gap-5">
               <div className="space-y-2 flex-1">
                 <div className="flex items-center justify-between">
@@ -560,7 +811,6 @@ const HerramientasDiabetes: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Columna Izquierda: Checklist 5S */}
               <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-7 space-y-4">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <div>
@@ -611,16 +861,13 @@ const HerramientasDiabetes: React.FC = () => {
                 </div>
               </div>
 
-              {/* Columna Derecha: Contadores Semanales + Crononutrición */}
               <div className="lg:col-span-5 space-y-6">
-                {/* Rastreador Semanal 150 min + Fuerza */}
                 <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-6 space-y-5">
                   <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center space-x-2">
                     <Flame size={20} className="text-orange-500" />
                     <span>Metas Físicas Semanales</span>
                   </h3>
 
-                  {/* Aeróbico */}
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs font-bold">
                       <span className="text-slate-700 flex items-center space-x-1.5">
@@ -656,7 +903,6 @@ const HerramientasDiabetes: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Fuerza */}
                   <div className="pt-3 border-t border-slate-100 space-y-2">
                     <div className="flex justify-between text-xs font-bold">
                       <span className="text-slate-700 flex items-center space-x-1.5">
@@ -684,7 +930,6 @@ const HerramientasDiabetes: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Crononutrición y Sueño */}
                 <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-6 space-y-4">
                   <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center space-x-2">
                     <Clock size={20} className="text-teal-600" />
@@ -748,7 +993,6 @@ const HerramientasDiabetes: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Regla de cafeína 12h */}
                   <div className="p-3 bg-slate-100 rounded-2xl flex items-center space-x-3 text-xs text-slate-700">
                     <Coffee size={18} className="text-amber-700 shrink-0" />
                     <span>
@@ -756,7 +1000,6 @@ const HerramientasDiabetes: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* Alerta de seguridad insulina / sulfonilureas */}
                   <label className="flex items-start space-x-2.5 p-3 bg-rose-50 border border-rose-200 rounded-2xl cursor-pointer text-xs text-rose-900">
                     <input
                       type="checkbox"
@@ -777,10 +1020,302 @@ const HerramientasDiabetes: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 2: CALCULADORAS Y EVALUADORES CLÍNICOS */}
+        {/* TAB 2: CONSTRUCTOR MI PLATO SALUDABLE GUATEMALTECO */}
+        {activeTab === 'mi_plato' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in duration-200">
+            <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-7 space-y-5">
+              <div>
+                <h2 className="text-lg sm:text-xl font-black text-slate-900">
+                  Constructor de "Mi Plato Saludable Guatemalteco"
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Combina alimentos locales siguiendo los patrones Mediterráneo y Bajo en Carbohidratos respaldados por la ADA 2026 y la ciencia del microbioma.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-black uppercase text-emerald-800 block mb-1.5">
+                    1. Medio Plato (50%): Fibra Vegetal & Microbioma (Come esto primero)
+                  </label>
+                  <select
+                    value={selectedFibra}
+                    onChange={e => setSelectedFibra(e.target.value)}
+                    className="w-full p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs sm:text-sm font-bold text-slate-800"
+                  >
+                    {LOCAL_PLATE_OPTIONS.fibra.map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-black uppercase text-blue-900 block mb-1.5">
+                    2. Un Cuarto (25%): Proteína Protectora de Masa Muscular
+                  </label>
+                  <select
+                    value={selectedProteina}
+                    onChange={e => setSelectedProteina(e.target.value)}
+                    className="w-full p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs sm:text-sm font-bold text-slate-800"
+                  >
+                    {LOCAL_PLATE_OPTIONS.proteina.map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-black uppercase text-amber-900 block mb-1.5">
+                    3. Un Cuarto (25%): Carbohidrato Medido + Grasa Saludable
+                  </label>
+                  <select
+                    value={selectedCarb}
+                    onChange={e => setSelectedCarb(e.target.value)}
+                    className="w-full p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs sm:text-sm font-bold text-slate-800"
+                  >
+                    {LOCAL_PLATE_OPTIONS.carbohidrato.map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-black uppercase text-cyan-900 block mb-1.5">
+                    4. Bebida Sin Azúcares ni Edulcorantes
+                  </label>
+                  <select
+                    value={selectedBebida}
+                    onChange={e => setSelectedBebida(e.target.value)}
+                    className="w-full p-3 bg-cyan-50 border border-cyan-200 rounded-xl text-xs sm:text-sm font-bold text-slate-800"
+                  >
+                    {LOCAL_PLATE_OPTIONS.bebida.map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="lg:col-span-5 bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-7 flex flex-col justify-between space-y-5">
+              <div className="space-y-4">
+                <h3 className="text-base font-black text-slate-900 text-center">Tu Menú Armado de Hoy</h3>
+                <div className="w-56 h-56 mx-auto rounded-full border-8 border-slate-200 shadow-inner overflow-hidden flex flex-col">
+                  <div className="h-1/2 bg-emerald-500 text-white p-3 flex flex-col items-center justify-center text-center border-b-4 border-white">
+                    <span className="text-[10px] font-black uppercase">50% Fibra</span>
+                    <span className="text-[11px] font-bold leading-tight line-clamp-2 mt-0.5">{selectedFibra}</span>
+                  </div>
+                  <div className="h-1/2 flex">
+                    <div className="w-1/2 bg-blue-600 text-white p-2 flex flex-col items-center justify-center text-center border-r-2 border-white">
+                      <span className="text-[9px] font-black uppercase">25% Proteína</span>
+                      <span className="text-[10px] font-bold leading-tight line-clamp-2 mt-0.5">{selectedProteina}</span>
+                    </div>
+                    <div className="w-1/2 bg-amber-400 text-blue-950 p-2 flex flex-col items-center justify-center text-center border-l-2 border-white">
+                      <span className="text-[9px] font-black uppercase">25% Medido</span>
+                      <span className="text-[10px] font-bold leading-tight line-clamp-2 mt-0.5">{selectedCarb}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-center text-xs font-bold text-cyan-800 bg-cyan-50 py-2 px-3 rounded-xl border border-cyan-100">
+                  🥤 Acompañar con: {selectedBebida}
+                </div>
+              </div>
+
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs text-slate-700 space-y-1.5">
+                <div className="font-black text-slate-900">💡 Consejo de Orden Alimentario:</div>
+                <p className="leading-relaxed">
+                  Empieza comiendo la porción verde (fibra), sigue con la proteína y deja la tortilla/carbohidrato para el final: esto atenúa los picos de glucosa después de comer y nutre tu microbioma intestinal.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: BITÁCORA HISTÓRICA + GRÁFICA + REPORTE MÉDICO */}
+        {activeTab === 'bitacora' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <form
+                onSubmit={handleAddLog}
+                className="lg:col-span-5 bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-6 space-y-4 print:hidden"
+              >
+                <h2 className="text-lg font-black text-slate-900 flex items-center space-x-2">
+                  <Plus size={20} className="text-blue-700" />
+                  <span>Registrar Medición</span>
+                </h2>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Momento del día</label>
+                    <select
+                      value={newLogMoment}
+                      onChange={e => setNewLogMoment(e.target.value as any)}
+                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800"
+                    >
+                      <option value="Ayunas">En Ayunas</option>
+                      <option value="1h Post-comida">1 hora después de comer (Marcador precoz)</option>
+                      <option value="2h Post-comida">2 horas después de comer</option>
+                      <option value="Antes de dormir">Antes de dormir</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Glucosa (mg/dL)*</label>
+                    <input
+                      type="number"
+                      required
+                      min={20}
+                      max={650}
+                      value={newLogGlucose}
+                      onChange={e => setNewLogGlucose(e.target.value)}
+                      placeholder="112"
+                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black text-slate-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Presión (Opcional)</label>
+                    <div className="flex gap-1">
+                      <input
+                        type="number"
+                        value={newLogSys}
+                        onChange={e => setNewLogSys(e.target.value)}
+                        placeholder="120"
+                        className="w-1/2 px-2 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-center"
+                      />
+                      <input
+                        type="number"
+                        value={newLogDia}
+                        onChange={e => setNewLogDia(e.target.value)}
+                        placeholder="80"
+                        className="w-1/2 px-2 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-center"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Nota breve (opcional)</label>
+                    <input
+                      type="text"
+                      value={newLogNote}
+                      onChange={e => setNewLogNote(e.target.value)}
+                      placeholder="Ej. Caminé 20 min después de almorzar"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-blue-900 hover:bg-blue-800 text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition-colors"
+                >
+                  Guardar en Mi Bitácora
+                </button>
+              </form>
+
+              <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-6 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h2 className="text-lg font-black text-slate-900">Tendencia Glucémica (Meta 70–180 mg/dL)</h2>
+                    <p className="text-xs text-slate-500">Resumen automático para llevar a tu consulta médica</p>
+                  </div>
+                  {logs.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => window.print()}
+                      className="inline-flex items-center space-x-1.5 px-3.5 py-2 bg-slate-800 text-white rounded-xl text-xs font-black print:hidden"
+                    >
+                      <Printer size={14} />
+                      <span>Imprimir Reporte Médico</span>
+                    </button>
+                  )}
+                </div>
+
+                {logStats ? (
+                  <>
+                    <div className="grid grid-cols-3 gap-2.5 text-center">
+                      <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                        <span className="text-[10px] font-black uppercase text-slate-500">Promedio</span>
+                        <div className="text-xl font-black text-slate-900">{logStats.avgGlucose} mg/dL</div>
+                      </div>
+                      <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200">
+                        <span className="text-[10px] font-black uppercase text-emerald-800">En Rango (70–180)</span>
+                        <div className="text-xl font-black text-emerald-700">{logStats.tirPct}%</div>
+                      </div>
+                      <div className={`p-3 rounded-2xl border ${logStats.tbrPct < 1 ? 'bg-blue-50 border-blue-200 text-blue-900' : 'bg-rose-50 border-rose-200 text-rose-800'}`}>
+                        <span className="text-[10px] font-black uppercase">Bajo &lt;70 mg/dL</span>
+                        <div className="text-xl font-black">{logStats.tbrPct}%</div>
+                      </div>
+                    </div>
+
+                    <div className="h-56 w-full pt-2">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={chartData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                          <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+                          <YAxis domain={[50, 'auto']} tick={{ fontSize: 10 }} />
+                          <Tooltip />
+                          <ReferenceLine y={180} stroke="#f59e0b" strokeDasharray="4 4" />
+                          <ReferenceLine y={70} stroke="#ef4444" strokeDasharray="4 4" />
+                          <Line type="monotone" dataKey="glucose" stroke="#1e3a8a" strokeWidth={3} dot={{ r: 4 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </>
+                ) : (
+                  <div className="py-12 text-center text-slate-400 text-xs font-medium space-y-2">
+                    <TrendingUp size={32} className="mx-auto opacity-50" />
+                    <p>Aún no tienes lecturas registradas. Agrega tu primera medición para ver la gráfica y el porcentaje de Tiempo en Rango.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {logs.length > 0 && (
+              <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-6 space-y-3">
+                <h3 className="text-sm font-black uppercase tracking-wider text-slate-600">
+                  Últimos Registros Guardados ({logs.length})
+                </h3>
+                <div className="divide-y divide-slate-100">
+                  {logs.slice(0, 15).map(l => (
+                    <div key={l.id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`font-black px-2.5 py-1 rounded-lg ${
+                          l.glucose < 70
+                            ? 'bg-rose-100 text-rose-800'
+                            : l.glucose <= 180
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-amber-100 text-amber-900'
+                        }`}>
+                          {l.glucose} mg/dL
+                        </span>
+                        <span className="font-bold text-slate-800">{l.moment}</span>
+                        {l.systolic && l.diastolic && (
+                          <span className="text-slate-500 font-semibold">• PA: {l.systolic}/{l.diastolic}</span>
+                        )}
+                        <span className="text-slate-400">
+                          {new Date(l.dateTime).toLocaleString('es-GT', { dateStyle: 'short', timeStyle: 'short' })}
+                        </span>
+                        {l.note && <span className="text-slate-600 italic">— "{l.note}"</span>}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteLog(l.id)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors print:hidden"
+                        title="Eliminar registro"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 4: CALCULADORAS Y EVALUADORES CLÍNICOS */}
         {activeTab === 'calculadoras' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in duration-200">
-            {/* Calculadora 1: IMC, Meta Preventiva 5-7% y Proteína Protectora */}
             <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-7 space-y-5">
               <div className="flex items-center space-x-3">
                 <div className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
@@ -885,7 +1420,6 @@ const HerramientasDiabetes: React.FC = () => {
               )}
             </div>
 
-            {/* Calculadora 2: Evaluador de Metas Clínicas ADA 2026 */}
             <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-7 space-y-5">
               <div className="flex items-center space-x-3">
                 <div className="w-11 h-11 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
@@ -973,7 +1507,6 @@ const HerramientasDiabetes: React.FC = () => {
               </p>
             </div>
 
-            {/* Calculadora 3: Tamizaje Rápido de Sueño / Apnea (STOP-BANG ADA 2026) */}
             <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-7 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center space-x-3">
@@ -1023,9 +1556,102 @@ const HerramientasDiabetes: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 3: SEMÁFORO DE PRODUCTOS A EVITAR Y ALERTAS */}
+        {/* TAB 5: ESCÁNER DE ETIQUETAS IA & SEMÁFORO DE PRODUCTOS */}
         {activeTab === 'semaforo' && (
-          <div className="space-y-5 animate-in fade-in duration-200">
+          <div className="space-y-6 animate-in fade-in duration-200">
+            <div className="bg-gradient-to-br from-indigo-950 via-blue-900 to-blue-950 text-white rounded-3xl p-5 sm:p-7 shadow-lg space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-yellow-300 bg-yellow-400/15 px-2.5 py-0.5 rounded-full border border-yellow-400/30">
+                    Asistente IA de Etiquetas
+                  </span>
+                  <h2 className="text-lg sm:text-xl font-black">
+                    Escanea la Etiqueta o Ingredientes de cualquier Producto
+                  </h2>
+                  <p className="text-xs text-slate-200 max-w-2xl">
+                    Toma una foto a la tabla nutricional o ingredientes. La IA revisará si contiene grasas trans, eritritol/xilitol, azúcares añadidos, edulcorantes o sodio alto.
+                  </p>
+                </div>
+
+                <div className="shrink-0">
+                  <input
+                    ref={labelInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleLabelImageChange}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    disabled={analyzingLabel}
+                    onClick={() => labelInputRef.current?.click()}
+                    className="inline-flex items-center space-x-2 px-5 py-3 bg-yellow-400 hover:bg-yellow-300 text-blue-950 rounded-2xl text-xs sm:text-sm font-black shadow-lg transition-all disabled:opacity-60"
+                  >
+                    {analyzingLabel ? (
+                      <>
+                        <Loader2 size={18} className="animate-spin" />
+                        <span>Analizando etiqueta...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Camera size={18} />
+                        <span>Tomar / Subir Foto de Etiqueta</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {labelError && (
+                <div className="p-3.5 bg-rose-500/20 border border-rose-300/40 rounded-2xl text-xs text-rose-100 font-semibold">
+                  {labelError}
+                </div>
+              )}
+
+              {labelResult && (
+                <div className="bg-white text-slate-900 rounded-2xl p-5 space-y-3 shadow-xl animate-in zoom-in-95 duration-200">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="font-black text-base">{labelResult.productoDetectado}</h3>
+                    <span
+                      className={`text-xs font-black uppercase px-3 py-1 rounded-full ${
+                        labelResult.veredicto === 'recomendado'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : labelResult.veredicto === 'precaucion'
+                          ? 'bg-amber-100 text-amber-900'
+                          : 'bg-rose-100 text-rose-800'
+                      }`}
+                    >
+                      {labelResult.veredicto === 'recomendado'
+                        ? '✅ Apto / Recomendado'
+                        : labelResult.veredicto === 'precaucion'
+                        ? '⚠️ Consumir con Precaución'
+                        : '🚫 Mejor Evitar'}
+                    </span>
+                  </div>
+
+                  {labelResult.alertasDetectadas && labelResult.alertasDetectadas.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {labelResult.alertasDetectadas.map((a, i) => (
+                        <span key={i} className="text-[11px] font-bold bg-slate-100 text-slate-800 px-2.5 py-1 rounded-lg border border-slate-200">
+                          • {a}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <p className="text-xs text-slate-700 leading-relaxed font-medium">
+                    {labelResult.analisisDetallado}
+                  </p>
+                  {labelResult.alternativaSaludable && (
+                    <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-950">
+                      <strong>Alternativa sugerida:</strong> {labelResult.alternativaSaludable}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-6 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
               <div className="relative flex-1">
                 <Search size={18} className="absolute left-3.5 top-3 text-slate-400" />
@@ -1095,7 +1721,7 @@ const HerramientasDiabetes: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 4: AVANCES CIENTÍFICOS 2025-2026 */}
+        {/* TAB 6: AVANCES CIENTÍFICOS 2025-2026 */}
         {activeTab === 'avances' && (
           <div className="space-y-4 animate-in fade-in duration-200">
             {[
@@ -1168,6 +1794,36 @@ const HerramientasDiabetes: React.FC = () => {
             })}
           </div>
         )}
+
+        {/* Enlace con Jornadas Médicas del Club de Leones */}
+        <div className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-3xl p-6 sm:p-8 shadow-lg flex flex-col md:flex-row items-center justify-between gap-6 print:hidden">
+          <div className="space-y-2 text-center md:text-left">
+            <span className="text-[10px] font-black uppercase tracking-widest bg-yellow-400 text-blue-950 px-3 py-1 rounded-full">
+              Servicio Comunitario en Quetzaltenango
+            </span>
+            <h2 className="text-xl sm:text-2xl font-black">
+              ¿Buscas Jornadas de Glucosa, Presión o Salud Visual?
+            </h2>
+            <p className="text-xs sm:text-sm text-blue-100 max-w-2xl">
+              Consulta el calendario de jornadas médicas gratuitas del Club de Leones de Quetzaltenango o envía una solicitud de apoyo comunitario.
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-3 shrink-0">
+            <Link
+              to="/actividades"
+              className="inline-flex items-center space-x-2 px-5 py-3 bg-yellow-400 hover:bg-yellow-300 text-blue-950 font-black text-xs sm:text-sm rounded-xl shadow-md transition-colors"
+            >
+              <Calendar size={16} />
+              <span>Ver Jornadas y Actividades</span>
+            </Link>
+            <Link
+              to="/solicitudes"
+              className="inline-flex items-center space-x-2 px-5 py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-black text-xs sm:text-sm rounded-xl transition-colors"
+            >
+              <span>Solicitar Apoyo</span>
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );
