@@ -757,13 +757,13 @@ const HerramientasDiabetes: React.FC = () => {
               </button>
 
               <a
-                href="/docs/Avances%20Recientes%20Sobre%20la%20Diabetes.pdf"
+                href="/docs/Guia-Uso-Herramientas-Diabetes.pdf"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center space-x-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all"
               >
                 <FileDown size={15} className="text-yellow-300" />
-                <span>Guía PDF (2025–2026)</span>
+                <span>Guía de Uso (PDF)</span>
               </a>
             </div>
           </div>
@@ -2191,6 +2191,21 @@ const HerramientasDiabetes: React.FC = () => {
                 </div>
               );
             })}
+
+            <div className="bg-slate-100 border border-slate-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="text-xs text-slate-700 font-medium">
+                <strong>Documento Científico Base:</strong> Consulta la investigación completa con referencias médicas (2025–2026).
+              </div>
+              <a
+                href="/docs/Avances%20Recientes%20Sobre%20la%20Diabetes.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center space-x-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-300 text-blue-950 rounded-xl text-xs font-black shadow-2xs transition-colors"
+              >
+                <FileDown size={14} />
+                <span>Descargar Investigación Completa (PDF)</span>
+              </a>
+            </div>
           </div>
         )}
 
