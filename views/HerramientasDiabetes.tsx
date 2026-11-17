@@ -37,7 +37,8 @@ import {
   PhoneCall,
   Type,
   UtensilsCrossed,
-  TrendingUp
+  TrendingUp,
+  Eye
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -50,6 +51,7 @@ import {
   ReferenceLine
 } from 'recharts';
 import { safeSetItem } from '../utils/storage';
+import { compressImageFile } from '../utils/imageCompressor';
 import { geminiService, NutritionLabelAnalysisResult } from '../services/geminiService';
 
 type ProfileMode = 'prevencion' | 'cuidado';
@@ -84,7 +86,7 @@ const ROUTINE_TASKS: RoutineTask[] = [
   {
     id: 'stepping',
     pillar: '5S',
-    title: 'Stepping: Sumar pasos diarios',
+    title: 'Stepping: Caminata digestiva post-comida',
     detail: 'Camina al menos 15–20 min después de tu comida principal para suavizar el pico de glucosa.',
     mode: 'both'
   },
@@ -170,7 +172,7 @@ const PRODUCTS_LIST: ProductItem[] = [
     action: 'Adquiere medicamentos únicamente en farmacias autorizadas con receta y cadena de frío verificada.'
   },
   {
-    name: 'Suplementos "milagro" con Adelfa Amarilla (Yellow Oleander)',
+    name: 'Suplementos "milagro" con Adelfa Amarilla (Yellow Oleander / Tejocote)',
     category: 'peligro',
     badge: 'Toxina Mortal (FDA 2026)',
     summary: 'Productos de fibra o control de peso por internet (ej. Niwali Tejocote, Easy Forte, D Magic Plus, B. Magi) contaminados con toxina cardíaca o diclofenaco/dexametasona ocultos.',
@@ -184,7 +186,7 @@ const PRODUCTS_LIST: ProductItem[] = [
     action: 'Evita preparados magistrales, viales sin registro sanitario o gotas sublinguales sin respaldo clínico.'
   },
   {
-    name: 'Bebidas azucaradas y ultraprocesados',
+    name: 'Bebidas azucaradas, refrescos y ultraprocesados',
     category: 'evitar',
     badge: 'Riesgo Cardiometabólico (+7%)',
     summary: 'Principal vehículo de azúcares libres y exceso de sodio; impulsan la diabetes tipo 2 y la cardiopatía isquémica.',
@@ -198,7 +200,7 @@ const PRODUCTS_LIST: ProductItem[] = [
     action: 'Evita por completo bollería industrial, margarinas hidrogenadas y frituras comerciales reutilizadas.'
   },
   {
-    name: 'Polioles: Eritritol y Xilitol en dosis frecuentes',
+    name: 'Polioles: Eritritol y Xilitol en dosis frecuentes (productos keto)',
     category: 'evitar',
     badge: 'Riesgo Trombótico (Cleveland Clinic)',
     summary: 'Ingestas altas (30 g en postres "keto", chicles o productos sin azúcar) activan inmediatamente la agregación plaquetaria y elevan riesgo de infarto/ictus.',
@@ -234,34 +236,47 @@ const PRODUCTS_LIST: ProductItem[] = [
   }
 ];
 
-const LOCAL_PLATE_OPTIONS = {
+interface PlateOption {
+  label: string;
+  benefit: string;
+}
+
+const LOCAL_PLATE_OPTIONS: Record<'fibra' | 'proteina' | 'carbohidrato' | 'bebida', PlateOption[]> = {
   fibra: [
-    'Ensalada fresca de berro, pepino y tomate con limón',
-    'Hierbas cocidas (quilete/macuy, acelga o espinaca)',
-    'Ejotes, güicoy y brócoli al vapor',
-    'Chirmol asado con cebolla, cilantro y rábano'
+    { label: 'Ensalada fresca de berro, pepino y tomate', benefit: 'Fibra soluble + antioxidantes' },
+    { label: 'Hierbas cocidas (macuy/quilete, acelga o espinaca)', benefit: 'Hierro, fibra y bajo índice glucémico' },
+    { label: 'Ejotes, güicoy y brócoli al vapor', benefit: 'Alimenta bacterias de butirato' },
+    { label: 'Chirmol asado con cebolla, cilantro y rábano', benefit: 'Sabor natural sin azúcares ni sodio alto' }
   ],
   proteina: [
-    'Pechuga de pollo o pavo asada (tamaño de la palma)',
-    '2 huevos revueltos o duros con queso fresco',
-    'Filete de pescado a la plancha con ajo y limón',
-    '½ taza de frijol negro parado (fibra prebiótica + proteína)'
+    { label: 'Pechuga de pollo o pavo a la plancha', benefit: 'Proteína magra para preservar músculo' },
+    { label: '2 huevos revueltos o duros con queso fresco', benefit: 'Alta saciedad matutina' },
+    { label: 'Filete de pescado con ajo y limón', benefit: 'Omega-3 cardioprotector (patrón mediterráneo)' },
+    { label: '½ taza de frijol negro parado', benefit: 'Proteína vegetal + fibra prebiótica' }
   ],
   carbohidrato: [
-    '1 o 2 tortillas de maíz nixtamalizado (máximo)',
-    '½ taza de arroz integral o camote cocido',
-    '¼ de aguacate (grasa cardiosaludable) + 1 tortilla',
-    '1 cucharadita de pepitoria molida + 1 tortilla'
+    { label: '¼ de aguacate + 1 tortilla de maíz', benefit: 'Grasa monoinsaturada que amortigua picos' },
+    { label: '1 o 2 tortillas de maíz nixtamalizado', benefit: 'Porción controlada sin ultraprocesados' },
+    { label: '½ taza de arroz integral o camote cocido', benefit: 'Carbohidrato complejo de absorción lenta' },
+    { label: '1 cda de pepitoria molida + 1 tortilla', benefit: 'Magnesio y grasas saludables locales' }
   ],
   bebida: [
-    'Agua pura fría o al tiempo',
-    'Té de jamaica o manzanilla natural sin azúcar ni edulcorantes',
-    'Agua con rodajas de limón y menta'
+    { label: 'Agua pura fresca', benefit: 'Cero calorías, cero edulcorantes (OMS)' },
+    { label: 'Té de jamaica o manzanilla sin azúcar', benefit: 'Sin dulzor artificial' },
+    { label: 'Agua con limón y hojas de hierbabuena', benefit: 'Hidratación limpia y refrescante' }
   ]
 };
 
+const QUICK_SEARCH_CHIPS = ['Ozempic', 'Eritritol', 'Tejocote', 'Estatinas', 'Refrescos', 'Prednisona'];
+
 const STORAGE_KEY = 'club_leones_diabetes_planner_v1';
 const LOGS_STORAGE_KEY = 'club_leones_diabetes_logs_v1';
+
+const timeToMinutes = (t: string) => {
+  const [h, m] = t.split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return 0;
+  return h * 60 + m;
+};
 
 const HerramientasDiabetes: React.FC = () => {
   const [profileMode, setProfileMode] = useState<ProfileMode>('prevencion');
@@ -280,10 +295,10 @@ const HerramientasDiabetes: React.FC = () => {
   const [usesInsulinOrSulfonylurea, setUsesInsulinOrSulfonylurea] = useState<boolean>(false);
 
   // Mi Plato Guatemalteco State
-  const [selectedFibra, setSelectedFibra] = useState<string>(LOCAL_PLATE_OPTIONS.fibra[0]);
-  const [selectedProteina, setSelectedProteina] = useState<string>(LOCAL_PLATE_OPTIONS.proteina[0]);
-  const [selectedCarb, setSelectedCarb] = useState<string>(LOCAL_PLATE_OPTIONS.carbohidrato[2]);
-  const [selectedBebida, setSelectedBebida] = useState<string>(LOCAL_PLATE_OPTIONS.bebida[0]);
+  const [selectedFibra, setSelectedFibra] = useState<string>(LOCAL_PLATE_OPTIONS.fibra[0].label);
+  const [selectedProteina, setSelectedProteina] = useState<string>(LOCAL_PLATE_OPTIONS.proteina[0].label);
+  const [selectedCarb, setSelectedCarb] = useState<string>(LOCAL_PLATE_OPTIONS.carbohidrato[0].label);
+  const [selectedBebida, setSelectedBebida] = useState<string>(LOCAL_PLATE_OPTIONS.bebida[0].label);
 
   // Bitácora Histórica State
   const [logs, setLogs] = useState<GlucoseLogEntry[]>([]);
@@ -321,6 +336,7 @@ const HerramientasDiabetes: React.FC = () => {
   const [productFilter, setProductFilter] = useState<'all' | 'peligro' | 'evitar' | 'vigilar'>('all');
   const labelInputRef = useRef<HTMLInputElement>(null);
   const [analyzingLabel, setAnalyzingLabel] = useState<boolean>(false);
+  const [labelPreview, setLabelPreview] = useState<string | null>(null);
   const [labelResult, setLabelResult] = useState<NutritionLabelAnalysisResult | null>(null);
   const [labelError, setLabelError] = useState<string | null>(null);
 
@@ -394,6 +410,47 @@ const HerramientasDiabetes: React.FC = () => {
     return `${String(cutoffH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   }, [sleepTime]);
 
+  const circadianStats = useMemo(() => {
+    const bMin = timeToMinutes(breakfastTime);
+    const dMin = timeToMinutes(dinnerTime);
+    const lMin = timeToMinutes(lunchTime);
+    const sMin = timeToMinutes(sleepTime);
+    const cMin = timeToMinutes(caffeineCutoff);
+    const eatingWindowHours = Math.max(0, Number(((dMin - bMin) / 60).toFixed(1)));
+    const overnightFastHours = Number((24 - eatingWindowHours).toFixed(1));
+    const isLateDinner = dMin > 20 * 60 + 30;
+    return {
+      bPct: (bMin / 1440) * 100,
+      lPct: (lMin / 1440) * 100,
+      dPct: (dMin / 1440) * 100,
+      sPct: (sMin / 1440) * 100,
+      cPct: (cMin / 1440) * 100,
+      eatingWindowHours,
+      overnightFastHours,
+      isLateDinner
+    };
+  }, [breakfastTime, lunchTime, dinnerTime, sleepTime, caffeineCutoff]);
+
+  // Presets Mi Plato
+  const applyPlatePreset = (preset: 'desayuno' | 'almuerzo' | 'cena') => {
+    if (preset === 'desayuno') {
+      setSelectedFibra(LOCAL_PLATE_OPTIONS.fibra[3]);
+      setSelectedProteina(LOCAL_PLATE_OPTIONS.proteina[1]);
+      setSelectedCarb(LOCAL_PLATE_OPTIONS.carbohidrato[0]);
+      setSelectedBebida(LOCAL_PLATE_OPTIONS.bebida[1]);
+    } else if (preset === 'almuerzo') {
+      setSelectedFibra(LOCAL_PLATE_OPTIONS.fibra[2]);
+      setSelectedProteina(LOCAL_PLATE_OPTIONS.proteina[0]);
+      setSelectedCarb(LOCAL_PLATE_OPTIONS.carbohidrato[1]);
+      setSelectedBebida(LOCAL_PLATE_OPTIONS.bebida[2]);
+    } else {
+      setSelectedFibra(LOCAL_PLATE_OPTIONS.fibra[0]);
+      setSelectedProteina(LOCAL_PLATE_OPTIONS.proteina[2]);
+      setSelectedCarb(LOCAL_PLATE_OPTIONS.carbohidrato[3]);
+      setSelectedBebida(LOCAL_PLATE_OPTIONS.bebida[1]);
+    }
+  };
+
   // Bitácora handlers
   const handleAddLog = (e: React.FormEvent) => {
     e.preventDefault();
@@ -411,10 +468,27 @@ const HerramientasDiabetes: React.FC = () => {
     };
 
     setLogs(prev => [entry, ...prev].slice(0, 90));
+    if (entry.glucose < 70) {
+      setShowEmergencyCard(true);
+    }
     setNewLogGlucose('');
     setNewLogSys('');
     setNewLogDia('');
     setNewLogNote('');
+  };
+
+  const handleLoadDemoLogs = () => {
+    const now = Date.now();
+    const hour = 3600 * 1000;
+    const demo: GlucoseLogEntry[] = [
+      { id: 'demo-1', dateTime: new Date(now - 2 * hour).toISOString(), moment: 'Ayunas', glucose: 104, systolic: 122, diastolic: 78, note: 'Buen descanso 7.5 h' },
+      { id: 'demo-2', dateTime: new Date(now - 14 * hour).toISOString(), moment: 'Antes de dormir', glucose: 128, note: 'Cena ligera a las 18:30' },
+      { id: 'demo-3', dateTime: new Date(now - 20 * hour).toISOString(), moment: '2h Post-comida', glucose: 146, note: 'Caminata de 20 min' },
+      { id: 'demo-4', dateTime: new Date(now - 26 * hour).toISOString(), moment: 'Ayunas', glucose: 109, systolic: 125, diastolic: 80 },
+      { id: 'demo-5', dateTime: new Date(now - 42 * hour).toISOString(), moment: '1h Post-comida', glucose: 168, note: 'Almuerzo con 2 tortillas' },
+      { id: 'demo-6', dateTime: new Date(now - 50 * hour).toISOString(), moment: 'Ayunas', glucose: 112 }
+    ];
+    setLogs(demo);
   };
 
   const handleDeleteLog = (id: string) => {
@@ -448,7 +522,7 @@ const HerramientasDiabetes: React.FC = () => {
       });
   }, [logs]);
 
-  // Escáner IA de Etiquetas
+  // Escáner IA de Etiquetas con compresión
   const handleLabelImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -457,35 +531,26 @@ const HerramientasDiabetes: React.FC = () => {
     setLabelError(null);
 
     try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64 = reader.result as string;
-        try {
-          const res = await geminiService.analyzeNutritionLabel(base64, file.type || 'image/jpeg');
-          if (!res.success) {
-            setLabelError(
-              res.error === 'ETIQUETA_NO_LEGIBLE'
-                ? 'No logramos leer una tabla nutricional o lista de ingredientes clara. Acerca un poco más la cámara con buena luz.'
-                : 'No se pudo completar el análisis en este momento. Verifica tu conexión o intenta con otra foto.'
-            );
-          } else {
-            setLabelResult(res);
-          }
-        } catch (err: any) {
-          setLabelError(
-            err?.message === 'NO_API_KEY'
-              ? 'El servicio de análisis IA no está configurado en este entorno.'
-              : 'Ocurrió un error al analizar la etiqueta.'
-          );
-        } finally {
-          setAnalyzingLabel(false);
-        }
-      };
-      reader.readAsDataURL(file);
-    } catch {
-      setAnalyzingLabel(false);
-      setLabelError('No se pudo leer el archivo seleccionado.');
+      const compressedDataUrl = await compressImageFile(file, 1200, 1200, 0.82);
+      setLabelPreview(compressedDataUrl);
+      const res = await geminiService.analyzeNutritionLabel(compressedDataUrl, 'image/jpeg');
+      if (!res.success) {
+        setLabelError(
+          res.error === 'ETIQUETA_NO_LEGIBLE'
+            ? 'No logramos leer una tabla nutricional o lista de ingredientes clara. Acerca la cámara con buena luz.'
+            : 'No se pudo completar el análisis en este momento. Verifica tu conexión e intenta de nuevo.'
+        );
+      } else {
+        setLabelResult(res);
+      }
+    } catch (err: any) {
+      setLabelError(
+        err?.message === 'NO_API_KEY'
+          ? 'El servicio de análisis IA no está configurado en este entorno.'
+          : 'Ocurrió un error al procesar o analizar la imagen.'
+      );
     } finally {
+      setAnalyzingLabel(false);
       e.target.value = '';
     }
   };
@@ -508,6 +573,11 @@ const HerramientasDiabetes: React.FC = () => {
     return weightKg / (heightM * heightM);
   }, [weightKg, heightM]);
 
+  const bmiMarkerPct = useMemo(() => {
+    if (bmi <= 0) return 0;
+    return Math.min(98, Math.max(2, ((bmi - 15) / (40 - 15)) * 100));
+  }, [bmi]);
+
   const weightLoss5 = weightKg * 0.05;
   const weightLoss7 = weightKg * 0.07;
 
@@ -529,6 +599,10 @@ const HerramientasDiabetes: React.FC = () => {
   const tbrNum = parseFloat(tbr) || 0;
   const sysNum = parseFloat(systolicBp) || 0;
   const diaNum = parseFloat(diastolicBp) || 0;
+
+  const hba1cMarkerPct = useMemo(() => {
+    return Math.min(98, Math.max(2, ((hba1cNum - 4.5) / (11 - 4.5)) * 100));
+  }, [hba1cNum]);
 
   const stopBangScore = useMemo(() => {
     const base = Object.values(sleepChecks).filter(Boolean).length;
@@ -556,16 +630,99 @@ const HerramientasDiabetes: React.FC = () => {
       `• Actividad aeróbica semanal: ${aerobicMinutes}/150 min\n` +
       `• Sesiones de fuerza: ${strengthSessions}/3\n` +
       `• Horario comidas: Desayuno ${breakfastTime} | Almuerzo ${lunchTime} | Cena ligera ${dinnerTime}\n` +
+      `• Ventana alimentación: ${circadianStats.eatingWindowHours} h / Ayuno nocturno: ${circadianStats.overnightFastHours} h\n` +
       `• Hora de dormir: ${sleepTime} (Cero cafeína desde las ${caffeineCutoff})\n\n` +
       `Crea tu plan gratuito en: https://clubdeleonesquetzaltenango.org/#/herramientas/diabetes`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
+  // Ring math for progress
+  const ringRadius = 32;
+  const ringCircumference = 2 * Math.PI * ringRadius;
+  const ringOffset = ringCircumference - (progressPct / 100) * ringCircumference;
+
   return (
-    <div className={`min-h-screen bg-slate-50 pb-16 print:bg-white ${largeText ? 'text-[17px]' : ''}`}>
+    <div className={`min-h-screen bg-slate-50 pb-16 print:bg-white print:pb-0 ${largeText ? 'diabetes-large-text' : ''}`}>
+      {/* Reglas reales de escalado accesible para Letra Grande */}
+      <style>{`
+        .diabetes-large-text .text-xs { font-size: 0.95rem !important; line-height: 1.45rem !important; }
+        .diabetes-large-text .text-\\[11px\\] { font-size: 0.88rem !important; line-height: 1.3rem !important; }
+        .diabetes-large-text .text-\\[10px\\] { font-size: 0.8rem !important; line-height: 1.2rem !important; }
+        .diabetes-large-text .text-sm { font-size: 1.06rem !important; line-height: 1.55rem !important; }
+        .diabetes-large-text .text-base { font-size: 1.18rem !important; line-height: 1.7rem !important; }
+      `}</style>
+
+      {/* HOJA CLÍNICA DE IMPRESIÓN EXCLUSIVA (Solo visible al imprimir / guardar PDF) */}
+      <div className="hidden print:block p-6 text-slate-900 space-y-5">
+        <div className="border-b-2 border-blue-900 pb-3 flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-black text-blue-950">Hoja Clínica Personal — Prevención y Cuidado de Diabetes</h1>
+            <p className="text-xs text-slate-600">Club de Leones de Quetzaltenango • Referencia Estándares ADA/EASD 2026</p>
+          </div>
+          <div className="text-right text-xs">
+            <div><strong>Enfoque:</strong> {profileMode === 'prevencion' ? 'Prevención' : 'Cuidado Activo'}</div>
+            <div><strong>Fecha:</strong> {new Date().toLocaleDateString('es-GT')}</div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 text-xs">
+          <div className="border border-slate-300 rounded-xl p-3 space-y-1">
+            <h2 className="font-black text-sm text-blue-900 border-b border-slate-200 pb-1">Rutina 5S & Crononutrición</h2>
+            <p><strong>Cumplimiento de hoy:</strong> {progressPct}%</p>
+            <p><strong>Actividad aeróbica semanal:</strong> {aerobicMinutes} / 150 min</p>
+            <p><strong>Sesiones de fuerza:</strong> {strengthSessions} / 3 por semana</p>
+            <p><strong>Horarios:</strong> Desayuno {breakfastTime} | Almuerzo {lunchTime} | Cena {dinnerTime}</p>
+            <p><strong>Dormir:</strong> {sleepTime} (Sin cafeína desde {caffeineCutoff})</p>
+          </div>
+          <div className="border border-slate-300 rounded-xl p-3 space-y-1">
+            <h2 className="font-black text-sm text-blue-900 border-b border-slate-200 pb-1">Metas Antropométricas y Clínicas</h2>
+            <p><strong>Peso / Estatura / IMC:</strong> {weightVal} {weightUnit} / {heightCm} cm / {bmi.toFixed(1)} kg/m²</p>
+            <p><strong>Proteína diaria sugerida:</strong> {proteinMinG}–{proteinMaxG} g/día</p>
+            <p><strong>HbA1c:</strong> {hba1c}% | <strong>Tiempo en Rango:</strong> {tir}% | <strong>Bajo &lt;70:</strong> {tbr}%</p>
+            <p><strong>Presión arterial:</strong> {systolicBp}/{diastolicBp} mmHg</p>
+            <p><strong>Riesgo Apnea (STOP-BANG):</strong> {stopBangScore} factores</p>
+          </div>
+        </div>
+
+        <div className="border border-slate-300 rounded-xl p-3 text-xs space-y-1">
+          <h2 className="font-black text-sm text-blue-900">Mi Plato Saludable Planificado</h2>
+          <p><strong>50% Fibra:</strong> {selectedFibra} | <strong>25% Proteína:</strong> {selectedProteina} | <strong>25% Medido:</strong> {selectedCarb} | <strong>Bebida:</strong> {selectedBebida}</p>
+        </div>
+
+        {logs.length > 0 && (
+          <div className="space-y-2">
+            <h2 className="font-black text-sm text-blue-900">
+              Bitácora Reciente ({logs.length} lecturas • Promedio: {logStats?.avgGlucose} mg/dL • En rango 70–180: {logStats?.tirPct}%)
+            </h2>
+            <table className="w-full text-xs border-collapse border border-slate-300">
+              <thead>
+                <tr className="bg-slate-100">
+                  <th className="border border-slate-300 p-1.5 text-left">Fecha/Hora</th>
+                  <th className="border border-slate-300 p-1.5 text-left">Momento</th>
+                  <th className="border border-slate-300 p-1.5 text-left">Glucosa</th>
+                  <th className="border border-slate-300 p-1.5 text-left">Presión</th>
+                  <th className="border border-slate-300 p-1.5 text-left">Nota</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.slice(0, 15).map(l => (
+                  <tr key={l.id}>
+                    <td className="border border-slate-300 p-1.5">{new Date(l.dateTime).toLocaleString('es-GT', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                    <td className="border border-slate-300 p-1.5">{l.moment}</td>
+                    <td className="border border-slate-300 p-1.5 font-bold">{l.glucose} mg/dL</td>
+                    <td className="border border-slate-300 p-1.5">{l.systolic && l.diastolic ? `${l.systolic}/${l.diastolic}` : '—'}</td>
+                    <td className="border border-slate-300 p-1.5">{l.note || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* Hero Header */}
-      <section className="bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white pt-8 pb-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden print:hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.16),transparent_45%)]" />
+      <section className="bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white pt-8 pb-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden print:hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.18),transparent_45%)]" />
         <div className="max-w-[1240px] mx-auto relative z-10 space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-2.5">
             <Link
@@ -582,10 +739,9 @@ const HerramientasDiabetes: React.FC = () => {
                 onClick={() => setLargeText(v => !v)}
                 className={`inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-black border transition-all ${
                   largeText
-                    ? 'bg-yellow-400 text-blue-950 border-yellow-300'
+                    ? 'bg-yellow-400 text-blue-950 border-yellow-300 shadow-md'
                     : 'bg-white/10 hover:bg-white/20 text-white border-white/20'
                 }`}
-                title="Aumentar tamaño de letra para lectura cómoda"
               >
                 <Type size={14} />
                 <span>{largeText ? 'Letra Normal' : 'Letra Grande'}</span>
@@ -594,7 +750,7 @@ const HerramientasDiabetes: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowEmergencyCard(v => !v)}
-                className="inline-flex items-center space-x-1.5 bg-rose-600/90 hover:bg-rose-500 border border-rose-400/50 text-white px-3 py-2 rounded-xl text-xs font-black transition-all"
+                className="inline-flex items-center space-x-1.5 bg-rose-600 hover:bg-rose-500 border border-rose-400/50 text-white px-3 py-2 rounded-xl text-xs font-black transition-all shadow-sm"
               >
                 <PhoneCall size={14} />
                 <span>Emergencia (&lt;70 mg/dL)</span>
@@ -622,7 +778,7 @@ const HerramientasDiabetes: React.FC = () => {
                 Diabetes: Prevención y Cuidado Interactivo
               </h1>
               <p className="text-slate-200 text-sm sm:text-base leading-relaxed max-w-2xl">
-                Planifica tus rutinas diarias de alimentación, ejercicio y sueño, registra tu bitácora para tu médico, escanea etiquetas con IA y consulta alertas sanitarias 2026.
+                Organiza tu rutina diaria de 24 horas, arma tu plato guatemalteco, registra tu bitácora para el médico y escanea etiquetas con IA.
               </p>
             </div>
 
@@ -630,19 +786,19 @@ const HerramientasDiabetes: React.FC = () => {
             <div className="lg:col-span-5 bg-white/10 backdrop-blur-md border border-white/15 rounded-3xl p-4 sm:p-5 space-y-3">
               <p className="text-xs font-black uppercase tracking-wider text-yellow-300 flex items-center space-x-1.5">
                 <Sparkles size={14} />
-                <span>Personaliza tu experiencia</span>
+                <span>Elige tu objetivo principal</span>
               </p>
               <div className="grid grid-cols-2 gap-2.5">
                 <button
                   type="button"
                   onClick={() => setProfileMode('prevencion')}
-                  className={`p-3 rounded-2xl text-left transition-all border ${
+                  className={`p-3.5 rounded-2xl text-left transition-all border ${
                     profileMode === 'prevencion'
-                      ? 'bg-emerald-500 text-white border-emerald-300 shadow-lg shadow-emerald-950/30'
+                      ? 'bg-emerald-500 text-white border-emerald-300 shadow-lg shadow-emerald-950/30 scale-[1.02]'
                       : 'bg-white/5 text-slate-200 border-white/10 hover:bg-white/10'
                   }`}
                 >
-                  <ShieldCheck size={20} className="mb-1.5" />
+                  <ShieldCheck size={22} className="mb-1.5" />
                   <div className="font-black text-xs sm:text-sm">Prevención</div>
                   <div className="text-[10px] opacity-90 leading-tight mt-0.5">
                     Reducir riesgo y cuidar hábitos
@@ -652,13 +808,13 @@ const HerramientasDiabetes: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setProfileMode('cuidado')}
-                  className={`p-3 rounded-2xl text-left transition-all border ${
+                  className={`p-3.5 rounded-2xl text-left transition-all border ${
                     profileMode === 'cuidado'
-                      ? 'bg-yellow-400 text-blue-950 border-yellow-200 shadow-lg shadow-blue-950/30'
+                      ? 'bg-yellow-400 text-blue-950 border-yellow-200 shadow-lg shadow-blue-950/30 scale-[1.02]'
                       : 'bg-white/5 text-slate-200 border-white/10 hover:bg-white/10'
                   }`}
                 >
-                  <Activity size={20} className="mb-1.5" />
+                  <Activity size={22} className="mb-1.5" />
                   <div className="font-black text-xs sm:text-sm">Cuidado Activo</div>
                   <div className="text-[10px] opacity-90 leading-tight mt-0.5">
                     Control diario y metas clínicas
@@ -672,21 +828,21 @@ const HerramientasDiabetes: React.FC = () => {
 
       {/* Tarjeta de Emergencia Desplegable */}
       {showEmergencyCard && (
-        <div className="max-w-[1240px] mx-auto px-3 sm:px-6 lg:px-8 pt-6">
-          <div className="bg-rose-50 border-2 border-rose-300 rounded-3xl p-5 sm:p-6 space-y-4 shadow-lg">
+        <div className="max-w-[1240px] mx-auto px-3 sm:px-6 lg:px-8 pt-6 print:hidden">
+          <div className="bg-rose-50 border-2 border-rose-300 rounded-3xl p-5 sm:p-6 space-y-4 shadow-lg animate-in fade-in duration-200">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-lg font-black text-rose-900 flex items-center space-x-2">
                 <AlertTriangle size={22} className="text-rose-600" />
                 <span>Tarjeta de Emergencia: ¿Qué hacer ante Hipoglucemia (&lt;70 mg/dL)?</span>
               </h2>
-              <div className="flex gap-2 print:hidden">
+              <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => window.print()}
                   className="px-3 py-1.5 bg-rose-700 text-white rounded-xl text-xs font-black inline-flex items-center space-x-1"
                 >
                   <Printer size={14} />
-                  <span>Imprimir Tarjeta</span>
+                  <span>Imprimir</span>
                 </button>
                 <button
                   type="button"
@@ -708,7 +864,7 @@ const HerramientasDiabetes: React.FC = () => {
               </div>
               <div className="bg-white p-4 rounded-2xl border border-rose-200 space-y-1.5">
                 <div className="font-black text-sm text-rose-700">3. Emergencias Quetzaltenango</div>
-                <p>Si hay pérdida de conciencia NO des líquidos. Llama de inmediato: <strong>Bomberos Voluntarios: 122</strong> | <strong>Bomberos Municipales: 123</strong> | <strong>Cruz Roja: 125</strong>.</p>
+                <p>Si hay pérdida de conciencia NO des líquidos. Llama de inmediato: <strong>Bomberos Voluntarios: 122</strong> | <strong>Municipales: 123</strong> | <strong>Cruz Roja: 125</strong>.</p>
               </div>
             </div>
           </div>
@@ -750,45 +906,65 @@ const HerramientasDiabetes: React.FC = () => {
       </div>
 
       {/* Contenido Principal */}
-      <div className="max-w-[1240px] mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-8">
+      <div className="max-w-[1240px] mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-8 print:hidden">
         {/* Aviso Médico */}
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-start space-x-3 text-xs text-blue-950 print:hidden">
+        <div className="bg-blue-50/90 border border-blue-200 rounded-2xl p-4 flex items-start space-x-3 text-xs text-blue-950">
           <Stethoscope size={20} className="text-blue-700 shrink-0 mt-0.5" />
           <p className="leading-relaxed font-medium">
-            <strong>Aviso de Salud Comunitaria:</strong> Esta herramienta interactiva resume evidencia médica 2025–2026 (ADA/EASD, OMS, IDF) para ayudarte a organizar tus hábitos. <strong>No sustituye el criterio de tu médico</strong>; nunca cambies dosis ni suspendas medicamentos sin supervisión profesional.
+            <strong>Aviso de Salud Comunitaria:</strong> Esta herramienta resume evidencia médica 2025–2026 (ADA/EASD, OMS, IDF) para ayudarte a organizar tus hábitos. <strong>No sustituye el criterio de tu médico</strong>; nunca cambies dosis ni suspendas medicamentos sin supervisión profesional.
           </p>
         </div>
 
-        {/* TAB 1: PLANIFICADOR 5S Y CRONONUTRICIÓN */}
+        {/* TAB 1: PLANIFICADOR 5S + ANILLO PROGRESO + LÍNEA CIRCADIANA 24H */}
         {activeTab === 'planificador' && (
           <div className="space-y-6 animate-in fade-in duration-200">
-            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-7 flex flex-col md:flex-row md:items-center justify-between gap-5">
-              <div className="space-y-2 flex-1">
-                <div className="flex items-center justify-between">
+            {/* Barra de Progreso con Anillo SVG */}
+            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-5">
+              <div className="flex items-center gap-4 flex-1">
+                <div className="relative w-20 h-20 shrink-0 flex items-center justify-center">
+                  <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
+                    <circle cx="40" cy="40" r={ringRadius} stroke="#e2e8f0" strokeWidth="8" fill="none" />
+                    <circle
+                      cx="40"
+                      cy="40"
+                      r={ringRadius}
+                      stroke={progressPct === 100 ? '#10b981' : '#2563eb'}
+                      strokeWidth="8"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeDasharray={ringCircumference}
+                      strokeDashoffset={ringOffset}
+                      className="transition-all duration-500"
+                    />
+                  </svg>
+                  <span className="absolute text-base font-black text-slate-900">{progressPct}%</span>
+                </div>
+
+                <div className="space-y-1">
                   <span className="text-xs font-black uppercase tracking-wider text-blue-900">
-                    Tu Rutina de Hoy ({profileMode === 'prevencion' ? 'Modo Prevención' : 'Modo Cuidado'})
+                    Tu Rutina de Hoy • {profileMode === 'prevencion' ? 'Prevención' : 'Cuidado Activo'}
                   </span>
-                  <span className="text-lg font-black text-emerald-600">{progressPct}%</span>
+                  <h2 className="text-base sm:text-lg font-black text-slate-900">
+                    {progressPct === 100
+                      ? '¡Excelente! Completaste todos tus hábitos de hoy.'
+                      : progressPct >= 50
+                      ? '¡Vas por muy buen camino! Sigue sumando pilares.'
+                      : 'Marca cada hábito conforme avances en tu día.'}
+                  </h2>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Se guarda automáticamente en tu dispositivo.
+                  </p>
                 </div>
-                <div className="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-blue-600 to-emerald-500 transition-all duration-500 rounded-full"
-                    style={{ width: `${progressPct}%` }}
-                  />
-                </div>
-                <p className="text-xs text-slate-500 font-medium">
-                  Marca tus hábitos completados. Tu progreso se guarda automáticamente en este dispositivo.
-                </p>
               </div>
 
-              <div className="flex flex-wrap gap-2 print:hidden">
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={handleShareWhatsApp}
                   className="inline-flex items-center space-x-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-sm transition-colors"
                 >
                   <Share2 size={15} />
-                  <span>Enviar a mi WhatsApp</span>
+                  <span>Enviar a WhatsApp</span>
                 </button>
                 <button
                   type="button"
@@ -796,31 +972,29 @@ const HerramientasDiabetes: React.FC = () => {
                   className="inline-flex items-center space-x-1.5 px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-black shadow-sm transition-colors"
                 >
                   <Printer size={15} />
-                  <span>Imprimir / PDF</span>
+                  <span>Hoja Clínica PDF</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setCompletedIds([])}
                   className="inline-flex items-center space-x-1.5 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors"
-                  title="Reiniciar checks de hoy"
                 >
                   <RotateCcw size={15} />
-                  <span>Reiniciar Día</span>
+                  <span>Reiniciar</span>
                 </button>
               </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Checklist 5S */}
               <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-7 space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                  <div>
-                    <h2 className="text-lg sm:text-xl font-black text-slate-900">
-                      Lista Diaria Basada en el Marco "5S" (ADA 2026)
-                    </h2>
-                    <p className="text-xs text-slate-500 font-medium">
-                      Standing • Stepping • Sweating • Strengthening • Sleeping
-                    </p>
-                  </div>
+                <div className="border-b border-slate-100 pb-3">
+                  <h2 className="text-lg sm:text-xl font-black text-slate-900">
+                    Lista Diaria Basada en el Marco "5S" (ADA 2026)
+                  </h2>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Standing • Stepping • Sweating • Strengthening • Sleeping
+                  </p>
                 </div>
 
                 <div className="space-y-2.5">
@@ -831,17 +1005,17 @@ const HerramientasDiabetes: React.FC = () => {
                         key={task.id}
                         type="button"
                         onClick={() => toggleTask(task.id)}
-                        className={`w-full text-left p-3.5 rounded-2xl border transition-all flex items-start space-x-3 ${
+                        className={`w-full text-left p-3.5 rounded-2xl border transition-all flex items-start space-x-3 active:scale-[0.99] ${
                           checked
-                            ? 'bg-emerald-50/80 border-emerald-300 text-emerald-950'
+                            ? 'bg-emerald-50/90 border-emerald-300 text-emerald-950'
                             : 'bg-slate-50/70 border-slate-200/80 hover:border-blue-300 text-slate-800'
                         }`}
                       >
                         <div className="mt-0.5 shrink-0">
                           {checked ? (
-                            <CheckCircle2 size={22} className="text-emerald-600" />
+                            <CheckCircle2 size={24} className="text-emerald-600" />
                           ) : (
-                            <Circle size={22} className="text-slate-300" />
+                            <Circle size={24} className="text-slate-300" />
                           )}
                         </div>
                         <div className="flex-1">
@@ -861,6 +1035,7 @@ const HerramientasDiabetes: React.FC = () => {
                 </div>
               </div>
 
+              {/* Metas Físicas + Línea de Tiempo Circadiana 24h */}
               <div className="lg:col-span-5 space-y-6">
                 <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-6 space-y-5">
                   <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center space-x-2">
@@ -876,9 +1051,9 @@ const HerramientasDiabetes: React.FC = () => {
                       </span>
                       <span className="font-black text-blue-900">{aerobicMinutes} / 150 min</span>
                     </div>
-                    <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-blue-600 rounded-full transition-all"
+                        className="h-full bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full transition-all duration-300"
                         style={{ width: `${Math.min(100, Math.round((aerobicMinutes / 150) * 100))}%` }}
                       />
                     </div>
@@ -888,7 +1063,7 @@ const HerramientasDiabetes: React.FC = () => {
                           key={m}
                           type="button"
                           onClick={() => setAerobicMinutes(prev => prev + m)}
-                          className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-lg text-xs font-black transition-colors"
+                          className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-xl text-xs font-black transition-colors"
                         >
                           +{m} min
                         </button>
@@ -896,7 +1071,7 @@ const HerramientasDiabetes: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setAerobicMinutes(0)}
-                        className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-bold ml-auto"
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold ml-auto"
                       >
                         Reiniciar
                       </button>
@@ -907,7 +1082,7 @@ const HerramientasDiabetes: React.FC = () => {
                     <div className="flex justify-between text-xs font-bold">
                       <span className="text-slate-700 flex items-center space-x-1.5">
                         <Dumbbell size={15} className="text-indigo-600" />
-                        <span>Entrenamiento de Fuerza (Meta: 2–3 días)</span>
+                        <span>Entrenamiento de Fuerza (2–3 días/sem)</span>
                       </span>
                       <span className="font-black text-indigo-900">{strengthSessions} sesiones</span>
                     </div>
@@ -917,7 +1092,7 @@ const HerramientasDiabetes: React.FC = () => {
                           key={s}
                           type="button"
                           onClick={() => setStrengthSessions(s === strengthSessions ? s - 1 : s)}
-                          className={`flex-1 py-2 rounded-xl text-xs font-black border transition-all ${
+                          className={`flex-1 py-2.5 rounded-xl text-xs font-black border transition-all ${
                             strengthSessions >= s
                               ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
                               : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-indigo-300'
@@ -930,20 +1105,59 @@ const HerramientasDiabetes: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Mapa Visual de 24h & Crononutrición */}
                 <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-6 space-y-4">
-                  <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center space-x-2">
-                    <Clock size={20} className="text-teal-600" />
-                    <span>Reloj de Crononutrición y Sueño</span>
-                  </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Concentrar calorías en el desayuno y adelantar una cena ligera protege el perfil glucémico (Ensayo ChronoFast & ADA 2026).
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center space-x-2">
+                      <Clock size={20} className="text-teal-600" />
+                      <span>Reloj Circadiano 24h</span>
+                    </h3>
+                    <span className="text-[11px] font-black bg-teal-50 text-teal-800 px-2.5 py-1 rounded-full border border-teal-200">
+                      Ayuno nocturno: {circadianStats.overnightFastHours} h
+                    </span>
+                  </div>
+
+                  {/* Barra Timeline 24h */}
+                  <div className="space-y-1.5">
+                    <div className="relative h-7 bg-slate-900 rounded-full overflow-hidden border border-slate-300">
+                      {/* Ventana de alimentación */}
+                      <div
+                        className="absolute top-0 bottom-0 bg-gradient-to-r from-amber-300 via-emerald-300 to-teal-300 opacity-85 transition-all duration-300"
+                        style={{
+                          left: `${circadianStats.bPct}%`,
+                          width: `${Math.max(4, circadianStats.dPct - circadianStats.bPct)}%`
+                        }}
+                      />
+                      {/* Marcadores */}
+                      <div title={`Desayuno ${breakfastTime}`} className="absolute top-1 bottom-1 w-2 bg-amber-600 rounded-full border border-white" style={{ left: `${circadianStats.bPct}%` }} />
+                      <div title={`Sin cafeína ${caffeineCutoff}`} className="absolute top-1 bottom-1 w-2 bg-rose-500 rounded-full border border-white" style={{ left: `${circadianStats.cPct}%` }} />
+                      <div title={`Cena ${dinnerTime}`} className="absolute top-1 bottom-1 w-2 bg-teal-700 rounded-full border border-white" style={{ left: `${circadianStats.dPct}%` }} />
+                      <div title={`Dormir ${sleepTime}`} className="absolute top-1 bottom-1 w-2 bg-yellow-300 rounded-full border border-slate-900" style={{ left: `${circadianStats.sPct}%` }} />
+                    </div>
+                    <div className="flex justify-between text-[10px] font-bold text-slate-400 px-1">
+                      <span>00:00</span>
+                      <span>06:00</span>
+                      <span>12:00</span>
+                      <span>18:00</span>
+                      <span>24:00</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-[10px] font-bold text-slate-600 pt-1">
+                      <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block" /> Ventana comida ({circadianStats.eatingWindowHours} h)</span>
+                      <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block" /> Corte cafeína ({caffeineCutoff})</span>
+                    </div>
+                  </div>
+
+                  {circadianStats.isLateDinner && (
+                    <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 font-semibold">
+                      ⚠️ Tu cena está programada tarde ({dinnerTime}). Adelantarla mejora el perfil glucémico nocturno.
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-amber-50/70 p-3 rounded-2xl border border-amber-200/70">
                       <label className="text-[10px] font-black uppercase text-amber-900 flex items-center space-x-1">
                         <Sun size={12} />
-                        <span>Desayuno Principal</span>
+                        <span>Desayuno</span>
                       </label>
                       <input
                         type="time"
@@ -982,7 +1196,7 @@ const HerramientasDiabetes: React.FC = () => {
                     <div className="bg-blue-950 text-white p-3 rounded-2xl">
                       <label className="text-[10px] font-black uppercase text-yellow-300 flex items-center space-x-1">
                         <Moon size={12} />
-                        <span>Hora de Dormir</span>
+                        <span>Dormir</span>
                       </label>
                       <input
                         type="time"
@@ -996,7 +1210,7 @@ const HerramientasDiabetes: React.FC = () => {
                   <div className="p-3 bg-slate-100 rounded-2xl flex items-center space-x-3 text-xs text-slate-700">
                     <Coffee size={18} className="text-amber-700 shrink-0" />
                     <span>
-                      <strong>Regla de Cafeína (12h):</strong> Si duermes a las <strong>{sleepTime}</strong>, evita café, té negro o bebidas energéticas después de las <strong>{caffeineCutoff}</strong>.
+                      <strong>Regla de Cafeína (12h):</strong> Si duermes a las <strong>{sleepTime}</strong>, evita café después de las <strong>{caffeineCutoff}</strong>.
                     </span>
                   </div>
 
@@ -1010,8 +1224,8 @@ const HerramientasDiabetes: React.FC = () => {
                     <span>
                       <strong>¿Usas insulina o sulfonilureas?</strong>
                       {usesInsulinOrSulfonylurea
-                        ? ' Precaución: cualquier cambio de horario de comidas o ayuno debe coordinarse con tu médico para evitar hipoglucemias.'
-                        : ' Marca esta casilla si usas estos fármacos para recordar las precauciones de horario.'}
+                        ? ' Precaución: cualquier cambio de horario de comidas debe coordinarse con tu médico para evitar hipoglucemias.'
+                        : ' Marca aquí para ver precauciones sobre horarios de comida.'}
                     </span>
                   </label>
                 </div>
@@ -1020,144 +1234,223 @@ const HerramientasDiabetes: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 2: CONSTRUCTOR MI PLATO SALUDABLE GUATEMALTECO */}
+        {/* TAB 2: CONSTRUCTOR MI PLATO SALUDABLE GUATEMALTECO (TÁCTIL + PRESETS) */}
         {activeTab === 'mi_plato' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in duration-200">
-            <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-7 space-y-5">
-              <div>
-                <h2 className="text-lg sm:text-xl font-black text-slate-900">
-                  Constructor de "Mi Plato Saludable Guatemalteco"
-                </h2>
-                <p className="text-xs text-slate-500 mt-1">
-                  Combina alimentos locales siguiendo los patrones Mediterráneo y Bajo en Carbohidratos respaldados por la ADA 2026 y la ciencia del microbioma.
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="text-xs font-black uppercase text-emerald-800 block mb-1.5">
-                    1. Medio Plato (50%): Fibra Vegetal & Microbioma (Come esto primero)
-                  </label>
-                  <select
-                    value={selectedFibra}
-                    onChange={e => setSelectedFibra(e.target.value)}
-                    className="w-full p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs sm:text-sm font-bold text-slate-800"
-                  >
-                    {LOCAL_PLATE_OPTIONS.fibra.map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-black uppercase text-blue-900 block mb-1.5">
-                    2. Un Cuarto (25%): Proteína Protectora de Masa Muscular
-                  </label>
-                  <select
-                    value={selectedProteina}
-                    onChange={e => setSelectedProteina(e.target.value)}
-                    className="w-full p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs sm:text-sm font-bold text-slate-800"
-                  >
-                    {LOCAL_PLATE_OPTIONS.proteina.map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-black uppercase text-amber-900 block mb-1.5">
-                    3. Un Cuarto (25%): Carbohidrato Medido + Grasa Saludable
-                  </label>
-                  <select
-                    value={selectedCarb}
-                    onChange={e => setSelectedCarb(e.target.value)}
-                    className="w-full p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs sm:text-sm font-bold text-slate-800"
-                  >
-                    {LOCAL_PLATE_OPTIONS.carbohidrato.map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-black uppercase text-cyan-900 block mb-1.5">
-                    4. Bebida Sin Azúcares ni Edulcorantes
-                  </label>
-                  <select
-                    value={selectedBebida}
-                    onChange={e => setSelectedBebida(e.target.value)}
-                    className="w-full p-3 bg-cyan-50 border border-cyan-200 rounded-xl text-xs sm:text-sm font-bold text-slate-800"
-                  >
-                    {LOCAL_PLATE_OPTIONS.bebida.map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-                </div>
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Presets de 1 Clic */}
+            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
+              <span className="text-xs font-black uppercase tracking-wider text-slate-700">
+                ⚡ Menús Chapines en 1 Clic:
+              </span>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => applyPlatePreset('desayuno')}
+                  className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-950 border border-amber-200 rounded-xl text-xs font-black transition-colors"
+                >
+                  🌅 Desayuno Chapín
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyPlatePreset('almuerzo')}
+                  className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-950 border border-emerald-200 rounded-xl text-xs font-black transition-colors"
+                >
+                  🍽️ Almuerzo Balanceado
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyPlatePreset('cena')}
+                  className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-950 border border-indigo-200 rounded-xl text-xs font-black transition-colors"
+                >
+                  🌙 Cena Ligera Nocturna
+                </button>
               </div>
             </div>
 
-            <div className="lg:col-span-5 bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-7 flex flex-col justify-between space-y-5">
-              <div className="space-y-4">
-                <h3 className="text-base font-black text-slate-900 text-center">Tu Menú Armado de Hoy</h3>
-                <div className="w-56 h-56 mx-auto rounded-full border-8 border-slate-200 shadow-inner overflow-hidden flex flex-col">
-                  <div className="h-1/2 bg-emerald-500 text-white p-3 flex flex-col items-center justify-center text-center border-b-4 border-white">
-                    <span className="text-[10px] font-black uppercase">50% Fibra</span>
-                    <span className="text-[11px] font-bold leading-tight line-clamp-2 mt-0.5">{selectedFibra}</span>
-                  </div>
-                  <div className="h-1/2 flex">
-                    <div className="w-1/2 bg-blue-600 text-white p-2 flex flex-col items-center justify-center text-center border-r-2 border-white">
-                      <span className="text-[9px] font-black uppercase">25% Proteína</span>
-                      <span className="text-[10px] font-bold leading-tight line-clamp-2 mt-0.5">{selectedProteina}</span>
-                    </div>
-                    <div className="w-1/2 bg-amber-400 text-blue-950 p-2 flex flex-col items-center justify-center text-center border-l-2 border-white">
-                      <span className="text-[9px] font-black uppercase">25% Medido</span>
-                      <span className="text-[10px] font-bold leading-tight line-clamp-2 mt-0.5">{selectedCarb}</span>
-                    </div>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Tarjetas Táctiles */}
+              <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-7 space-y-6">
+                <div>
+                  <h2 className="text-lg sm:text-xl font-black text-slate-900">
+                    Toca los ingredientes para armar tu plato
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Basado en el patrón Mediterráneo y Bajo en Carbohidratos (ADA 2026) con alimentos locales de Quetzaltenango.
+                  </p>
+                </div>
+
+                {/* 50% Fibra */}
+                <div className="space-y-2">
+                  <div className="text-xs font-black uppercase text-emerald-800">1. Medio Plato (50%): Fibra y Microbioma (Comer primero)</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {LOCAL_PLATE_OPTIONS.fibra.map(opt => (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        onClick={() => setSelectedFibra(opt.label)}
+                        className={`p-3 rounded-2xl border text-left transition-all ${
+                          selectedFibra === opt.label
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
+                            : 'bg-emerald-50/50 text-slate-800 border-emerald-200/80 hover:border-emerald-400'
+                        }`}
+                      >
+                        <div className="text-xs font-black leading-snug">{opt.label}</div>
+                        <div className={`text-[10px] mt-0.5 ${selectedFibra === opt.label ? 'text-emerald-100' : 'text-emerald-700'}`}>
+                          {opt.benefit}
+                        </div>
+                      </button>
+                    ))}
                   </div>
                 </div>
-                <div className="text-center text-xs font-bold text-cyan-800 bg-cyan-50 py-2 px-3 rounded-xl border border-cyan-100">
-                  🥤 Acompañar con: {selectedBebida}
+
+                {/* 25% Proteína */}
+                <div className="space-y-2">
+                  <div className="text-xs font-black uppercase text-blue-900">2. Un Cuarto (25%): Proteína Protectora Muscular</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {LOCAL_PLATE_OPTIONS.proteina.map(opt => (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        onClick={() => setSelectedProteina(opt.label)}
+                        className={`p-3 rounded-2xl border text-left transition-all ${
+                          selectedProteina === opt.label
+                            ? 'bg-blue-700 text-white border-blue-700 shadow-md'
+                            : 'bg-blue-50/50 text-slate-800 border-blue-200/80 hover:border-blue-400'
+                        }`}
+                      >
+                        <div className="text-xs font-black leading-snug">{opt.label}</div>
+                        <div className={`text-[10px] mt-0.5 ${selectedProteina === opt.label ? 'text-blue-100' : 'text-blue-700'}`}>
+                          {opt.benefit}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 25% Carbohidrato Medido */}
+                <div className="space-y-2">
+                  <div className="text-xs font-black uppercase text-amber-900">3. Un Cuarto (25%): Carbohidrato Medido + Grasa Saludable</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {LOCAL_PLATE_OPTIONS.carbohidrato.map(opt => (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        onClick={() => setSelectedCarb(opt.label)}
+                        className={`p-3 rounded-2xl border text-left transition-all ${
+                          selectedCarb === opt.label
+                            ? 'bg-amber-500 text-blue-950 border-amber-500 shadow-md'
+                            : 'bg-amber-50/50 text-slate-800 border-amber-200/80 hover:border-amber-400'
+                        }`}
+                      >
+                        <div className="text-xs font-black leading-snug">{opt.label}</div>
+                        <div className={`text-[10px] mt-0.5 ${selectedCarb === opt.label ? 'text-blue-900 font-bold' : 'text-amber-800'}`}>
+                          {opt.benefit}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Bebida */}
+                <div className="space-y-2">
+                  <div className="text-xs font-black uppercase text-cyan-900">4. Bebida Sin Azúcar ni Edulcorantes</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {LOCAL_PLATE_OPTIONS.bebida.map(opt => (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        onClick={() => setSelectedBebida(opt.label)}
+                        className={`p-2.5 rounded-2xl border text-left transition-all ${
+                          selectedBebida === opt.label
+                            ? 'bg-cyan-700 text-white border-cyan-700 shadow-md'
+                            : 'bg-cyan-50/50 text-slate-800 border-cyan-200/80 hover:border-cyan-400'
+                        }`}
+                      >
+                        <div className="text-xs font-black leading-snug">{opt.label}</div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs text-slate-700 space-y-1.5">
-                <div className="font-black text-slate-900">💡 Consejo de Orden Alimentario:</div>
-                <p className="leading-relaxed">
-                  Empieza comiendo la porción verde (fibra), sigue con la proteína y deja la tortilla/carbohidrato para el final: esto atenúa los picos de glucosa después de comer y nutre tu microbioma intestinal.
-                </p>
+              {/* Vista Previa Visual del Plato + Orden Alimentario */}
+              <div className="lg:col-span-5 bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-7 flex flex-col justify-between space-y-5">
+                <div className="space-y-4">
+                  <h3 className="text-base font-black text-slate-900 text-center">Tu Plato Listo</h3>
+                  <div className="w-60 h-60 mx-auto rounded-full border-8 border-slate-200 shadow-inner overflow-hidden flex flex-col">
+                    <div className="h-1/2 bg-emerald-500 text-white p-3 flex flex-col items-center justify-center text-center border-b-4 border-white">
+                      <span className="text-[10px] font-black uppercase">50% Fibra (1º)</span>
+                      <span className="text-[11px] font-bold leading-tight line-clamp-2 mt-0.5">{selectedFibra}</span>
+                    </div>
+                    <div className="h-1/2 flex">
+                      <div className="w-1/2 bg-blue-600 text-white p-2.5 flex flex-col items-center justify-center text-center border-r-2 border-white">
+                        <span className="text-[9px] font-black uppercase">25% Proteína (2º)</span>
+                        <span className="text-[10px] font-bold leading-tight line-clamp-3 mt-0.5">{selectedProteina}</span>
+                      </div>
+                      <div className="w-1/2 bg-amber-400 text-blue-950 p-2.5 flex flex-col items-center justify-center text-center border-l-2 border-white">
+                        <span className="text-[9px] font-black uppercase">25% Medido (3º)</span>
+                        <span className="text-[10px] font-bold leading-tight line-clamp-3 mt-0.5">{selectedCarb}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-center text-xs font-bold text-cyan-900 bg-cyan-50 py-2.5 px-3 rounded-xl border border-cyan-200">
+                    🥤 Bebida: {selectedBebida}
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs text-slate-700 space-y-2">
+                  <div className="font-black text-slate-900">📉 Secuencia Inteligente para Evitar Picos:</div>
+                  <div className="flex items-center justify-between gap-1 text-[11px] font-bold">
+                    <span className="bg-emerald-100 text-emerald-900 px-2 py-1 rounded-lg">1º Verduras</span>
+                    <span>→</span>
+                    <span className="bg-blue-100 text-blue-900 px-2 py-1 rounded-lg">2º Proteína</span>
+                    <span>→</span>
+                    <span className="bg-amber-100 text-amber-900 px-2 py-1 rounded-lg">3º Tortilla/Carb</span>
+                  </div>
+                  <p className="leading-relaxed">
+                    Comer la fibra primero crea una "red natural" en el intestino que frena la absorción rápida de glucosa y alimenta bacterias productoras de butirato.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* TAB 3: BITÁCORA HISTÓRICA + GRÁFICA + REPORTE MÉDICO */}
+        {/* TAB 3: BITÁCORA HISTÓRICA + DEMO 1 CLIC + GRÁFICA */}
         {activeTab === 'bitacora' && (
           <div className="space-y-6 animate-in fade-in duration-200">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <form
                 onSubmit={handleAddLog}
-                className="lg:col-span-5 bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-6 space-y-4 print:hidden"
+                className="lg:col-span-5 bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-6 space-y-4"
               >
                 <h2 className="text-lg font-black text-slate-900 flex items-center space-x-2">
                   <Plus size={20} className="text-blue-700" />
                   <span>Registrar Medición</span>
                 </h2>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="col-span-2">
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Momento del día</label>
-                    <select
-                      value={newLogMoment}
-                      onChange={e => setNewLogMoment(e.target.value as any)}
-                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800"
-                    >
-                      <option value="Ayunas">En Ayunas</option>
-                      <option value="1h Post-comida">1 hora después de comer (Marcador precoz)</option>
-                      <option value="2h Post-comida">2 horas después de comer</option>
-                      <option value="Antes de dormir">Antes de dormir</option>
-                    </select>
+                {/* Chips táctiles para momento del día */}
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1.5">Momento del día</label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {(['Ayunas', '1h Post-comida', '2h Post-comida', 'Antes de dormir'] as const).map(m => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setNewLogMoment(m)}
+                        className={`py-2 px-2.5 rounded-xl text-xs font-black border transition-all ${
+                          newLogMoment === m
+                            ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
+                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-blue-300'
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    ))}
                   </div>
+                </div>
 
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1">Glucosa (mg/dL)*</label>
                     <input
@@ -1168,7 +1461,7 @@ const HerramientasDiabetes: React.FC = () => {
                       value={newLogGlucose}
                       onChange={e => setNewLogGlucose(e.target.value)}
                       placeholder="112"
-                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black text-slate-900"
+                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-base font-black text-slate-900"
                     />
                   </div>
 
@@ -1212,22 +1505,44 @@ const HerramientasDiabetes: React.FC = () => {
                 </button>
               </form>
 
+              {/* Gráfica y Estadísticas */}
               <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-6 space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h2 className="text-lg font-black text-slate-900">Tendencia Glucémica (Meta 70–180 mg/dL)</h2>
                     <p className="text-xs text-slate-500">Resumen automático para llevar a tu consulta médica</p>
                   </div>
-                  {logs.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => window.print()}
-                      className="inline-flex items-center space-x-1.5 px-3.5 py-2 bg-slate-800 text-white rounded-xl text-xs font-black print:hidden"
-                    >
-                      <Printer size={14} />
-                      <span>Imprimir Reporte Médico</span>
-                    </button>
-                  )}
+                  <div className="flex flex-wrap gap-2">
+                    {logs.length === 0 ? (
+                      <button
+                        type="button"
+                        onClick={handleLoadDemoLogs}
+                        className="inline-flex items-center space-x-1.5 px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl text-xs font-black"
+                      >
+                        <Eye size={14} />
+                        <span>Cargar Ejemplo Demo</span>
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => window.print()}
+                          className="inline-flex items-center space-x-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-black"
+                        >
+                          <Printer size={14} />
+                          <span>Imprimir Reporte</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLogs([])}
+                          className="inline-flex items-center space-x-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold"
+                        >
+                          <RotateCcw size={13} />
+                          <span>Limpiar</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {logStats ? (
@@ -1264,7 +1579,7 @@ const HerramientasDiabetes: React.FC = () => {
                 ) : (
                   <div className="py-12 text-center text-slate-400 text-xs font-medium space-y-2">
                     <TrendingUp size={32} className="mx-auto opacity-50" />
-                    <p>Aún no tienes lecturas registradas. Agrega tu primera medición para ver la gráfica y el porcentaje de Tiempo en Rango.</p>
+                    <p>Agrega tu primera medición o presiona <strong>"Cargar Ejemplo Demo"</strong> para visualizar la gráfica de tendencia.</p>
                   </div>
                 )}
               </div>
@@ -1300,7 +1615,7 @@ const HerramientasDiabetes: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleDeleteLog(l.id)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors print:hidden"
+                        className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors"
                         title="Eliminar registro"
                       >
                         <Trash2 size={15} />
@@ -1313,7 +1628,7 @@ const HerramientasDiabetes: React.FC = () => {
           </div>
         )}
 
-        {/* TAB 4: CALCULADORAS Y EVALUADORES CLÍNICOS */}
+        {/* TAB 4: CALCULADORAS CON DESLIZADORES TÁCTILES Y TERMÓMETROS */}
         {activeTab === 'calculadoras' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in duration-200">
             <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-7 space-y-5">
@@ -1323,38 +1638,58 @@ const HerramientasDiabetes: React.FC = () => {
                 </div>
                 <div>
                   <h2 className="text-lg font-black text-slate-900">Meta de Peso (5–7%) y Proteína Diaria</h2>
-                  <p className="text-xs text-slate-500">Estándares ADA 2026 de prevención y protección muscular</p>
+                  <p className="text-xs text-slate-500">Desliza para calcular al instante según ADA 2026</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">Peso Actual</label>
-                  <div className="flex">
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-xs font-bold text-slate-700">Peso Actual</label>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        value={weightVal}
+                        onChange={e => setWeightVal(e.target.value)}
+                        className="w-20 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-sm font-black text-center"
+                      />
+                      <select
+                        value={weightUnit}
+                        onChange={e => setWeightUnit(e.target.value as 'kg' | 'lb')}
+                        className="px-2 py-1 bg-slate-200 rounded-lg text-xs font-black text-slate-800"
+                      >
+                        <option value="lb">lb</option>
+                        <option value="kg">kg</option>
+                      </select>
+                    </div>
+                  </div>
+                  <input
+                    type="range"
+                    min={weightUnit === 'lb' ? 80 : 35}
+                    max={weightUnit === 'lb' ? 350 : 160}
+                    value={parseFloat(weightVal) || (weightUnit === 'lb' ? 165 : 75)}
+                    onChange={e => setWeightVal(e.target.value)}
+                    className="w-full accent-emerald-600 cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-xs font-bold text-slate-700">Estatura (cm)</label>
                     <input
                       type="number"
-                      value={weightVal}
-                      onChange={e => setWeightVal(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-l-xl text-sm font-black text-slate-900"
+                      value={heightCm}
+                      onChange={e => setHeightCm(e.target.value)}
+                      className="w-20 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-sm font-black text-center"
                     />
-                    <select
-                      value={weightUnit}
-                      onChange={e => setWeightUnit(e.target.value as 'kg' | 'lb')}
-                      className="px-2.5 py-2 bg-slate-200 border border-l-0 border-slate-200 rounded-r-xl text-xs font-black text-slate-800"
-                    >
-                      <option value="lb">lb</option>
-                      <option value="kg">kg</option>
-                    </select>
                   </div>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">Estatura (cm)</label>
                   <input
-                    type="number"
-                    value={heightCm}
+                    type="range"
+                    min={130}
+                    max={210}
+                    value={parseFloat(heightCm) || 168}
                     onChange={e => setHeightCm(e.target.value)}
-                    placeholder="168"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black text-slate-900"
+                    className="w-full accent-blue-700 cursor-pointer"
                   />
                 </div>
               </div>
@@ -1379,12 +1714,12 @@ const HerramientasDiabetes: React.FC = () => {
               </div>
 
               {bmi > 0 && (
-                <div className="space-y-3 pt-2">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                      <span className="text-[10px] font-black uppercase text-slate-500">Índice de Masa Corporal</span>
-                      <div className="text-2xl font-black text-slate-900 mt-0.5">{bmi.toFixed(1)} kg/m²</div>
-                      <span className="text-xs font-bold text-blue-700">
+                <div className="space-y-4 pt-1">
+                  {/* Termómetro visual de IMC */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-xs font-bold">
+                      <span>IMC: <strong className="text-base text-slate-900">{bmi.toFixed(1)} kg/m²</strong></span>
+                      <span className="text-blue-700">
                         {bmi < 19
                           ? 'Bajo peso (Evaluar T5DM si hay hiperglucemia)'
                           : bmi < 25
@@ -1394,27 +1729,38 @@ const HerramientasDiabetes: React.FC = () => {
                           : 'Obesidad'}
                       </span>
                     </div>
+                    <div className="relative h-3 rounded-full overflow-hidden flex">
+                      <div className="w-[16%] bg-sky-400" title="Bajo peso <19" />
+                      <div className="w-[24%] bg-emerald-500" title="Saludable 19-24.9" />
+                      <div className="w-[20%] bg-amber-400" title="Sobrepeso 25-29.9" />
+                      <div className="w-[40%] bg-rose-500" title="Obesidad ≥30" />
+                      <div
+                        className="absolute top-0 bottom-0 w-2.5 bg-slate-900 border-2 border-white rounded-full -ml-1 transition-all duration-200"
+                        style={{ left: `${bmiMarkerPct}%` }}
+                      />
+                    </div>
+                  </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200">
                       <span className="text-[10px] font-black uppercase text-emerald-800">Meta Preventiva ADA 5–7%</span>
                       <div className="text-lg font-black text-emerald-950 mt-0.5">
                         -{(weightUnit === 'lb' ? weightLoss5 * 2.20462 : weightLoss5).toFixed(1)} a -{(weightUnit === 'lb' ? weightLoss7 * 2.20462 : weightLoss7).toFixed(1)} {weightUnit}
                       </div>
                       <span className="text-[11px] font-semibold text-emerald-800 block">
-                        Meta junto a 150 min/sem de actividad
+                        Junto a 150 min/sem de actividad
                       </span>
                     </div>
-                  </div>
 
-                  <div className="p-4 bg-blue-50 rounded-2xl border border-blue-200 text-xs text-blue-950 space-y-1">
-                    <div className="font-black text-sm">
-                      Proteína Diaria Protectora: {proteinMinG} – {proteinMaxG} gramos/día
+                    <div className="p-4 bg-blue-50 rounded-2xl border border-blue-200 text-xs text-blue-950">
+                      <span className="text-[10px] font-black uppercase text-blue-800">Proteína Protectora</span>
+                      <div className="font-black text-lg mt-0.5">
+                        {proteinMinG} – {proteinMaxG} g/día
+                      </div>
+                      <span className="text-[11px] font-medium block">
+                        Para conservar masa muscular
+                      </span>
                     </div>
-                    <p className="leading-relaxed">
-                      {rapidWeightLoss
-                        ? 'En pérdida de peso rápida o terapia con incretinas, asegurar 1.1–1.5 g/kg (o mínimo 60–80 g/día) y entrenamiento de fuerza evita perder masa muscular.'
-                        : 'Asegurar al menos 0.8 g/kg al día protege el músculo esquelético y la sensibilidad a la insulina.'}
-                    </p>
                   </div>
                 </div>
               )}
@@ -1427,23 +1773,46 @@ const HerramientasDiabetes: React.FC = () => {
                 </div>
                 <div>
                   <h2 className="text-lg font-black text-slate-900">Evaluador de Metas Clínicas (ADA 2026)</h2>
-                  <p className="text-xs text-slate-500">Compara tus últimos resultados frente a las metas oficiales</p>
+                  <p className="text-xs text-slate-500">Ajusta tus valores para comparar contra metas oficiales</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="text-[11px] font-bold text-slate-700 block mb-1">HbA1c (%)</label>
+              {/* Slider HbA1c + Termómetro */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-xs font-bold">
+                  <label>HbA1c (%)</label>
                   <input
                     type="number"
                     step="0.1"
                     value={hba1c}
                     onChange={e => setHba1c(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black text-slate-900"
+                    className="w-20 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-sm font-black text-center"
                   />
                 </div>
+                <input
+                  type="range"
+                  min={4.5}
+                  max={11}
+                  step={0.1}
+                  value={hba1cNum}
+                  onChange={e => setHba1c(e.target.value)}
+                  className="w-full accent-blue-900 cursor-pointer"
+                />
+                <div className="relative h-2.5 rounded-full overflow-hidden flex">
+                  <div className="w-[31%] bg-emerald-500" title="<6.5% Óptimo / Remisión" />
+                  <div className="w-[8%] bg-teal-400" title="6.5-6.9% En Meta" />
+                  <div className="w-[15%] bg-amber-400" title="7.0-7.9% Precirugía" />
+                  <div className="w-[46%] bg-rose-500" title="≥8.0% Fuera de meta" />
+                  <div
+                    className="absolute top-0 bottom-0 w-2.5 bg-slate-900 border-2 border-white rounded-full -ml-1 transition-all duration-200"
+                    style={{ left: `${hba1cMarkerPct}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
-                  <label className="text-[11px] font-bold text-slate-700 block mb-1">Tiempo en Rango (%)</label>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">En Rango (%)</label>
                   <input
                     type="number"
                     value={tir}
@@ -1452,7 +1821,7 @@ const HerramientasDiabetes: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-slate-700 block mb-1">Bajo Rango &lt;70 (%)</label>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">Bajo &lt;70 (%)</label>
                   <input
                     type="number"
                     step="0.1"
@@ -1462,7 +1831,7 @@ const HerramientasDiabetes: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-slate-700 block mb-1">Presión Sistólica</label>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">Sistólica</label>
                   <input
                     type="number"
                     value={systolicBp}
@@ -1471,7 +1840,7 @@ const HerramientasDiabetes: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-slate-700 block mb-1">Presión Diastólica</label>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">Diastólica</label>
                   <input
                     type="number"
                     value={diastolicBp}
@@ -1481,19 +1850,19 @@ const HerramientasDiabetes: React.FC = () => {
                 </div>
               </div>
 
-              <div className="space-y-2.5 text-xs">
+              <div className="space-y-2 text-xs">
                 <div className={`p-3 rounded-2xl border flex items-center justify-between ${hba1cNum < 7 ? 'bg-emerald-50 border-emerald-200 text-emerald-950' : 'bg-amber-50 border-amber-200 text-amber-950'}`}>
                   <span><strong>HbA1c ({hba1cNum}%):</strong> Meta general adultos &lt; 7.0%</span>
-                  <span className="font-black">{hba1cNum < 6.5 ? 'Óptimo / Rango Remisión*' : hba1cNum < 7 ? 'En Meta' : 'Revisar con médico'}</span>
+                  <span className="font-black">{hba1cNum < 6.5 ? 'Óptimo / Remisión*' : hba1cNum < 7 ? 'En Meta' : 'Revisar con médico'}</span>
                 </div>
 
                 <div className={`p-3 rounded-2xl border flex items-center justify-between ${tirNum >= 70 ? 'bg-emerald-50 border-emerald-200 text-emerald-950' : 'bg-amber-50 border-amber-200 text-amber-950'}`}>
-                  <span><strong>Tiempo en Rango ({tirNum}%):</strong> Meta 70–180 mg/dL &gt; 70%</span>
+                  <span><strong>Tiempo en Rango ({tirNum}%):</strong> Meta 70–180 &gt; 70%</span>
                   <span className="font-black">{tirNum >= 70 ? 'En Meta' : 'Por mejorar'}</span>
                 </div>
 
                 <div className={`p-3 rounded-2xl border flex items-center justify-between ${tbrNum < 1 ? 'bg-emerald-50 border-emerald-200 text-emerald-950' : 'bg-rose-50 border-rose-200 text-rose-950'}`}>
-                  <span><strong>Hipoglucemia &lt;70 ({tbrNum}%):</strong> Seguridad crítica 2026 &lt; 1%</span>
+                  <span><strong>Hipoglucemia &lt;70 ({tbrNum}%):</strong> Seguridad 2026 &lt; 1%</span>
                   <span className="font-black">{tbrNum < 1 ? 'Seguro (<1%)' : 'Alerta Hipoglucemia'}</span>
                 </div>
 
@@ -1503,7 +1872,7 @@ const HerramientasDiabetes: React.FC = () => {
                 </div>
               </div>
               <p className="text-[11px] text-slate-500">
-                *La remisión de DT2 se define como HbA1c &lt; 6.5% durante ≥3 meses sin medicación hipoglucemiante. Antes de cirugías electivas, la meta recomendada es HbA1c &lt; 8% y glucemia 100–180 mg/dL.
+                *La remisión de DT2 se define como HbA1c &lt; 6.5% durante ≥3 meses sin medicación hipoglucemiante. Antes de cirugías electivas: HbA1c &lt; 8%.
               </p>
             </div>
 
@@ -1569,7 +1938,7 @@ const HerramientasDiabetes: React.FC = () => {
                     Escanea la Etiqueta o Ingredientes de cualquier Producto
                   </h2>
                   <p className="text-xs text-slate-200 max-w-2xl">
-                    Toma una foto a la tabla nutricional o ingredientes. La IA revisará si contiene grasas trans, eritritol/xilitol, azúcares añadidos, edulcorantes o sodio alto.
+                    Toma una foto a la tabla nutricional o ingredientes. Comprimimos la imagen para respuesta rápida y revisamos grasas trans, eritritol/xilitol, azúcares, edulcorantes y sodio.
                   </p>
                 </div>
 
@@ -1596,7 +1965,7 @@ const HerramientasDiabetes: React.FC = () => {
                     ) : (
                       <>
                         <Camera size={18} />
-                        <span>Tomar / Subir Foto de Etiqueta</span>
+                        <span>Tomar / Subir Foto</span>
                       </>
                     )}
                   </button>
@@ -1610,78 +1979,108 @@ const HerramientasDiabetes: React.FC = () => {
               )}
 
               {labelResult && (
-                <div className="bg-white text-slate-900 rounded-2xl p-5 space-y-3 shadow-xl animate-in zoom-in-95 duration-200">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="font-black text-base">{labelResult.productoDetectado}</h3>
-                    <span
-                      className={`text-xs font-black uppercase px-3 py-1 rounded-full ${
-                        labelResult.veredicto === 'recomendado'
-                          ? 'bg-emerald-100 text-emerald-800'
+                <div className="bg-white text-slate-900 rounded-2xl p-5 shadow-xl animate-in zoom-in-95 duration-200 flex flex-col sm:flex-row gap-4">
+                  {labelPreview && (
+                    <img
+                      src={labelPreview}
+                      alt="Etiqueta analizada"
+                      className="w-full sm:w-32 h-32 object-cover rounded-xl border border-slate-200 shrink-0"
+                    />
+                  )}
+                  <div className="flex-1 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="font-black text-base">{labelResult.productoDetectado}</h3>
+                      <span
+                        className={`text-xs font-black uppercase px-3 py-1 rounded-full ${
+                          labelResult.veredicto === 'recomendado'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : labelResult.veredicto === 'precaucion'
+                            ? 'bg-amber-100 text-amber-900'
+                            : 'bg-rose-100 text-rose-800'
+                        }`}
+                      >
+                        {labelResult.veredicto === 'recomendado'
+                          ? '✅ Apto / Recomendado'
                           : labelResult.veredicto === 'precaucion'
-                          ? 'bg-amber-100 text-amber-900'
-                          : 'bg-rose-100 text-rose-800'
-                      }`}
-                    >
-                      {labelResult.veredicto === 'recomendado'
-                        ? '✅ Apto / Recomendado'
-                        : labelResult.veredicto === 'precaucion'
-                        ? '⚠️ Consumir con Precaución'
-                        : '🚫 Mejor Evitar'}
-                    </span>
+                          ? '⚠️ Consumir con Precaución'
+                          : '🚫 Mejor Evitar'}
+                      </span>
+                    </div>
+
+                    {labelResult.alertasDetectadas && labelResult.alertasDetectadas.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {labelResult.alertasDetectadas.map((a, i) => (
+                          <span key={i} className="text-[11px] font-bold bg-slate-100 text-slate-800 px-2.5 py-1 rounded-lg border border-slate-200">
+                            • {a}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    <p className="text-xs text-slate-700 leading-relaxed font-medium">
+                      {labelResult.analisisDetallado}
+                    </p>
+                    {labelResult.alternativaSaludable && (
+                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-950">
+                        <strong>Alternativa sugerida:</strong> {labelResult.alternativaSaludable}
+                      </div>
+                    )}
                   </div>
-
-                  {labelResult.alertasDetectadas && labelResult.alertasDetectadas.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {labelResult.alertasDetectadas.map((a, i) => (
-                        <span key={i} className="text-[11px] font-bold bg-slate-100 text-slate-800 px-2.5 py-1 rounded-lg border border-slate-200">
-                          • {a}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  <p className="text-xs text-slate-700 leading-relaxed font-medium">
-                    {labelResult.analisisDetallado}
-                  </p>
-                  {labelResult.alternativaSaludable && (
-                    <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-950">
-                      <strong>Alternativa sugerida:</strong> {labelResult.alternativaSaludable}
-                    </div>
-                  )}
                 </div>
               )}
             </div>
 
-            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-6 flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
-              <div className="relative flex-1">
-                <Search size={18} className="absolute left-3.5 top-3 text-slate-400" />
-                <input
-                  type="text"
-                  value={productQuery}
-                  onChange={e => setProductQuery(e.target.value)}
-                  placeholder="Buscar producto, edulcorante, suplemento o fármaco (ej. eritritol, ozempic, prednisona)..."
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-600 outline-none"
-                />
+            {/* Buscador + Chips Rápidos */}
+            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 sm:p-6 space-y-4">
+              <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+                <div className="relative flex-1">
+                  <Search size={18} className="absolute left-3.5 top-3 text-slate-400" />
+                  <input
+                    type="text"
+                    value={productQuery}
+                    onChange={e => setProductQuery(e.target.value)}
+                    placeholder="Buscar producto, edulcorante, suplemento o fármaco..."
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-600 outline-none"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { id: 'all', label: 'Todos' },
+                    { id: 'peligro', label: '🚫 Peligro Crítico' },
+                    { id: 'evitar', label: '⚠️ Limitar / Evitar' },
+                    { id: 'vigilar', label: '💊 Vigilar con Médico' }
+                  ].map(f => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setProductFilter(f.id as any)}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all ${
+                        productFilter === f.id
+                          ? 'bg-blue-900 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { id: 'all', label: 'Todos' },
-                  { id: 'peligro', label: '🚫 Peligro Crítico' },
-                  { id: 'evitar', label: '⚠️ Limitar / Evitar' },
-                  { id: 'vigilar', label: '💊 Vigilar con Médico' }
-                ].map(f => (
+              <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                <span className="text-slate-400 font-bold mr-1">Búsquedas rápidas:</span>
+                {QUICK_SEARCH_CHIPS.map(chip => (
                   <button
-                    key={f.id}
+                    key={chip}
                     type="button"
-                    onClick={() => setProductFilter(f.id as any)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all ${
-                      productFilter === f.id
-                        ? 'bg-blue-900 text-white shadow-sm'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    onClick={() => setProductQuery(productQuery === chip ? '' : chip)}
+                    className={`px-2.5 py-1 rounded-lg font-bold border transition-colors ${
+                      productQuery === chip
+                        ? 'bg-blue-100 text-blue-900 border-blue-300'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                     }`}
                   >
-                    {f.label}
+                    {chip}
                   </button>
                 ))}
               </div>
@@ -1796,7 +2195,7 @@ const HerramientasDiabetes: React.FC = () => {
         )}
 
         {/* Enlace con Jornadas Médicas del Club de Leones */}
-        <div className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-3xl p-6 sm:p-8 shadow-lg flex flex-col md:flex-row items-center justify-between gap-6 print:hidden">
+        <div className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-3xl p-6 sm:p-8 shadow-lg flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-2 text-center md:text-left">
             <span className="text-[10px] font-black uppercase tracking-widest bg-yellow-400 text-blue-950 px-3 py-1 rounded-full">
               Servicio Comunitario en Quetzaltenango
