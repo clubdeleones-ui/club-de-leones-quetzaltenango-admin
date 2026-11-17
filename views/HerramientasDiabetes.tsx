@@ -655,9 +655,15 @@ const HerramientasDiabetes: React.FC = () => {
       {/* HOJA CLÍNICA DE IMPRESIÓN EXCLUSIVA (Solo visible al imprimir / guardar PDF) */}
       <div className="hidden print:block p-6 text-slate-900 space-y-5">
         <div className="border-b-2 border-blue-900 pb-3 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-black text-blue-950">Hoja Clínica Personal — Prevención y Cuidado de Diabetes</h1>
-            <p className="text-xs text-slate-600">Club de Leones de Quetzaltenango • Referencia Estándares ADA/EASD 2026</p>
+          <div className="flex items-center gap-3.5">
+            <div className="flex flex-col items-center">
+              <img src="/images/logo.png" alt="Lions International" className="w-12 h-12 object-contain" />
+              <span className="text-[8px] font-black tracking-widest text-blue-950 uppercase mt-0.5">Quetzaltenango</span>
+            </div>
+            <div>
+              <h1 className="text-xl font-black text-blue-950">Hoja Clínica Personal — Prevención y Cuidado de Diabetes</h1>
+              <p className="text-xs text-slate-600">Club de Leones de Quetzaltenango • Referencia Estándares ADA/EASD 2026</p>
+            </div>
           </div>
           <div className="text-right text-xs">
             <div><strong>Enfoque:</strong> {profileMode === 'prevencion' ? 'Prevención' : 'Cuidado Activo'}</div>
@@ -757,7 +763,7 @@ const HerramientasDiabetes: React.FC = () => {
               </button>
 
               <a
-                href="/docs/Guia-Uso-Herramientas-Diabetes.pdf"
+                href="/docs/Guia-Uso-Herramientas-Diabetes.pdf?v=3"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center space-x-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all"
