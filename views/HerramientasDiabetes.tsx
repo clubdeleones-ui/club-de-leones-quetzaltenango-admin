@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   HeartPulse,
   ShieldCheck,
@@ -38,8 +38,14 @@ import {
   Type,
   UtensilsCrossed,
   TrendingUp,
-  Eye
+  Eye,
+  Cloud,
+  RefreshCw,
+  LogOut,
+  Smartphone
 } from 'lucide-react';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '../services/firebase';
 import {
   ResponsiveContainer,
   LineChart,
@@ -271,6 +277,7 @@ const QUICK_SEARCH_CHIPS = ['Ozempic', 'Eritritol', 'Tejocote', 'Estatinas', 'Re
 
 const STORAGE_KEY = 'club_leones_diabetes_planner_v1';
 const LOGS_STORAGE_KEY = 'club_leones_diabetes_logs_v1';
+const CLOUD_AUTH_KEY = 'club_leones_diabetes_cloud_auth_v1';
 
 const timeToMinutes = (t: string) => {
   const [h, m] = t.split(':').map(Number);
@@ -279,10 +286,21 @@ const timeToMinutes = (t: string) => {
 };
 
 const HerramientasDiabetes: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [profileMode, setProfileMode] = useState<ProfileMode>('prevencion');
   const [activeTab, setActiveTab] = useState<MainTab>('planificador');
   const [largeText, setLargeText] = useState<boolean>(false);
   const [showEmergencyCard, setShowEmergencyCard] = useState<boolean>(false);
+
+  // Respaldo en la nube sin cuenta (Teléfono + Año nacimiento / PIN)
+  const [cloudPhone, setCloudPhone] = useState<string>('');
+  const [cloudPin, setCloudPin] = useState<string>('');
+  const [cloudName, setCloudName] = useState<string>('');
+  const [cloudConnected, setCloudConnected] = useState<boolean>(false);
+  const [cloudSyncing, setCloudSyncing] = useState<boolean>(false);
+  const [cloudLastSaved, setCloudLastSaved] = useState<string | null>(null);
+  const [cloudError, setCloudError] = useState<string | null>(null);
+  const isInitialCloudLoadRef = useRef<boolean>(false);
 
   // Planificador State
   const [completedIds, setCompletedIds] = useState<string[]>([]);
@@ -387,6 +405,243 @@ const HerramientasDiabetes: React.FC = () => {
   useEffect(() => {
     safeSetItem(LOGS_STORAGE_KEY, JSON.stringify(logs));
   }, [logs]);
+
+  // Función para conectar / sincronizar con Firestore usando Teléfono + PIN (Año nac.)
+  const connectAndSyncProfile = async (phoneInput: string, pinInput: string, nameInput?: string) => {
+    const cleanPhone = phoneInput.replace(/\D/g, '').slice(-8);
+    const cleanPin = pinInput.replace(/\D/g, '').slice(0, 4);
+
+    if (cleanPhone.length !== 8) {
+      setCloudError('Ingresa tu número de teléfono de 8 dígitos (ej. 55554444).');
+      return;
+    }
+    if (cleanPin.length !== 4) {
+      setCloudError('Ingresa los 4 dígitos de tu año de nacimiento o PIN (ej. 1960).');
+      return;
+    }
+
+    setCloudError(null);
+    setCloudSyncing(true);
+    isInitialCloudLoadRef.current = true;
+
+    const docId = `diab_${cleanPhone}_${cleanPin}`;
+    try {
+      const docRef = doc(db, 'diabetes_registros', docId);
+      const snap = await getDoc(docRef);
+
+      let mergedLogs = [...logs];
+      let finalName = (nameInput ?? cloudName).trim();
+
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.userName && !finalName) finalName = data.userName;
+        if (data.profileMode) setProfileMode(data.profileMode);
+        if (Array.isArray(data.completedIds)) setCompletedIds(data.completedIds);
+        if (typeof data.aerobicMinutes === 'number') setAerobicMinutes(data.aerobicMinutes);
+        if (typeof data.strengthSessions === 'number') setStrengthSessions(data.strengthSessions);
+        if (data.breakfastTime) setBreakfastTime(data.breakfastTime);
+        if (data.lunchTime) setLunchTime(data.lunchTime);
+        if (data.dinnerTime) setDinnerTime(data.dinnerTime);
+        if (data.sleepTime) setSleepTime(data.sleepTime);
+        if (data.weightUnit) setWeightUnit(data.weightUnit);
+        if (data.weightVal) setWeightVal(String(data.weightVal));
+        if (data.heightCm) setHeightCm(String(data.heightCm));
+        if (data.hba1c) setHba1c(String(data.hba1c));
+        if (data.tir) setTir(String(data.tir));
+        if (data.tbr) setTbr(String(data.tbr));
+        if (data.systolicBp) setSystolicBp(String(data.systolicBp));
+        if (data.diastolicBp) setDiastolicBp(String(data.diastolicBp));
+        if (data.selectedFibra) setSelectedFibra(data.selectedFibra);
+        if (data.selectedProteina) setSelectedProteina(data.selectedProteina);
+        if (data.selectedCarb) setSelectedCarb(data.selectedCarb);
+        if (data.selectedBebida) setSelectedBebida(data.selectedBebida);
+
+        if (Array.isArray(data.logs)) {
+          const map = new Map<string, GlucoseLogEntry>();
+          [...data.logs, ...logs].forEach((item: GlucoseLogEntry) => {
+            if (item && item.id) map.set(item.id, item);
+          });
+          mergedLogs = Array.from(map.values())
+            .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime())
+            .slice(0, 90);
+          setLogs(mergedLogs);
+        }
+      } else {
+        await setDoc(
+          docRef,
+          {
+            phone: cleanPhone,
+            userName: finalName || 'Usuario',
+            profileMode,
+            completedIds,
+            aerobicMinutes,
+            strengthSessions,
+            breakfastTime,
+            lunchTime,
+            dinnerTime,
+            sleepTime,
+            weightUnit,
+            weightVal,
+            heightCm,
+            hba1c,
+            tir,
+            tbr,
+            systolicBp,
+            diastolicBp,
+            selectedFibra,
+            selectedProteina,
+            selectedCarb,
+            selectedBebida,
+            logs: mergedLogs,
+            updatedAt: new Date().toISOString()
+          },
+          { merge: true }
+        );
+      }
+
+      setCloudPhone(cleanPhone);
+      setCloudPin(cleanPin);
+      setCloudName(finalName);
+      setCloudConnected(true);
+      setCloudLastSaved(new Date().toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' }));
+      safeSetItem(CLOUD_AUTH_KEY, JSON.stringify({ phone: cleanPhone, pin: cleanPin, name: finalName }));
+    } catch (err) {
+      console.error('Error conectando respaldo en la nube:', err);
+      setCloudError('No pudimos conectar con la nube en este momento. Tus datos siguen seguros en este dispositivo.');
+    } finally {
+      setCloudSyncing(false);
+      setTimeout(() => {
+        isInitialCloudLoadRef.current = false;
+      }, 400);
+    }
+  };
+
+  // Auto-restaurar desde URL (?perfil=55554444-1958) o desde sesión guardada
+  useEffect(() => {
+    const urlPerfil = searchParams.get('perfil');
+    if (urlPerfil && urlPerfil.includes('-')) {
+      const [pPhone, pPin] = urlPerfil.split('-');
+      if (pPhone && pPin) {
+        connectAndSyncProfile(pPhone, pPin);
+        return;
+      }
+    }
+
+    try {
+      const savedAuth = localStorage.getItem(CLOUD_AUTH_KEY);
+      if (savedAuth) {
+        const parsed = JSON.parse(savedAuth);
+        if (parsed.phone && parsed.pin) {
+          setCloudPhone(parsed.phone);
+          setCloudPin(parsed.pin);
+          if (parsed.name) setCloudName(parsed.name);
+          connectAndSyncProfile(parsed.phone, parsed.pin, parsed.name);
+        }
+      }
+    } catch (_) {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-guardado silencioso en Firestore cada vez que cambia algún dato estando conectado
+  useEffect(() => {
+    if (!cloudConnected || !cloudPhone || !cloudPin || isInitialCloudLoadRef.current) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        setCloudSyncing(true);
+        const docId = `diab_${cloudPhone}_${cloudPin}`;
+        await setDoc(
+          doc(db, 'diabetes_registros', docId),
+          {
+            phone: cloudPhone,
+            userName: cloudName || 'Usuario',
+            profileMode,
+            completedIds,
+            aerobicMinutes,
+            strengthSessions,
+            breakfastTime,
+            lunchTime,
+            dinnerTime,
+            sleepTime,
+            weightUnit,
+            weightVal,
+            heightCm,
+            hba1c,
+            tir,
+            tbr,
+            systolicBp,
+            diastolicBp,
+            selectedFibra,
+            selectedProteina,
+            selectedCarb,
+            selectedBebida,
+            logs,
+            updatedAt: new Date().toISOString()
+          },
+          { merge: true }
+        );
+        setCloudLastSaved(new Date().toLocaleTimeString('es-GT', { hour: '2-digit', minute: '2-digit' }));
+      } catch (e) {
+        console.warn('Error auto-guardando respaldo:', e);
+      } finally {
+        setCloudSyncing(false);
+      }
+    }, 900);
+
+    return () => clearTimeout(timer);
+  }, [
+    cloudConnected,
+    cloudPhone,
+    cloudPin,
+    cloudName,
+    profileMode,
+    completedIds,
+    aerobicMinutes,
+    strengthSessions,
+    breakfastTime,
+    lunchTime,
+    dinnerTime,
+    sleepTime,
+    weightUnit,
+    weightVal,
+    heightCm,
+    hba1c,
+    tir,
+    tbr,
+    systolicBp,
+    diastolicBp,
+    selectedFibra,
+    selectedProteina,
+    selectedCarb,
+    selectedBebida,
+    logs
+  ]);
+
+  const handleDisconnectCloud = () => {
+    setCloudConnected(false);
+    setCloudPhone('');
+    setCloudPin('');
+    setCloudName('');
+    setCloudLastSaved(null);
+    try {
+      localStorage.removeItem(CLOUD_AUTH_KEY);
+    } catch (_) {}
+    if (searchParams.has('perfil')) {
+      searchParams.delete('perfil');
+      setSearchParams(searchParams);
+    }
+  };
+
+  const handleSendPersonalLinkWhatsApp = () => {
+    if (!cloudPhone || !cloudPin) return;
+    const directUrl = `https://clubdeleonesquetzaltenango.org/#/herramientas/diabetes?perfil=${cloudPhone}-${cloudPin}`;
+    const msg =
+      `📋 *Mi Enlace Personal de Salud (Club de Leones Xela)*\n` +
+      `${cloudName ? `Paciente: ${cloudName}\n` : ''}` +
+      `Guarda este mensaje en tu propio chat. Toca el siguiente enlace cuando quieras abrir tu bitácora de glucosa y tu rutina desde cualquier teléfono:\n\n` +
+      `${directUrl}`;
+    window.open(`https://wa.me/502${cloudPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+  };
 
   const visibleTasks = useMemo(
     () => ROUTINE_TASKS.filter(t => t.mode === 'both' || t.mode === profileMode),
@@ -624,6 +879,11 @@ const HerramientasDiabetes: React.FC = () => {
 
   const handleShareWhatsApp = () => {
     const modeLabel = profileMode === 'prevencion' ? 'Prevención' : 'Cuidado Activo';
+    const personalUrl =
+      cloudConnected && cloudPhone && cloudPin
+        ? `https://clubdeleonesquetzaltenango.org/#/herramientas/diabetes?perfil=${cloudPhone}-${cloudPin}`
+        : `https://clubdeleonesquetzaltenango.org/#/herramientas/diabetes`;
+    const targetPhone = cloudConnected && cloudPhone ? `502${cloudPhone}` : '';
     const text =
       `Mi Plan Diario de Salud (${modeLabel} - Guía ADA 2026 Club de Leones Xela):\n` +
       `• Cumplimiento de hoy: ${progressPct}%\n` +
@@ -632,8 +892,8 @@ const HerramientasDiabetes: React.FC = () => {
       `• Horario comidas: Desayuno ${breakfastTime} | Almuerzo ${lunchTime} | Cena ligera ${dinnerTime}\n` +
       `• Ventana alimentación: ${circadianStats.eatingWindowHours} h / Ayuno nocturno: ${circadianStats.overnightFastHours} h\n` +
       `• Hora de dormir: ${sleepTime} (Cero cafeína desde las ${caffeineCutoff})\n\n` +
-      `Crea tu plan gratuito en: https://clubdeleonesquetzaltenango.org/#/herramientas/diabetes`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+      `Abre tu registro en: ${personalUrl}`;
+    window.open(`https://wa.me/${targetPhone}?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   // Ring math for progress
@@ -666,6 +926,8 @@ const HerramientasDiabetes: React.FC = () => {
             </div>
           </div>
           <div className="text-right text-xs">
+            {cloudName && <div><strong>Paciente:</strong> {cloudName}</div>}
+            {cloudPhone && <div><strong>Teléfono:</strong> {cloudPhone}</div>}
             <div><strong>Enfoque:</strong> {profileMode === 'prevencion' ? 'Prevención' : 'Cuidado Activo'}</div>
             <div><strong>Fecha:</strong> {new Date().toLocaleDateString('es-GT')}</div>
           </div>
@@ -763,7 +1025,7 @@ const HerramientasDiabetes: React.FC = () => {
               </button>
 
               <a
-                href="/docs/Guia-Uso-Herramientas-Diabetes.pdf?v=3"
+                href="/docs/Guia-Uso-Herramientas-Diabetes.pdf?v=4"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center space-x-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all"
@@ -912,7 +1174,142 @@ const HerramientasDiabetes: React.FC = () => {
       </div>
 
       {/* Contenido Principal */}
-      <div className="max-w-[1240px] mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-8 print:hidden">
+      <div className="max-w-[1240px] mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6 print:hidden">
+        {/* BARRA DE RESPALDO SIN CUENTA (TELÉFONO + AÑO NACIMIENTO / PIN) */}
+        <div className={`rounded-3xl border p-4 sm:p-5 transition-all shadow-xs ${
+          cloudConnected
+            ? 'bg-emerald-50/90 border-emerald-200'
+            : 'bg-white border-slate-200/90'
+        }`}>
+          {cloudConnected ? (
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3.5">
+              <div className="flex items-start sm:items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Cloud size={20} />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-black text-xs sm:text-sm text-emerald-950">
+                      ✓ Respaldo en la Nube Activo {cloudName ? `• ${cloudName}` : ''} (Tel. ••••{cloudPhone.slice(-4)})
+                    </span>
+                    <span className="text-[10px] font-extrabold bg-white text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200">
+                      {cloudSyncing ? 'Guardando cambios...' : `Sincronizado ${cloudLastSaved ? `a las ${cloudLastSaved}` : ''}`}
+                    </span>
+                  </div>
+                  <p className="text-xs text-emerald-800 mt-0.5">
+                    Puedes abrir tu progreso en cualquier teléfono ingresando tu número ({cloudPhone}) y tu PIN ({cloudPin}).
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleSendPersonalLinkWhatsApp}
+                  className="inline-flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-xs transition-colors"
+                >
+                  <Smartphone size={14} />
+                  <span>Guardar Enlace en mi WhatsApp</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => connectAndSyncProfile(cloudPhone, cloudPin, cloudName)}
+                  disabled={cloudSyncing}
+                  className="inline-flex items-center space-x-1 px-3 py-2 bg-white hover:bg-emerald-100 text-emerald-900 border border-emerald-200 rounded-xl text-xs font-bold transition-colors"
+                >
+                  <RefreshCw size={13} className={cloudSyncing ? 'animate-spin' : ''} />
+                  <span>Sincronizar</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDisconnectCloud}
+                  className="inline-flex items-center space-x-1 px-2.5 py-2 text-slate-500 hover:text-rose-700 text-xs font-bold"
+                  title="Desvincular de este navegador"
+                >
+                  <LogOut size={14} />
+                  <span>Salir</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <form
+              onSubmit={e => {
+                e.preventDefault();
+                connectAndSyncProfile(cloudPhone, cloudPin, cloudName);
+              }}
+              className="space-y-3"
+            >
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="flex items-start space-x-3">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-800 flex items-center justify-center shrink-0 mt-0.5">
+                    <Cloud size={20} />
+                  </div>
+                  <div>
+                    <h2 className="text-sm sm:text-base font-black text-slate-900">
+                      ¿Quieres guardar o recuperar tu proceso para abrirlo en cualquier teléfono?
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                      Sin cuentas ni contraseñas: solo escribe tu <strong>teléfono (8 dígitos)</strong> y tu <strong>año de nacimiento (4 dígitos)</strong>.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 shrink-0">
+                  <input
+                    type="text"
+                    value={cloudName}
+                    onChange={e => setCloudName(e.target.value)}
+                    placeholder="Tu nombre (opcional)"
+                    className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
+                  />
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={8}
+                    required
+                    value={cloudPhone}
+                    onChange={e => setCloudPhone(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                    placeholder="Teléfono (8 dígitos)"
+                    className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-900"
+                  />
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={4}
+                    required
+                    value={cloudPin}
+                    onChange={e => setCloudPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    placeholder="Año nac. (ej. 1960)"
+                    className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-900"
+                  />
+                  <button
+                    type="submit"
+                    disabled={cloudSyncing}
+                    className="px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-black shadow-sm transition-colors flex items-center justify-center space-x-1.5"
+                  >
+                    {cloudSyncing ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        <span>Conectando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Cloud size={14} className="text-yellow-300" />
+                        <span>Guardar / Recuperar</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+              {cloudError && (
+                <p className="text-xs font-bold text-rose-700 bg-rose-50 px-3 py-2 rounded-xl border border-rose-200">
+                  {cloudError}
+                </p>
+              )}
+            </form>
+          )}
+        </div>
+
         {/* Aviso Médico */}
         <div className="bg-blue-50/90 border border-blue-200 rounded-2xl p-4 flex items-start space-x-3 text-xs text-blue-950">
           <Stethoscope size={20} className="text-blue-700 shrink-0 mt-0.5" />
