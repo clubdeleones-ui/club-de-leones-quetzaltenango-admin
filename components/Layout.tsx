@@ -24,7 +24,9 @@ import {
   Cpu,
   Bot,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  HeartPulse,
+  Wrench
 } from 'lucide-react';
 import { AuthState, UserRole } from '../types';
 import { googleService } from '../services/googleService';
@@ -41,12 +43,15 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [isProgramasOpen, setIsProgramasOpen] = useState(false);
   const [isMobileProgramasOpen, setIsMobileProgramasOpen] = useState(false);
+  const [isHerramientasOpen, setIsHerramientasOpen] = useState(false);
+  const [isMobileHerramientasOpen, setIsMobileHerramientasOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<'public' | 'private'>('public');
   const navigate = useNavigate();
   const location = useLocation();
   const isEvaluationView = location.pathname.startsWith('/ficha-evaluacion') || location.pathname === '/evaluacion-compartida';
   const isConvencionRoute = location.pathname === '/convencion';
   const isCensoRoute = location.pathname === '/censo';
+  const isHerramientasRoute = location.pathname.startsWith('/herramientas');
   const isProtectedRoute = [
     '/dashboard',
     '/admin',
@@ -59,12 +64,14 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
   const isPublicRoute = !isProtectedRoute && location.pathname !== '/login';
   const dropdownRef = useRef<HTMLDivElement>(null);
   const programasRef = useRef<HTMLDivElement>(null);
+  const herramientasRef = useRef<HTMLDivElement>(null);
 
   // Reset mobile menu tab to public when mobile drawer is closed
   useEffect(() => {
     if (!isOpen) {
       setMobileTab('public');
       setIsMobileProgramasOpen(false);
+      setIsMobileHerramientasOpen(false);
     }
   }, [isOpen]);
 
@@ -90,6 +97,9 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
       }
       if (programasRef.current && !programasRef.current.contains(event.target as Node)) {
         setIsProgramasOpen(false);
+      }
+      if (herramientasRef.current && !herramientasRef.current.contains(event.target as Node)) {
+        setIsHerramientasOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -241,6 +251,61 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
                             Laboratorios de computación y formación modular en Inteligencia Artificial.
                           </p>
                         </div>
+                      </Link>
+                    </div>
+                  )}
+                </div>
+
+                {/* Herramientas Dropdown */}
+                <div className="relative" ref={herramientasRef}>
+                  <button
+                    onClick={() => setIsHerramientasOpen(!isHerramientasOpen)}
+                    className={`px-3 py-2 rounded-xl text-xs xl:text-sm font-bold transition-all duration-300 flex items-center space-x-1 border border-transparent cursor-pointer ${
+                      isHerramientasRoute
+                        ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20 shadow-sm'
+                        : 'text-slate-200 hover:bg-white/5 hover:text-white'
+                    }`}
+                  >
+                    <span>Herramientas</span>
+                    <ChevronDown size={14} className={`transition-transform duration-300 ${isHerramientasOpen ? 'rotate-180 text-yellow-400' : 'text-slate-300'}`} />
+                  </button>
+
+                  {isHerramientasOpen && (
+                    <div className="absolute left-0 mt-3 w-84 bg-white text-slate-800 rounded-[1.75rem] shadow-2xl border border-slate-200/90 p-3.5 z-50 animate-in fade-in slide-in-from-top-2 duration-200 space-y-2">
+                      <div className="px-3 py-2 bg-emerald-50/80 rounded-2xl border border-emerald-100 flex items-center justify-between">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-900 block">
+                          Herramientas Comunitarias
+                        </span>
+                        <span className="text-[9px] font-extrabold uppercase bg-emerald-500 text-white px-2 py-0.5 rounded-full">
+                          Salud
+                        </span>
+                      </div>
+                      <Link
+                        to="/herramientas/diabetes"
+                        onClick={() => setIsHerramientasOpen(false)}
+                        className="flex items-start space-x-3.5 p-3 rounded-2xl hover:bg-slate-100/80 transition-all group border border-transparent hover:border-emerald-400/40"
+                      >
+                        <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black shrink-0 shadow-md group-hover:scale-105 transition-transform">
+                          <HeartPulse size={22} />
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-1.5">
+                            <span className="font-black text-sm text-slate-900 group-hover:text-emerald-800 transition-colors">
+                              Diabetes: Prevención y Cuidado
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600 font-medium leading-snug mt-1">
+                            Planificador 5S, calculadoras ADA 2026 y alertas sanitarias.
+                          </p>
+                        </div>
+                      </Link>
+                      <Link
+                        to="/herramientas"
+                        onClick={() => setIsHerramientasOpen(false)}
+                        className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-black text-blue-900 hover:bg-blue-50 transition-colors"
+                      >
+                        <span>Ver todas las herramientas</span>
+                        <ChevronRight size={14} />
                       </Link>
                     </div>
                   )}
@@ -452,6 +517,52 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
                   )}
                 </div>
 
+                {/* Mobile Herramientas Accordion */}
+                <div className="bg-blue-950/40 rounded-2xl border border-blue-800/60 overflow-hidden">
+                  <button
+                    onClick={() => setIsMobileHerramientasOpen(!isMobileHerramientasOpen)}
+                    className="w-full flex items-center justify-between px-4 py-3 text-left text-base font-bold text-slate-100 hover:bg-blue-850 transition-colors"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <Wrench size={18} className="text-emerald-400" />
+                      <span>Herramientas</span>
+                    </div>
+                    <ChevronDown size={16} className={`text-slate-400 transition-transform ${isMobileHerramientasOpen ? 'rotate-180 text-emerald-400' : ''}`} />
+                  </button>
+
+                  {isMobileHerramientasOpen && (
+                    <div className="px-3 pb-3 pt-1 space-y-1.5 bg-blue-950/80 border-t border-blue-800/40 animate-in fade-in duration-200">
+                      <button
+                        onClick={() => handleNav('/herramientas/diabetes')}
+                        className={`w-full flex items-start space-x-3 p-2.5 rounded-xl text-left transition-all ${
+                          location.pathname === '/herramientas/diabetes'
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                            : 'text-slate-200 hover:bg-white/5'
+                        }`}
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-black shrink-0 mt-0.5">
+                          <HeartPulse size={16} />
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-1">
+                            <span className="font-extrabold text-sm text-white">Diabetes: Prevención y Cuidado</span>
+                          </div>
+                          <span className="text-[11px] text-slate-300 block leading-tight">
+                            Planificador diario 5S, calculadoras y guía 2026.
+                          </span>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => handleNav('/herramientas')}
+                        className="w-full text-left px-3 py-2 text-xs font-bold text-yellow-300 hover:bg-white/5 rounded-xl flex items-center justify-between"
+                      >
+                        <span>Explorar todas las herramientas</span>
+                        <ChevronRight size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 {navItems.filter(i => i.path !== '/').map((item) => (
                   <button
                     key={item.path}
@@ -556,7 +667,7 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
       </nav>
 
       {/* Main Content Area */}
-      <main className={`flex-grow w-full ${isConvencionRoute || isCensoRoute ? 'max-w-none px-0 py-0' : 'max-w-[1400px] mx-auto px-2.5 sm:px-6 lg:px-8 py-4 sm:py-8 md:py-10'}`}>
+      <main className={`flex-grow w-full ${isConvencionRoute || isCensoRoute || isHerramientasRoute ? 'max-w-none px-0 py-0' : 'max-w-[1400px] mx-auto px-2.5 sm:px-6 lg:px-8 py-4 sm:py-8 md:py-10'}`}>
         {children}
       </main>
 

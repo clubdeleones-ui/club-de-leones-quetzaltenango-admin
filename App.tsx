@@ -39,6 +39,8 @@ const RequerimientoPublico = lazyWithRetry(() => import('./views/RequerimientoPu
 const AgendaPublica = lazyWithRetry(() => import('./views/AgendaPublica').then(m => ({ default: m.AgendaPublica })), 'AgendaPublica');
 const NeveraPublica = lazyWithRetry(() => import('./views/NeveraPublica').then(m => ({ default: m.NeveraPublica })), 'NeveraPublica');
 const ProgramaFuturo = lazyWithRetry(() => import('./views/ProgramaFuturo'), 'ProgramaFuturo');
+const Herramientas = lazyWithRetry(() => import('./views/Herramientas'), 'Herramientas');
+const HerramientasDiabetes = lazyWithRetry(() => import('./views/HerramientasDiabetes'), 'HerramientasDiabetes');
 const CensoSocio = lazyWithRetry(() => import('./views/CensoSocio'), 'CensoSocio');
 
 // Component to synchronize authenticated user session in real-time with Firestore socios collection
@@ -193,6 +195,8 @@ const App: React.FC = () => {
               <Route path="/confirmar-invitacion/:id" element={<ConfirmarInvitacion />} />
               <Route path="/programas/futuro" element={<ProgramaFuturo />} />
               <Route path="/futuro" element={<Navigate to="/programas/futuro" replace />} />
+              <Route path="/herramientas" element={<Herramientas />} />
+              <Route path="/herramientas/diabetes" element={<HerramientasDiabetes />} />
               <Route path="/completar-ficha-socio/:id" element={<CompletarFichaSocio />} />
               <Route path="/pago-cuota" element={<PublicPagoCuota />} />
               <Route path="/convocatoria/:id" element={<RequerimientoPublico />} />
