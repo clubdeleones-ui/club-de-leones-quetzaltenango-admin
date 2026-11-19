@@ -5509,12 +5509,13 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
               </p>
             </div>
 
-            {/* Render HTML real enriquecido */}
-            <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-inner max-h-96 overflow-y-auto bg-slate-100 p-4">
-              <div 
-                dangerouslySetInnerHTML={{
-                  __html: gmailService.generateTemplate(broadcastTemplateTipo, previewSampleRegistro, { customSubject: broadcastSubject, customBody: broadcastBody }).cuerpoHtml
-                }}
+            {/* Render HTML real enriquecido en iframe aislado */}
+            <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-inner h-96 bg-slate-100 p-2">
+              <iframe
+                title="Vista previa segura de correo"
+                sandbox=""
+                srcDoc={gmailService.generateTemplate(broadcastTemplateTipo, previewSampleRegistro, { customSubject: broadcastSubject, customBody: broadcastBody }).cuerpoHtml}
+                className="w-full h-full border-0 rounded-xl bg-white"
               />
             </div>
 

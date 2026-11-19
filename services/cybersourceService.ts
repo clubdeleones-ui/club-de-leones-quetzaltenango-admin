@@ -52,9 +52,8 @@ export interface CyberSourcePaymentResult {
 }
 
 export const CYBERSOURCE_DEFAULT_CONFIG = {
-  merchantId: 'test_bac_gt_clubdeleonesdeqtng',
-  keyId: 'e8791aa5-4287-49f7-a74d-619f9be36ccb',
-  sharedSecret: 'AJa07UXrBul2OIm5zm8q8xeS7Um2bd+4/PAYyLRTLFY=',
+  merchantIdTest: 'test_bac_gt_clubdeleonesdeqtng',
+  merchantIdLive: 'bac_gt_clubdeleonesdeqtng',
   isTestMode: true,
   hostTest: 'apitest.cybersource.com',
   hostLive: 'api.cybersource.com',
@@ -98,7 +97,7 @@ class CyberSourceService {
   }
 
   public getMerchantId(): string {
-    return this.config.merchantId;
+    return this.config.isTestMode ? this.config.merchantIdTest : this.config.merchantIdLive;
   }
 
   /**
@@ -199,9 +198,7 @@ class CyberSourceService {
     const payload = {
       action: 'cybersource_3ds_payment',
       isTestMode: this.config.isTestMode,
-      merchantId: this.config.merchantId,
-      keyId: this.config.keyId,
-      sharedSecret: this.config.sharedSecret,
+      merchantId: this.getMerchantId(),
       orderCode,
       concept: params.concept,
       cuotas,

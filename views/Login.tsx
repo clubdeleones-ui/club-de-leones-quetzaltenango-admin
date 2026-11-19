@@ -24,6 +24,17 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Socio, UserRole } from '../types';
 import { firebaseService } from '../services/firebaseService';
 import { gmailService } from '../services/gmailService';
+import { useClubData } from '../context/ClubDataContext';
+
+const generateSecureToken = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID().replace(/-/g, '');
+  }
+  return Math.random().toString(36).substring(2, 12) + Date.now().toString(36);
+};
+
+const normalizePositionName = (val?: string): string =>
+  (val || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 
 // Helpers para normalización y cotejo seguro de fecha de nacimiento
 const normalizeDateDigits = (val?: string) => {
@@ -61,17 +72,18 @@ const isBirthdateMatching = (inputBirthdate: string, storedBirthdate?: string) =
   if (!normStored || !normInput) {
     const inputDigits = inputBirthdate.replace(/\D/g, '');
     const storedDigits = storedBirthdate.replace(/\D/g, '');
-    if (inputDigits.length >= 4 && storedDigits.includes(inputDigits)) return true;
+    if (inputDigits.length >= 8 && storedDigits === inputDigits) return true;
     return false;
   }
 
-  // Si ambos tienen día, mes y año completos, comparar coincidencia exacta
-  if (normInput.d && normInput.m && normInput.y && normStored.d && normStored.m && normStored.y) {
+  // Si la ficha en Firestore tiene día, mes y año completos, exigir coincidencia exacta de los 3
+  if (normStored.d && normStored.m && normStored.y) {
+    if (!normInput.d || !normInput.m || !normInput.y) return false;
     return normInput.y === normStored.y && normInput.m === normStored.m && normInput.d === normStored.d;
   }
 
-  // Si se ingresó solo el año de nacimiento o la base solo tiene año
-  return normInput.y === normStored.y;
+  // Solo si el registro histórico únicamente guardó el año (4 dígitos)
+  return Boolean(normInput.y && normInput.y === normStored.y);
 };
 
 const PUESTOS_LOGIN = [
@@ -117,63 +129,69 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isQrLoggingIn, setIsQrLoggingIn] = useState(false);
   const [qrLoginError, setQrLoginError] = useState<string | null>(null);
+  const { socios: contextSocios } = useClubData();
   const [availablePuestos, setAvailablePuestos] = useState<string[]>(PUESTOS_LOGIN);
-  const [allSocios, setAllSocios] = useState<Socio[]>([]);
+  const [allSocios, setAllSocios] = useState<Socio[]>(contextSocios);
   
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    const fetchPuestos = async () => {
+    const syncPuestosFromList = (list: Socio[]) => {
+      setAllSocios(list);
+
+      let rolesOrderMap: Record<string, number> = {};
       try {
-        const list = await firebaseService.getSocios();
-        setAllSocios(list);
-        
-        let rolesOrderMap: Record<string, number> = {};
-        try {
-          const storedConfig = localStorage.getItem('club_leones_roles_config');
-          if (storedConfig) {
-            const parsed = JSON.parse(storedConfig);
-            parsed.forEach((r: any, idx: number) => {
-              rolesOrderMap[r.id] = r.orden !== undefined ? r.orden : idx;
-            });
-          }
-        } catch (e) {
-          console.error("Error parsing roles config in Login.tsx:", e);
-        }
-
-        const uniquePuestosWithRole = list.reduce((acc: { puesto: string, rol: string }[], socio) => {
-          if (socio.puesto && !acc.some(item => item.puesto === socio.puesto)) {
-            acc.push({ puesto: socio.puesto, rol: socio.rol || 'SOCIO' });
-          }
-          return acc;
-        }, []);
-
-        if (uniquePuestosWithRole.length > 0) {
-          uniquePuestosWithRole.sort((a, b) => {
-            const orderA = rolesOrderMap[a.rol] ?? 999;
-            const orderB = rolesOrderMap[b.rol] ?? 999;
-            if (orderA !== orderB) {
-              return orderA - orderB;
-            }
-            return a.puesto.localeCompare(b.puesto);
+        const storedConfig = localStorage.getItem('club_leones_roles_config');
+        if (storedConfig) {
+          const parsed = JSON.parse(storedConfig);
+          parsed.forEach((r: any, idx: number) => {
+            rolesOrderMap[r.id] = r.orden !== undefined ? r.orden : idx;
           });
-          setAvailablePuestos(uniquePuestosWithRole.map(item => item.puesto));
         }
-      } catch (err) {
-        console.error("Error loading dynamic login positions:", err);
+      } catch (e) {
+        console.error("Error parsing roles config in Login.tsx:", e);
+      }
+
+      const uniquePuestosWithRole = list.reduce((acc: { puesto: string, rol: string }[], socio) => {
+        if (socio.puesto && !acc.some(item => item.puesto === socio.puesto)) {
+          acc.push({ puesto: socio.puesto, rol: socio.rol || 'SOCIO' });
+        }
+        return acc;
+      }, []);
+
+      if (uniquePuestosWithRole.length > 0) {
+        uniquePuestosWithRole.sort((a, b) => {
+          const orderA = rolesOrderMap[a.rol] ?? 999;
+          const orderB = rolesOrderMap[b.rol] ?? 999;
+          if (orderA !== orderB) {
+            return orderA - orderB;
+          }
+          return a.puesto.localeCompare(b.puesto);
+        });
+        setAvailablePuestos(uniquePuestosWithRole.map(item => item.puesto));
       }
     };
-    fetchPuestos();
-  }, []);
 
-  // Socios que coinciden con el puesto seleccionado
+    if (contextSocios && contextSocios.length > 0) {
+      syncPuestosFromList(contextSocios);
+      return;
+    }
+
+    firebaseService.getSocios()
+      .then(syncPuestosFromList)
+      .catch(err => console.error("Error loading dynamic login positions:", err));
+  }, [contextSocios]);
+
+  // Socios que coinciden exactamente con el puesto seleccionado
   const matchingSociosForPuesto = React.useMemo(() => {
     if (!puesto) return [];
-    const selPuesto = puesto.toLowerCase().trim();
+    const selPuesto = normalizePositionName(puesto);
+    const exactMatches = allSocios.filter(s => normalizePositionName(s.puesto) === selPuesto);
+    if (exactMatches.length > 0) return exactMatches;
     return allSocios.filter(s => {
-      const sPuesto = (s.puesto || '').toLowerCase().trim();
-      return sPuesto === selPuesto || sPuesto.startsWith(selPuesto) || selPuesto.startsWith(sPuesto);
+      const sPuesto = normalizePositionName(s.puesto);
+      return sPuesto.length > 0 && (sPuesto.startsWith(selPuesto) || selPuesto.startsWith(sPuesto));
     });
   }, [allSocios, puesto]);
 
@@ -290,7 +308,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     try {
       let token = verifiedSocio.qrToken;
       if (!token) {
-        token = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+        token = generateSecureToken();
         const updatedSocio = { ...verifiedSocio, qrToken: token };
         await firebaseService.saveSocio(updatedSocio);
         setAllSocios(prev => prev.map(s => s.id === updatedSocio.id ? updatedSocio : s));
@@ -350,7 +368,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       // Asegurar que el socio tenga qrToken generado y persistido
       let token = matchingSocio.qrToken;
       if (!token) {
-        token = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+        token = generateSecureToken();
         const updatedSocio = { ...matchingSocio, qrToken: token };
         await firebaseService.saveSocio(updatedSocio);
         setAllSocios(prev => prev.map(s => s.id === updatedSocio.id ? updatedSocio : s));
@@ -454,11 +472,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         setError('Por favor seleccione un cargo.');
         return;
       }
-      const selPuesto = puesto.toLowerCase().trim();
-      const matching = sociosList.filter(s => {
-        const sPuesto = (s.puesto || '').toLowerCase().trim();
-        return sPuesto === selPuesto || sPuesto.startsWith(selPuesto) || selPuesto.startsWith(sPuesto);
-      });
+      const selPuesto = normalizePositionName(puesto);
+      let matching = sociosList.filter(s => normalizePositionName(s.puesto) === selPuesto);
+      if (matching.length === 0) {
+        matching = sociosList.filter(s => {
+          const sPuesto = normalizePositionName(s.puesto);
+          return sPuesto.length > 0 && (sPuesto.startsWith(selPuesto) || selPuesto.startsWith(sPuesto));
+        });
+      }
 
       if (matching.length === 0) {
         setError('No se encontró ningún socio con el cargo seleccionado.');

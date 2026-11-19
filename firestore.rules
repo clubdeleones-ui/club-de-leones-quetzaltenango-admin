@@ -77,7 +77,13 @@ service cloud.firestore {
       allow write: if isValidString(request.resource.data, 'nombre', false)
                    && isValidString(request.resource.data, 'correo', false)
                    && isValidString(request.resource.data, 'telefono', false)
-                   && (request.resource.data.estado in ['Pendiente', 'Aprobado', 'Rechado', 'Rechazado']);
+                   && (request.resource.data.estado in ['Pendiente', 'Aprobado', 'Rechazado']);
+    }
+
+    match /diabetes_registros/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'phone', false)
+                   && isValidList(request.resource.data, 'logs', true);
     }
 
     match /registro_participaciones/{document} {

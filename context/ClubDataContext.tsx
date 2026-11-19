@@ -1,6 +1,6 @@
 import { safeSetItem } from '../utils/storage';
 import { safeGetTime } from '../utils/dateSpanishFormatter';
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { db } from '../services/firebase';
 import { 
   collection, 
@@ -211,6 +211,7 @@ interface ClubDataProviderProps {
 const ClubDataContext = createContext<ClubDataContextType | undefined>(undefined);
 
 export const ClubDataProvider: React.FC<ClubDataProviderProps> = ({ children, isAuthenticated = false }) => {
+  const hasMigratedRolesRef = useRef(false);
   // 1. Initialize state from LocalStorage or constant fallbacks (for offline/instant load)
   const [socios, setSocios] = useState<Socio[]>(() => getLocalData(KEYS.SOCIOS, MOCK_SOCIOS));
   const [propuestas, setPropuestas] = useState<PropuestaSocio[]>(() => getLocalData(KEYS.PROPUESTAS, MOCK_PROPUESTAS));
@@ -319,25 +320,12 @@ export const ClubDataProvider: React.FC<ClubDataProviderProps> = ({ children, is
       setLoading(prev => ({ ...prev, solicitudes: false }));
     });
 
-    // 3f. Solicitudes de Voluntarios
-    const unsubVoluntarios = onSnapshot(collection(db, 'solicitudes_voluntarios'), (snapshot) => {
-      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as SolicitudVoluntario)
-        .sort((a, b) => safeGetTime(b.fechaRegistro) - safeGetTime(a.fechaRegistro));
-      setVoluntarios(list);
-      safeSetLocalData(KEYS.VOLUNTARIOS, list);
-      setLoading(prev => ({ ...prev, voluntarios: false }));
-    }, (err) => {
-      console.error("Error subscribing to voluntarios:", err);
-      setLoading(prev => ({ ...prev, voluntarios: false }));
-    });
-
     return () => {
       unsubSocios();
       unsubActividades();
       unsubGaleria();
       unsubHitos();
       unsubSolicitudes();
-      unsubVoluntarios();
     };
   }, []);
 
@@ -346,6 +334,7 @@ export const ClubDataProvider: React.FC<ClubDataProviderProps> = ({ children, is
     if (!isAuthenticated) {
       setLoading(prev => ({
         ...prev,
+        voluntarios: false,
         propuestas: false,
         actas: false,
         comisiones: false,
@@ -361,6 +350,18 @@ export const ClubDataProvider: React.FC<ClubDataProviderProps> = ({ children, is
       }));
       return;
     }
+
+    // 4.0 Solicitudes de Voluntarios (solo usuarios autenticados)
+    const unsubVoluntarios = onSnapshot(collection(db, 'solicitudes_voluntarios'), (snapshot) => {
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as SolicitudVoluntario)
+        .sort((a, b) => safeGetTime(b.fechaRegistro) - safeGetTime(a.fechaRegistro));
+      setVoluntarios(list);
+      safeSetLocalData(KEYS.VOLUNTARIOS, list);
+      setLoading(prev => ({ ...prev, voluntarios: false }));
+    }, (err) => {
+      console.error("Error subscribing to voluntarios:", err);
+      setLoading(prev => ({ ...prev, voluntarios: false }));
+    });
 
     // 4a. Propuestas
     const unsubPropuestas = onSnapshot(collection(db, 'propuestas'), (snapshot) => {
@@ -502,28 +503,32 @@ export const ClubDataProvider: React.FC<ClubDataProviderProps> = ({ children, is
     // 4m. Roles Config
     const unsubRoles = onSnapshot(collection(db, 'config_roles'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      if (list.length === 0) {
+      if (list.length === 0 && !hasMigratedRolesRef.current) {
+        hasMigratedRolesRef.current = true;
         DEFAULT_ROLES_CONFIG.forEach(async (role) => {
           await setDoc(doc(db, 'config_roles', role.id), { label: role.label, allowedTabs: role.allowedTabs, orden: role.orden }).catch(err => console.error("Error seeding role:", role.id, err));
         });
       } else {
-        list.forEach(async (role: any) => {
-          let updatedTabs = [...(role.allowedTabs || [])];
-          let changed = false;
+        if (!hasMigratedRolesRef.current) {
+          hasMigratedRolesRef.current = true;
+          list.forEach(async (role: any) => {
+            let updatedTabs = [...(role.allowedTabs || [])];
+            let changed = false;
 
-          ALL_APP_MODULES.forEach(mod => {
-            if (role.id === 'SUPER_ADMIN' || mod.defaultRoles?.includes(role.id)) {
-              if (!updatedTabs.includes(mod.id)) {
-                updatedTabs.push(mod.id);
-                changed = true;
+            ALL_APP_MODULES.forEach(mod => {
+              if (role.id === 'SUPER_ADMIN' || mod.defaultRoles?.includes(role.id)) {
+                if (!updatedTabs.includes(mod.id)) {
+                  updatedTabs.push(mod.id);
+                  changed = true;
+                }
               }
+            });
+
+            if (changed) {
+              await setDoc(doc(db, 'config_roles', role.id), { label: role.label, allowedTabs: updatedTabs, orden: role.orden }, { merge: true }).catch(err => console.error("Error migrating role:", role.id, err));
             }
           });
-
-          if (changed) {
-            await setDoc(doc(db, 'config_roles', role.id), { label: role.label, allowedTabs: updatedTabs, orden: role.orden }, { merge: true }).catch(err => console.error("Error migrating role:", role.id, err));
-          }
-        });
+        }
 
         list.sort((a: any, b: any) => (a.orden ?? 999) - (b.orden ?? 999));
         setRolesConfig(list);
@@ -549,6 +554,7 @@ export const ClubDataProvider: React.FC<ClubDataProviderProps> = ({ children, is
     });
 
     return () => {
+      unsubVoluntarios();
       unsubPropuestas();
       unsubActas();
       unsubComisiones();

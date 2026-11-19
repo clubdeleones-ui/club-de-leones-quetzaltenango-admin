@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import QRCode from 'qrcode';
 import { Socio, UserRole } from '../types';
 import { 
   CreditCard, 
@@ -82,7 +83,19 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
 
   const [showQrModal, setShowQrModal] = useState(false);
   const [isGeneratingQr, setIsGeneratingQr] = useState(false);
+  const [localQrDataUrl, setLocalQrDataUrl] = useState<string>('');
   const [rawCropperImage, setRawCropperImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user.qrToken) {
+      setLocalQrDataUrl('');
+      return;
+    }
+    const loginTarget = `${window.location.origin}${window.location.pathname}#/login?qr_token=${user.qrToken}`;
+    QRCode.toDataURL(loginTarget, { width: 320, margin: 2, color: { dark: '#172554', light: '#ffffff' } })
+      .then(url => setLocalQrDataUrl(url))
+      .catch(err => console.error('Error generating local QR code:', err));
+  }, [user.qrToken]);
 
   const handleQrClick = async () => {
     if (user.qrToken) {
@@ -92,7 +105,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
 
     setIsGeneratingQr(true);
     try {
-      const token = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+      const token =
+        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID().replace(/-/g, '')
+          : Math.random().toString(36).substring(2, 12) + Date.now().toString(36);
       const updatedUser = { ...user, qrToken: token };
       await firebaseService.saveSocio(updatedUser);
       onUpdateUser(updatedUser);
@@ -106,28 +122,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
   };
 
   const handleDownloadQr = () => {
-    if (!user.qrToken) return;
-    
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
-      window.location.origin + window.location.pathname + '#/login?qr_token=' + user.qrToken
-    )}`;
-    
-    fetch(qrUrl)
-      .then(response => response.blob())
-      .then(blob => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `QR_Acceso_${user.nombre.replace(/\s+/g, '_')}.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-      })
-      .catch(err => {
-        console.error("Error downloading QR:", err);
-        alert("No se pudo descargar el código QR.");
-      });
+    if (!localQrDataUrl) return;
+    const a = document.createElement('a');
+    a.href = localQrDataUrl;
+    a.download = `QR_Acceso_${user.nombre.replace(/\s+/g, '_')}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   const [activeTab, setActiveTab] = useState<'perfil' | 'resumen' | 'requerimientos'>(() => {
@@ -1006,13 +1007,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onUpdateUser }) => {
             </div>
 
             {/* QR Image Display */}
-            {user.qrToken ? (
+            {user.qrToken && localQrDataUrl ? (
               <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-col items-center justify-center space-y-4">
                 <div className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-inner">
                   <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
-                      window.location.origin + window.location.pathname + '#/login?qr_token=' + user.qrToken
-                    )}`}
+                    src={localQrDataUrl}
                     alt="Acceso QR"
                     className="w-56 h-56 object-contain"
                   />
