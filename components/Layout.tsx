@@ -102,9 +102,19 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
         setIsHerramientasOpen(false);
       }
     };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsUserDropdownOpen(false);
+        setIsProgramasOpen(false);
+        setIsHerramientasOpen(false);
+        setIsOpen(false);
+      }
+    };
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
@@ -210,6 +220,8 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
                 <div className="relative" ref={programasRef}>
                   <button
                     onClick={() => setIsProgramasOpen(!isProgramasOpen)}
+                    aria-expanded={isProgramasOpen}
+                    aria-haspopup="true"
                     className={`px-3 py-2 rounded-xl text-xs xl:text-sm font-bold transition-all duration-300 flex items-center space-x-1 border border-transparent cursor-pointer ${
                       location.pathname.startsWith('/programas') || location.pathname === '/futuro'
                         ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20 shadow-sm'
@@ -260,6 +272,8 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
                 <div className="relative" ref={herramientasRef}>
                   <button
                     onClick={() => setIsHerramientasOpen(!isHerramientasOpen)}
+                    aria-expanded={isHerramientasOpen}
+                    aria-haspopup="true"
                     className={`px-3 py-2 rounded-xl text-xs xl:text-sm font-bold transition-all duration-300 flex items-center space-x-1 border border-transparent cursor-pointer ${
                       isHerramientasRoute
                         ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20 shadow-sm'
@@ -424,6 +438,8 @@ const Layout: React.FC<LayoutProps> = ({ children, auth, onLogout }) => {
               <div className="lg:hidden flex items-center">
                 <button
                   onClick={() => setIsOpen(!isOpen)}
+                  aria-expanded={isOpen}
+                  aria-label={isOpen ? 'Cerrar menú de navegación' : 'Abrir menú de navegación'}
                   className="inline-flex items-center justify-center p-2.5 rounded-xl hover:bg-blue-800 focus:outline-none transition-colors border border-transparent hover:border-blue-750"
                 >
                   {isOpen ? <X size={24} /> : <Menu size={24} />}

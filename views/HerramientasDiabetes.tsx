@@ -375,6 +375,19 @@ const HerramientasDiabetes: React.FC = () => {
         if (parsed.lunchTime) setLunchTime(parsed.lunchTime);
         if (parsed.dinnerTime) setDinnerTime(parsed.dinnerTime);
         if (parsed.sleepTime) setSleepTime(parsed.sleepTime);
+        if (parsed.weightUnit) setWeightUnit(parsed.weightUnit);
+        if (parsed.weightVal) setWeightVal(String(parsed.weightVal));
+        if (parsed.heightCm) setHeightCm(String(parsed.heightCm));
+        if (parsed.hba1c) setHba1c(String(parsed.hba1c));
+        if (parsed.tir) setTir(String(parsed.tir));
+        if (parsed.tbr) setTbr(String(parsed.tbr));
+        if (parsed.systolicBp) setSystolicBp(String(parsed.systolicBp));
+        if (parsed.diastolicBp) setDiastolicBp(String(parsed.diastolicBp));
+        if (parsed.selectedFibra) setSelectedFibra(parsed.selectedFibra);
+        if (parsed.selectedProteina) setSelectedProteina(parsed.selectedProteina);
+        if (parsed.selectedCarb) setSelectedCarb(parsed.selectedCarb);
+        if (parsed.selectedBebida) setSelectedBebida(parsed.selectedBebida);
+        if (typeof parsed.largeText === 'boolean') setLargeText(parsed.largeText);
       }
 
       const savedLogs = localStorage.getItem(LOGS_STORAGE_KEY);
@@ -397,10 +410,45 @@ const HerramientasDiabetes: React.FC = () => {
         breakfastTime,
         lunchTime,
         dinnerTime,
-        sleepTime
+        sleepTime,
+        weightUnit,
+        weightVal,
+        heightCm,
+        hba1c,
+        tir,
+        tbr,
+        systolicBp,
+        diastolicBp,
+        selectedFibra,
+        selectedProteina,
+        selectedCarb,
+        selectedBebida,
+        largeText
       })
     );
-  }, [profileMode, completedIds, aerobicMinutes, strengthSessions, breakfastTime, lunchTime, dinnerTime, sleepTime]);
+  }, [
+    profileMode,
+    completedIds,
+    aerobicMinutes,
+    strengthSessions,
+    breakfastTime,
+    lunchTime,
+    dinnerTime,
+    sleepTime,
+    weightUnit,
+    weightVal,
+    heightCm,
+    hba1c,
+    tir,
+    tbr,
+    systolicBp,
+    diastolicBp,
+    selectedFibra,
+    selectedProteina,
+    selectedCarb,
+    selectedBebida,
+    largeText
+  ]);
 
   useEffect(() => {
     safeSetItem(LOGS_STORAGE_KEY, JSON.stringify(logs));
