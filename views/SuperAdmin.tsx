@@ -1,6 +1,7 @@
 import { safeSetItem } from '../utils/storage';
 import React, { useState, useMemo, useEffect, useRef, Suspense } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import QRCode from 'qrcode';
 import { 
   MOCK_SOCIOS, 
   MOCK_ACTIVIDADES, 
@@ -641,7 +642,26 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const [socioSaveError, setSocioSaveError] = useState<string | null>(null);
   const [qrSocio, setQrSocio] = useState<Socio | null>(null);
   const [isGeneratingQr, setIsGeneratingQr] = useState(false);
+  const [qrSocioDataUrl, setQrSocioDataUrl] = useState<string>('');
+  const [censoQrDataUrl, setCensoQrDataUrl] = useState<string>('');
   const [rawAdminCropperImage, setRawAdminCropperImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (qrSocio?.qrToken) {
+      const qrUrl = window.location.origin + window.location.pathname + '#/login?qr_token=' + qrSocio.qrToken;
+      QRCode.toDataURL(qrUrl, { width: 400, margin: 2, color: { dark: '#0B1E3D', light: '#FFFFFF' } })
+        .then(setQrSocioDataUrl)
+        .catch(() => setQrSocioDataUrl(''));
+    } else {
+      setQrSocioDataUrl('');
+    }
+  }, [qrSocio?.qrToken]);
+
+  useEffect(() => {
+    QRCode.toDataURL('https://clubdeleonesquetzaltenango.org/#/censo', { width: 400, margin: 2, color: { dark: '#0B1E3D', light: '#FFFFFF' } })
+      .then(setCensoQrDataUrl)
+      .catch(() => setCensoQrDataUrl(''));
+  }, []);
 
   // Check if editingSocio is a new registration
   const isNewSocio = useMemo(() => {
@@ -1582,7 +1602,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
     setIsGeneratingQr(true);
     try {
-      const token = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+      const token = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+        ? crypto.randomUUID().replace(/-/g, '')
+        : Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
       const updatedSocio = { ...socio, qrToken: token };
       await firebaseService.saveSocio(updatedSocio);
       
@@ -1608,7 +1630,9 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
     setIsGeneratingQr(true);
     try {
-      const token = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+      const token = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+        ? crypto.randomUUID().replace(/-/g, '')
+        : Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
       const updatedSocio = { ...socio, qrToken: token };
       await firebaseService.saveSocio(updatedSocio);
       
@@ -1630,23 +1654,22 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     if (!socio.qrToken) return;
     
     const qrUrl = window.location.origin + window.location.pathname + '#/login?qr_token=' + socio.qrToken;
-    const apiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(qrUrl)}`;
     
     try {
-      const response = await fetch(apiUrl);
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
+      const dataUrl = await QRCode.toDataURL(qrUrl, {
+        width: 1000,
+        margin: 2,
+        color: { dark: '#0B1E3D', light: '#FFFFFF' }
+      });
       const link = document.createElement('a');
-      link.href = blobUrl;
+      link.href = dataUrl;
       link.download = `QR_Acceso_${socio.nombre.replace(/\s+/g, '_')}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(blobUrl);
     } catch (err) {
-      console.error("Error downloading QR image blob:", err);
-      // Fallback
-      window.open(apiUrl, '_blank');
+      console.error("Error generating QR image locally:", err);
+      alert("No se pudo generar el código QR para descarga.");
     }
   };
 
@@ -4296,9 +4319,16 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     }
   };
 
-  const handlePrintCensoSheet = () => {
+  const handlePrintCensoSheet = async () => {
     const printUrl = `https://clubdeleonesquetzaltenango.org/#/censo`;
-    const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${encodeURIComponent(printUrl)}`;
+    let qrImgUrl = censoQrDataUrl;
+    if (!qrImgUrl) {
+      try {
+        qrImgUrl = await QRCode.toDataURL(printUrl, { width: 600, margin: 2, color: { dark: '#0B1E3D', light: '#FFFFFF' } });
+      } catch {
+        qrImgUrl = '';
+      }
+    }
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       showToast("Por favor permite ventanas emergentes para imprimir la lámina", "error");
@@ -6949,13 +6979,11 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
             </div>
 
             {/* QR Image Display */}
-            {qrSocio.qrToken ? (
+            {qrSocio.qrToken && qrSocioDataUrl ? (
               <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-col items-center justify-center space-y-4">
                 <div className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-inner">
                   <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
-                      window.location.origin + window.location.pathname + '#/login?qr_token=' + qrSocio.qrToken
-                    )}`}
+                    src={qrSocioDataUrl}
                     alt="Acceso QR"
                     className="w-56 h-56 object-contain"
                   />
@@ -7060,11 +7088,17 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
             {/* QR Image Display */}
             <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200/80 flex flex-col items-center justify-center space-y-3">
               <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-md">
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent('https://clubdeleonesquetzaltenango.org/#/censo')}`}
-                  alt="QR Censo Asambleas"
-                  className="w-52 h-52 sm:w-56 sm:h-56 object-contain"
-                />
+                {censoQrDataUrl ? (
+                  <img
+                    src={censoQrDataUrl}
+                    alt="QR Censo Asambleas"
+                    className="w-52 h-52 sm:w-56 sm:h-56 object-contain"
+                  />
+                ) : (
+                  <div className="w-52 h-52 sm:w-56 sm:h-56 flex items-center justify-center">
+                    <Loader2 className="animate-spin text-blue-900" size={32} />
+                  </div>
+                )}
               </div>
               <div className="text-center">
                 <span className="text-[10px] font-mono font-bold text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-200 inline-block">

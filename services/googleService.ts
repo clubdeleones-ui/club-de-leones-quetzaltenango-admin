@@ -1,61 +1,21 @@
 
-import { gapi } from 'gapi-script';
 import type * as XLSXTypes from 'xlsx';
-import { env } from '../config/env';
 
 const getXLSX = async () => import('xlsx');
 
-const CLIENT_ID = env.googleClientId || import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 export const GOOGLE_CONFIG = {
     ESTATUTOS_DOC_ID: '1ynFhIRLt2R8JVHGmxVjm0-6Qfa9wCs-3pEzX6ZtMzOM',
 };
-const DISCOVERY_DOCS = [
-    'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
-    'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest',
-    'https://www.googleapis.com/discovery/v1/apis/docs/v1/rest',
-    'https://sheets.googleapis.com/$discovery/rest?version=v4'
-];
-const SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/documents.readonly https://www.googleapis.com/auth/spreadsheets.readonly';
 
-let initPromise: Promise<boolean> | null = null;
 let currentAccessToken: string | null = null;
 
 export const googleService = {
-    initClient: (): Promise<boolean> => {
-        if (!initPromise) {
-            initPromise = new Promise((resolve, reject) => {
-                gapi.load('client', () => {
-                    const initConfig: any = {
-                        discoveryDocs: DISCOVERY_DOCS,
-                    };
-                    if (CLIENT_ID) {
-                        initConfig.clientId = CLIENT_ID;
-                        initConfig.scope = SCOPES;
-                    }
-                    gapi.client.init(initConfig).then(() => {
-                        if (currentAccessToken && (gapi as any)?.client?.setToken) {
-                            (gapi as any).client.setToken({ access_token: currentAccessToken });
-                        }
-                        resolve(true);
-                    }, (error: any) => {
-                        initPromise = null; // reset if initialization failed
-                        reject(error);
-                    });
-                });
-            });
-        }
-        return initPromise;
+    initClient: async (): Promise<boolean> => {
+        return true;
     },
 
     setAccessToken: (token: string) => {
         currentAccessToken = token;
-        try {
-            if (typeof gapi !== 'undefined' && (gapi as any)?.client?.setToken) {
-                (gapi as any).client.setToken({ access_token: token });
-            }
-        } catch (e) {
-            // Silencioso: gapi.client aún no ha cargado, se usa fetch REST nativo con el token
-        }
     },
 
     getAccessToken: (): string | null => {
@@ -76,11 +36,7 @@ export const googleService = {
                     return data.files || [];
                 }
             }
-            const response = await gapi.client.drive.files.list({
-                q: `'${folderId}' in parents and trashed = false`,
-                fields: 'files(id, name, createdTime, webViewLink, iconLink)',
-            });
-            return response.result.files;
+            return [];
         } catch (error) {
             console.error('Error fetching actas from Drive:', error);
             return [];
@@ -100,11 +56,7 @@ export const googleService = {
                     return googleService.parseDocContent(data.body?.content || []);
                 }
             }
-            const response = await gapi.client.docs.documents.get({
-                documentId: documentId,
-            });
-            const content = response.result.body.content;
-            return googleService.parseDocContent(content);
+            return '';
         } catch (error) {
             console.error('Error fetching Doc content:', error);
             return '';
@@ -124,15 +76,7 @@ export const googleService = {
                     return data.items || [];
                 }
             }
-            const response = await gapi.client.calendar.events.list({
-                calendarId: 'primary',
-                timeMin: (new Date()).toISOString(),
-                showDeleted: false,
-                singleEvents: true,
-                maxResults: 10,
-                orderBy: 'startTime',
-            });
-            return response.result.items;
+            return [];
         } catch (error) {
             console.error('Error fetching Calendar events:', error);
             return [];
@@ -361,21 +305,6 @@ export const googleService = {
                     return data.files || [];
                 }
             }
-
-            // 2. Fallback con GAPI
-            await googleService.initClient();
-            const client = (gapi as any).client;
-            if (client && client.drive) {
-                const response = await client.drive.files.list({
-                    q: query,
-                    fields: 'files(id, name, mimeType, modifiedTime, iconLink)',
-                    orderBy: 'folder,modifiedTime desc',
-                    pageSize: 50,
-                    supportsAllDrives: true,
-                    includeItemsFromAllDrives: true
-                });
-                return response.result.files || [];
-            }
             return [];
         } catch (error: any) {
             console.error('Error fetching spreadsheets/folders from Drive:', error);
@@ -418,24 +347,7 @@ export const googleService = {
                 }
             }
 
-            // 3. Probar vía GAPI
-            try {
-                await googleService.initClient();
-                const client = (gapi as any).client;
-                if (client && client.sheets) {
-                    const response = await client.sheets.spreadsheets.get({
-                        spreadsheetId,
-                        fields: 'sheets.properties(sheetId,title,index)'
-                    });
-                    const sheets = response.result.sheets || [];
-                    const titles = sheets.map((s: any) => s.properties?.title as string).filter(Boolean);
-                    if (titles.length > 0) return titles;
-                }
-            } catch (gapiErr) {
-                console.warn('GAPI tabs fetch failed, fallback a pestaña única:', gapiErr);
-            }
-
-            // 4. Fallback por defecto
+            // 3. Fallback por defecto
             return ['Hoja 1'];
         } catch (error: any) {
             console.error('Error fetching sheet tabs:', error);
@@ -492,33 +404,7 @@ export const googleService = {
             }
         }
 
-        // 3. Probar vía GAPI
-        try {
-            await googleService.initClient();
-            const client = (gapi as any).client;
-            if (client && client.sheets) {
-                const response = await client.sheets.spreadsheets.values.get({
-                    spreadsheetId,
-                    range,
-                });
-                const values: string[][] = response.result.values || [];
-                if (values.length > 0) {
-                    const [rawHeaders, ...rows] = values;
-                    const headers = rawHeaders.map((h, i) => String(h || `Columna_${i + 1}`).trim());
-                    return rows.map(row => {
-                        const item: Record<string, string> = {};
-                        headers.forEach((header, index) => {
-                            item[header] = String(row[index] || '').trim();
-                        });
-                        return item;
-                    });
-                }
-            }
-        } catch (gapiErr) {
-            console.warn('GAPI fetchSheetData failed:', gapiErr);
-        }
-
-        // 4. Fallback a lectura pública CSV (solo para documentos publicados o de enlace público)
+        // 3. Fallback a lectura pública CSV (solo para documentos publicados o de enlace público)
         return googleService.fetchSheetDataPublic(spreadsheetId, sheetName);
     },
 

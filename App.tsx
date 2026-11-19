@@ -49,6 +49,31 @@ interface UserSessionSyncProps {
   onUpdateUser: (updatedUser: Socio) => void;
 }
 
+const hasSocioChanged = (a: Socio, b: Socio): boolean => {
+  if (
+    a.id !== b.id ||
+    a.nombre !== b.nombre ||
+    a.correo !== b.correo ||
+    a.telefono !== b.telefono ||
+    a.puesto !== b.puesto ||
+    a.rol !== b.rol ||
+    a.estadoCuotas !== b.estadoCuotas ||
+    a.montoPendiente !== b.montoPendiente ||
+    a.qrToken !== b.qrToken ||
+    a.fechaNacimiento !== b.fechaNacimiento ||
+    a.fechaEdicion !== b.fechaEdicion ||
+    a.codigoSocio !== b.codigoSocio ||
+    a.estadoCenso !== b.estadoCenso ||
+    a.foto !== b.foto
+  ) {
+    return true;
+  }
+  const pagosA = a.pagos || [];
+  const pagosB = b.pagos || [];
+  if (pagosA.length !== pagosB.length) return true;
+  return JSON.stringify(pagosA) !== JSON.stringify(pagosB);
+};
+
 const UserSessionSync: React.FC<UserSessionSyncProps> = ({ auth, onUpdateUser }) => {
   const { socios } = useClubData();
 
@@ -79,7 +104,7 @@ const UserSessionSync: React.FC<UserSessionSyncProps> = ({ auth, onUpdateUser })
           }
         }
 
-        if (JSON.stringify(matchingSocio) !== JSON.stringify(auth.user)) {
+        if (hasSocioChanged(matchingSocio, auth.user)) {
           onUpdateUser(matchingSocio);
         }
       }
