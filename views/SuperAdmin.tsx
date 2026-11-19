@@ -175,7 +175,7 @@ const CATEGORIAS_MODULOS = [
       { id: 'nevera_admin', label: 'Control de Nevera / Bar', icon: Refrigerator },
       { id: 'parqueo', label: 'Gestión de Parqueo', icon: Car },
       { id: 'donaciones', label: 'Donaciones Recibidas', icon: Gift },
-      { id: 'presupuestos', label: 'Presupuestos', icon: DollarSign }
+      { id: 'presupuestos', label: 'Presupuestos y Cuentas Banrural', icon: DollarSign }
     ]
   },
   {

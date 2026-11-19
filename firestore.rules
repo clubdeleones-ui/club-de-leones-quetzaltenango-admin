@@ -163,6 +163,14 @@ service cloud.firestore {
                    && isValidNumber(request.resource.data, 'monto', false);
     }
 
+    match /tesoreria_cuentas_movimientos/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'numeroCuenta', false)
+                   && isValidString(request.resource.data, 'descripcion', false)
+                   && isValidNumber(request.resource.data, 'debito', false)
+                   && isValidNumber(request.resource.data, 'credito', false);
+    }
+
     match /config_roles/{document} {
       allow read: if true;
       allow write: if isValidString(request.resource.data, 'label', false)

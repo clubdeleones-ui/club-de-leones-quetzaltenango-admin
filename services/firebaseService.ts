@@ -539,6 +539,62 @@ export const firebaseService = {
     }
   },
 
+  // ================= TESORERÍA: CUENTAS BANCARIAS BANRURAL =================
+  getMovimientosBancarios: async (): Promise<any[]> => {
+    try {
+      const colRef = collection(db, "tesoreria_cuentas_movimientos");
+      const snapshot = await getDocs(colRef);
+      const list: any[] = [];
+      snapshot.forEach(d => {
+        list.push({ id: d.id, ...d.data() });
+      });
+      return list;
+    } catch (error) {
+      console.error("Error fetching movimientos bancarios:", error);
+      return [];
+    }
+  },
+
+  saveMovimientoBancario: async (movimiento: any): Promise<void> => {
+    try {
+      const docRef = doc(db, "tesoreria_cuentas_movimientos", movimiento.id);
+      const cleanData = JSON.parse(JSON.stringify(movimiento));
+      await setDoc(docRef, cleanData, { merge: true });
+    } catch (error) {
+      console.error("Error saving movimiento bancario:", error);
+      throw error;
+    }
+  },
+
+  deleteMovimientoBancario: async (id: string): Promise<void> => {
+    try {
+      const docRef = doc(db, "tesoreria_cuentas_movimientos", id);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting movimiento bancario:", error);
+      throw error;
+    }
+  },
+
+  resetMovimientosBancariosOficiales: async (movimientosBase: any[]): Promise<void> => {
+    try {
+      const colRef = collection(db, "tesoreria_cuentas_movimientos");
+      const snapshot = await getDocs(colRef);
+      const batch = writeBatch(db);
+      snapshot.forEach(d => {
+        batch.delete(d.ref);
+      });
+      movimientosBase.forEach(m => {
+        const ref = doc(db, "tesoreria_cuentas_movimientos", m.id);
+        batch.set(ref, JSON.parse(JSON.stringify(m)));
+      });
+      await batch.commit();
+    } catch (error) {
+      console.error("Error resetting movimientos bancarios:", error);
+      throw error;
+    }
+  },
+
   // COMISIONES
   getComisiones: async (): Promise<Comision[]> => {
     try {

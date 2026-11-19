@@ -1,460 +1,450 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  DollarSign, 
-  Plus, 
-  Trash2, 
-  Briefcase, 
-  TrendingUp, 
+import {
+  Landmark,
+  Plus,
+  Trash2,
+  TrendingUp,
   TrendingDown,
-  Tags, 
-  Activity, 
-  CheckCircle, 
   Search,
-  Filter,
   Download,
   Printer,
   Edit3,
-  Calendar,
   X,
-  Sparkles,
-  PieChart as PieChartIcon,
   BarChart3,
-  Layers,
-  ArrowUpRight,
   ShieldCheck,
   RotateCcw,
   Users,
   Building2,
-  HeartHandshake,
-  PartyPopper,
-  Car
+  Car,
+  ArrowLeftRight,
+  Copy,
+  Check,
+  Wallet,
+  FileSpreadsheet,
+  AlertCircle,
+  CheckCircle2,
+  Calendar,
+  Tag
 } from 'lucide-react';
-import { 
-  ResponsiveContainer, 
-  PieChart, 
-  Pie, 
-  Cell, 
-  Tooltip as RechartsTooltip,
-  BarChart, 
-  Bar, 
-  XAxis, 
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  Cell,
+  XAxis,
   YAxis,
-  Legend
+  Tooltip as RechartsTooltip,
+  CartesianGrid
 } from 'recharts';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../services/firebase';
 import { firebaseService } from '../services/firebaseService';
-import { useClubData } from '../context/ClubDataContext';
-import { RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision } from '../types';
 import { useModal } from '../context/ModalContext';
-import { PRESUPUESTO_OFICIAL_LEONES, TOTALES_PRESUPUESTO_OFICIAL, ItemPresupuestoOficial } from '../data/presupuestoOficial';
+import {
+  CUENTAS_BANCARIAS_BANRURAL,
+  MOVIMIENTOS_BANCARIOS_REALES,
+  MovimientoBancarioReal
+} from '../data/cuentasBancariasReales';
 
-const PALETA_COLORES = [
-  '#0d9488', // Teal
-  '#2563eb', // Blue
-  '#7c3aed', // Purple
-  '#ea580c', // Orange
-  '#059669', // Emerald
-  '#d97706', // Amber
-  '#e11d48', // Rose
-  '#0284c7', // Sky
-  '#4f46e5', // Indigo
+const CATEGORIAS_ADMIN = [
+  'Cuotas Ordinarias de Socios',
+  'Ingresos de Nuevos Socios',
+  'Ingresos Convención / Socios',
+  'Traslado de Cuotas entre Cuentas',
+  'Actividades Institucionales / Convivio',
+  'Cuotas Internacionales / Distritales',
+  'Ajuste / Reversión Bancaria',
+  'Otros Movimientos Administrativos'
 ];
 
-const COMISIONES_OFICIALES = [
-  "Comisión de Obras Sociales y Salud",
-  "Comisión de Medio Ambiente",
-  "Comisión de Entretenimiento y Convivencia",
-  "Comisión de Protocolo y Convivencia",
-  "Comisión de Damas Leonas y Festejos",
-  "Administración y Finanzas",
-  "Comisión de Parqueo",
-  "Comisión de Arrendamientos",
-  "Junta Directiva y Presidencia",
-  "Comisión de Liderazgo y Aumento de Socios",
-  "Comisión de Logística, Alimentos y Bebidas",
-  "Administración y Mantenimiento de Sede",
-  "Comisión de Relaciones Públicas",
-  "Comisión de Festejos y Recaudación"
+const CATEGORIAS_CUEVA = [
+  'Ingresos de Parqueo',
+  'Alquiler de Salón / Local / Apartamento',
+  'Operación de Parqueo (Planilla)',
+  'Mantenimiento de Sede (Cueva)',
+  'Honorarios Contables',
+  'Obras Sociales y Donaciones',
+  'Convivencia Leonística',
+  'Eventos y Reservaciones',
+  'Publicidad y Redes Sociales',
+  'Gestión Bancaria',
+  'Traslado a Cuenta Administrativa',
+  'Otros Movimientos No Administrativos'
 ];
+
+const formatGTQ = (val: number) =>
+  `Q${Number(val || 0).toLocaleString('es-GT', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })}`;
 
 export const Presupuestos: React.FC = () => {
   const { showAlert, showConfirm } = useModal();
 
-  // Pestañas de análisis
-  const [activeTab, setActiveTab] = useState<'resumen' | 'egresos' | 'ingresos' | 'verificacion'>('resumen');
-  
-  // Datos reactivos de ClubDataContext
-  const { 
-    rubros: dbRubros, 
-    fondos: dbFondos, 
-    asignaciones: dbAsignaciones, 
-    comisiones: dbComisiones 
-  } = useClubData();
+  const [activeTab, setActiveTab] = useState<'consolidado' | 'admin_3827008588' | 'cueva_3827008592'>('consolidado');
+  const [movimientos, setMovimientos] = useState<MovimientoBancarioReal[]>(MOVIMIENTOS_BANCARIOS_REALES);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [copiedAccount, setCopiedAccount] = useState<string | null>(null);
 
-  const [rubros, setRubros] = useState<RubroPresupuesto[]>(dbRubros);
-  const [fondos, setFondos] = useState<FondoPresupuesto[]>(dbFondos);
-  const [asignaciones, setAsignaciones] = useState<AsignacionComision[]>(dbAsignaciones);
-  const [comisiones, setComisiones] = useState<Comision[]>(dbComisiones);
-
-  useEffect(() => { setRubros(dbRubros); }, [dbRubros]);
-  useEffect(() => { setFondos(dbFondos); }, [dbFondos]);
-  useEffect(() => { setAsignaciones(dbAsignaciones); }, [dbAsignaciones]);
-  useEffect(() => { setComisiones(dbComisiones); }, [dbComisiones]);
-
-  // Filtros interactivos
+  // Filtros
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterComision, setFilterComision] = useState('todas');
-  const [filterCategoria, setFilterCategoria] = useState('todas');
+  const [typeFilter, setTypeFilter] = useState<'todos' | 'creditos' | 'debitos'>('todos');
+  const [categoryFilter, setCategoryFilter] = useState<string>('todas');
 
-  // Modal para edición de partida
-  const [editingItem, setEditingItem] = useState<any | null>(null);
-  const [editForm, setEditForm] = useState({
+  // Modal de Nuevo / Editar Movimiento
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    cuentaId: 'admin_3827008588' as 'admin_3827008588' | 'cueva_3827008592',
+    fecha: new Date().toISOString().slice(0, 10),
+    fechaTexto: '',
     descripcion: '',
-    cantidad: 1,
-    montoUnitario: 0,
-    unidad: 'UNIDAD',
-    comision: ''
+    categoriaContable: CATEGORIAS_ADMIN[0],
+    tipoMovimiento: 'credito' as 'credito' | 'debito',
+    monto: '',
+    notaAuditor: '',
+    destacado: false
   });
 
-  // Lista combinada de nombres de comisiones (incluyendo las de Firestore y las oficiales)
-  const listaComisionesNombres = useMemo(() => {
-    const setNames = new Set<string>(COMISIONES_OFICIALES);
-    comisiones.forEach(c => { if (c.nombre) setNames.add(c.nombre); });
-    return Array.from(setNames);
-  }, [comisiones]);
-
-  // Totales calculados en tiempo real
-  const totalIngresos = useMemo(() => {
-    return fondos.reduce((acc, curr) => acc + (Number(curr.monto) || 0), 0);
-  }, [fondos]);
-
-  const totalEgresos = useMemo(() => {
-    return asignaciones.reduce((acc, curr) => acc + (Number(curr.monto) || 0), 0);
-  }, [asignaciones]);
-
-  const superavitNeto = totalIngresos - totalEgresos;
-
-  // Totales por Categoría
-  const totalesPorCategoria = useMemo(() => {
-    const map = new Map<string, { tipo: 'Ingreso' | 'Egreso', total: number, count: number }>();
-    
-    // Ingresos
-    fondos.forEach(f => {
-      const cat = (f as any).categoria || (f.tipo === 'Cuotas' ? 'Ingresos Administrativos' : 'Ingresos por Actividades');
-      const prev = map.get(cat) || { tipo: 'Ingreso', total: 0, count: 0 };
-      map.set(cat, { tipo: 'Ingreso', total: prev.total + (Number(f.monto) || 0), count: prev.count + 1 });
-    });
-
-    // Egresos
-    asignaciones.forEach(a => {
-      const cat = (a as any).categoria || 'Egresos Administrativos';
-      const prev = map.get(cat) || { tipo: 'Egreso', total: 0, count: 0 };
-      map.set(cat, { tipo: 'Egreso', total: prev.total + (Number(a.monto) || 0), count: prev.count + 1 });
-    });
-
-    return Array.from(map.entries()).map(([nombre, data]) => ({
-      categoria: nombre,
-      ...data
-    }));
-  }, [fondos, asignaciones]);
-
-  // Distribución de Fondos por Comisión Responsable
-  const fondosPorComision = useMemo(() => {
-    const map = new Map<string, { total: number; partidas: number }>();
-    
-    asignaciones.forEach(asig => {
-      const comNombre = asig.comision || 'Sin Comisión Designada';
-      const prev = map.get(comNombre) || { total: 0, partidas: 0 };
-      map.set(comNombre, {
-        total: prev.total + (Number(asig.monto) || 0),
-        partidas: prev.partidas + 1
-      });
-    });
-
-    return Array.from(map.entries())
-      .map(([nombre, data]) => ({ nombre, ...data }))
-      .sort((a, b) => b.total - a.total);
-  }, [asignaciones]);
-
-  // Filtrado de Egresos
-  const filteredEgresos = useMemo(() => {
-    return asignaciones.filter(a => {
-      const matchSearch = !searchQuery.trim() || 
-        (a.actividad || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (a.descripcion || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (a.comision || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ((a as any).codigo || '').includes(searchQuery);
-
-      const matchComision = filterComision === 'todas' || a.comision === filterComision;
-      const matchCategoria = filterCategoria === 'todas' || (a as any).categoria === filterCategoria;
-
-      return matchSearch && matchComision && matchCategoria;
-    });
-  }, [asignaciones, searchQuery, filterComision, filterCategoria]);
-
-  // Filtrado de Ingresos
-  const filteredIngresos = useMemo(() => {
-    return fondos.filter(f => {
-      const matchSearch = !searchQuery.trim() || 
-        f.descripcion.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ((f as any).categoria || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ((f as any).codigo || '').includes(searchQuery);
-
-      const matchCategoria = filterCategoria === 'todas' || (f as any).categoria === filterCategoria;
-
-      return matchSearch && matchCategoria;
-    });
-  }, [fondos, searchQuery, filterCategoria]);
-
-  // Cambiar designación de comisión en tiempo real
-  const handleUpdateComision = async (asigId: string, nuevaComision: string) => {
-    const item = asignaciones.find(a => a.id === asigId);
-    if (!item) return;
-
-    try {
-      const updated: AsignacionComision = {
-        ...item,
-        comision: nuevaComision
-      };
-      await firebaseService.saveAsignacionComision(updated);
-    } catch (err: any) {
-      console.error("Error al designar comisión:", err);
-      showAlert("Error", "No se pudo actualizar la comisión responsable.");
-    }
-  };
-
-  // Abrir modal de edición rápida
-  const handleOpenEdit = (item: any) => {
-    setEditingItem(item);
-    setEditForm({
-      descripcion: item.actividad || item.descripcion || '',
-      cantidad: item.cantidad || 1,
-      montoUnitario: item.montoUnitario || item.monto || 0,
-      unidad: item.unidad || 'UNIDAD',
-      comision: item.comision || ''
-    });
-  };
-
-  // Guardar edición
-  const handleSaveEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingItem) return;
-
-    const nuevoTotal = (Number(editForm.cantidad) || 1) * (Number(editForm.montoUnitario) || 0);
-
-    try {
-      if (editingItem.comision !== undefined) {
-        // Es un Egreso (Asignación)
-        const updated: AsignacionComision = {
-          ...editingItem,
-          actividad: editForm.descripcion,
-          monto: nuevoTotal,
-          comision: editForm.comision,
-          descripcion: `${editForm.cantidad} ${editForm.unidad} × Q${(Number(editForm.montoUnitario) || 0).toFixed(2)}`
-        };
-        (updated as any).cantidad = Number(editForm.cantidad) || 1;
-        (updated as any).montoUnitario = Number(editForm.montoUnitario) || 0;
-        (updated as any).unidad = editForm.unidad;
-        (updated as any).totalPresupuestado = nuevoTotal;
-
-        await firebaseService.saveAsignacionComision(updated);
-      } else {
-        // Es un Ingreso (Fondo)
-        const updated: FondoPresupuesto = {
-          ...editingItem,
-          descripcion: editForm.descripcion,
-          monto: nuevoTotal
-        };
-        (updated as any).cantidad = Number(editForm.cantidad) || 1;
-        (updated as any).montoUnitario = Number(editForm.montoUnitario) || 0;
-        (updated as any).unidad = editForm.unidad;
-
-        await firebaseService.saveFondoPresupuesto(updated);
+  // Suscripción en tiempo real a Firestore; si está vacía, se siembran los movimientos reales de las 2 cuentas Banrural
+  useEffect(() => {
+    const colRef = collection(db, 'tesoreria_cuentas_movimientos');
+    const unsub = onSnapshot(
+      colRef,
+      async (snapshot) => {
+        if (snapshot.empty) {
+          try {
+            await firebaseService.resetMovimientosBancariosOficiales(MOVIMIENTOS_BANCARIOS_REALES);
+          } catch (e) {
+            console.warn('Usando datos reales locales de respaldo:', e);
+            setMovimientos(MOVIMIENTOS_BANCARIOS_REALES);
+          }
+          return;
+        }
+        const loaded: MovimientoBancarioReal[] = snapshot.docs.map(
+          (d) => ({ id: d.id, ...d.data() } as MovimientoBancarioReal)
+        );
+        setMovimientos(loaded);
+      },
+      (err) => {
+        console.warn('Error suscribiendo a tesoreria_cuentas_movimientos, usando datos reales locales:', err);
+        setMovimientos(MOVIMIENTOS_BANCARIOS_REALES);
       }
+    );
+    return () => unsub();
+  }, []);
 
-      setEditingItem(null);
-    } catch (err: any) {
-      console.error("Error al actualizar partida:", err);
-      showAlert("Error", "No se pudo guardar la modificación.");
+  // Recalcular libro auxiliar ordenado y con saldo contable acumulado por cuenta
+  const analizarCuenta = (
+    cuentaId: 'admin_3827008588' | 'cueva_3827008592',
+    listaRaw: MovimientoBancarioReal[]
+  ) => {
+    const infoCuenta = CUENTAS_BANCARIAS_BANRURAL[cuentaId];
+    const items = listaRaw
+      .filter((m) => m.cuentaId === cuentaId || m.numeroCuenta === infoCuenta.numeroCuenta)
+      .sort((a, b) => {
+        if (a.orden !== undefined && b.orden !== undefined && a.orden !== b.orden) {
+          return a.orden - b.orden;
+        }
+        return (a.fecha || '').localeCompare(b.fecha || '');
+      });
+
+    let runningBalance = infoCuenta.saldoInicialPeriodo;
+    const recalc = items.map((item, idx) => {
+      const deb = Number(item.debito) || 0;
+      const cred = Number(item.credito) || 0;
+      runningBalance = Number((runningBalance - deb + cred).toFixed(2));
+      return {
+        ...item,
+        orden: item.orden ?? idx + 1,
+        debito: deb,
+        credito: cred,
+        saldoContable: runningBalance
+      };
+    });
+
+    const totalCreditos = recalc.reduce((acc, m) => acc + m.credito, 0);
+    const totalDebitos = recalc.reduce((acc, m) => acc + m.debito, 0);
+    const saldoFinal = recalc.length > 0 ? recalc[recalc.length - 1].saldoContable : infoCuenta.saldoActual;
+    const ultimaFecha = recalc.length > 0 ? recalc[recalc.length - 1].fechaTexto : infoCuenta.fechaCorte;
+
+    // Excluir la reversión por depósito a cuenta equivocada (Q12,709.22) para mostrar también el ingreso operativo real limpio
+    const ajusteEquivocado = recalc
+      .filter((m) => m.descripcion.toUpperCase().includes('CTA EQUIVOCADA') || m.notaAuditor?.includes('Reversado'))
+      .reduce((acc, m) => acc + m.debito, 0);
+
+    return {
+      info: infoCuenta,
+      movimientos: recalc,
+      totalCreditos,
+      totalDebitos,
+      totalCreditosOperativos: Math.max(0, totalCreditos - ajusteEquivocado),
+      totalDebitosOperativos: Math.max(0, totalDebitos - ajusteEquivocado),
+      ajusteEquivocado,
+      saldoInicial: infoCuenta.saldoInicialPeriodo,
+      saldoFinal,
+      ultimaFecha
+    };
+  };
+
+  const estadoAdmin = useMemo(() => analizarCuenta('admin_3827008588', movimientos), [movimientos]);
+  const estadoCueva = useMemo(() => analizarCuenta('cueva_3827008592', movimientos), [movimientos]);
+
+  const saldoTotalClub = estadoAdmin.saldoFinal + estadoCueva.saldoFinal;
+  const totalIngresosOperativosClub = estadoAdmin.totalCreditosOperativos + estadoCueva.totalCreditosOperativos;
+  const totalEgresosOperativosClub = estadoAdmin.totalDebitosOperativos + estadoCueva.totalDebitosOperativos;
+
+  const handleCopyAccount = (num: string) => {
+    navigator.clipboard.writeText(num);
+    setCopiedAccount(num);
+    setTimeout(() => setCopiedAccount(null), 2000);
+  };
+
+  const handleOpenNewModal = (defaultCuenta?: 'admin_3827008588' | 'cueva_3827008592') => {
+    const targetCuenta =
+      defaultCuenta || (activeTab === 'cueva_3827008592' ? 'cueva_3827008592' : 'admin_3827008588');
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const [y, m, d] = todayIso.split('-');
+    setEditingId(null);
+    setFormData({
+      cuentaId: targetCuenta,
+      fecha: todayIso,
+      fechaTexto: `${d}/${m}/${y}`,
+      descripcion: '',
+      categoriaContable: targetCuenta === 'admin_3827008588' ? CATEGORIAS_ADMIN[0] : CATEGORIAS_CUEVA[0],
+      tipoMovimiento: targetCuenta === 'admin_3827008588' ? 'credito' : 'debito',
+      monto: '',
+      notaAuditor: '',
+      destacado: false
+    });
+    setShowModal(true);
+  };
+
+  const handleOpenEditModal = (item: MovimientoBancarioReal) => {
+    setEditingId(item.id);
+    const isCredito = (Number(item.credito) || 0) > 0;
+    setFormData({
+      cuentaId: item.cuentaId,
+      fecha: item.fecha,
+      fechaTexto: item.fechaTexto,
+      descripcion: item.descripcion,
+      categoriaContable: item.categoriaContable,
+      tipoMovimiento: isCredito ? 'credito' : 'debito',
+      monto: String(isCredito ? item.credito : item.debito),
+      notaAuditor: item.notaAuditor || '',
+      destacado: Boolean(item.destacado)
+    });
+    setShowModal(true);
+  };
+
+  const handleSaveMovimiento = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const montoNum = parseFloat(formData.monto);
+    if (!formData.descripcion.trim() || isNaN(montoNum) || montoNum < 0) {
+      showAlert('Datos incompletos', 'Ingresa una descripción válida y un monto mayor o igual a Q0.00.');
+      return;
+    }
+
+    const cuentaMovs =
+      formData.cuentaId === 'admin_3827008588' ? estadoAdmin.movimientos : estadoCueva.movimientos;
+    const maxOrden = cuentaMovs.reduce((max, m) => Math.max(max, m.orden || 0), 0);
+    const existingItem = movimientos.find((m) => m.id === editingId);
+
+    const [y, m, d] = (formData.fecha || '').split('-');
+    const formattedFechaTexto =
+      formData.fechaTexto.trim() || (d && m && y ? `${d}/${m}/${y}` : formData.fecha);
+
+    const nuevo: MovimientoBancarioReal = {
+      id:
+        editingId ||
+        `${formData.cuentaId === 'admin_3827008588' ? 'adm' : 'cva'}-${Date.now()}`,
+      cuentaId: formData.cuentaId,
+      numeroCuenta: formData.cuentaId === 'admin_3827008588' ? '3827008588' : '3827008592',
+      orden: existingItem ? existingItem.orden : maxOrden + 1,
+      fecha: formData.fecha,
+      fechaTexto: formattedFechaTexto,
+      descripcion: formData.descripcion.trim(),
+      categoriaContable: formData.categoriaContable,
+      debito: formData.tipoMovimiento === 'debito' ? montoNum : 0,
+      credito: formData.tipoMovimiento === 'credito' ? montoNum : 0,
+      saldoContable: 0, // Se recalcula automáticamente en la vista por orden cronológico
+      destacado: formData.destacado,
+      ...(formData.notaAuditor.trim() ? { notaAuditor: formData.notaAuditor.trim() } : {})
+    };
+
+    try {
+      setIsSyncing(true);
+      await firebaseService.saveMovimientoBancario(nuevo);
+      setShowModal(false);
+    } catch (err) {
+      console.error('Error guardando movimiento:', err);
+      showAlert('Error', 'No se pudo guardar la transacción en la base de datos.');
+    } finally {
+      setIsSyncing(false);
     }
   };
 
-  // Restaurar los 30 registros oficiales en Firestore
-  const handleResetToOfficialData = async () => {
-    const confirm = await showConfirm(
-      "Restablecer Presupuesto Oficial",
-      "¿Deseas restablecer las 30 partidas contables oficiales del Club de Leones Quetzaltenango? Esto sincronizará exactamente los Q266,150.00 de ingresos y Q164,958.12 de egresos.",
-      { confirmText: "Restablecer Datos Oficiales", cancelText: "Cancelar" }
+  const handleDeleteMovimiento = async (item: MovimientoBancarioReal) => {
+    const ok = await showConfirm(
+      'Eliminar Transacción',
+      `¿Deseas eliminar el movimiento "${item.descripcion}" (${formatGTQ(
+        item.credito > 0 ? item.credito : item.debito
+      )}) de la cuenta ${item.numeroCuenta}? El saldo contable se recalculará automáticamente.`,
+      { confirmText: 'Eliminar', cancelText: 'Cancelar', type: 'warning' }
+    );
+    if (!ok) return;
+
+    try {
+      setIsSyncing(true);
+      await firebaseService.deleteMovimientoBancario(item.id);
+    } catch (err) {
+      console.error('Error eliminando movimiento:', err);
+      showAlert('Error', 'No se pudo eliminar la transacción.');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleRestaurarLibrosOficiales = async () => {
+    const ok = await showConfirm(
+      'Restaurar Libros Reales Banrural S.A.',
+      '¿Deseas restaurar exactamente los 15 movimientos oficiales de la Cuenta Administrativa (3827008588 — Saldo Q27,394.09) y los 12 movimientos oficiales de la Cuenta Cueva (3827008592 — Saldo Q21,405.17)?',
+      { confirmText: 'Restaurar Saldos Oficiales', cancelText: 'Cancelar' }
+    );
+    if (!ok) return;
+
+    try {
+      setIsSyncing(true);
+      await firebaseService.resetMovimientosBancariosOficiales(MOVIMIENTOS_BANCARIOS_REALES);
+      showAlert(
+        'Libros Bancarios Sincronizados',
+        'Se han restaurado las dos cuentas monetarias de Banrural S.A. con sus saldos y transacciones reales.'
+      );
+    } catch (err) {
+      console.error('Error restaurando libros:', err);
+      showAlert('Error', 'No se pudieron restaurar los movimientos oficiales.');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleExportCSV = () => {
+    const headers = [
+      'Banco',
+      'Numero_Cuenta',
+      'Nombre_Cuenta',
+      'Orden',
+      'Fecha',
+      'Descripcion',
+      'Categoria',
+      'Debito_Q',
+      'Credito_Q',
+      'Saldo_Contable_Q'
+    ];
+
+    const todosOrdenados = [...estadoAdmin.movimientos, ...estadoCueva.movimientos];
+    const rows = todosOrdenados.map((m) =>
+      [
+        '"Banrural S.A."',
+        `"${m.numeroCuenta}"`,
+        `"${m.cuentaId === 'admin_3827008588' ? 'Administrativa' : 'Cueva / No Administrativa'}"`,
+        m.orden,
+        `"${m.fechaTexto}"`,
+        `"${m.descripcion.replace(/"/g, '""')}"`,
+        `"${(m.categoriaContable || '').replace(/"/g, '""')}"`,
+        m.debito.toFixed(2),
+        m.credito.toFixed(2),
+        m.saldoContable.toFixed(2)
+      ].join(',')
     );
 
-    if (!confirm) return;
-
-    try {
-      // 1. Borrar anteriores
-      for (const f of fondos) {
-        await firebaseService.deleteFondoPresupuesto(f.id);
-      }
-      for (const a of asignaciones) {
-        await firebaseService.deleteAsignacionComision(a.id);
-      }
-      for (const r of rubros) {
-        await firebaseService.deleteRubroPresupuesto(r.id);
-      }
-
-      // 2. Crear Rubros oficiales
-      const rubrosUnicos = [
-        { codigo: "1.01", nombre: "Ingresos Administrativos", descripcion: "Cuotas, parqueo y arrendamientos del Club" },
-        { codigo: "2.01", nombre: "Ingresos por Actividades", descripcion: "Rifas, bingos, cenas benéficas y donaciones de patrocinadores" },
-        { codigo: "3.01", nombre: "Egresos Administrativos", descripcion: "Operación de parqueo, cuotas internacionales/distritales, suministros y sede" },
-        { codigo: "4.01", nombre: "Obras Sociales / Actividades de Servicio", descripcion: "Ejes de servicio: Salud Mental, Diabetes, Hambre, Ayuda Humanitaria, Medio Ambiente" },
-        { codigo: "5.01", nombre: "Convivencias y Eventos", descripcion: "Festejos leonísticos, convivios y fechas tradicionales" }
-      ];
-
-      for (const r of rubrosUnicos) {
-        const rubroId = `rubro-cod-${r.codigo.replace('.', '_')}`;
-        await firebaseService.saveRubroPresupuesto({
-          id: rubroId,
-          codigo: r.codigo,
-          nombre: r.nombre,
-          descripcion: r.descripcion,
-          fechaCreacion: new Date().toISOString(),
-          activo: true
-        });
-      }
-
-      // 3. Crear Ingresos
-      const ingresos = PRESUPUESTO_OFICIAL_LEONES.filter(i => i.tipo === 'Ingreso');
-      for (let i = 0; i < ingresos.length; i++) {
-        const ing = ingresos[i];
-        const fondoId = `fondo-${ing.codigo.replace('.', '_')}-${i + 1}`;
-        await firebaseService.saveFondoPresupuesto({
-          id: fondoId,
-          tipo: ing.descripcion.includes("Cuota") ? "Cuotas" : ing.categoria.includes("Actividades") ? "Actividad" : "Autónomo",
-          monto: ing.presupuestadoTotal,
-          descripcion: ing.descripcion,
-          fecha: new Date().toISOString(),
-          ...({
-            codigo: ing.codigo,
-            categoria: ing.categoria,
-            unidad: ing.unidad,
-            cantidad: ing.cantidad,
-            montoUnitario: ing.montoUnitario,
-            comision: ing.comisionSugerida
-          } as any)
-        });
-      }
-
-      // 4. Crear Egresos
-      const egresos = PRESUPUESTO_OFICIAL_LEONES.filter(i => i.tipo === 'Egreso');
-      for (let i = 0; i < egresos.length; i++) {
-        const eg = egresos[i];
-        const asigId = `asig-${eg.codigo.replace('.', '_')}-${i + 1}`;
-        const rubroId = `rubro-cod-${eg.codigo.replace('.', '_')}`;
-
-        let temporalidad = "Unica";
-        if (eg.unidad === "MES") temporalidad = "Mensual";
-        else if (eg.unidad === "SOCIO" || eg.unidad === "ACTIVIDAD" || eg.unidad === "CONVIVENCIA") temporalidad = "Anual";
-
-        await firebaseService.saveAsignacionComision({
-          id: asigId,
-          comision: eg.comisionSugerida,
-          monto: eg.presupuestadoTotal,
-          rubroId: rubroId,
-          temporalidad: temporalidad as any,
-          actividad: eg.descripcion,
-          descripcion: `${eg.cantidad} ${eg.unidad} × Q${eg.montoUnitario.toFixed(2)} (${eg.categoria})`,
-          fechaCreacion: new Date().toISOString(),
-          ...({
-            codigo: eg.codigo,
-            categoria: eg.categoria,
-            unidad: eg.unidad,
-            cantidad: eg.cantidad,
-            montoUnitario: eg.montoUnitario,
-            totalPresupuestado: eg.presupuestadoTotal
-          } as any)
-        });
-      }
-
-      showAlert("Datos Oficiales Restablecidos", "Se han cargado las 30 partidas contables oficiales con éxito.");
-    } catch (err: any) {
-      console.error("Error al restablecer:", err);
-      showAlert("Error", "Ocurrió un error al restablecer los datos.");
-    }
-  };
-
-  // Exportar a CSV
-  const handleExportCSV = () => {
-    const headers = ["Codigo", "Tipo", "Categoria", "Descripcion", "Unidad", "Cantidad", "Monto_Unitario", "Presupuestado_Total", "Comision_Designada"];
-    
-    const rowsIngresos = fondos.map(f => [
-      `"${(f as any).codigo || '1.01'}"`,
-      `"Ingreso"`,
-      `"${((f as any).categoria || 'Ingresos Administrativos').replace(/"/g, '""')}"`,
-      `"${f.descripcion.replace(/"/g, '""')}"`,
-      `"${(f as any).unidad || 'UNIDAD'}"`,
-      (f as any).cantidad || 1,
-      ((f as any).montoUnitario || f.monto).toFixed(2),
-      f.monto.toFixed(2),
-      `"${((f as any).comision || 'Tesorería').replace(/"/g, '""')}"`
-    ].join(','));
-
-    const rowsEgresos = asignaciones.map(a => [
-      `"${(a as any).codigo || '3.01'}"`,
-      `"Egreso"`,
-      `"${((a as any).categoria || 'Egresos Administrativos').replace(/"/g, '""')}"`,
-      `"${(a.actividad || a.descripcion).replace(/"/g, '""')}"`,
-      `"${(a as any).unidad || a.temporalidad}"`,
-      (a as any).cantidad || 1,
-      ((a as any).montoUnitario || a.monto).toFixed(2),
-      a.monto.toFixed(2),
-      `"${(a.comision || 'Sin Designar').replace(/"/g, '""')}"`
-    ].join(','));
-
-    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(','), ...rowsIngresos, ...rowsEgresos].join('\n');
+    const csvContent =
+      'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows].join('\n');
     const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Presupuesto_Club_de_Leones_Quetzaltenango_Oficial.csv`);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', 'Estados_De_Cuenta_Banrural_Club_Leones_Quetzaltenango.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
+  // Filtrar movimientos para la pestaña activa
+  const cuentaActivaEstado =
+    activeTab === 'cueva_3827008592' ? estadoCueva : estadoAdmin;
+
+  const categoriasDisponiblesCuenta = useMemo(() => {
+    const set = new Set<string>();
+    cuentaActivaEstado.movimientos.forEach((m) => {
+      if (m.categoriaContable) set.add(m.categoriaContable);
+    });
+    return Array.from(set);
+  }, [cuentaActivaEstado.movimientos]);
+
+  const filteredMovimientosCuenta = useMemo(() => {
+    return cuentaActivaEstado.movimientos.filter((m) => {
+      const q = searchQuery.trim().toLowerCase();
+      const matchSearch =
+        !q ||
+        m.descripcion.toLowerCase().includes(q) ||
+        m.fechaTexto.toLowerCase().includes(q) ||
+        (m.categoriaContable || '').toLowerCase().includes(q);
+      const matchType =
+        typeFilter === 'todos' ||
+        (typeFilter === 'creditos' && m.credito > 0) ||
+        (typeFilter === 'debitos' && m.debito > 0);
+      const matchCat = categoryFilter === 'todas' || m.categoriaContable === categoryFilter;
+      return matchSearch && matchType && matchCat;
+    });
+  }, [cuentaActivaEstado.movimientos, searchQuery, typeFilter, categoryFilter]);
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500 max-w-[1400px] mx-auto pb-16">
-      
-      {/* Cabecera Principal */}
-      <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 rounded-[2.5rem] p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border border-blue-900/50">
+      {/* CABECERA PRINCIPAL: TESORERÍA Y CUENTAS MONETARIAS BANRURAL S.A. */}
+      <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-emerald-950 rounded-[2.5rem] p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border border-blue-900/50">
         <div className="absolute top-0 right-0 w-96 h-96 bg-yellow-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
         <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
           <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/20 border border-yellow-400/30 text-yellow-300 text-[11px] font-black uppercase tracking-wider">
-              <ShieldCheck size={14} />
-              <span>Presupuesto Anual Oficial • Club de Leones Quetzaltenango</span>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[11px] font-black uppercase tracking-wider">
+              <Landmark size={14} />
+              <span>Tesorería Real • Cuentas Monetarias Banrural S.A.</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              Análisis, Control y Designación Presupuestaria
+              Control de Saldos Bancarios y Libros de Cuentas
             </h1>
-            <p className="text-xs sm:text-sm text-slate-300 font-medium">
-              30 partidas presupuestadas para revisión de junta directiva, designación a comisiones y fiscalización de ingresos y egresos.
+            <p className="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed">
+              Gestión contable real de las dos cuentas monetarias del Club de Leones de Quetzaltenango en{' '}
+              <strong className="text-white">Banrural S.A.</strong>: Cuenta Administrativa (<span className="font-mono text-yellow-300">3827008588</span>) y Cuenta Cueva / Operativa (<span className="font-mono text-emerald-300">3827008592</span>).
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 shrink-0 print:hidden">
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0 print:hidden">
             <button
               type="button"
-              onClick={handleResetToOfficialData}
-              title="Restablecer exactamente las 30 partidas oficiales"
-              className="px-4 py-2.5 rounded-xl bg-blue-800/80 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider border border-blue-700 flex items-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-md"
+              onClick={() => handleOpenNewModal()}
+              className="px-4 py-2.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-blue-950 font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-lg cursor-pointer"
             >
-              <RotateCcw size={15} />
-              <span>Restablecer Datos Oficiales</span>
+              <Plus size={16} />
+              <span>Registrar Movimiento</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleRestaurarLibrosOficiales}
+              disabled={isSyncing}
+              title="Restaurar los movimientos y saldos oficiales de los libros de Banrural"
+              className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider border border-white/20 flex items-center gap-2 transition-all cursor-pointer"
+            >
+              <RotateCcw size={15} className={isSyncing ? 'animate-spin' : ''} />
+              <span>Sincronizar Libros Oficiales</span>
             </button>
             <button
               type="button"
               onClick={handleExportCSV}
-              className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider border border-white/20 flex items-center gap-2 transition-all"
+              className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider border border-white/20 flex items-center gap-2 transition-all cursor-pointer"
             >
               <Download size={15} />
               <span>Exportar Excel (CSV)</span>
@@ -462,7 +452,7 @@ export const Presupuestos: React.FC = () => {
             <button
               type="button"
               onClick={() => window.print()}
-              className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider border border-white/20 flex items-center gap-2 transition-all"
+              className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider border border-white/20 flex items-center gap-2 transition-all cursor-pointer"
             >
               <Printer size={15} />
               <span>Imprimir</span>
@@ -471,737 +461,1269 @@ export const Presupuestos: React.FC = () => {
         </div>
       </div>
 
-      {/* KPI Cards: Resumen Financiero Oficial */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        
-        {/* KPI 1: Ingresos Totales */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm relative overflow-hidden group hover:border-emerald-400 transition-all">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Ingresos Totales (1.01 & 2.01)</p>
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
-              <TrendingUp size={20} />
+      {/* TARJETAS PRINCIPALES DE SALDO EN BANRURAL S.A. */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Cuenta 1: Administrativa 3827008588 */}
+        <div
+          onClick={() => {
+            setActiveTab('admin_3827008588');
+            setCategoryFilter('todas');
+          }}
+          className={`lg:col-span-4 rounded-3xl p-6 border transition-all cursor-pointer relative overflow-hidden ${
+            activeTab === 'admin_3827008588'
+              ? 'bg-blue-950 text-white border-blue-700 shadow-xl ring-4 ring-blue-500/20'
+              : 'bg-white text-slate-900 border-slate-200 hover:border-blue-400 shadow-sm'
+          }`}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <span
+                className={`inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${
+                  activeTab === 'admin_3827008588'
+                    ? 'bg-blue-800 text-yellow-300 border border-blue-700'
+                    : 'bg-blue-50 text-blue-800 border border-blue-200'
+                }`}
+              >
+                <Users size={12} />
+                <span>Banrural Monetaria • Administrativa</span>
+              </span>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="font-mono text-sm font-black tracking-wider">
+                  No. 3827008588
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCopyAccount('3827008588');
+                  }}
+                  title="Copiar número de cuenta"
+                  className={`p-1 rounded-lg transition-colors ${
+                    activeTab === 'admin_3827008588'
+                      ? 'hover:bg-blue-800 text-blue-200'
+                      : 'hover:bg-slate-100 text-slate-500'
+                  }`}
+                >
+                  {copiedAccount === '3827008588' ? <Check size={13} /> : <Copy size={13} />}
+                </button>
+              </div>
+            </div>
+            <div
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+                activeTab === 'admin_3827008588'
+                  ? 'bg-blue-800 text-yellow-400'
+                  : 'bg-blue-50 text-blue-700 border border-blue-100'
+              }`}
+            >
+              <Landmark size={22} />
             </div>
           </div>
-          <h2 className="text-3xl font-black text-emerald-700 mt-3 tracking-tight">
-            Q{totalIngresos.toLocaleString('es-GT', { minimumFractionDigits: 2 })}
-          </h2>
-          <div className="mt-2 text-[11px] font-bold text-slate-500 space-y-0.5">
-            <p>• Admin (Cuotas, Parqueo, Rentas): Q216,150.00</p>
-            <p>• Actividades (Rifa, Bingo, Donaciones): Q50,000.00</p>
-          </div>
-        </div>
 
-        {/* KPI 2: Egresos Totales */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm relative overflow-hidden group hover:border-rose-400 transition-all">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Egresos Totales (3.01, 4.01, 5.01)</p>
-            <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600">
-              <TrendingDown size={20} />
-            </div>
+          <div className="mt-4">
+            <p
+              className={`text-[10px] font-black uppercase tracking-widest ${
+                activeTab === 'admin_3827008588' ? 'text-blue-200' : 'text-slate-400'
+              }`}
+            >
+              Saldo Contable Actual (Corte {estadoAdmin.ultimaFecha})
+            </p>
+            <h2 className="text-3xl font-black tracking-tight mt-0.5">
+              {formatGTQ(estadoAdmin.saldoFinal)}
+            </h2>
           </div>
-          <h2 className="text-3xl font-black text-slate-800 mt-3 tracking-tight">
-            Q{totalEgresos.toLocaleString('es-GT', { minimumFractionDigits: 2 })}
-          </h2>
-          <div className="mt-2 text-[11px] font-bold text-slate-500 space-y-0.5">
-            <p>• Obras Sociales: Q40,000.00 (24%)</p>
-            <p>• Convivencias: Q20,500.00 (12%)</p>
-            <p>• Administrativos: Q104,458.12 (64%)</p>
-          </div>
-        </div>
 
-        {/* KPI 3: Superávit Neto */}
-        <div className="bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-3xl p-6 border border-emerald-500 shadow-lg shadow-emerald-600/20 relative overflow-hidden">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] font-black uppercase tracking-widest opacity-80">Superávit Presupuestado</p>
-            <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-white/20 border border-white/30">
-              Saldo Positivo
-            </span>
-          </div>
-          <h2 className="text-3xl font-black mt-3 tracking-tight">
-            +Q{superavitNeto.toLocaleString('es-GT', { minimumFractionDigits: 2 })}
-          </h2>
-          <p className="text-[11px] font-medium opacity-90 mt-2">
-            Margen financiero saludable del 38.0% a favor del Club para contingencias y proyectos de servicio.
+          <p
+            className={`text-xs font-medium mt-2 leading-snug ${
+              activeTab === 'admin_3827008588' ? 'text-blue-100' : 'text-slate-600'
+            }`}
+          >
+            Pago de cuotas ordinarias de socios, ingresos de nuevos socios y pagos de convención.
           </p>
-        </div>
 
-        {/* KPI 4: Cobertura y Cumplimiento */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm relative overflow-hidden group hover:border-blue-400 transition-all">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Cobertura Financiera</p>
-            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
-              <Activity size={20} />
+          <div
+            className={`grid grid-cols-2 gap-2 mt-4 pt-3 border-t text-xs ${
+              activeTab === 'admin_3827008588' ? 'border-blue-800/80' : 'border-slate-100'
+            }`}
+          >
+            <div>
+              <span
+                className={`text-[10px] font-bold block ${
+                  activeTab === 'admin_3827008588' ? 'text-blue-200' : 'text-slate-400'
+                }`}
+              >
+                Créditos (+) Operativos
+              </span>
+              <span className="font-mono font-black text-emerald-500">
+                +{formatGTQ(estadoAdmin.totalCreditosOperativos)}
+              </span>
+            </div>
+            <div>
+              <span
+                className={`text-[10px] font-bold block ${
+                  activeTab === 'admin_3827008588' ? 'text-blue-200' : 'text-slate-400'
+                }`}
+              >
+                Débitos (-) Operativos
+              </span>
+              <span
+                className={`font-mono font-black ${
+                  activeTab === 'admin_3827008588' ? 'text-rose-300' : 'text-rose-600'
+                }`}
+              >
+                -{formatGTQ(estadoAdmin.totalDebitosOperativos)}
+              </span>
             </div>
           </div>
-          <h2 className="text-3xl font-black text-blue-900 mt-3 tracking-tight">
-            {totalEgresos > 0 ? `${((totalIngresos / totalEgresos) * 100).toFixed(1)}%` : '100%'}
-          </h2>
-          <p className="text-[11px] font-bold text-slate-500 mt-2 flex items-center gap-1.5">
-            <CheckCircle size={13} className="text-emerald-500" />
-            Cada Q1.00 de gasto cuenta con Q{(totalIngresos / (totalEgresos || 1)).toFixed(2)} de respaldo.
-          </p>
         </div>
 
+        {/* Cuenta 2: Cueva / No Administrativa 3827008592 */}
+        <div
+          onClick={() => {
+            setActiveTab('cueva_3827008592');
+            setCategoryFilter('todas');
+          }}
+          className={`lg:col-span-4 rounded-3xl p-6 border transition-all cursor-pointer relative overflow-hidden ${
+            activeTab === 'cueva_3827008592'
+              ? 'bg-emerald-950 text-white border-emerald-700 shadow-xl ring-4 ring-emerald-500/20'
+              : 'bg-white text-slate-900 border-slate-200 hover:border-emerald-400 shadow-sm'
+          }`}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <span
+                className={`inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${
+                  activeTab === 'cueva_3827008592'
+                    ? 'bg-emerald-800 text-emerald-200 border border-emerald-700'
+                    : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                }`}
+              >
+                <Car size={12} />
+                <span>Banrural Monetaria • Cueva (No Admin)</span>
+              </span>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="font-mono text-sm font-black tracking-wider">
+                  No. 3827008592
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCopyAccount('3827008592');
+                  }}
+                  title="Copiar número de cuenta"
+                  className={`p-1 rounded-lg transition-colors ${
+                    activeTab === 'cueva_3827008592'
+                      ? 'hover:bg-emerald-800 text-emerald-200'
+                      : 'hover:bg-slate-100 text-slate-500'
+                  }`}
+                >
+                  {copiedAccount === '3827008592' ? <Check size={13} /> : <Copy size={13} />}
+                </button>
+              </div>
+            </div>
+            <div
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+                activeTab === 'cueva_3827008592'
+                  ? 'bg-emerald-800 text-yellow-300'
+                  : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+              }`}
+            >
+              <Building2 size={22} />
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <p
+              className={`text-[10px] font-black uppercase tracking-widest ${
+                activeTab === 'cueva_3827008592' ? 'text-emerald-200' : 'text-slate-400'
+              }`}
+            >
+              Saldo Contable Actual (Corte {estadoCueva.ultimaFecha})
+            </p>
+            <h2 className="text-3xl font-black tracking-tight mt-0.5">
+              {formatGTQ(estadoCueva.saldoFinal)}
+            </h2>
+          </div>
+
+          <p
+            className={`text-xs font-medium mt-2 leading-snug ${
+              activeTab === 'cueva_3827008592' ? 'text-emerald-100' : 'text-slate-600'
+            }`}
+          >
+            Pagos no administrativos, entradas de parqueo, alquileres, mantenimiento de Cueva y obras sociales.
+          </p>
+
+          <div
+            className={`grid grid-cols-2 gap-2 mt-4 pt-3 border-t text-xs ${
+              activeTab === 'cueva_3827008592' ? 'border-emerald-800/80' : 'border-slate-100'
+            }`}
+          >
+            <div>
+              <span
+                className={`text-[10px] font-bold block ${
+                  activeTab === 'cueva_3827008592' ? 'text-emerald-200' : 'text-slate-400'
+                }`}
+              >
+                Créditos (+) Período
+              </span>
+              <span className="font-mono font-black text-emerald-500">
+                +{formatGTQ(estadoCueva.totalCreditos)}
+              </span>
+            </div>
+            <div>
+              <span
+                className={`text-[10px] font-bold block ${
+                  activeTab === 'cueva_3827008592' ? 'text-emerald-200' : 'text-slate-400'
+                }`}
+              >
+                Débitos (-) Período
+              </span>
+              <span
+                className={`font-mono font-black ${
+                  activeTab === 'cueva_3827008592' ? 'text-rose-300' : 'text-rose-600'
+                }`}
+              >
+                -{formatGTQ(estadoCueva.totalDebitos)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Liquidez Total Consolidada (Ambas Cuentas) */}
+        <div
+          onClick={() => setActiveTab('consolidado')}
+          className={`lg:col-span-4 rounded-3xl p-6 border transition-all cursor-pointer relative overflow-hidden ${
+            activeTab === 'consolidado'
+              ? 'bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white border-yellow-500/40 shadow-xl ring-4 ring-yellow-500/20'
+              : 'bg-white text-slate-900 border-slate-200 hover:border-yellow-500 shadow-sm'
+          }`}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <span
+                className={`inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${
+                  activeTab === 'consolidado'
+                    ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30'
+                    : 'bg-amber-50 text-amber-800 border border-amber-200'
+                }`}
+              >
+                <ShieldCheck size={12} />
+                <span>Liquidez Total en Banrural S.A.</span>
+              </span>
+              <p
+                className={`text-xs font-bold mt-2 ${
+                  activeTab === 'consolidado' ? 'text-slate-300' : 'text-slate-500'
+                }`}
+              >
+                Suma de Cuentas 3827008588 + 3827008592
+              </p>
+            </div>
+            <div
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+                activeTab === 'consolidado'
+                  ? 'bg-yellow-400 text-blue-950'
+                  : 'bg-amber-50 text-amber-700 border border-amber-200'
+              }`}
+            >
+              <Wallet size={22} />
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <p
+              className={`text-[10px] font-black uppercase tracking-widest ${
+                activeTab === 'consolidado' ? 'text-yellow-300/90' : 'text-slate-400'
+              }`}
+            >
+              Disponibilidad Consolidada Real
+            </p>
+            <h2 className="text-3xl font-black tracking-tight mt-0.5">
+              {formatGTQ(saldoTotalClub)}
+            </h2>
+          </div>
+
+          {/* Barra de proporción entre cuentas */}
+          <div className="mt-3 space-y-1.5">
+            <div className="w-full h-2.5 bg-slate-200/30 rounded-full overflow-hidden flex">
+              <div
+                className="bg-blue-500 h-full"
+                style={{
+                  width: `${saldoTotalClub > 0 ? (estadoAdmin.saldoFinal / saldoTotalClub) * 100 : 50}%`
+                }}
+              />
+              <div
+                className="bg-emerald-500 h-full"
+                style={{
+                  width: `${saldoTotalClub > 0 ? (estadoCueva.saldoFinal / saldoTotalClub) * 100 : 50}%`
+                }}
+              />
+            </div>
+            <div
+              className={`flex justify-between text-[10px] font-black ${
+                activeTab === 'consolidado' ? 'text-slate-300' : 'text-slate-500'
+              }`}
+            >
+              <span>
+                Admin ({((estadoAdmin.saldoFinal / (saldoTotalClub || 1)) * 100).toFixed(1)}%)
+              </span>
+              <span>
+                Cueva ({((estadoCueva.saldoFinal / (saldoTotalClub || 1)) * 100).toFixed(1)}%)
+              </span>
+            </div>
+          </div>
+
+          <div
+            className={`grid grid-cols-2 gap-2 mt-3 pt-3 border-t text-xs ${
+              activeTab === 'consolidado' ? 'border-slate-800' : 'border-slate-100'
+            }`}
+          >
+            <div>
+              <span
+                className={`text-[10px] font-bold block ${
+                  activeTab === 'consolidado' ? 'text-slate-400' : 'text-slate-400'
+                }`}
+              >
+                Total Movimientos
+              </span>
+              <span className="font-black">
+                {estadoAdmin.movimientos.length + estadoCueva.movimientos.length} transacciones
+              </span>
+            </div>
+            <div>
+              <span
+                className={`text-[10px] font-bold block ${
+                  activeTab === 'consolidado' ? 'text-slate-400' : 'text-slate-400'
+                }`}
+              >
+                Traslado Conciliado
+              </span>
+              <span className="font-mono font-black text-yellow-400">
+                Q1,500.00 (08/10)
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Selector de Pestañas de Navegación */}
-      <div className="flex flex-wrap bg-slate-100/90 backdrop-blur-md p-1.5 rounded-2xl shadow-inner border border-slate-200/60 gap-1 print:hidden">
-        <button 
-          onClick={() => setActiveTab('resumen')}
-          className={`flex-1 min-w-[200px] py-3 text-xs sm:text-sm font-black transition-all duration-300 rounded-xl flex items-center justify-center space-x-2 ${
-            activeTab === 'resumen' 
-              ? 'bg-white shadow-md text-blue-900 transform scale-[1.01]' 
+      {/* SELECTOR DE PESTAÑAS */}
+      <div className="flex flex-wrap bg-slate-100/90 backdrop-blur-md p-1.5 rounded-2xl shadow-inner border border-slate-200/60 gap-1.5 print:hidden">
+        <button
+          type="button"
+          onClick={() => setActiveTab('consolidado')}
+          className={`flex-1 min-w-[220px] py-3 px-4 text-xs sm:text-sm font-black transition-all duration-300 rounded-xl flex items-center justify-center space-x-2 cursor-pointer ${
+            activeTab === 'consolidado'
+              ? 'bg-white shadow-md text-slate-900'
               : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'
           }`}
         >
-          <BarChart3 size={16} className={activeTab === 'resumen' ? 'text-blue-700' : 'text-slate-400'} />
-          <span>1. Resumen y Análisis Financiero</span>
+          <BarChart3 size={16} className={activeTab === 'consolidado' ? 'text-blue-700' : 'text-slate-400'} />
+          <span>1. Vista Consolidada (Ambas Cuentas)</span>
         </button>
 
-        <button 
-          onClick={() => setActiveTab('egresos')}
-          className={`flex-1 min-w-[200px] py-3 text-xs sm:text-sm font-black transition-all duration-300 rounded-xl flex items-center justify-center space-x-2 ${
-            activeTab === 'egresos' 
-              ? 'bg-white shadow-md text-rose-700 transform scale-[1.01]' 
-              : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('admin_3827008588');
+            setCategoryFilter('todas');
+          }}
+          className={`flex-1 min-w-[240px] py-3 px-4 text-xs sm:text-sm font-black transition-all duration-300 rounded-xl flex items-center justify-center space-x-2 cursor-pointer ${
+            activeTab === 'admin_3827008588'
+              ? 'bg-blue-900 shadow-md text-white'
+              : 'text-slate-600 hover:text-blue-900 hover:bg-white/50'
           }`}
         >
-          <Briefcase size={16} className={activeTab === 'egresos' ? 'text-rose-600' : 'text-slate-400'} />
-          <span>2. Egresos y Designación a Comisiones ({asignaciones.length})</span>
+          <Users size={16} className={activeTab === 'admin_3827008588' ? 'text-yellow-300' : 'text-blue-600'} />
+          <span>2. Cuenta Administrativa • 3827008588 ({estadoAdmin.movimientos.length})</span>
         </button>
 
-        <button 
-          onClick={() => setActiveTab('ingresos')}
-          className={`flex-1 min-w-[180px] py-3 text-xs sm:text-sm font-black transition-all duration-300 rounded-xl flex items-center justify-center space-x-2 ${
-            activeTab === 'ingresos' 
-              ? 'bg-white shadow-md text-emerald-700 transform scale-[1.01]' 
-              : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('cueva_3827008592');
+            setCategoryFilter('todas');
+          }}
+          className={`flex-1 min-w-[240px] py-3 px-4 text-xs sm:text-sm font-black transition-all duration-300 rounded-xl flex items-center justify-center space-x-2 cursor-pointer ${
+            activeTab === 'cueva_3827008592'
+              ? 'bg-emerald-900 shadow-md text-white'
+              : 'text-slate-600 hover:text-emerald-900 hover:bg-white/50'
           }`}
         >
-          <TrendingUp size={16} className={activeTab === 'ingresos' ? 'text-emerald-600' : 'text-slate-400'} />
-          <span>3. Ingresos Presupuestados ({fondos.length})</span>
-        </button>
-
-        <button 
-          onClick={() => setActiveTab('verificacion')}
-          className={`flex-1 min-w-[180px] py-3 text-xs sm:text-sm font-black transition-all duration-300 rounded-xl flex items-center justify-center space-x-2 ${
-            activeTab === 'verificacion' 
-              ? 'bg-white shadow-md text-indigo-700 transform scale-[1.01]' 
-              : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'
-          }`}
-        >
-          <ShieldCheck size={16} className={activeTab === 'verificacion' ? 'text-indigo-600' : 'text-slate-400'} />
-          <span>4. Matriz de Auditoría y Códigos</span>
+          <Car size={16} className={activeTab === 'cueva_3827008592' ? 'text-yellow-300' : 'text-emerald-600'} />
+          <span>3. Cuenta Cueva (No Admin) • 3827008592 ({estadoCueva.movimientos.length})</span>
         </button>
       </div>
 
-      {/* PESTAÑA 1: RESUMEN Y ANÁLISIS */}
-      {activeTab === 'resumen' && (
+      {/* =====================================================================
+          PESTAÑA 1: VISTA CONSOLIDADA Y COMPARATIVA DE AMBAS CUENTAS
+      ===================================================================== */}
+      {activeTab === 'consolidado' && (
         <div className="space-y-8">
-          
-          {/* Gráficos de Análisis */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            
-            {/* Gráfico 1: Ingresos vs Egresos vs Superávit */}
-            <div className="lg:col-span-5 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
+          {/* Conciliación y Reglas de Uso de Cuentas */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Tarjeta de Reglas Cuenta 3827008588 */}
+            <div className="bg-white rounded-3xl p-6 border border-blue-200/80 shadow-sm space-y-4">
+              <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
                 <div>
-                  <h3 className="font-black text-slate-800 text-sm uppercase tracking-wide">
-                    Balance General Presupuestado
+                  <span className="text-[10px] font-black uppercase tracking-widest text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200">
+                    Banrural Monetaria • No. 3827008588
+                  </span>
+                  <h3 className="text-lg font-black text-slate-900 mt-2">
+                    Cuenta Administrativa (Cuotas y Socios)
                   </h3>
-                  <p className="text-[11px] text-slate-500 font-medium">Comparativa en Quetzales (Q)</p>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    {estadoAdmin.info.proposito}
+                  </p>
                 </div>
-                <BarChart3 size={18} className="text-slate-400" />
+                <div className="text-right shrink-0">
+                  <span className="text-[10px] font-black uppercase text-slate-400 block">Saldo Actual</span>
+                  <span className="text-xl font-black text-blue-900">{formatGTQ(estadoAdmin.saldoFinal)}</span>
+                </div>
               </div>
 
-              <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={[
-                    { name: 'Ingresos Totales', valor: totalIngresos, fill: '#059669' },
-                    { name: 'Egresos Totales', valor: totalEgresos, fill: '#e11d48' },
-                    { name: 'Superávit Neto', valor: superavitNeto, fill: '#0d9488' }
-                  ]} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
-                    <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 'bold' }} />
-                    <YAxis tickFormatter={(v) => `Q${(v / 1000).toFixed(0)}k`} />
-                    <RechartsTooltip formatter={(v: any) => [`Q${Number(v).toLocaleString('es-GT', {minimumFractionDigits: 2})}`, 'Monto']} />
-                    <Bar dataKey="valor" radius={[8, 8, 0, 0]}>
-                      <Cell fill="#059669" />
-                      <Cell fill="#e11d48" />
-                      <Cell fill="#0d9488" />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+              <div className="grid grid-cols-3 gap-2.5 text-center">
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/60">
+                  <span className="text-[10px] font-black text-slate-400 uppercase block">Saldo Base (07/10)</span>
+                  <span className="text-xs sm:text-sm font-mono font-black text-slate-800">
+                    {formatGTQ(estadoAdmin.saldoInicial)}
+                  </span>
+                </div>
+                <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200/60">
+                  <span className="text-[10px] font-black text-emerald-800 uppercase block">Ingresos Cuotas/Conv.</span>
+                  <span className="text-xs sm:text-sm font-mono font-black text-emerald-700">
+                    +{formatGTQ(estadoAdmin.totalCreditosOperativos)}
+                  </span>
+                </div>
+                <div className="p-3 rounded-2xl bg-rose-50/70 border border-rose-200/60">
+                  <span className="text-[10px] font-black text-rose-800 uppercase block">Egresos Operativos</span>
+                  <span className="text-xs sm:text-sm font-mono font-black text-rose-700">
+                    -{formatGTQ(estadoAdmin.totalDebitosOperativos)}
+                  </span>
+                </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-slate-100 text-center">
-                <div className="p-2 bg-emerald-50 rounded-xl">
-                  <span className="text-[10px] font-black text-emerald-800 uppercase block">Ingresos</span>
-                  <span className="text-xs font-black text-emerald-700">Q{totalIngresos.toLocaleString()}</span>
+              {estadoAdmin.ajusteEquivocado > 0 && (
+                <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-start gap-2.5 text-xs text-amber-950">
+                  <AlertCircle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-black">Partida compensada de tránsito:</span> El 05/11/2026 ingresó una transferencia TIF de{' '}
+                    <strong className="font-mono">{formatGTQ(estadoAdmin.ajusteEquivocado)}</strong> que fue reversada íntegramente el 12/11/2026 bajo concepto <em>"DEPOSITO A CTA EQUIVOCADA"</em> (efecto neto Q0.00).
+                  </div>
                 </div>
-                <div className="p-2 bg-rose-50 rounded-xl">
-                  <span className="text-[10px] font-black text-rose-800 uppercase block">Egresos</span>
-                  <span className="text-xs font-black text-rose-700">Q{totalEgresos.toLocaleString()}</span>
-                </div>
-                <div className="p-2 bg-teal-50 rounded-xl">
-                  <span className="text-[10px] font-black text-teal-800 uppercase block">Superávit</span>
-                  <span className="text-xs font-black text-teal-700">+Q{superavitNeto.toLocaleString()}</span>
-                </div>
+              )}
+
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-[11px] font-bold text-slate-500">
+                  Último movimiento: <strong>18/11/2026 — 2 pagos convención Ero y Jose (+Q1,300.00)</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('admin_3827008588')}
+                  className="text-xs font-black text-blue-800 hover:text-blue-600 underline cursor-pointer shrink-0 ml-2"
+                >
+                  Ver libro completo →
+                </button>
               </div>
             </div>
 
-            {/* Gráfico 2: Distribución de Fondos por Comisión Responsable */}
-            <div className="lg:col-span-7 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
+            {/* Tarjeta de Reglas Cuenta 3827008592 */}
+            <div className="bg-white rounded-3xl p-6 border border-emerald-200/80 shadow-sm space-y-4">
+              <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
                 <div>
-                  <h3 className="font-black text-slate-800 text-sm uppercase tracking-wide">
-                    Distribución de Fondos Asignados a Comisiones
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
+                    Banrural Monetaria • No. 3827008592
+                  </span>
+                  <h3 className="text-lg font-black text-slate-900 mt-2">
+                    Cuenta Cueva / No Administrativa (Parqueo y Alquileres)
                   </h3>
-                  <p className="text-[11px] text-slate-500 font-medium">Monto total administrado por cada comisión (Egresos)</p>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    {estadoCueva.info.proposito}
+                  </p>
                 </div>
-                <Briefcase size={18} className="text-slate-400" />
+                <div className="text-right shrink-0">
+                  <span className="text-[10px] font-black uppercase text-slate-400 block">Saldo Actual</span>
+                  <span className="text-xl font-black text-emerald-800">{formatGTQ(estadoCueva.saldoFinal)}</span>
+                </div>
               </div>
 
-              <div className="h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={fondosPorComision.slice(0, 7)} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                    <XAxis type="number" tickFormatter={(v) => `Q${(v / 1000).toFixed(0)}k`} />
-                    <YAxis type="category" dataKey="nombre" width={170} tick={{ fontSize: 10, fontWeight: 'bold' }} />
-                    <RechartsTooltip formatter={(v: any) => [`Q${Number(v).toLocaleString('es-GT', {minimumFractionDigits: 2})}`, 'Presupuesto']} />
-                    <Bar dataKey="total" radius={[0, 8, 8, 0]}>
-                      {fondosPorComision.map((_, index) => (
-                        <Cell key={`bar-${index}`} fill={PALETA_COLORES[index % PALETA_COLORES.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+              <div className="grid grid-cols-3 gap-2.5 text-center">
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/60">
+                  <span className="text-[10px] font-black text-slate-400 uppercase block">Saldo Base (08/10)</span>
+                  <span className="text-xs sm:text-sm font-mono font-black text-slate-800">
+                    {formatGTQ(estadoCueva.saldoInicial)}
+                  </span>
+                </div>
+                <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200/60">
+                  <span className="text-[10px] font-black text-emerald-800 uppercase block">Ingreso Parqueo (+)</span>
+                  <span className="text-xs sm:text-sm font-mono font-black text-emerald-700">
+                    +{formatGTQ(estadoCueva.totalCreditos)}
+                  </span>
+                </div>
+                <div className="p-3 rounded-2xl bg-rose-50/70 border border-rose-200/60">
+                  <span className="text-[10px] font-black text-rose-800 uppercase block">Débitos Operativos (-)</span>
+                  <span className="text-xs sm:text-sm font-mono font-black text-rose-700">
+                    -{formatGTQ(estadoCueva.totalDebitos)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 flex items-start gap-2.5 text-xs text-emerald-950">
+                <ArrowLeftRight size={16} className="text-emerald-700 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-black">Conciliación entre cuentas verificada:</span> El 08/10/2026 se trasladaron{' '}
+                  <strong className="font-mono">Q1,500.00</strong> de Cueva (<span className="font-mono">3827008592</span>) hacia Administrativa (<span className="font-mono">3827008588</span>) por <em>"DEPOSITO DE CUOTAS DE ARTURO WOK 2026"</em>.
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-[11px] font-bold text-slate-500">
+                  Último movimiento: <strong>19-nov-2026 — Promoción en redes sociales (-Q200.00)</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('cueva_3827008592')}
+                  className="text-xs font-black text-emerald-800 hover:text-emerald-600 underline cursor-pointer shrink-0 ml-2"
+                >
+                  Ver libro completo →
+                </button>
               </div>
             </div>
-
           </div>
 
-          {/* Tarjetas de Ejes de Gastos e Inversión */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
-            {/* Eje 1: Obras Sociales (4.01) */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm relative overflow-hidden group hover:border-emerald-400 transition-all">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                  <HeartHandshake size={24} />
-                </div>
+          {/* Gráficas de Evolución de Saldos Contables */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Evolución Cuenta Administrativa */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
                 <div>
-                  <span className="text-[10px] font-mono font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded uppercase">Código 4.01</span>
-                  <h4 className="text-sm font-black text-slate-800 mt-1">Obras Sociales y Servicio</h4>
+                  <h4 className="font-black text-slate-800 text-sm uppercase tracking-wide">
+                    Evolución de Saldo • Cuenta Administrativa (3827008588)
+                  </h4>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    Comportamiento del saldo contable en Quetzales (Octubre – Noviembre 2026)
+                  </p>
                 </div>
+                <span className="font-mono text-xs font-black bg-blue-50 text-blue-800 px-2.5 py-1 rounded-lg border border-blue-200">
+                  {formatGTQ(estadoAdmin.saldoFinal)}
+                </span>
               </div>
-              <p className="text-2xl font-black text-slate-800 mt-4">Q40,000.00</p>
-              <p className="text-xs text-slate-500 font-medium mt-1">
-                5 actividades de Q8,000.00 cada una: Salud Mental, Diabetes, Hambre, Ayuda Humanitaria y Medio Ambiente.
-              </p>
+              <div className="h-56 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={estadoAdmin.movimientos}
+                    margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                  >
+                    <defs>
+                      <linearGradient id="gradAdmin" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#1e40af" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="#1e40af" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <XAxis dataKey="fechaTexto" tick={{ fontSize: 10, fontWeight: 'bold' }} />
+                    <YAxis tickFormatter={(v) => `Q${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10 }} />
+                    <RechartsTooltip
+                      formatter={(v: any) => [formatGTQ(Number(v)), 'Saldo Contable']}
+                      labelFormatter={(label) => `Fecha: ${label}`}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="saldoContable"
+                      stroke="#1e40af"
+                      strokeWidth={2.5}
+                      fillOpacity={1}
+                      fill="url(#gradAdmin)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             </div>
 
-            {/* Eje 2: Convivencias y Eventos (5.01) */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm relative overflow-hidden group hover:border-purple-400 transition-all">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-                  <PartyPopper size={24} />
-                </div>
+            {/* Evolución Cuenta Cueva */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
                 <div>
-                  <span className="text-[10px] font-mono font-black text-purple-700 bg-purple-100 px-2 py-0.5 rounded uppercase">Código 5.01</span>
-                  <h4 className="text-sm font-black text-slate-800 mt-1">Convivencias y Tradiciones</h4>
+                  <h4 className="font-black text-slate-800 text-sm uppercase tracking-wide">
+                    Evolución de Saldo • Cuenta Cueva (3827008592)
+                  </h4>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    Comportamiento del saldo contable en Quetzales (Octubre – Noviembre 2026)
+                  </p>
                 </div>
+                <span className="font-mono text-xs font-black bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-lg border border-emerald-200">
+                  {formatGTQ(estadoCueva.saldoFinal)}
+                </span>
               </div>
-              <p className="text-2xl font-black text-slate-800 mt-4">Q20,500.00</p>
-              <p className="text-xs text-slate-500 font-medium mt-1">
-                7 celebraciones leonísticas (Convivio Navideño Q10k, Día de la Madre Q3k, Leones Fallecidos, Padre, Cariño, etc.).
-              </p>
-            </div>
-
-            {/* Eje 3: Egresos Administrativos (3.01) */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm relative overflow-hidden group hover:border-blue-400 transition-all">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                  <Building2 size={24} />
-                </div>
-                <div>
-                  <span className="text-[10px] font-mono font-black text-blue-700 bg-blue-100 px-2 py-0.5 rounded uppercase">Código 3.01</span>
-                  <h4 className="text-sm font-black text-slate-800 mt-1">Operación y Sede</h4>
-                </div>
+              <div className="h-56 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={estadoCueva.movimientos}
+                    margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                  >
+                    <defs>
+                      <linearGradient id="gradCueva" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#047857" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="#047857" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <XAxis dataKey="fechaTexto" tick={{ fontSize: 10, fontWeight: 'bold' }} />
+                    <YAxis tickFormatter={(v) => `Q${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10 }} />
+                    <RechartsTooltip
+                      formatter={(v: any) => [formatGTQ(Number(v)), 'Saldo Contable']}
+                      labelFormatter={(label) => `Fecha: ${label}`}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="saldoContable"
+                      stroke="#047857"
+                      strokeWidth={2.5}
+                      fillOpacity={1}
+                      fill="url(#gradCueva)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
-              <p className="text-2xl font-black text-slate-800 mt-4">Q104,458.12</p>
-              <p className="text-xs text-slate-500 font-medium mt-1">
-                Cuotas Internacionales/Distrito (54 socios), Operadora Parqueo (Q38,232), Mantenimiento de Edificio, Luz, Agua y Suministros.
-              </p>
             </div>
-
           </div>
 
+          {/* VISTA LADO A LADO DE AMBOS LIBROS BANCARIOS (FIEL A LAS HOJAS CONTABLES) */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {/* Libro Resumen Cuenta Administrativa 3827008588 */}
+            <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+              <div className="bg-blue-900 text-white px-5 py-4 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-yellow-300 block">
+                    Banrural S.A. • Monetaria No. 3827008588
+                  </span>
+                  <h3 className="text-base font-black">Libro de Cuenta Administrativa</h3>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] uppercase font-bold text-blue-200 block">Saldo Final</span>
+                  <span className="text-lg font-mono font-black text-yellow-300">
+                    {formatGTQ(estadoAdmin.saldoFinal)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="bg-blue-800 text-white text-[10px] font-black uppercase tracking-wider">
+                      <th className="py-2.5 px-3">Fecha</th>
+                      <th className="py-2.5 px-3">Descripción</th>
+                      <th className="py-2.5 px-3 text-right">Débito (-)</th>
+                      <th className="py-2.5 px-3 text-right">Crédito (+)</th>
+                      <th className="py-2.5 px-3 text-right">Saldo Contable</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 font-medium">
+                    {estadoAdmin.movimientos.map((m, idx) => (
+                      <tr
+                        key={m.id}
+                        className={`${
+                          idx % 2 === 1 ? 'bg-sky-50/60' : 'bg-white'
+                        } hover:bg-blue-50/80 transition-colors`}
+                      >
+                        <td className="py-2.5 px-3 font-mono text-[11px] font-bold text-slate-700 whitespace-nowrap">
+                          {m.fechaTexto}
+                        </td>
+                        <td className="py-2.5 px-3 font-bold text-slate-900">
+                          {m.descripcion}
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-mono text-slate-700 whitespace-nowrap">
+                          {m.debito > 0 ? (
+                            <span className="font-black text-rose-700">{formatGTQ(m.debito)}</span>
+                          ) : (
+                            <span className="text-slate-400">Q0.00</span>
+                          )}
+                        </td>
+                        <td
+                          className={`py-2.5 px-3 text-right font-mono whitespace-nowrap ${
+                            m.destacado && m.credito > 0 ? 'bg-yellow-300/80 font-black text-slate-950' : ''
+                          }`}
+                        >
+                          {m.credito > 0 ? (
+                            <span className="font-black text-emerald-700">{formatGTQ(m.credito)}</span>
+                          ) : (
+                            <span className="text-slate-400">Q0.00</span>
+                          )}
+                        </td>
+                        <td
+                          className={`py-2.5 px-3 text-right font-mono font-black whitespace-nowrap ${
+                            m.destacado && m.orden === 9
+                              ? 'bg-yellow-300/90 text-slate-950'
+                              : idx === estadoAdmin.movimientos.length - 1
+                              ? 'text-blue-950 bg-blue-50'
+                              : 'text-slate-900'
+                          }`}
+                        >
+                          {formatGTQ(m.saldoContable)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Libro Resumen Cuenta Cueva 3827008592 */}
+            <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+              <div className="bg-emerald-900 text-white px-5 py-4 flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-200 block">
+                    Banrural S.A. • Monetaria No. 3827008592
+                  </span>
+                  <h3 className="text-base font-black">Libro de Cuenta Cueva (No Administrativa)</h3>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] uppercase font-bold text-emerald-200 block">Saldo Final</span>
+                  <span className="text-lg font-mono font-black text-yellow-300">
+                    {formatGTQ(estadoCueva.saldoFinal)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="bg-blue-800 text-white text-[10px] font-black uppercase tracking-wider">
+                      <th className="py-2.5 px-3">Fecha</th>
+                      <th className="py-2.5 px-3">Descripción</th>
+                      <th className="py-2.5 px-3 text-right">Débito (-)</th>
+                      <th className="py-2.5 px-3 text-right">Crédito (+)</th>
+                      <th className="py-2.5 px-3 text-right">Saldo Contable</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 font-medium">
+                    {estadoCueva.movimientos.map((m, idx) => (
+                      <tr
+                        key={m.id}
+                        className={`${
+                          idx % 2 === 1 ? 'bg-sky-50/60' : 'bg-white'
+                        } hover:bg-emerald-50/80 transition-colors`}
+                      >
+                        <td className="py-2.5 px-3 font-mono text-[11px] font-bold text-slate-700 whitespace-nowrap">
+                          {m.fechaTexto}
+                        </td>
+                        <td className="py-2.5 px-3 font-bold text-slate-900">
+                          {m.descripcion}
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-mono text-slate-700 whitespace-nowrap">
+                          {m.debito > 0 ? (
+                            <span className="font-black text-rose-700">{formatGTQ(m.debito)}</span>
+                          ) : (
+                            <span className="text-slate-400">Q0.00</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-mono text-slate-700 whitespace-nowrap">
+                          {m.credito > 0 ? (
+                            <span className="font-black text-emerald-700">{formatGTQ(m.credito)}</span>
+                          ) : (
+                            <span className="text-slate-400">Q0.00</span>
+                          )}
+                        </td>
+                        <td
+                          className={`py-2.5 px-3 text-right font-mono font-black whitespace-nowrap ${
+                            m.destacado && m.orden === 5
+                              ? 'bg-yellow-300/90 text-slate-950'
+                              : idx === estadoCueva.movimientos.length - 1
+                              ? 'text-emerald-950 bg-emerald-50'
+                              : 'text-slate-900'
+                          }`}
+                        >
+                          {formatGTQ(m.saldoContable)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* PESTAÑA 2: EGRESOS Y DESIGNACIÓN A COMISIONES */}
-      {activeTab === 'egresos' && (
+      {/* =====================================================================
+          PESTAÑAS 2 Y 3: DETALLE Y GESTIÓN POR CUENTA BANCARIA INDIVIDUAL
+      ===================================================================== */}
+      {(activeTab === 'admin_3827008588' || activeTab === 'cueva_3827008592') && (
         <div className="space-y-6">
-          
-          {/* Barra de Filtros */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+          {/* Ficha Técnica de la Cuenta Seleccionada */}
+          <div
+            className={`rounded-3xl p-6 border shadow-sm flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 ${
+              activeTab === 'admin_3827008588'
+                ? 'bg-blue-50/70 border-blue-200'
+                : 'bg-emerald-50/70 border-emerald-200'
+            }`}
+          >
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md ${
+                    activeTab === 'admin_3827008588'
+                      ? 'bg-blue-900 text-yellow-300'
+                      : 'bg-emerald-900 text-yellow-300'
+                  }`}
+                >
+                  {cuentaActivaEstado.info.banco} • {cuentaActivaEstado.info.tipoCuenta}
+                </span>
+                <span className="font-mono text-xs font-black text-slate-800 bg-white px-2.5 py-1 rounded-md border border-slate-200">
+                  Cuenta No. {cuentaActivaEstado.info.numeroCuenta}
+                </span>
+              </div>
+              <h2 className="text-xl font-black text-slate-900">
+                {cuentaActivaEstado.info.nombreOficial}
+              </h2>
+              <p className="text-xs text-slate-600 font-medium">
+                {cuentaActivaEstado.info.proposito}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
+              <div className="bg-white px-4 py-2.5 rounded-2xl border border-slate-200 text-right">
+                <span className="text-[10px] font-black uppercase text-slate-400 block">
+                  Saldo Anterior (Inicio)
+                </span>
+                <span className="text-sm font-mono font-black text-slate-700">
+                  {formatGTQ(cuentaActivaEstado.saldoInicial)}
+                </span>
+              </div>
+              <div className="bg-white px-4 py-2.5 rounded-2xl border border-slate-200 text-right">
+                <span className="text-[10px] font-black uppercase text-slate-400 block">
+                  Saldo Contable Actual
+                </span>
+                <span
+                  className={`text-xl font-mono font-black ${
+                    activeTab === 'admin_3827008588' ? 'text-blue-900' : 'text-emerald-800'
+                  }`}
+                >
+                  {formatGTQ(cuentaActivaEstado.saldoFinal)}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleOpenNewModal(activeTab)}
+                className={`px-4 py-3 rounded-2xl font-black text-xs uppercase tracking-wider text-white flex items-center gap-2 shadow-md cursor-pointer ${
+                  activeTab === 'admin_3827008588'
+                    ? 'bg-blue-900 hover:bg-blue-800'
+                    : 'bg-emerald-800 hover:bg-emerald-700'
+                }`}
+              >
+                <Plus size={16} />
+                <span>Nueva Transacción</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Barra de Búsqueda y Filtros */}
+          <div className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 print:hidden">
             <div className="relative flex-1">
               <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar egreso por descripción, actividad o comisión..."
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-rose-500"
+                placeholder={`Buscar en cuenta ${cuentaActivaEstado.info.numeroCuenta} por descripción, socio, fecha o categoría...`}
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
-                <Filter size={14} className="text-slate-400" />
-                <span className="text-[10px] font-black uppercase text-slate-400">Comisión:</span>
-                <select
-                  value={filterComision}
-                  onChange={(e) => setFilterComision(e.target.value)}
-                  className="bg-transparent text-xs font-black text-slate-800 outline-none cursor-pointer max-w-[160px] truncate"
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-black">
+                <button
+                  type="button"
+                  onClick={() => setTypeFilter('todos')}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    typeFilter === 'todos' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+                  }`}
                 >
-                  <option value="todas">Todas las comisiones</option>
-                  {listaComisionesNombres.map((nom, i) => (
-                    <option key={i} value={nom}>{nom}</option>
+                  Todos ({cuentaActivaEstado.movimientos.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTypeFilter('creditos')}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    typeFilter === 'creditos' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500'
+                  }`}
+                >
+                  Créditos (+)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTypeFilter('debitos')}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    typeFilter === 'debitos' ? 'bg-rose-600 text-white shadow-sm' : 'text-slate-500'
+                  }`}
+                >
+                  Débitos (-)
+                </button>
+              </div>
+
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-black text-slate-700 outline-none cursor-pointer"
+              >
+                <option value="todas">Todas las categorías</option>
+                {categoriasDisponiblesCuenta.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Tabla Oficial de Movimientos de la Cuenta */}
+          <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="bg-blue-800 text-white text-[10px] font-black uppercase tracking-wider">
+                    <th className="py-3.5 px-4 text-center">#</th>
+                    <th className="py-3.5 px-4">Fecha</th>
+                    <th className="py-3.5 px-4">Descripción Bancaria / Concepto</th>
+                    <th className="py-3.5 px-4">Categoría Contable</th>
+                    <th className="py-3.5 px-4 text-right">Débito (-)</th>
+                    <th className="py-3.5 px-4 text-right">Crédito (+)</th>
+                    <th className="py-3.5 px-4 text-right">Saldo Contable</th>
+                    <th className="py-3.5 px-4 text-center print:hidden">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 font-medium">
+                  {/* Fila de Saldo Inicial */}
+                  <tr className="bg-slate-100/90 text-slate-600 font-bold">
+                    <td className="py-2.5 px-4 text-center font-mono text-[10px]">0</td>
+                    <td className="py-2.5 px-4 font-mono text-[11px]">Inicio oct-2026</td>
+                    <td className="py-2.5 px-4 italic" colSpan={2}>
+                      SALDO ANTERIOR EN LIBROS ({cuentaActivaEstado.info.alias} • {cuentaActivaEstado.info.numeroCuenta})
+                    </td>
+                    <td className="py-2.5 px-4 text-right font-mono">Q0.00</td>
+                    <td className="py-2.5 px-4 text-right font-mono">Q0.00</td>
+                    <td className="py-2.5 px-4 text-right font-mono font-black text-slate-800">
+                      {formatGTQ(cuentaActivaEstado.saldoInicial)}
+                    </td>
+                    <td className="py-2.5 px-4 text-center print:hidden">—</td>
+                  </tr>
+
+                  {filteredMovimientosCuenta.map((m, idx) => (
+                    <tr
+                      key={m.id}
+                      className={`${
+                        idx % 2 === 1 ? 'bg-sky-50/50' : 'bg-white'
+                      } hover:bg-blue-50/60 transition-colors`}
+                    >
+                      <td className="py-3 px-4 text-center font-mono text-[11px] font-bold text-slate-400">
+                        {m.orden}
+                      </td>
+                      <td className="py-3 px-4 font-mono text-xs font-bold text-slate-800 whitespace-nowrap">
+                        {m.fechaTexto}
+                      </td>
+                      <td className="py-3 px-4">
+                        <p className="font-black text-slate-900">{m.descripcion}</p>
+                        {m.notaAuditor && (
+                          <p className="text-[11px] text-amber-800 font-semibold mt-0.5">
+                            Nota: {m.notaAuditor}
+                          </p>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-slate-100 text-slate-700 border border-slate-200">
+                          <Tag size={10} />
+                          <span>{m.categoriaContable || 'General'}</span>
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono whitespace-nowrap">
+                        {m.debito > 0 ? (
+                          <span className="font-black text-rose-700 text-sm">
+                            {formatGTQ(m.debito)}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">Q0.00</span>
+                        )}
+                      </td>
+                      <td
+                        className={`py-3 px-4 text-right font-mono whitespace-nowrap ${
+                          m.destacado && m.credito > 0 ? 'bg-yellow-200/80' : ''
+                        }`}
+                      >
+                        {m.credito > 0 ? (
+                          <span className="font-black text-emerald-700 text-sm">
+                            {formatGTQ(m.credito)}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">Q0.00</span>
+                        )}
+                      </td>
+                      <td
+                        className={`py-3 px-4 text-right font-mono font-black text-sm whitespace-nowrap ${
+                          m.destacado ? 'bg-yellow-300/80 text-slate-950' : 'text-slate-900'
+                        }`}
+                      >
+                        {formatGTQ(m.saldoContable)}
+                      </td>
+                      <td className="py-3 px-4 text-center print:hidden">
+                        <div className="inline-flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal(m)}
+                            title="Editar movimiento"
+                            className="p-1.5 text-slate-400 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <Edit3 size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteMovimiento(m)}
+                            title="Eliminar movimiento"
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
                   ))}
-                </select>
-              </div>
-
-              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
-                <span className="text-[10px] font-black uppercase text-slate-400">Categoría:</span>
-                <select
-                  value={filterCategoria}
-                  onChange={(e) => setFilterCategoria(e.target.value)}
-                  className="bg-transparent text-xs font-black text-slate-800 outline-none cursor-pointer"
-                >
-                  <option value="todas">Todas</option>
-                  <option value="Obras Sociales / Actividades de Servicio">Obras Sociales (4.01)</option>
-                  <option value="Convivencias y Eventos">Convivencias y Eventos (5.01)</option>
-                  <option value="Egresos Administrativos">Egresos Administrativos (3.01)</option>
-                </select>
-              </div>
+                </tbody>
+                <tfoot>
+                  <tr className="bg-slate-900 text-white font-black text-xs">
+                    <td colSpan={4} className="py-3.5 px-4 text-right uppercase tracking-wider">
+                      Totales del Período ({filteredMovimientosCuenta.length} movimientos mostrados):
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-mono text-rose-300">
+                      {formatGTQ(
+                        filteredMovimientosCuenta.reduce((acc, m) => acc + m.debito, 0)
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-mono text-emerald-300">
+                      {formatGTQ(
+                        filteredMovimientosCuenta.reduce((acc, m) => acc + m.credito, 0)
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-mono text-yellow-300 text-sm">
+                      {formatGTQ(cuentaActivaEstado.saldoFinal)}
+                    </td>
+                    <td className="print:hidden"></td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Tabla de Egresos y Designación */}
-          <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
-            <div className="p-6 border-b border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-50/50">
+      {/* =====================================================================
+          MODAL PARA REGISTRAR O EDITAR TRANSACCIÓN BANCARIA
+      ===================================================================== */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-2xl max-w-lg w-full space-y-5 animate-in zoom-in-95 duration-200 max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <h3 className="font-black text-slate-800 text-base">Egresos Presupuestados y Responsables</h3>
-                <p className="text-xs text-slate-500 font-medium">
-                  {filteredEgresos.length} partidas • Puedes designar o cambiar la comisión responsable directamente en la columna correspondiente
+                <h3 className="font-black text-slate-900 text-lg">
+                  {editingId ? 'Editar Transacción Bancaria' : 'Registrar Transacción Banrural S.A.'}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  El saldo contable de la cuenta se recalcula automáticamente en cascada.
                 </p>
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] font-black uppercase text-slate-400 block">Subtotal Egresos</span>
-                <span className="text-xl font-black text-rose-700">
-                  Q{filteredEgresos.reduce((acc, a) => acc + (Number(a.monto) || 0), 0).toLocaleString('es-GT', {minimumFractionDigits: 2})}
-                </span>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-100/70 text-[10px] font-black uppercase text-slate-500 tracking-wider">
-                    <th className="py-3 px-4">Código</th>
-                    <th className="py-3 px-4">Descripción / Concepto</th>
-                    <th className="py-3 px-4 text-center">Unidad</th>
-                    <th className="py-3 px-4 text-center">Cantidad</th>
-                    <th className="py-3 px-4 text-right">Monto Unitario</th>
-                    <th className="py-3 px-4 text-right">Total Presupuestado</th>
-                    <th className="py-3 px-4">Comisión Designada (Responsable)</th>
-                    <th className="py-3 px-4 text-center print:hidden">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-medium">
-                  {filteredEgresos.map((asig) => {
-                    const cod = (asig as any).codigo || '3.01';
-                    const unidad = (asig as any).unidad || asig.temporalidad;
-                    const cantidad = (asig as any).cantidad || 1;
-                    const montoUnitario = (asig as any).montoUnitario || (asig.monto / (cantidad || 1));
-
-                    return (
-                      <tr key={asig.id} className="hover:bg-slate-50 transition-colors group">
-                        
-                        {/* Código */}
-                        <td className="py-3.5 px-4">
-                          <span className={`inline-block px-2 py-0.5 rounded font-mono text-[10px] font-black ${
-                            cod === '4.01' ? 'bg-emerald-100 text-emerald-800' :
-                            cod === '5.01' ? 'bg-purple-100 text-purple-800' :
-                            'bg-blue-100 text-blue-800'
-                          }`}>
-                            {cod}
-                          </span>
-                        </td>
-
-                        {/* Descripción */}
-                        <td className="py-3.5 px-4 max-w-[280px]">
-                          <p className="font-bold text-slate-800 truncate" title={asig.actividad || asig.descripcion}>
-                            {asig.actividad || asig.descripcion}
-                          </p>
-                          <p className="text-[10px] text-slate-400 truncate">
-                            {(asig as any).categoria || 'Egreso'}
-                          </p>
-                        </td>
-
-                        {/* Unidad */}
-                        <td className="py-3.5 px-4 text-center">
-                          <span className="inline-block px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-black uppercase">
-                            {unidad}
-                          </span>
-                        </td>
-
-                        {/* Cantidad */}
-                        <td className="py-3.5 px-4 text-center font-bold text-slate-700">
-                          {cantidad}
-                        </td>
-
-                        {/* Monto Unitario */}
-                        <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-600">
-                          Q{Number(montoUnitario).toLocaleString('es-GT', {minimumFractionDigits: 2})}
-                        </td>
-
-                        {/* Total Presupuestado */}
-                        <td className="py-3.5 px-4 text-right font-mono font-black text-rose-700 text-sm">
-                          Q{Number(asig.monto).toLocaleString('es-GT', {minimumFractionDigits: 2})}
-                        </td>
-
-                        {/* Selector de Comisión Designada */}
-                        <td className="py-3.5 px-4">
-                          <select
-                            value={asig.comision || ''}
-                            onChange={(e) => handleUpdateComision(asig.id, e.target.value)}
-                            className="w-full bg-slate-50 hover:bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer transition-all"
-                          >
-                            <option value="">Seleccionar comisión...</option>
-                            {listaComisionesNombres.map((nom, idx) => (
-                              <option key={idx} value={nom}>{nom}</option>
-                            ))}
-                          </select>
-                        </td>
-
-                        {/* Acciones */}
-                        <td className="py-3.5 px-4 text-center print:hidden">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEdit(asig)}
-                            title="Editar valores"
-                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          >
-                            <Edit3 size={14} />
-                          </button>
-                        </td>
-
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-        </div>
-      )}
-
-      {/* PESTAÑA 3: INGRESOS PRESUPUESTADOS */}
-      {activeTab === 'ingresos' && (
-        <div className="space-y-6">
-          
-          {/* Tarjetas de Resumen de Ingresos */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-              <span className="text-[10px] font-mono font-black text-blue-700 bg-blue-100 px-2 py-0.5 rounded uppercase">Código 1.01</span>
-              <h3 className="text-base font-black text-slate-800 mt-2">Ingresos Administrativos y Operativos</h3>
-              <p className="text-3xl font-black text-blue-900 mt-2">Q216,150.00</p>
-              <div className="mt-4 space-y-2 text-xs font-medium text-slate-600">
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span>Cuotas Ordinarias (54 Socios x Q1,125):</span>
-                  <span className="font-bold text-slate-800">Q60,750.00</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span>Parqueo Club de Leones (9 Meses x Q15,000):</span>
-                  <span className="font-bold text-slate-800">Q135,000.00</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span>Local Club de Leones (6 Meses x Q3,000):</span>
-                  <span className="font-bold text-slate-800">Q18,000.00</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span>Apartamento Club de Leones (8 Meses x Q300):</span>
-                  <span className="font-bold text-slate-800">Q2,400.00</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-              <span className="text-[10px] font-mono font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded uppercase">Código 2.01</span>
-              <h3 className="text-base font-black text-slate-800 mt-2">Ingresos por Actividades y Recaudación</h3>
-              <p className="text-3xl font-black text-emerald-700 mt-2">Q50,000.00</p>
-              <div className="mt-4 space-y-2 text-xs font-medium text-slate-600">
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span>Rifa Anual de Recaudación:</span>
-                  <span className="font-bold text-slate-800">Q10,000.00</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span>Bingo Anual de Recaudación:</span>
-                  <span className="font-bold text-slate-800">Q10,000.00</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-slate-100">
-                  <span>Patrocinadores / Empresas (10 x Q2,000):</span>
-                  <span className="font-bold text-slate-800">Q20,000.00</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span>Evento / Cena Benéfica:</span>
-                  <span className="font-bold text-slate-800">Q10,000.00</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Tabla de Detalle de Ingresos */}
-          <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
-            <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
-              <h3 className="font-black text-slate-800 text-base">Detalle de Fuentes de Ingreso ({filteredIngresos.length})</h3>
-              <span className="text-xl font-black text-emerald-700">Q{totalIngresos.toLocaleString('es-GT', {minimumFractionDigits: 2})}</span>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-100/70 text-[10px] font-black uppercase text-slate-500 tracking-wider">
-                    <th className="py-3 px-4">Código</th>
-                    <th className="py-3 px-4">Fuente / Descripción</th>
-                    <th className="py-3 px-4 text-center">Unidad</th>
-                    <th className="py-3 px-4 text-center">Cantidad</th>
-                    <th className="py-3 px-4 text-right">Monto Unitario</th>
-                    <th className="py-3 px-4 text-right">Presupuestado Total</th>
-                    <th className="py-3 px-4 text-center print:hidden">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-medium">
-                  {filteredIngresos.map((f) => {
-                    const cod = (f as any).codigo || '1.01';
-                    const unidad = (f as any).unidad || 'UNIDAD';
-                    const cantidad = (f as any).cantidad || 1;
-                    const montoUnitario = (f as any).montoUnitario || (f.monto / (cantidad || 1));
-
-                    return (
-                      <tr key={f.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="py-3.5 px-4">
-                          <span className="inline-block px-2 py-0.5 rounded font-mono text-[10px] font-black bg-emerald-100 text-emerald-800">
-                            {cod}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 font-bold text-slate-800">
-                          {f.descripcion}
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <span className="inline-block px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-black uppercase">
-                            {unidad}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-center font-bold text-slate-700">
-                          {cantidad}
-                        </td>
-                        <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-600">
-                          Q{Number(montoUnitario).toLocaleString('es-GT', {minimumFractionDigits: 2})}
-                        </td>
-                        <td className="py-3.5 px-4 text-right font-mono font-black text-emerald-700 text-sm">
-                          Q{Number(f.monto).toLocaleString('es-GT', {minimumFractionDigits: 2})}
-                        </td>
-                        <td className="py-3.5 px-4 text-center print:hidden">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEdit(f)}
-                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          >
-                            <Edit3 size={14} />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-        </div>
-      )}
-
-      {/* PESTAÑA 4: MATRIZ DE AUDITORÍA Y CÓDIGOS OFICIALES */}
-      {activeTab === 'verificacion' && (
-        <div className="space-y-6">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-            <h3 className="font-black text-slate-800 text-base mb-2">
-              Verificación Contable Oficial (30 Partidas)
-            </h3>
-            <p className="text-xs text-slate-500 font-medium mb-6">
-              Esta matriz compara y valida el presupuesto por código contable oficial para garantizar concordancia con el documento presentado.
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-              {totalesPorCategoria.map((cat, idx) => (
-                <div key={idx} className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60">
-                  <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
-                    cat.tipo === 'Ingreso' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                  }`}>
-                    {cat.tipo} ({cat.count} partidas)
-                  </span>
-                  <h4 className="text-xs font-black text-slate-800 mt-2 truncate" title={cat.categoria}>
-                    {cat.categoria}
-                  </h4>
-                  <p className="text-lg font-black text-slate-900 mt-1">
-                    Q{cat.total.toLocaleString('es-GT', {minimumFractionDigits: 2})}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            <div className="p-4 bg-blue-50 rounded-2xl border border-blue-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <CheckCircle size={24} className="text-blue-700 shrink-0" />
-                <div>
-                  <p className="text-xs font-black text-blue-950">
-                    Conciliación Contable Verificada
-                  </p>
-                  <p className="text-[11px] text-blue-800 font-medium">
-                    Total Ingresos: Q{totalIngresos.toLocaleString()} | Total Egresos: Q{totalEgresos.toLocaleString()} | Saldo a favor: Q{superavitNeto.toLocaleString()}
-                  </p>
-                </div>
               </div>
               <button
                 type="button"
-                onClick={handleExportCSV}
-                className="px-4 py-2 rounded-xl bg-blue-900 text-white font-bold text-xs uppercase tracking-wider hover:bg-blue-800 shrink-0"
-              >
-                Descargar Cuadro de Auditoría
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: EDICIÓN DE PARTIDA */}
-      {editingItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-2xl max-w-lg w-full space-y-5 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div>
-                <h3 className="font-black text-slate-900 text-lg">Modificar Partida Presupuestaria</h3>
-                <p className="text-xs text-slate-500">Ajustar cantidad, costo unitario o comisión responsable</p>
-              </div>
-              <button 
-                type="button" 
-                onClick={() => setEditingItem(null)}
-                className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100"
+                onClick={() => setShowModal(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 cursor-pointer"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleSaveEdit} className="space-y-4">
+            <form onSubmit={handleSaveMovimiento} className="space-y-4">
+              {/* Selección de Cuenta */}
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Descripción del Concepto</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">
+                  Cuenta Monetaria Banrural S.A.
+                </label>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData({
+                        ...formData,
+                        cuentaId: 'admin_3827008588',
+                        categoriaContable: CATEGORIAS_ADMIN[0]
+                      })
+                    }
+                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                      formData.cuentaId === 'admin_3827008588'
+                        ? 'bg-blue-950 text-white border-blue-800 shadow-md'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span className="font-mono text-xs font-black block">3827008588</span>
+                    <span className="text-[11px] font-bold opacity-90">Administrativa (Cuotas)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData({
+                        ...formData,
+                        cuentaId: 'cueva_3827008592',
+                        categoriaContable: CATEGORIAS_CUEVA[0]
+                      })
+                    }
+                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                      formData.cuentaId === 'cueva_3827008592'
+                        ? 'bg-emerald-950 text-white border-emerald-800 shadow-md'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span className="font-mono text-xs font-black block">3827008592</span>
+                    <span className="text-[11px] font-bold opacity-90">Cueva (Parqueo/Rentas)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Tipo de Movimiento y Fecha */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">
+                    Tipo de Operación
+                  </label>
+                  <div className="grid grid-cols-2 gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, tipoMovimiento: 'credito' })}
+                      className={`py-2 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                        formData.tipoMovimiento === 'credito'
+                          ? 'bg-emerald-600 text-white shadow-sm'
+                          : 'text-slate-600'
+                      }`}
+                    >
+                      Crédito (+)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, tipoMovimiento: 'debito' })}
+                      className={`py-2 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                        formData.tipoMovimiento === 'debito'
+                          ? 'bg-rose-600 text-white shadow-sm'
+                          : 'text-slate-600'
+                      }`}
+                    >
+                      Débito (-)
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">
+                    Fecha del Movimiento
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={formData.fecha}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const [y, m, d] = val.split('-');
+                      setFormData({
+                        ...formData,
+                        fecha: val,
+                        fechaTexto: d && m && y ? `${d}/${m}/${y}` : val
+                      });
+                    }}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Descripción */}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">
+                  Descripción en Estado de Cuenta / Concepto
+                </label>
                 <input
                   type="text"
                   required
-                  value={editForm.descripcion}
-                  onChange={(e) => setEditForm({...editForm, descripcion: e.target.value})}
+                  placeholder="Ej. N/CREDITO TRANSFERENCIA ELECTRONICA TIF / Pago cuota socio..."
+                  value={formData.descripcion}
+                  onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              {/* Categoría y Monto */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Unidad</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">
+                    Categoría Contable
+                  </label>
                   <select
-                    value={editForm.unidad}
-                    onChange={(e) => setEditForm({...editForm, unidad: e.target.value})}
+                    value={formData.categoriaContable}
+                    onChange={(e) => setFormData({ ...formData, categoriaContable: e.target.value })}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="SOCIO">SOCIO</option>
-                    <option value="MES">MES</option>
-                    <option value="UNIDAD">UNIDAD</option>
-                    <option value="ACTIVIDAD">ACTIVIDAD</option>
-                    <option value="CONVIVENCIA">CONVIVENCIA</option>
-                    <option value="SESION">SESION</option>
+                    {(formData.cuentaId === 'admin_3827008588'
+                      ? CATEGORIAS_ADMIN
+                      : CATEGORIAS_CUEVA
+                    ).map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Cantidad</label>
-                  <input
-                    type="number"
-                    step="1"
-                    required
-                    value={editForm.cantidad}
-                    onChange={(e) => setEditForm({...editForm, cantidad: parseFloat(e.target.value) || 0})}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Monto Unitario (Q)</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">
+                    Monto en Quetzales (Q)
+                  </label>
                   <input
                     type="number"
                     step="0.01"
+                    min="0"
                     required
-                    value={editForm.montoUnitario}
-                    onChange={(e) => setEditForm({...editForm, montoUnitario: parseFloat(e.target.value) || 0})}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="0.00"
+                    value={formData.monto}
+                    onChange={(e) => setFormData({ ...formData, monto: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-sm font-mono font-black text-slate-900 outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
-              {editingItem.comision !== undefined && (
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">Comisión Responsable</label>
-                  <select
-                    value={editForm.comision}
-                    onChange={(e) => setEditForm({...editForm, comision: e.target.value})}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Seleccionar comisión...</option>
-                    {listaComisionesNombres.map((nom, idx) => (
-                      <option key={idx} value={nom}>{nom}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div className="p-3 bg-blue-50 rounded-xl border border-blue-100 text-xs text-blue-900 font-bold flex items-center justify-between">
-                <span>Total Presupuestado Calculado:</span>
-                <span className="text-base font-black">
-                  Q{((editForm.cantidad || 0) * (editForm.montoUnitario || 0)).toLocaleString('es-GT', {minimumFractionDigits: 2})}
-                </span>
+              {/* Nota de Auditoría opcional */}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">
+                  Nota de Tesorería / Observación (Opcional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej. Boleta #12345 o referencia de socio..."
+                  value={formData.notaAuditor}
+                  onChange={(e) => setFormData({ ...formData, notaAuditor: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
 
               <div className="flex gap-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setEditingItem(null)}
-                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-colors"
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 rounded-xl bg-blue-700 hover:bg-blue-600 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-blue-700/20 transition-all"
+                  disabled={isSyncing}
+                  className="flex-1 py-3 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-black text-xs uppercase tracking-wider shadow-lg transition-all cursor-pointer"
                 >
-                  Guardar Cambios
+                  {editingId ? 'Guardar Cambios' : 'Registrar en Libro'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-
     </div>
   );
 };
