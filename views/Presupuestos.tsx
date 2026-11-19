@@ -403,60 +403,108 @@ export const Presupuestos: React.FC = () => {
   return (
     <div className="space-y-8 animate-in fade-in duration-500 max-w-[1400px] mx-auto pb-16">
       {/* CABECERA PRINCIPAL: TESORERÍA Y CUENTAS MONETARIAS BANRURAL S.A. */}
-      <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-emerald-950 rounded-[2.5rem] p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border border-blue-900/50">
+      <div className="bg-gradient-to-br from-blue-950 via-slate-900 to-emerald-950 rounded-3xl sm:rounded-[2rem] p-5 sm:p-7 text-white shadow-xl relative overflow-hidden border border-blue-900/50">
         <div className="absolute top-0 right-0 w-96 h-96 bg-yellow-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
         <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
-        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[11px] font-black uppercase tracking-wider">
-              <Landmark size={14} />
-              <span>Tesorería Real • Cuentas Monetarias Banrural S.A.</span>
+        <div className="relative z-10 space-y-5">
+          {/* Fila superior: Identidad, título a ancho completo y resumen rápido */}
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+            <div className="space-y-2.5 min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[11px] font-black uppercase tracking-wider whitespace-nowrap">
+                  <Landmark size={13} className="shrink-0" />
+                  <span>Tesorería Real • Banrural S.A.</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 border border-white/15 text-slate-200 text-[11px] font-bold whitespace-nowrap">
+                  <Calendar size={12} className="text-yellow-300 shrink-0" />
+                  <span>Corte al {estadoCueva.ultimaFecha}</span>
+                </span>
+              </div>
+
+              <h1 className="font-sans text-2xl sm:text-3xl font-black tracking-tight text-white leading-tight">
+                Control de Saldos Bancarios y Libros de Cuentas
+              </h1>
+
+              <div className="flex flex-wrap items-center gap-2 pt-0.5 text-xs text-slate-300 font-medium">
+                <span>Cuentas monetarias oficiales del Club:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('admin_3827008588');
+                    setCategoryFilter('todas');
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-900/70 hover:bg-blue-800/80 border border-blue-700/60 text-white transition-colors cursor-pointer"
+                >
+                  <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
+                  <span className="font-bold">Administrativa:</span>
+                  <span className="font-mono font-black text-yellow-300">3827008588</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('cueva_3827008592');
+                    setCategoryFilter('todas');
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-900/70 hover:bg-emerald-800/80 border border-emerald-700/60 text-white transition-colors cursor-pointer"
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  <span className="font-bold">Cueva (No Admin):</span>
+                  <span className="font-mono font-black text-emerald-300">3827008592</span>
+                </button>
+              </div>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              Control de Saldos Bancarios y Libros de Cuentas
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed">
-              Gestión contable real de las dos cuentas monetarias del Club de Leones de Quetzaltenango en{' '}
-              <strong className="text-white">Banrural S.A.</strong>: Cuenta Administrativa (<span className="font-mono text-yellow-300">3827008588</span>) y Cuenta Cueva / Operativa (<span className="font-mono text-emerald-300">3827008592</span>).
-            </p>
+
+            {/* Indicador compacto de liquidez consolidada */}
+            <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl px-4 py-3 md:text-right shrink-0 self-start">
+              <span className="text-[10px] font-black uppercase tracking-widest text-yellow-300 block">
+                Liquidez Total en Banco
+              </span>
+              <span className="text-xl sm:text-2xl font-mono font-black text-white tracking-tight">
+                {formatGTQ(saldoTotalClub)}
+              </span>
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0 print:hidden">
+          {/* Barra inferior de acciones: limpia, alineada y sin desbordes */}
+          <div className="pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 print:hidden">
             <button
               type="button"
               onClick={() => handleOpenNewModal()}
-              className="px-4 py-2.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-blue-950 font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-lg cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-blue-950 font-black text-xs uppercase tracking-wider inline-flex items-center gap-2 transition-all shadow-lg shadow-yellow-500/15 cursor-pointer"
             >
               <Plus size={16} />
               <span>Registrar Movimiento</span>
             </button>
-            <button
-              type="button"
-              onClick={handleRestaurarLibrosOficiales}
-              disabled={isSyncing}
-              title="Restaurar los movimientos y saldos oficiales de los libros de Banrural"
-              className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider border border-white/20 flex items-center gap-2 transition-all cursor-pointer"
-            >
-              <RotateCcw size={15} className={isSyncing ? 'animate-spin' : ''} />
-              <span>Sincronizar Libros Oficiales</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleExportCSV}
-              className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider border border-white/20 flex items-center gap-2 transition-all cursor-pointer"
-            >
-              <Download size={15} />
-              <span>Exportar Excel (CSV)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider border border-white/20 flex items-center gap-2 transition-all cursor-pointer"
-            >
-              <Printer size={15} />
-              <span>Imprimir</span>
-            </button>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleRestaurarLibrosOficiales}
+                disabled={isSyncing}
+                title="Restaurar los movimientos y saldos oficiales de los libros de Banrural"
+                className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/15 inline-flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <RotateCcw size={14} className={isSyncing ? 'animate-spin' : ''} />
+                <span>Sincronizar Libros</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleExportCSV}
+                className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/15 inline-flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Download size={14} />
+                <span>Exportar CSV</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/15 inline-flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Printer size={14} />
+                <span>Imprimir</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
