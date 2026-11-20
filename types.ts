@@ -492,6 +492,15 @@ export interface ConvencionAlianza {
   logoUrl?: string;
 }
 
+export interface ConvencionCodigoDescuento {
+  id: string;
+  codigo: string;
+  tipo: 'porcentaje' | 'monto';
+  valor: number;
+  descripcion?: string;
+  activo: boolean;
+}
+
 export interface ConvencionConfig {
   titulo: string;
   lema: string;
@@ -519,6 +528,7 @@ export interface ConvencionConfig {
   cuentaBancariaBanrural?: string;
   nombreCuentaBancaria?: string;
   bancoNombre?: string;
+  codigosDescuento?: ConvencionCodigoDescuento[];
 }
 
 export interface MensajeEnviadoLog {
@@ -544,8 +554,13 @@ export interface ConvencionRegistro {
   includeCultural?: boolean;
   includeFamiliar?: boolean;
   montoPagar?: number;
+  subtotalOriginal?: number;
+  codigoDescuento?: string;
+  descuentoAplicado?: number;
+  metodoPago?: 'tarjeta' | 'transferencia' | 'cortesia';
   estadoPago?: 'Pendiente' | 'Pagado' | 'Checkout_Creado';
   recurrenteCheckoutUrl?: string;
+  recurrenteCheckoutId?: string;
   preferenciaNotificacion?: 'telegram' | 'email';
   telegramVerificado?: boolean;
   fechaRegistro: string;

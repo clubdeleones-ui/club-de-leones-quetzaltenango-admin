@@ -253,6 +253,77 @@ export function AdminConvencion() {
     icon: '🦁',
     logoUrl: ''
   });
+
+  // Palabras Clave de Descuento (Cupones)
+  const [newDiscountCode, setNewDiscountCode] = useState('');
+  const [newDiscountType, setNewDiscountType] = useState<'porcentaje' | 'monto'>('porcentaje');
+  const [newDiscountValue, setNewDiscountValue] = useState('10');
+  const [newDiscountDesc, setNewDiscountDesc] = useState('');
+
+  const handleAddDiscountCode = async () => {
+    const cleanCode = newDiscountCode.trim().toUpperCase();
+    const valNum = parseFloat(newDiscountValue);
+    if (!cleanCode || isNaN(valNum) || valNum <= 0) {
+      setErrorMsg('Ingresa una palabra clave y un valor de descuento mayor a 0.');
+      return;
+    }
+    if (newDiscountType === 'porcentaje' && valNum > 100) {
+      setErrorMsg('El porcentaje de descuento no puede ser mayor al 100%.');
+      return;
+    }
+    const existing = config.codigosDescuento || [];
+    if (existing.some(c => c.codigo.toUpperCase() === cleanCode)) {
+      setErrorMsg(`La palabra clave "${cleanCode}" ya existe.`);
+      return;
+    }
+    const updatedList = [
+      ...existing,
+      {
+        id: `desc_${Date.now()}`,
+        codigo: cleanCode,
+        tipo: newDiscountType,
+        valor: valNum,
+        descripcion: newDiscountDesc.trim() || (newDiscountType === 'porcentaje' ? `${valNum}% de descuento` : `Q.${valNum} de descuento`),
+        activo: true
+      }
+    ];
+    const updatedConfig = { ...config, codigosDescuento: updatedList };
+    setConfig(updatedConfig);
+    setNewDiscountCode('');
+    setNewDiscountValue('10');
+    setNewDiscountDesc('');
+    setErrorMsg(null);
+    try {
+      await firebaseService.saveConvencionConfig(updatedConfig);
+      setSuccessMsg(`Palabra clave "${cleanCode}" creada y activada en el formulario de Convención.`);
+    } catch (e) {
+      console.error('Error guardando código de descuento:', e);
+    }
+  };
+
+  const handleToggleDiscountCode = async (id: string) => {
+    const updatedList = (config.codigosDescuento || []).map(c =>
+      c.id === id ? { ...c, activo: !c.activo } : c
+    );
+    const updatedConfig = { ...config, codigosDescuento: updatedList };
+    setConfig(updatedConfig);
+    try {
+      await firebaseService.saveConvencionConfig(updatedConfig);
+    } catch (e) {
+      console.error('Error actualizando estado del código:', e);
+    }
+  };
+
+  const handleDeleteDiscountCode = async (id: string) => {
+    const updatedList = (config.codigosDescuento || []).filter(c => c.id !== id);
+    const updatedConfig = { ...config, codigosDescuento: updatedList };
+    setConfig(updatedConfig);
+    try {
+      await firebaseService.saveConvencionConfig(updatedConfig);
+    } catch (e) {
+      console.error('Error eliminando código de descuento:', e);
+    }
+  };
   const [alianzaLogoFile, setAlianzaLogoFile] = useState<File | null>(null);
   const [alianzaLogoPreview, setAlianzaLogoPreview] = useState<string>('');
 
@@ -451,6 +522,9 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
           cuentaBancariaBanrural: (!dbConfig.cuentaBancariaBanrural || dbConfig.cuentaBancariaBanrural === '3827008588') ? '908326358' : dbConfig.cuentaBancariaBanrural,
           nombreCuentaBancaria: dbConfig.nombreCuentaBancaria || 'Club de Leones Quetzaltenango',
           bancoNombre: (!dbConfig.bancoNombre || dbConfig.bancoNombre.toLowerCase().includes('banrural')) ? 'BAC Credomatic Monetaria' : dbConfig.bancoNombre,
+          codigosDescuento: Array.isArray(dbConfig.codigosDescuento)
+            ? dbConfig.codigosDescuento
+            : [{ id: 'default-xela', codigo: 'LEONESXELA', tipo: 'porcentaje', valor: 10, descripcion: 'Descuento especial Club Anfitrión', activo: true }],
           actividadesCulturales: dbConfig.actividadesCulturales || [],
           experienciasUnicas: dbConfig.experienciasUnicas || []
         });
@@ -1948,6 +2022,118 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                         <span className="text-[10px] text-slate-400">Titular verificado para emisión de boletas y transferencias BAC.</span>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Palabras Clave de Descuento (Cupones Promocionales) */}
+                  <div className="md:col-span-2 bg-emerald-50/60 border border-emerald-200/80 rounded-2xl p-5 space-y-4">
+                    <div className="border-b border-emerald-200/70 pb-3">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-emerald-900 flex items-center space-x-2">
+                        <Sparkles size={16} className="text-emerald-600" />
+                        <span>Palabras Clave de Descuento (Paso 4 de Inscripción)</span>
+                      </h4>
+                      <p className="text-[11px] text-emerald-800/80 mt-0.5">
+                        Crea palabras clave para otorgar descuentos en porcentaje (%) o en Quetzales (Q) al momento de inscribirse. Usa 100% para cortesías/becas.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">
+                      <div className="sm:col-span-3">
+                        <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">Palabra Clave</label>
+                        <input
+                          type="text"
+                          value={newDiscountCode}
+                          onChange={(e) => setNewDiscountCode(e.target.value.toUpperCase())}
+                          placeholder="Ej. XELA2027"
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-black text-slate-800"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">Tipo</label>
+                        <select
+                          value={newDiscountType}
+                          onChange={(e) => setNewDiscountType(e.target.value as 'porcentaje' | 'monto')}
+                          className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-800"
+                        >
+                          <option value="porcentaje">% Porcentaje</option>
+                          <option value="monto">Q Monto Fijo</option>
+                        </select>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">Valor</label>
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={newDiscountValue}
+                          onChange={(e) => setNewDiscountValue(e.target.value)}
+                          placeholder="10"
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-black text-slate-800"
+                        />
+                      </div>
+                      <div className="sm:col-span-3">
+                        <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">Descripción (Opcional)</label>
+                        <input
+                          type="text"
+                          value={newDiscountDesc}
+                          onChange={(e) => setNewDiscountDesc(e.target.value)}
+                          placeholder="Ej. Tarifa Socio Activo"
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <button
+                          type="button"
+                          onClick={handleAddDiscountCode}
+                          className="w-full py-2 px-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs uppercase tracking-wider cursor-pointer transition-colors"
+                        >
+                          + Agregar
+                        </button>
+                      </div>
+                    </div>
+
+                    {(config.codigosDescuento || []).length > 0 && (
+                      <div className="space-y-2 pt-2">
+                        {(config.codigosDescuento || []).map((c) => (
+                          <div
+                            key={c.id}
+                            className="flex flex-wrap items-center justify-between gap-2 bg-white border border-emerald-200/70 rounded-xl px-3.5 py-2.5 text-xs"
+                          >
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-mono font-black text-emerald-950 bg-emerald-100 px-2.5 py-0.5 rounded-md">
+                                {c.codigo}
+                              </span>
+                              <span className="font-black text-slate-800">
+                                {c.tipo === 'porcentaje' ? `${c.valor}% OFF` : `Q.${c.valor} OFF`}
+                              </span>
+                              {c.descripcion && (
+                                <span className="text-slate-500 font-medium">• {c.descripcion}</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleDiscountCode(c.id)}
+                                className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase cursor-pointer ${
+                                  c.activo
+                                    ? 'bg-emerald-100 text-emerald-800'
+                                    : 'bg-slate-200 text-slate-600'
+                                }`}
+                              >
+                                {c.activo ? 'Activo' : 'Inactivo'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteDiscountCode(c.id)}
+                                className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg cursor-pointer"
+                                title="Eliminar palabra clave"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Configuración de Notificaciones Telegram Bot */}

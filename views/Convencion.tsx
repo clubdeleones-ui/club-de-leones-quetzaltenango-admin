@@ -569,11 +569,63 @@ export default function Convencion() {
     );
   });
 
+  const [discountInput, setDiscountInput] = useState('');
+  const [appliedDiscount, setAppliedDiscount] = useState<{
+    codigo: string;
+    tipo: 'porcentaje' | 'monto';
+    valor: number;
+    descripcion?: string;
+  } | null>(null);
+  const [discountError, setDiscountError] = useState<string | null>(null);
+
+  const codigosDisponibles = useMemo(() => {
+    if (Array.isArray(config.codigosDescuento)) {
+      return config.codigosDescuento.filter(c => c.activo);
+    }
+    return [
+      { id: 'default-xela', codigo: 'LEONESXELA', tipo: 'porcentaje' as const, valor: 10, descripcion: 'Descuento especial Club Anfitrión', activo: true }
+    ];
+  }, [config.codigosDescuento]);
+
+  const handleApplyDiscount = () => {
+    const clean = discountInput.trim().toUpperCase();
+    if (!clean) {
+      setDiscountError('Escribe una palabra clave de descuento.');
+      return;
+    }
+    const found = codigosDisponibles.find(c => c.codigo.trim().toUpperCase() === clean);
+    if (!found) {
+      setAppliedDiscount(null);
+      setDiscountError('Palabra clave no válida o inactiva.');
+      return;
+    }
+    setAppliedDiscount({
+      codigo: found.codigo.trim().toUpperCase(),
+      tipo: found.tipo,
+      valor: found.valor,
+      descripcion: found.descripcion
+    });
+    setDiscountError(null);
+    showToast(`¡Descuento "${found.codigo.toUpperCase()}" aplicado correctamente!`, 'success');
+  };
+
+  const handleRemoveDiscount = () => {
+    setAppliedDiscount(null);
+    setDiscountInput('');
+    setDiscountError(null);
+  };
+
   const baseCost = config.tarifaBase && config.tarifaBase > 0 ? config.tarifaBase : 650;
   const hotelCost = includeHotel ? (config.tarifaHotel || 400) : 0;
   const culturalCost = includeCultural ? (config.tarifaCultural || 150) : 0;
   const familiarCost = includeFamiliar ? (config.tarifaFamiliar || 450) : 0;
-  const montoTotal = baseCost + hotelCost + culturalCost + familiarCost;
+  const subtotalTotal = baseCost + hotelCost + culturalCost + familiarCost;
+  const descuentoMonto = appliedDiscount
+    ? appliedDiscount.tipo === 'porcentaje'
+      ? Math.round((subtotalTotal * appliedDiscount.valor) / 100)
+      : Math.min(subtotalTotal, appliedDiscount.valor)
+    : 0;
+  const montoTotal = Math.max(0, subtotalTotal - descuentoMonto);
   const [isRedirectingPayment, setIsRedirectingPayment] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -599,6 +651,7 @@ export default function Convencion() {
     try {
       const updatedReg: ConvencionRegistro = {
         ...pendingConvencionRegistro,
+        metodoPago: 'tarjeta',
         estadoPago: 'Pagado',
         recurrenteCheckoutId: result.transactionId,
         ultimoTipoNotificacion: 'pago_confirmado',
@@ -1214,12 +1267,15 @@ export default function Convencion() {
     setIncludeFamiliar(false);
     setTelegramOption(null);
     setTelegramVerified(false);
+    setAppliedDiscount(null);
+    setDiscountInput('');
+    setDiscountError(null);
     setPaymentSuccessData(null);
     setWizardStep(1);
     setIsSubmitted(false);
   };
 
-  const handleFinalSubmit = async (metodo: 'recurrente' | 'transferencia') => {
+  const handleFinalSubmit = async (metodo: 'recurrente' | 'transferencia' | 'cortesia') => {
     if (telefonoDigitos.length !== 8) {
       showToast("Por favor, ingresa un número de teléfono válido de 8 dígitos.", "error");
       return;
@@ -1235,48 +1291,16 @@ export default function Convencion() {
     }
 
     setLoading(true);
-    const selectedComplementos: string[] = ['Inscripción Base (Q. 650)'];
-    if (includeHotel) selectedComplementos.push('Hospedaje Hotel Sede (+ Q. 400)');
-    if (includeCultural) selectedComplementos.push('Paquete Inmersivo Cultural (+ Q. 150)');
-    if (includeFamiliar) selectedComplementos.push('Paquete Familiar Inmersivo Cultural (+ Q. 450)');
+    const selectedComplementos: string[] = [`Inscripción Base (Q. ${baseCost})`];
+    if (includeHotel) selectedComplementos.push(`Hospedaje Hotel Sede (+ Q. ${hotelCost})`);
+    if (includeCultural) selectedComplementos.push(`Paquete Inmersivo Cultural (+ Q. ${culturalCost})`);
+    if (includeFamiliar) selectedComplementos.push(`Paquete Familiar Inmersivo Cultural (+ Q. ${familiarCost})`);
+    if (appliedDiscount && descuentoMonto > 0) {
+      selectedComplementos.push(`Descuento "${appliedDiscount.codigo}" (- Q. ${descuentoMonto})`);
+    }
 
     const paqueteNombre = selectedComplementos.join(' + ');
-
-    const checkoutItems = [
-      {
-        name: 'Inscripción Convención Base',
-        amount_in_cents: 65000,
-        currency: 'GTQ' as const,
-        quantity: 1
-      }
-    ];
-
-    if (includeHotel) {
-      checkoutItems.push({
-        name: 'Complemento: Hospedaje en Hotel Sede y Tour',
-        amount_in_cents: 40000,
-        currency: 'GTQ' as const,
-        quantity: 1
-      });
-    }
-
-    if (includeCultural) {
-      checkoutItems.push({
-        name: 'Complemento: Paquete Inmersivo Cultural',
-        amount_in_cents: 15000,
-        currency: 'GTQ' as const,
-        quantity: 1
-      });
-    }
-
-    if (includeFamiliar) {
-      checkoutItems.push({
-        name: 'Complemento: Paquete Familiar Inmersivo Cultural',
-        amount_in_cents: 45000,
-        currency: 'GTQ' as const,
-        quantity: 1
-      });
-    }
+    const isCortesiaTotal = montoTotal === 0 || metodo === 'cortesia';
     
     try {
       const nuevoRegistro: ConvencionRegistro = {
@@ -1290,21 +1314,33 @@ export default function Convencion() {
         includeFamiliar,
         preferenciaNotificacion: telegramOption || 'email',
         telegramVerificado: telegramOption === 'telegram' ? telegramVerified : false,
+        subtotalOriginal: subtotalTotal,
+        ...(appliedDiscount && descuentoMonto > 0 ? {
+          codigoDescuento: appliedDiscount.codigo,
+          descuentoAplicado: descuentoMonto
+        } : {}),
         montoPagar: montoTotal,
-        estadoPago: metodo === 'recurrente' ? 'Checkout_Creado' : 'Pendiente',
+        metodoPago: isCortesiaTotal ? 'cortesia' : (metodo === 'recurrente' ? 'tarjeta' : 'transferencia'),
+        estadoPago: isCortesiaTotal ? 'Pagado' : (metodo === 'recurrente' ? 'Checkout_Creado' : 'Pendiente'),
         fechaRegistro: new Date().toISOString(),
-        ultimoTipoNotificacion: 'pre_registro',
-        ultimoMensajeEnviado: '🦁 Confirmación de Pre-Inscripción: LXXV Convención Nacional',
+        ultimoTipoNotificacion: isCortesiaTotal ? 'pago_confirmado' : 'pre_registro',
+        ultimoMensajeEnviado: isCortesiaTotal
+          ? `🦁 Inscripción Confirmada con Cortesía (${appliedDiscount?.codigo || '100%'}): LXXV Convención Nacional`
+          : '🦁 Confirmación de Pre-Inscripción: LXXV Convención Nacional',
         fechaUltimoMensaje: new Date().toISOString(),
         canalUltimoMensaje: 'gmail',
-        notificacionesEnviadas: ['pre_registro'],
+        notificacionesEnviadas: [isCortesiaTotal ? 'pago_confirmado' : 'pre_registro'],
         mensajesEnviados: [{
           id: `msg_${Date.now()}_pre`,
           fecha: new Date().toISOString(),
           canal: 'gmail',
-          tipo: 'pre_registro',
-          asunto: '🦁 Confirmación de Pre-Inscripción: LXXV Convención Nacional',
-          mensajeResumen: 'Bienvenido y confirmación de pre-registro recibida.'
+          tipo: isCortesiaTotal ? 'pago_confirmado' : 'pre_registro',
+          asunto: isCortesiaTotal
+            ? '🦁 Inscripción Oficial Confirmada: LXXV Convención Nacional'
+            : '🦁 Confirmación de Pre-Inscripción: LXXV Convención Nacional',
+          mensajeResumen: isCortesiaTotal
+            ? `Inscripción confirmada con código de cortesía ${appliedDiscount?.codigo || ''}.`
+            : 'Bienvenido y confirmación de pre-registro recibida.'
         }]
       };
       
@@ -1313,7 +1349,7 @@ export default function Convencion() {
       // Enviar correo informativo automático por Gmail & notificación de Telegram
       gmailService.sendRegistrationEmail(
         nuevoRegistro, 
-        'pre_registro', 
+        isCortesiaTotal ? 'pago_confirmado' : 'pre_registro', 
         { customWelcomeText: config?.mensajeBienvenidaEmail }, 
         config?.googleScriptUrl
       ).catch(err => {
@@ -1328,7 +1364,7 @@ export default function Convencion() {
         console.warn("No se pudo enviar notificación de Telegram:", err);
       });
 
-      if (metodo === 'recurrente') {
+      if (metodo === 'recurrente' && !isCortesiaTotal) {
         setPendingConvencionRegistro(nuevoRegistro);
         setIsCyberSourceModalOpen(true);
         setLoading(false);
@@ -1346,13 +1382,15 @@ export default function Convencion() {
         club: finalClub,
         paquete: paqueteNombre,
         monto: montoTotal,
-        metodo: metodo,
-        estadoPago: 'Pendiente'
+        metodo: isCortesiaTotal ? 'recurrente' : metodo,
+        estadoPago: isCortesiaTotal ? 'Pagado' : 'Pendiente'
       });
       setIsSubmitted(true);
       showToast(
-        metodo === 'transferencia' 
-          ? "¡Pre-registro guardado con éxito! Por favor realiza tu depósito o transferencia bancaria para asegurar tu cupo." 
+        isCortesiaTotal
+          ? "¡Inscripción oficial confirmada con tu código de cortesía!"
+          : metodo === 'transferencia' 
+          ? "¡Pre-registro guardado con éxito! Por favor realiza tu depósito o transferencia a la cuenta BAC 908326358 para asegurar tu cupo." 
           : "¡Pre-registro guardado con éxito!", 
         "success"
       );
@@ -2893,10 +2931,85 @@ export default function Convencion() {
                               <span className="font-bold text-white">Q. {(config.tarifaFamiliar || 450).toLocaleString()}.00</span>
                             </div>
                           )}
+                          {appliedDiscount && descuentoMonto > 0 && (
+                            <div className="flex justify-between items-center font-bold text-emerald-300 pt-1">
+                              <span>
+                                • Descuento "{appliedDiscount.codigo}" (
+                                {appliedDiscount.tipo === 'porcentaje'
+                                  ? `${appliedDiscount.valor}%`
+                                  : `Q. ${appliedDiscount.valor}`}
+                                ):
+                              </span>
+                              <span>- Q. {descuentoMonto.toLocaleString()}.00</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Palabra Clave de Descuento */}
+                        <div className="pt-3 border-t border-white/10 space-y-2">
+                          <label className="text-[11px] font-black uppercase tracking-wider text-yellow-300 flex items-center gap-1.5">
+                            <Sparkles size={13} />
+                            <span>¿Tienes una palabra clave de descuento?</span>
+                          </label>
+                          {appliedDiscount ? (
+                            <div className="flex items-center justify-between bg-emerald-500/20 border border-emerald-400/40 rounded-xl px-3.5 py-2.5 text-xs">
+                              <div className="text-emerald-200 font-bold">
+                                <span className="font-mono font-black text-white bg-emerald-600/80 px-2 py-0.5 rounded mr-2">
+                                  {appliedDiscount.codigo}
+                                </span>
+                                <span>
+                                  {appliedDiscount.descripcion || 'Descuento aplicado'} (-Q. {descuentoMonto.toLocaleString()}.00)
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={handleRemoveDiscount}
+                                className="text-rose-300 hover:text-rose-200 font-black text-[11px] underline ml-2 cursor-pointer"
+                              >
+                                Quitar
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={discountInput}
+                                onChange={(e) => {
+                                  setDiscountInput(e.target.value.toUpperCase());
+                                  if (discountError) setDiscountError(null);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleApplyDiscount();
+                                  }
+                                }}
+                                placeholder="Ingresa tu palabra clave (ej. LEONESXELA)"
+                                className="flex-1 bg-white/10 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-yellow-400/60"
+                              />
+                              <button
+                                type="button"
+                                onClick={handleApplyDiscount}
+                                className="px-4 py-2.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-blue-950 font-black text-xs uppercase tracking-wider transition-all cursor-pointer shrink-0"
+                              >
+                                Aplicar
+                              </button>
+                            </div>
+                          )}
+                          {discountError && (
+                            <p className="text-[11px] font-bold text-rose-300">{discountError}</p>
+                          )}
                         </div>
 
                         <div className="flex justify-between items-center pt-3 border-t border-white/15 text-sm sm:text-base font-black">
-                          <span className="text-white tracking-wide">MONTO TOTAL A CANCELAR:</span>
+                          <div>
+                            <span className="text-white tracking-wide block">MONTO TOTAL A CANCELAR:</span>
+                            {appliedDiscount && descuentoMonto > 0 && (
+                              <span className="text-[11px] text-slate-400 line-through font-bold">
+                                Subtotal original: Q. {subtotalTotal.toLocaleString()}.00
+                              </span>
+                            )}
+                          </div>
                           <span className="text-3xl font-black text-yellow-300 tracking-tight drop-shadow">
                             Q. {montoTotal.toLocaleString()}.00
                           </span>
@@ -2905,35 +3018,49 @@ export default function Convencion() {
 
                       {/* Acciones de Pago con Máxima Llamada a la Acción */}
                       <div className="space-y-3.5 pt-2">
-                        <button
-                          type="button"
-                          onClick={() => handleFinalSubmit('recurrente')}
-                          disabled={loading || isRedirectingPayment}
-                          className="w-full flex items-center justify-center space-x-3 bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 hover:from-emerald-400 hover:to-green-400 text-white font-black px-6 py-4.5 rounded-2xl text-base sm:text-lg transition-all duration-300 shadow-[0_10px_35px_rgba(16,185,129,0.4)] hover:shadow-[0_15px_45px_rgba(16,185,129,0.6)] active:scale-95 disabled:opacity-50 cursor-pointer transform hover:-translate-y-0.5 min-h-[56px]"
-                        >
-                          {loading || isRedirectingPayment ? (
-                            <div className="flex items-center space-x-3">
-                              <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
-                              <span>Conectando con Pasarela Segura Recurrente GT...</span>
-                            </div>
-                          ) : (
-                            <>
-                              <CreditCard size={22} />
-                              <span>Pagar con Tarjeta en Línea (Q. {montoTotal.toLocaleString()}.00)</span>
-                              <ArrowRight size={20} />
-                            </>
-                          )}
-                        </button>
+                        {montoTotal === 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => handleFinalSubmit('cortesia')}
+                            disabled={loading || isRedirectingPayment}
+                            className="w-full flex items-center justify-center space-x-3 bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 hover:from-emerald-400 hover:to-green-400 text-white font-black px-6 py-4.5 rounded-2xl text-base sm:text-lg transition-all duration-300 shadow-[0_10px_35px_rgba(16,185,129,0.4)] cursor-pointer min-h-[56px]"
+                          >
+                            <CheckCircle2 size={22} />
+                            <span>Confirmar Inscripción Oficial (Cortesía Q. 0.00)</span>
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleFinalSubmit('recurrente')}
+                              disabled={loading || isRedirectingPayment}
+                              className="w-full flex items-center justify-center space-x-3 bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 hover:from-emerald-400 hover:to-green-400 text-white font-black px-6 py-4.5 rounded-2xl text-base sm:text-lg transition-all duration-300 shadow-[0_10px_35px_rgba(16,185,129,0.4)] hover:shadow-[0_15px_45px_rgba(16,185,129,0.6)] active:scale-95 disabled:opacity-50 cursor-pointer transform hover:-translate-y-0.5 min-h-[56px]"
+                            >
+                              {loading || isRedirectingPayment ? (
+                                <div className="flex items-center space-x-3">
+                                  <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+                                  <span>Conectando con Pasarela Segura BAC Credomatic...</span>
+                                </div>
+                              ) : (
+                                <>
+                                  <CreditCard size={22} />
+                                  <span>Pagar con Tarjeta en Línea BAC (Q. {montoTotal.toLocaleString()}.00)</span>
+                                  <ArrowRight size={20} />
+                                </>
+                              )}
+                            </button>
 
-                        <button
-                          type="button"
-                          onClick={() => handleFinalSubmit('transferencia')}
-                          disabled={loading || isRedirectingPayment}
-                          className="w-full flex items-center justify-center space-x-2 bg-white/10 hover:bg-white/15 text-white font-bold px-6 py-3.5 rounded-2xl text-xs sm:text-sm transition-all border border-white/20 hover:border-yellow-400/40 cursor-pointer min-h-[46px]"
-                        >
-                          <Send size={15} />
-                          <span>Pre-registrarme con Opción de Depósito / Transferencia Bancaria (BAC Credomatic)</span>
-                        </button>
+                            <button
+                              type="button"
+                              onClick={() => handleFinalSubmit('transferencia')}
+                              disabled={loading || isRedirectingPayment}
+                              className="w-full flex items-center justify-center space-x-2 bg-white/10 hover:bg-white/15 text-white font-bold px-6 py-3.5 rounded-2xl text-xs sm:text-sm transition-all border border-white/20 hover:border-yellow-400/40 cursor-pointer min-h-[46px]"
+                            >
+                              <Send size={15} />
+                              <span>Pre-registrarme con Depósito / Transferencia BAC (Cta. 908326358)</span>
+                            </button>
+                          </>
+                        )}
                       </div>
 
                       {/* Botón Regresar */}
@@ -2987,9 +3114,11 @@ export default function Convencion() {
                     <div className="text-xs text-slate-200 space-y-1.5">
                       <p>• <strong>Paquete:</strong> {paymentSuccessData?.paquete || 'Inscripción Convención Nacional'}</p>
                       <p>• <strong>Estado del Pago:</strong> {paymentSuccessData?.metodo === 'recurrente' || paymentSuccessData?.estadoPago === 'Pagado' ? (
-                        <span className="text-emerald-400 font-bold ml-1">Pagado con Tarjeta (Recurrente GT)</span>
+                        <span className="text-emerald-400 font-bold ml-1">
+                          {paymentSuccessData?.monto === 0 ? 'Confirmado (Cortesía 100%)' : 'Pagado con Tarjeta (BAC Credomatic)'}
+                        </span>
                       ) : (
-                        <span className="text-amber-300 font-bold ml-1">Pendiente de depósito / transferencia bancaria</span>
+                        <span className="text-amber-300 font-bold ml-1">Pendiente de depósito / transferencia BAC (Cta. 908326358)</span>
                       )}</p>
                     </div>
 
