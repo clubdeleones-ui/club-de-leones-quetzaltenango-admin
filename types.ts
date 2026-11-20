@@ -529,6 +529,7 @@ export interface ConvencionConfig {
   nombreCuentaBancaria?: string;
   bancoNombre?: string;
   codigosDescuento?: ConvencionCodigoDescuento[];
+  revelarAgendaOficial?: boolean;
 }
 
 export interface MensajeEnviadoLog {

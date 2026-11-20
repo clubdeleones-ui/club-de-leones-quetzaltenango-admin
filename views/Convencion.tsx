@@ -311,67 +311,46 @@ export const ALIANZAS_CONVENCION = [
 
 export const DEFAULT_ACTIVIDADES_CULTURALES = [
   {
-    id: 'act-1',
-    title: 'Desfile de Banderas y Sesión Inaugural',
-    description: 'Apertura oficial con honores de gala, marcha de estandartes leonísticos y mensaje solemne de autoridades distritales.',
-    time: 'Jueves 19 • 16:00 hrs',
-    iconName: 'Flag'
-  },
-  {
-    id: 'act-2',
-    title: 'Noche Típica Quetzalteca & Convivencia',
-    description: 'Velada mágica con concierto de marimba en vivo, degustación de gastronomía tradicional, shecas calientes y fraternidad.',
-    time: 'Viernes 20 • 19:30 hrs',
-    iconName: 'Music'
-  },
-  {
-    id: 'act-3',
-    title: 'Plenarias Magistrales y Elecciones Distritales',
-    description: 'Jornadas de capacitación en liderazgo global, toma de acuerdos trascendentales y elección democrática del nuevo Gabinete.',
-    time: 'Sábado 21 • 08:30 hrs',
-    iconName: 'Award'
-  },
-  {
-    id: 'act-4',
-    title: 'Cena de Gala y Baile de Coronación',
-    description: 'Banquete solemne de clausura en el Salón Doña Beatriz con orquesta internacional y reconocimiento al mérito leonístico.',
-    time: 'Sábado 21 • 20:00 hrs',
+    id: 'act-expectativa-1',
+    title: 'Gran Velada de Apertura • Sorpresa Oficial',
+    description: 'Estamos preparando una noche inolvidable bajo el cielo de Quetzaltenango. Un encuentro lleno de elegancia, emoción y el calor único de la hospitalidad altense que marcará el inicio de una convención histórica.',
+    time: 'Por Revelar • Próximamente',
     iconName: 'Sparkles'
   },
   {
-    id: 'act-5',
-    title: 'Paseo Turístico & Tour Cultural por Xela',
-    description: 'Recorrido guiado por el Centro Histórico, Teatro Municipal, pasaje Enríquez y miradores emblemáticos de los Altos.',
-    time: 'Domingo 22 • 09:00 hrs',
-    iconName: 'Coffee'
+    id: 'act-expectativa-2',
+    title: 'Encuentro de Hermandad en la Ciudad Altense',
+    description: 'La magia y el espíritu de Xelajú serán testigos de un momento vibrante que unirá a todas las delegaciones del Distrito D-3. Prepárate para vivir el orgullo leonístico como nunca antes.',
+    time: 'Por Revelar • Próximamente',
+    iconName: 'Flag'
   },
   {
-    id: 'act-6',
-    title: 'Clausura Solemne y Almuerzo de Despedida',
-    description: 'Acto de juramentación de nuevas autoridades leonísticas, intercambio de pines conmemorativos y despedida fraterna.',
-    time: 'Domingo 22 • 13:00 hrs',
-    iconName: 'Users'
+    id: 'act-expectativa-3',
+    title: 'Experiencia Social & Tradición de Altura',
+    description: 'Los sentidos serán protagonistas en una cita diseñada especialmente para compartir, celebrar la amistad y llevarte un recuerdo imborrable del corazón cultural del altiplano guatemalteco.',
+    time: 'Por Revelar • Próximamente',
+    iconName: 'Award'
   }
 ];
 
 export const DEFAULT_EXPERIENCIAS = [
   {
-    id: 'exp-1',
-    badge: 'Mística & Servicio',
-    title: 'Hermandad Leonística Sin Fronteras',
-    desc: 'Un encuentro único para reencontrarse con compañeros leones de toda la nación, fortalecer lazos de amistad sincera y renovar votos de servicio hacia los más necesitados.'
+    id: 'exp-expectativa-1',
+    badge: 'Próximamente • Inspiración',
+    title: 'Un Escenario para Encender el Futuro',
+    desc: 'Voces que transforman, ideas que inspiran y un espacio diseñado para impulsar la próxima gran etapa de servicio en nuestro distrito. Muy pronto revelaremos todos los detalles.'
   },
   {
-    id: 'exp-2',
-    badge: 'Cultura Viva',
-    title: 'La Esencia y Majestad de Xelajú',
-    desc: 'Sumérgete en la riqueza arquitectónica, cultural y climática de la ciudad de la Estrella de Occidente, cuna de poetas, artistas y hombres ilustres de Guatemala.'
+    id: 'exp-expectativa-2',
+    badge: 'Próximamente • Hermandad',
+    title: 'Un Momento Emblemático para Coleccionar',
+    desc: 'Una tradición muy esperada que despierta sonrisas, fortalece lazos entre clubes y deja recuerdos para toda la vida. Estamos afinando cada detalle para sorprenderte.'
   },
   {
-    id: 'exp-3',
-    badge: 'Liderazgo Global',
-    title: 'Formación de Alto Nivel para el Futuro',
-    desc: 'Seminarios de vanguardia con ponentes nacionales e internacionales sobre filantropía moderna, proyectos de alto impacto social y crecimiento de clubes.'
+    id: 'exp-expectativa-3',
+    badge: 'Próximamente • Impacto',
+    title: 'Huella Viva en Quetzaltenango',
+    desc: 'Más allá del protocolo, dejaremos una marca real y perdurable en nuestra comunidad anfitriona. Una vivencia con propósito que muy pronto daremos a conocer oficialmente.'
   }
 ];
 
@@ -719,21 +698,21 @@ export default function Convencion() {
     return ALIANZAS_CONVENCION;
   }, [config.alianzas]);
 
-  // Derivar actividades culturales garantizando itinerario representativo
+  // Derivar actividades culturales: mientras el comité no confirme y revele el programa oficial, se muestran tarjetas de expectativa
   const displayActividades = useMemo(() => {
-    if (config.actividadesCulturales && config.actividadesCulturales.length > 0) {
+    if (config.revelarAgendaOficial && config.actividadesCulturales && config.actividadesCulturales.length > 0) {
       return config.actividadesCulturales;
     }
     return DEFAULT_ACTIVIDADES_CULTURALES;
-  }, [config.actividadesCulturales]);
+  }, [config.revelarAgendaOficial, config.actividadesCulturales]);
 
-  // Derivar experiencias únicas
+  // Derivar experiencias únicas: modo expectativa hasta confirmación oficial
   const displayExperiencias = useMemo(() => {
-    if (config.experienciasUnicas && config.experienciasUnicas.length > 0) {
+    if (config.revelarAgendaOficial && config.experienciasUnicas && config.experienciasUnicas.length > 0) {
       return config.experienciasUnicas;
     }
     return DEFAULT_EXPERIENCIAS;
-  }, [config.experienciasUnicas]);
+  }, [config.revelarAgendaOficial, config.experienciasUnicas]);
 
   const [showStickyBar, setShowStickyBar] = useState(false);
 
@@ -1891,7 +1870,10 @@ export default function Convencion() {
                   <p className="text-slate-300 text-xs sm:text-sm leading-relaxed font-medium">{act.description}</p>
                 </div>
                 <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-yellow-400 font-extrabold">
-                  <span>Cronograma Oficial</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Sparkles size={13} className="text-yellow-300" />
+                    <span>{config.revelarAgendaOficial ? 'Cronograma Oficial' : 'Sorpresa en Preparación'}</span>
+                  </span>
                   <span className="bg-yellow-500/20 border border-yellow-500/30 px-3 py-1 rounded-lg text-yellow-300">{act.time}</span>
                 </div>
               </div>
@@ -1928,8 +1910,11 @@ export default function Convencion() {
                 <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight pt-1 group-hover:text-yellow-300 transition-colors">{exp.title}</h3>
                 <p className="text-slate-300 text-xs sm:text-sm leading-relaxed font-medium">{exp.desc}</p>
               </div>
-              <div className="mt-6 pt-4 border-t border-white/10 flex items-center text-yellow-300 font-extrabold text-xs group-hover:text-yellow-200 transition-colors">
-                <span>Conocer más detalles</span>
+              <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between text-yellow-300 font-extrabold text-xs group-hover:text-yellow-200 transition-colors">
+                <span className="inline-flex items-center gap-1.5">
+                  <Sparkles size={13} />
+                  <span>{config.revelarAgendaOficial ? 'Experiencia Confirmada' : 'Revelación oficial muy pronto'}</span>
+                </span>
                 <ChevronRight size={14} className="ml-1 transition-transform group-hover:translate-x-1" />
               </div>
             </div>
