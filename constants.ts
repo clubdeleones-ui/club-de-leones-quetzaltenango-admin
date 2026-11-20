@@ -693,48 +693,7 @@ ARTÍCULO 50: Interpretación
 Cualquier problema de interpretación de los estatutos y sus reglamentos, deberá ser resuelto por la Junta Directiva. Si la interpretación genera controversia, deberá solicitarse dictamen a un Profesional del Derecho, para resolverla.
 `;
 
-export const MOCK_DONACIONES: Donacion[] = [
-  {
-    id: 'don-1',
-    donante: 'Supermercados La Torre',
-    monto: 5000,
-    fecha: '2024-03-12',
-    proyecto: 'Jornada Oftalmológica',
-    tipo: 'Empresarial'
-  },
-  {
-    id: 'don-2',
-    donante: 'Familia Maldonado Fuentes',
-    monto: 1200,
-    fecha: '2024-04-05',
-    proyecto: 'Remodelación de la Cueva',
-    tipo: 'Individual'
-  },
-  {
-    id: 'don-3',
-    donante: 'Fundación Rotaria Xela',
-    monto: 8000,
-    fecha: '2024-04-20',
-    proyecto: 'Jornada Médica Palajunoj',
-    tipo: 'Empresarial'
-  },
-  {
-    id: 'don-4',
-    donante: 'Sofía Ramos',
-    monto: 3500,
-    fecha: '2025-03-15',
-    proyecto: 'Jornada Médica Palajunoj',
-    tipo: 'Individual'
-  },
-  {
-    id: 'don-5',
-    donante: 'Sofía Ramos',
-    monto: 1500,
-    fecha: '2025-05-10',
-    proyecto: 'Bingo Benéfico',
-    tipo: 'Individual'
-  }
-];
+export const MOCK_DONACIONES: Donacion[] = [];
 
 export const MOCK_BENEFICIOS: Beneficio[] = [
   {

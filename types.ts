@@ -77,6 +77,13 @@ export interface Donacion {
   fecha: string;
   proyecto: string;
   tipo: 'Individual' | 'Empresarial';
+  origen?: 'Manual' | 'Pasarela BAC';
+  cuentaDestinoId?: 'cueva_3827008592' | 'admin_3827008588';
+  numeroCuentaDestino?: '3827008592' | '3827008588';
+  movimientoBancarioId?: string;
+  correoDonante?: string;
+  referenciaPago?: string;
+  codigoAprobacion?: string;
 }
 
 export interface Beneficio {

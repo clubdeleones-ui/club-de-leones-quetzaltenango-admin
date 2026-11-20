@@ -4,6 +4,8 @@ import { Gift, Heart, ArrowLeft, CreditCard, ShieldCheck, Sparkles, Check, Check
 import { useToast } from '../context/ToastContext';
 import { CyberSourcePaymentModal } from '../components/CyberSourcePaymentModal';
 import { CyberSourcePaymentResult } from '../services/cybersourceService';
+import { firebaseService } from '../services/firebaseService';
+import { Donacion } from '../types';
 
 const Donar: React.FC = () => {
   const { showToast } = useToast();
@@ -33,10 +35,32 @@ const Donar: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handlePaymentSuccess = (result: CyberSourcePaymentResult) => {
+  const handlePaymentSuccess = async (result: CyberSourcePaymentResult) => {
     setDonationResult(result);
     setIsModalOpen(false);
-    showToast('¡Gracias por tu donación! Tu aporte fue procesado con éxito.', 'success');
+
+    // Registrar automáticamente en Donaciones y reflejar el ingreso en Presupuestos (Cuenta Cueva 3827008592)
+    try {
+      const nuevaDonacion: Donacion = {
+        id: `don-bac-${result.transactionId || Date.now()}`,
+        donante: nombreDonante.trim() || 'Amigo León Solidario',
+        monto: Number(result.amount) || currentAmount,
+        fecha: new Date().toISOString().split('T')[0],
+        proyecto: 'Obras Sociales (Donación en Línea)',
+        tipo: 'Individual',
+        origen: 'Pasarela BAC',
+        cuentaDestinoId: 'cueva_3827008592',
+        numeroCuentaDestino: '3827008592',
+        correoDonante: correoDonante.trim(),
+        referenciaPago: result.transactionId,
+        codigoAprobacion: result.approvalCode
+      };
+      await firebaseService.saveDonacionConPresupuesto(nuevaDonacion);
+    } catch (err) {
+      console.error('Error registrando donación de pasarela en Firestore:', err);
+    }
+
+    showToast('¡Gracias por tu donación! Tu aporte fue procesado y registrado con éxito.', 'success');
   };
 
   const currentAmount = montoPersonalizado ? parseFloat(montoPersonalizado) || 0 : monto;

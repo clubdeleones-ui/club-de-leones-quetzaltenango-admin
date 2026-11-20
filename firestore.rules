@@ -171,6 +171,13 @@ service cloud.firestore {
                    && isValidNumber(request.resource.data, 'credito', false);
     }
 
+    match /donaciones/{document} {
+      allow read: if true;
+      allow write: if isValidString(request.resource.data, 'donante', false)
+                   && isValidNumber(request.resource.data, 'monto', false)
+                   && isValidString(request.resource.data, 'proyecto', false);
+    }
+
     match /config_roles/{document} {
       allow read: if true;
       allow write: if isValidString(request.resource.data, 'label', false)

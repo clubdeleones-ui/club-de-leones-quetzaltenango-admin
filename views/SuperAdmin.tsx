@@ -6,10 +6,11 @@ import {
   MOCK_SOCIOS, 
   MOCK_ACTIVIDADES, 
   MOCK_ACTAS, 
-  MOCK_DONACIONES, 
   MOCK_BENEFICIOS,
   MOCK_PROPUESTAS
 } from '../constants';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../services/firebase';
 import { 
   Socio, 
   Actividad, 
@@ -443,7 +444,24 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     setIsLoadingSocios(dbLoading.socios);
   }, [dbLoading.socios]);
 
-  const [donaciones, setDonaciones] = useState<Donacion[]>(MOCK_DONACIONES);
+  const [donaciones, setDonaciones] = useState<Donacion[]>([]);
+
+  // Suscripción en tiempo real a Donaciones reales en Firestore (sin datos ficticios)
+  useEffect(() => {
+    const unsubDonaciones = onSnapshot(
+      collection(db, 'donaciones'),
+      (snapshot) => {
+        const list: Donacion[] = snapshot.docs
+          .map(d => ({ id: d.id, ...d.data() } as Donacion))
+          .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '') || (b.id || '').localeCompare(a.id || ''));
+        setDonaciones(list);
+      },
+      (err) => {
+        console.error('Error suscribiendo a donaciones:', err);
+      }
+    );
+    return () => unsubDonaciones();
+  }, []);
   const [beneficios, setBeneficios] = useState<Beneficio[]>(() => {
     const local = localStorage.getItem('club_leones_beneficios');
     return local ? JSON.parse(local) : MOCK_BENEFICIOS;
@@ -815,7 +833,15 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const [isSavingActividad, setIsSavingActividad] = useState(false);
 
   const [showAddDonacion, setShowAddDonacion] = useState(false);
-  const [newDonacion, setNewDonacion] = useState({ donante: '', monto: '', proyecto: '', tipo: 'Individual' as 'Individual' | 'Empresarial' });
+  const [isSavingDonacion, setIsSavingDonacion] = useState(false);
+  const [newDonacion, setNewDonacion] = useState({
+    donante: '',
+    monto: '',
+    proyecto: '',
+    tipo: 'Individual' as 'Individual' | 'Empresarial',
+    fecha: new Date().toISOString().split('T')[0],
+    cuentaDestinoId: 'cueva_3827008592' as 'cueva_3827008592' | 'admin_3827008588'
+  });
 
   const [showAddBeneficio, setShowAddBeneficio] = useState(false);
   const [newBeneficio, setNewBeneficio] = useState({ titulo: '', descripcion: '', convenioCon: '', descuento: '', categoria: 'Salud' as any });
@@ -1479,21 +1505,58 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
     }
   };
 
-  const handleAddDonacion = (e: React.FormEvent) => {
+  const handleAddDonacion = async (e: React.FormEvent) => {
     e.preventDefault();
     const montoNum = parseFloat(newDonacion.monto);
-    if (!newDonacion.donante || isNaN(montoNum) || !newDonacion.proyecto) return;
-    const created: Donacion = {
-      id: `don-${Date.now()}`,
-      donante: newDonacion.donante,
-      monto: montoNum,
-      fecha: new Date().toISOString().split('T')[0],
-      proyecto: newDonacion.proyecto,
-      tipo: newDonacion.tipo
-    };
-    setDonaciones([created, ...donaciones]);
-    setNewDonacion({ donante: '', monto: '', proyecto: '', tipo: 'Individual' });
-    setShowAddDonacion(false);
+    if (!newDonacion.donante.trim() || isNaN(montoNum) || montoNum <= 0 || !newDonacion.proyecto.trim()) return;
+
+    setIsSavingDonacion(true);
+    try {
+      const created: Donacion = {
+        id: `don-${Date.now()}`,
+        donante: newDonacion.donante.trim(),
+        monto: montoNum,
+        fecha: newDonacion.fecha || new Date().toISOString().split('T')[0],
+        proyecto: newDonacion.proyecto.trim(),
+        tipo: newDonacion.tipo,
+        origen: 'Manual',
+        cuentaDestinoId: newDonacion.cuentaDestinoId,
+        numeroCuentaDestino: newDonacion.cuentaDestinoId === 'admin_3827008588' ? '3827008588' : '3827008592'
+      };
+      await firebaseService.saveDonacionConPresupuesto(created);
+      setNewDonacion({
+        donante: '',
+        monto: '',
+        proyecto: '',
+        tipo: 'Individual',
+        fecha: new Date().toISOString().split('T')[0],
+        cuentaDestinoId: 'cueva_3827008592'
+      });
+      setShowAddDonacion(false);
+      showToast('Donación registrada y sumada automáticamente a Presupuestos y Cuentas Banrural.', 'success');
+    } catch (err) {
+      console.error('Error registrando donación:', err);
+      showAlert('Error', 'No se pudo registrar la donación en Firestore.');
+    } finally {
+      setIsSavingDonacion(false);
+    }
+  };
+
+  const handleDeleteDonacion = async (don: Donacion) => {
+    const confirmed = await showConfirm(
+      'Eliminar Donación',
+      `¿Deseas eliminar la donación de "${don.donante}" por Q${don.monto.toLocaleString('es-GT', { minimumFractionDigits: 2 })}? También se eliminará su ingreso vinculado en Presupuestos y Cuentas Banrural.`,
+      { type: 'warning', confirmText: 'Eliminar', cancelText: 'Cancelar' }
+    );
+    if (!confirmed) return;
+
+    try {
+      await firebaseService.deleteDonacionConPresupuesto(don);
+      showToast('Donación y movimiento de presupuesto eliminados.', 'success');
+    } catch (err) {
+      console.error('Error eliminando donación:', err);
+      showAlert('Error', 'No se pudo eliminar la donación.');
+    }
   };
 
   const handleAddBeneficio = (e: React.FormEvent) => {
@@ -6206,10 +6269,15 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           {activeTab === 'donaciones' && (
             <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <h3 className="text-3xl font-black text-slate-800 tracking-tight">Registro de Donaciones</h3>
+                <div>
+                  <h3 className="text-3xl font-black text-slate-800 tracking-tight">Registro de Donaciones</h3>
+                  <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
+                    Conectado en tiempo real a la pasarela de pago BAC y a Presupuestos y Cuentas Banrural.
+                  </p>
+                </div>
                 <button 
                   onClick={() => setShowAddDonacion(true)}
-                  className="bg-blue-900 hover:bg-blue-800 text-white font-black px-6 py-3 rounded-xl flex items-center space-x-2 shadow-lg shadow-blue-900/10"
+                  className="bg-blue-900 hover:bg-blue-800 text-white font-black px-6 py-3 rounded-xl flex items-center space-x-2 shadow-lg shadow-blue-900/10 cursor-pointer shrink-0"
                 >
                   <Plus size={18} />
                   <span>Registrar Donación</span>
@@ -6219,10 +6287,10 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               {/* Add Donacion Modal */}
               {showAddDonacion && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-md">
-                  <form onSubmit={handleAddDonacion} className="bg-white rounded-[2.5rem] p-10 md:p-12 max-w-lg w-full space-y-8 shadow-2xl border border-slate-100">
+                  <form onSubmit={handleAddDonacion} className="bg-white rounded-[2.5rem] p-8 md:p-10 max-w-lg w-full space-y-6 shadow-2xl border border-slate-100 max-h-[92vh] overflow-y-auto">
                     <div className="flex justify-between items-center">
                       <h4 className="text-2xl font-black text-slate-800">Registrar Donación Entrante</h4>
-                      <button type="button" onClick={() => setShowAddDonacion(false)} className="p-2 hover:bg-slate-50 rounded-xl transition-colors"><XIcon size={20} /></button>
+                      <button type="button" onClick={() => setShowAddDonacion(false)} className="p-2 hover:bg-slate-50 rounded-xl transition-colors cursor-pointer"><XIcon size={20} /></button>
                     </div>
 
                     <div className="space-y-4">
@@ -6245,7 +6313,7 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                             <input 
                               type="number" 
                               required 
-                              min="0"
+                              min="0.01"
                               step="0.01"
                               value={newDonacion.monto} 
                               onChange={e => setNewDonacion({...newDonacion, monto: e.target.value})}
@@ -6266,6 +6334,29 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                           </select>
                         </div>
                       </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-bold text-slate-700 mb-2">Fecha</label>
+                          <input
+                            type="date"
+                            required
+                            value={newDonacion.fecha}
+                            onChange={e => setNewDonacion({...newDonacion, fecha: e.target.value})}
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700 font-bold"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-bold text-slate-700 mb-2">Cuenta Banrural Destino</label>
+                          <select
+                            value={newDonacion.cuentaDestinoId}
+                            onChange={e => setNewDonacion({...newDonacion, cuentaDestinoId: e.target.value as any})}
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-slate-700 font-bold text-xs"
+                          >
+                            <option value="cueva_3827008592">3827008592 — Cueva / Obras Sociales</option>
+                            <option value="admin_3827008588">3827008588 — Administrativa</option>
+                          </select>
+                        </div>
+                      </div>
                       <div>
                         <label className="block text-sm font-bold text-slate-700 mb-2">Proyecto o Causa Destinada</label>
                         <input 
@@ -6273,25 +6364,29 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                           required 
                           value={newDonacion.proyecto} 
                           onChange={e => setNewDonacion({...newDonacion, proyecto: e.target.value})}
-                          placeholder="Ej. Jornada Médica 2024"
+                          placeholder="Ej. Jornada Médica 2026"
                           className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all"
                         />
                       </div>
+                      <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 font-medium">
+                        Al guardar, este ingreso se sumará automáticamente como <strong>Crédito (+)</strong> en <strong>Presupuestos y Cuentas Banrural</strong>.
+                      </div>
                     </div>
 
-                    <div className="flex space-x-4 pt-4">
+                    <div className="flex space-x-4 pt-2">
                       <button 
                         type="button" 
                         onClick={() => setShowAddDonacion(false)}
-                        className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition-all"
+                        className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition-all cursor-pointer"
                       >
                         Cancelar
                       </button>
                       <button 
                         type="submit" 
-                        className="w-1/2 bg-blue-900 hover:bg-blue-800 text-white font-black py-3 rounded-xl transition-all shadow-lg shadow-blue-900/10"
+                        disabled={isSavingDonacion}
+                        className="w-1/2 bg-blue-900 hover:bg-blue-800 text-white font-black py-3 rounded-xl transition-all shadow-lg shadow-blue-900/10 cursor-pointer disabled:opacity-60"
                       >
-                        Registrar
+                        {isSavingDonacion ? 'Guardando...' : 'Registrar'}
                       </button>
                     </div>
                   </form>
@@ -6300,69 +6395,129 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
               {/* Table of Donations */}
               <div className="bg-white rounded-[2.5rem] border border-slate-200/80 shadow-sm overflow-hidden">
-                {/* Desktop View: Table */}
-                <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full border-collapse text-left">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold text-xs uppercase tracking-wider">
-                        <th className="py-7 px-6">Donante</th>
-                        <th className="py-7 px-6">Fecha</th>
-                        <th className="py-7 px-6">Proyecto</th>
-                        <th className="py-7 px-6">Tipo</th>
-                        <th className="py-7 px-6 text-right">Monto</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {filteredDonaciones.map(don => (
-                        <tr key={don.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="py-7 px-6 font-extrabold text-slate-800 text-base">{don.donante}</td>
-                          <td className="py-7 px-6 text-sm text-slate-500 font-medium">{don.fecha}</td>
-                          <td className="py-7 px-6 text-sm text-slate-600 font-bold">{don.proyecto}</td>
-                          <td className="py-7 px-6">
-                            <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase ${
-                              don.tipo === 'Empresarial' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-600'
-                            }`}>
-                              {don.tipo}
-                            </span>
-                          </td>
-                          <td className="py-7 px-6 text-right font-black text-blue-900 text-lg">Q {don.monto.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Mobile View: Cards */}
-                <div className="block md:hidden divide-y divide-slate-100">
-                  {filteredDonaciones.map(don => (
-                    <div key={don.id} className="p-6 space-y-4 hover:bg-slate-50/30 transition-colors">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-extrabold text-slate-800 text-base leading-snug">{don.donante}</h4>
-                          <span className={`inline-block text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase mt-1.5 ${
-                            don.tipo === 'Empresarial' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-605'
-                          }`}>
-                            {don.tipo}
-                          </span>
-                        </div>
-                        <span className="font-black text-blue-900 text-base">
-                          Q {don.monto.toLocaleString('es-GT', { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4 text-xs font-semibold pt-1">
-                        <div>
-                          <span className="text-slate-400 text-[10px] uppercase tracking-wider block mb-0.5">Fecha</span>
-                          <span className="text-slate-700">{don.fecha}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 text-[10px] uppercase tracking-wider block mb-0.5">Proyecto / Causa</span>
-                          <span className="text-slate-700 font-bold block truncate">{don.proyecto}</span>
-                        </div>
-                      </div>
+                {filteredDonaciones.length === 0 ? (
+                  <div className="p-12 sm:p-16 text-center space-y-3">
+                    <div className="w-16 h-16 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                      <Gift size={32} />
                     </div>
-                  ))}
-                </div>
+                    <h4 className="text-lg font-black text-slate-800">Sin donaciones registradas todavía</h4>
+                    <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto font-medium">
+                      Los registros ficticios han sido eliminados. Cada donación que registres aquí o que ingrese desde la pasarela de pago BAC aparecerá automáticamente en esta tabla y se reflejará en Presupuestos.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Desktop View: Table */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full border-collapse text-left">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold text-xs uppercase tracking-wider">
+                            <th className="py-7 px-6">Donante</th>
+                            <th className="py-7 px-6">Fecha</th>
+                            <th className="py-7 px-6">Proyecto</th>
+                            <th className="py-7 px-6">Tipo</th>
+                            <th className="py-7 px-6 text-right">Monto</th>
+                            <th className="py-7 px-4 text-center">Acción</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {filteredDonaciones.map(don => (
+                            <tr key={don.id} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="py-7 px-6">
+                                <div className="font-extrabold text-slate-800 text-base">{don.donante}</div>
+                                <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase ${
+                                    don.origen === 'Pasarela BAC'
+                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                      : 'bg-blue-50 text-blue-700 border border-blue-200'
+                                  }`}>
+                                    {don.origen || 'Manual'}
+                                  </span>
+                                  <span className="text-[10px] font-mono font-bold text-slate-500">
+                                    Cta. {don.numeroCuentaDestino || '3827008592'}
+                                  </span>
+                                  {don.referenciaPago && (
+                                    <span className="text-[10px] font-mono text-slate-400">
+                                      • Ref: {don.referenciaPago}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-7 px-6 text-sm text-slate-500 font-medium whitespace-nowrap">{don.fecha}</td>
+                              <td className="py-7 px-6 text-sm text-slate-600 font-bold">{don.proyecto}</td>
+                              <td className="py-7 px-6">
+                                <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase ${
+                                  don.tipo === 'Empresarial' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-600'
+                                }`}>
+                                  {don.tipo}
+                                </span>
+                              </td>
+                              <td className="py-7 px-6 text-right font-black text-blue-900 text-lg whitespace-nowrap">Q {don.monto.toLocaleString('es-GT', { minimumFractionDigits: 2 })}</td>
+                              <td className="py-7 px-4 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteDonacion(don)}
+                                  title="Eliminar donación y su ingreso en Presupuestos"
+                                  className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile View: Cards */}
+                    <div className="block md:hidden divide-y divide-slate-100">
+                      {filteredDonaciones.map(don => (
+                        <div key={don.id} className="p-6 space-y-4 hover:bg-slate-50/30 transition-colors">
+                          <div className="flex justify-between items-start gap-2">
+                            <div>
+                              <h4 className="font-extrabold text-slate-800 text-base leading-snug">{don.donante}</h4>
+                              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                                <span className={`inline-block text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase ${
+                                  don.tipo === 'Empresarial' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-600'
+                                }`}>
+                                  {don.tipo}
+                                </span>
+                                <span className={`inline-block text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${
+                                  don.origen === 'Pasarela BAC' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700'
+                                }`}>
+                                  {don.origen || 'Manual'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="font-black text-blue-900 text-base block">
+                                Q {don.monto.toLocaleString('es-GT', { minimumFractionDigits: 2 })}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteDonacion(don)}
+                                className="text-[10px] font-bold text-rose-600 hover:underline mt-1 cursor-pointer"
+                              >
+                                Eliminar
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4 text-xs font-semibold pt-1">
+                            <div>
+                              <span className="text-slate-400 text-[10px] uppercase tracking-wider block mb-0.5">Fecha</span>
+                              <span className="text-slate-700">{don.fecha}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 text-[10px] uppercase tracking-wider block mb-0.5">Proyecto / Causa</span>
+                              <span className="text-slate-700 font-bold block truncate">{don.proyecto}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}

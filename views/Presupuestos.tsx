@@ -108,24 +108,29 @@ export const Presupuestos: React.FC = () => {
     destacado: false
   });
 
-  // Suscripción en tiempo real a Firestore; si está vacía, se siembran los movimientos reales de las 2 cuentas Banrural
+  // Suscripción en tiempo real a Firestore; si faltan los movimientos base oficiales, se siembran sin borrar donaciones
   useEffect(() => {
+    let seededBase = false;
     const colRef = collection(db, 'tesoreria_cuentas_movimientos');
     const unsub = onSnapshot(
       colRef,
       async (snapshot) => {
-        if (snapshot.empty) {
-          try {
-            await firebaseService.resetMovimientosBancariosOficiales(MOVIMIENTOS_BANCARIOS_REALES);
-          } catch (e) {
-            console.warn('Usando datos reales locales de respaldo:', e);
-            setMovimientos(MOVIMIENTOS_BANCARIOS_REALES);
-          }
-          return;
-        }
         const loaded: MovimientoBancarioReal[] = snapshot.docs.map(
           (d) => ({ id: d.id, ...d.data() } as MovimientoBancarioReal)
         );
+        const hasOfficialBase =
+          loaded.some((m) => m.id === 'adm-2026-01') && loaded.some((m) => m.id === 'cva-2026-01');
+
+        if ((snapshot.empty || !hasOfficialBase) && !seededBase) {
+          seededBase = true;
+          try {
+            await firebaseService.seedMovimientosBancariosSiFaltan(MOVIMIENTOS_BANCARIOS_REALES);
+          } catch (e) {
+            console.warn('Usando datos reales locales de respaldo:', e);
+            setMovimientos(loaded.length > 0 ? [...MOVIMIENTOS_BANCARIOS_REALES, ...loaded] : MOVIMIENTOS_BANCARIOS_REALES);
+          }
+          return;
+        }
         setMovimientos(loaded);
       },
       (err) => {

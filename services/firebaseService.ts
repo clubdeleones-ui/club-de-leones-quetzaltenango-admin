@@ -17,7 +17,7 @@ import {
   arrayUnion
 } from "firebase/firestore";
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
-import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda, Acta, HitoHistorico, SolicitudVoluntario, ReunionAgenda, TareaComision, Asistencia, BienInventario, CategoriaInventario, ConvencionConfig, ConvencionRegistro, MensajeEnviadoLog, RegistroParticipacion, RequerimientoActividad, NeveraProducto, NeveraConsumo, NeveraSaldoSocio, NeveraCuentaAbono } from "../types";
+import { VehiculoParqueo, Socio, PropuestaSocio, Solicitud, Actividad, Donacion, RubroPresupuesto, FondoPresupuesto, AsignacionComision, Comision, MinutaComision, GaleriaItem, ContactoAgenda, Acta, HitoHistorico, SolicitudVoluntario, ReunionAgenda, TareaComision, Asistencia, BienInventario, CategoriaInventario, ConvencionConfig, ConvencionRegistro, MensajeEnviadoLog, RegistroParticipacion, RequerimientoActividad, NeveraProducto, NeveraConsumo, NeveraSaldoSocio, NeveraCuentaAbono } from "../types";
 import { MOCK_NEVERA_CATALOG } from "../constants";
 
 // In-memory flag to avoid repeated 402 / quota-exceeded requests when Storage billing is disabled
@@ -582,7 +582,11 @@ export const firebaseService = {
       const snapshot = await getDocs(colRef);
       const batch = writeBatch(db);
       snapshot.forEach(d => {
-        batch.delete(d.ref);
+        // Preservar movimientos generados automáticamente desde Donaciones reales
+        const data = d.data();
+        if (!data?.donacionId) {
+          batch.delete(d.ref);
+        }
       });
       movimientosBase.forEach(m => {
         const ref = doc(db, "tesoreria_cuentas_movimientos", m.id);
@@ -591,6 +595,86 @@ export const firebaseService = {
       await batch.commit();
     } catch (error) {
       console.error("Error resetting movimientos bancarios:", error);
+      throw error;
+    }
+  },
+
+  seedMovimientosBancariosSiFaltan: async (movimientosBase: any[]): Promise<void> => {
+    try {
+      const batch = writeBatch(db);
+      movimientosBase.forEach(m => {
+        const ref = doc(db, "tesoreria_cuentas_movimientos", m.id);
+        batch.set(ref, JSON.parse(JSON.stringify(m)), { merge: true });
+      });
+      await batch.commit();
+    } catch (error) {
+      console.error("Error seeding movimientos bancarios base:", error);
+      throw error;
+    }
+  },
+
+  // ================= DONACIONES CONECTADAS A PRESUPUESTO / CUENTAS BANRURAL =================
+  saveDonacionConPresupuesto: async (donacion: Donacion): Promise<Donacion> => {
+    try {
+      const cuentaId = donacion.cuentaDestinoId || 'cueva_3827008592';
+      const numeroCuenta = cuentaId === 'admin_3827008588' ? '3827008588' : '3827008592';
+      const movId = donacion.movimientoBancarioId || `mov-${donacion.id}`;
+
+      const donacionCompleta: Donacion = {
+        ...donacion,
+        origen: donacion.origen || 'Manual',
+        cuentaDestinoId: cuentaId,
+        numeroCuentaDestino: numeroCuenta,
+        movimientoBancarioId: movId
+      };
+
+      const [y, m, d] = (donacion.fecha || new Date().toISOString().slice(0, 10)).split('-');
+      const fechaTexto = d && m && y ? `${d}/${m}/${y}` : donacion.fecha;
+      const etiquetaOrigen = donacionCompleta.origen === 'Pasarela BAC' ? ' (PASARELA BAC)' : '';
+      const notaPartes: string[] = [];
+      if (donacionCompleta.referenciaPago) notaPartes.push(`Ref: ${donacionCompleta.referenciaPago}`);
+      if (donacionCompleta.codigoAprobacion) notaPartes.push(`Aprob: ${donacionCompleta.codigoAprobacion}`);
+      if (donacionCompleta.correoDonante) notaPartes.push(`Correo: ${donacionCompleta.correoDonante}`);
+      if (notaPartes.length === 0) notaPartes.push(`Registrada desde módulo Donaciones (${donacionCompleta.tipo})`);
+
+      const movimientoVinculado = {
+        id: movId,
+        cuentaId,
+        numeroCuenta,
+        orden: Date.now(),
+        fecha: donacionCompleta.fecha,
+        fechaTexto,
+        descripcion: `DONACIÓN${etiquetaOrigen}: ${donacionCompleta.donante.toUpperCase()} — ${donacionCompleta.proyecto}`,
+        categoriaContable: 'Obras Sociales y Donaciones',
+        debito: 0,
+        credito: Number(donacionCompleta.monto) || 0,
+        saldoContable: 0,
+        destacado: true,
+        notaAuditor: notaPartes.join(' • '),
+        donacionId: donacionCompleta.id
+      };
+
+      const batch = writeBatch(db);
+      batch.set(doc(db, "donaciones", donacionCompleta.id), JSON.parse(JSON.stringify(donacionCompleta)), { merge: true });
+      batch.set(doc(db, "tesoreria_cuentas_movimientos", movId), JSON.parse(JSON.stringify(movimientoVinculado)), { merge: true });
+      await batch.commit();
+
+      return donacionCompleta;
+    } catch (error) {
+      console.error("Error saving donacion + presupuesto:", error);
+      throw error;
+    }
+  },
+
+  deleteDonacionConPresupuesto: async (donacion: Donacion): Promise<void> => {
+    try {
+      const batch = writeBatch(db);
+      batch.delete(doc(db, "donaciones", donacion.id));
+      const movId = donacion.movimientoBancarioId || `mov-${donacion.id}`;
+      batch.delete(doc(db, "tesoreria_cuentas_movimientos", movId));
+      await batch.commit();
+    } catch (error) {
+      console.error("Error deleting donacion + presupuesto:", error);
       throw error;
     }
   },
