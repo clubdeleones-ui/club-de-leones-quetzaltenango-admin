@@ -613,6 +613,9 @@ export default function Convencion() {
   const [searchParams] = useSearchParams();
   const [isCyberSourceModalOpen, setIsCyberSourceModalOpen] = useState(false);
   const [pendingConvencionRegistro, setPendingConvencionRegistro] = useState<ConvencionRegistro | null>(null);
+  const [directPayRegistro, setDirectPayRegistro] = useState<ConvencionRegistro | null>(null);
+  const [directPayLoading, setDirectPayLoading] = useState(false);
+  const [copiedBacAccount, setCopiedBacAccount] = useState(false);
   const [paymentSuccessData, setPaymentSuccessData] = useState<{
     id: string;
     nombre: string;
@@ -640,10 +643,17 @@ export default function Convencion() {
 
       await firebaseService.saveConvencionRegistro(updatedReg);
 
+      // Acreditar automáticamente el pago en la Cuenta BAC 908326358 dentro de Tesorería / Presupuestos
+      firebaseService.registrarIngresoConvencionEnBac(updatedReg, 'Pasarela BAC').catch(err => {
+        console.warn("No se pudo acreditar pago en cuenta BAC 908326358:", err);
+      });
+
       // Enviar correo de pago confirmado oficial con Entrada QR
       gmailService.sendRegistrationEmail(updatedReg, 'pago_confirmado', undefined, config?.googleScriptUrl).catch(err => {
         console.warn("No se pudo enviar correo de confirmación de pago por Gmail:", err);
       });
+
+      setDirectPayRegistro(null);
 
       try {
         localStorage.removeItem(CONVENCION_DRAFT_KEY);
@@ -910,6 +920,28 @@ export default function Convencion() {
 
       const pago = getParam('pago');
       const regId = getParam('id');
+      const pagarFolio = getParam('pagar');
+
+      if (pagarFolio) {
+        setDirectPayLoading(true);
+        try {
+          const reg = await firebaseService.getConvencionRegistroById(pagarFolio.trim());
+          if (reg) {
+            setDirectPayRegistro(reg);
+            setTimeout(() => {
+              const el = document.getElementById('pre-inscripcion');
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }, 350);
+          } else {
+            showToast("No encontramos ese folio de pre-inscripción. Puedes llenar un nuevo registro abajo.", "warning");
+          }
+        } catch (err) {
+          console.error("Error cargando folio directo de pago:", err);
+        } finally {
+          setDirectPayLoading(false);
+        }
+        return;
+      }
 
       if (pago === 'exitoso' && regId) {
         try {
@@ -1933,13 +1965,229 @@ export default function Convencion() {
 
           <div className="relative z-10">
             
-            {fetching ? (
+            {fetching || directPayLoading ? (
               <div className="text-center py-16 flex flex-col items-center justify-center space-y-4">
                 <div className="w-16 h-16 rounded-3xl bg-yellow-500/10 border border-yellow-400/30 flex items-center justify-center shadow-lg">
                   <Clock className="w-8 h-8 text-yellow-400 animate-spin" />
                 </div>
-                <p className="text-slate-300 text-sm font-bold tracking-wide">Cargando formulario de inscripciones oficiales...</p>
+                <p className="text-slate-300 text-sm font-bold tracking-wide">
+                  {directPayLoading ? 'Cargando tu folio de pre-inscripción...' : 'Cargando formulario de inscripciones oficiales...'}
+                </p>
               </div>
+            ) : directPayRegistro && !isSubmitted ? (
+              /* PANTALLA DE PAGO DIRECTO PARA YA PRE-INSCRITOS (?pagar=FOLIO) — SIN REPETIR FORMULARIO */
+              (() => {
+                const directSubtotal = directPayRegistro.subtotalOriginal || directPayRegistro.montoPagar || baseCost;
+                const directDescuento = appliedDiscount
+                  ? appliedDiscount.tipo === 'porcentaje'
+                    ? Math.round((directSubtotal * appliedDiscount.valor) / 100)
+                    : Math.min(directSubtotal, appliedDiscount.valor)
+                  : (directPayRegistro.descuentoAplicado || 0);
+                const directMontoFinal = appliedDiscount
+                  ? Math.max(0, directSubtotal - directDescuento)
+                  : (directPayRegistro.montoPagar ?? directSubtotal);
+                const yaPagado = (directPayRegistro.estadoPago || '').toLowerCase() === 'pagado';
+
+                return (
+                  <div className="max-w-2xl mx-auto py-4 sm:py-8 space-y-6 animate-in fade-in duration-300">
+                    <div className="text-center space-y-2">
+                      <span className="inline-flex items-center space-x-2 bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
+                        <ShieldCheck size={14} />
+                        <span>Acceso Directo de Pago • Folio {directPayRegistro.id}</span>
+                      </span>
+                      <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
+                        ¡Hola, {directPayRegistro.nombre}!
+                      </h2>
+                      <p className="text-slate-300 text-xs sm:text-sm max-w-lg mx-auto">
+                        Tus datos ya están registrados ({directPayRegistro.club}). No necesitas volver a llenar el formulario.
+                      </p>
+                    </div>
+
+                    <div className="bg-white/5 border border-white/15 rounded-3xl p-5 sm:p-7 space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <span className="text-slate-400 block">Participante</span>
+                          <strong className="text-white text-sm">{directPayRegistro.nombre}</strong>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block">Club / Distrito</span>
+                          <strong className="text-white text-sm">{directPayRegistro.club} ({directPayRegistro.distrito})</strong>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block">Correo Electrónico</span>
+                          <strong className="text-slate-200">{directPayRegistro.email}</strong>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block">Paquete</span>
+                          <strong className="text-yellow-300">{directPayRegistro.paquete || 'Inscripción Base'}</strong>
+                        </div>
+                      </div>
+
+                      {yaPagado ? (
+                        <div className="bg-emerald-500/20 border border-emerald-400/40 rounded-2xl p-5 text-center space-y-3">
+                          <CheckCircle2 size={36} className="text-emerald-300 mx-auto" />
+                          <h3 className="text-lg font-black text-white">¡Tu inscripción ya está Pagada y Confirmada!</h3>
+                          <p className="text-xs text-emerald-100">
+                            Tu lugar para la LXXV Convención Nacional está asegurado. Puedes consultar o descargar tu entrada QR oficial aquí mismo.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setQrSearchQuery(directPayRegistro.id);
+                              setIsQrSearchModalOpen(true);
+                            }}
+                            className="inline-flex items-center space-x-2 bg-yellow-400 hover:bg-yellow-300 text-blue-950 font-black px-5 py-3 rounded-xl text-xs uppercase tracking-wider cursor-pointer"
+                          >
+                            <QrCode size={16} />
+                            <span>Ver Mi Entrada QR Oficial</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Palabra clave de descuento en pago directo */}
+                          <div className="pt-3 border-t border-white/10 space-y-2">
+                            <label className="text-[11px] font-black uppercase tracking-wider text-yellow-300 flex items-center gap-1.5">
+                              <Sparkles size={13} />
+                              <span>¿Tienes una palabra clave de descuento?</span>
+                            </label>
+                            {appliedDiscount ? (
+                              <div className="flex items-center justify-between bg-emerald-500/20 border border-emerald-400/40 rounded-xl px-3.5 py-2.5 text-xs">
+                                <div className="text-emerald-200 font-bold">
+                                  <span className="font-mono font-black text-white bg-emerald-600/80 px-2 py-0.5 rounded mr-2">
+                                    {appliedDiscount.codigo}
+                                  </span>
+                                  <span>-Q. {directDescuento.toLocaleString()}.00</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={handleRemoveDiscount}
+                                  className="text-rose-300 hover:text-rose-200 font-black text-[11px] underline ml-2 cursor-pointer"
+                                >
+                                  Quitar
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={discountInput}
+                                  onChange={(e) => {
+                                    setDiscountInput(e.target.value.toUpperCase());
+                                    if (discountError) setDiscountError(null);
+                                  }}
+                                  placeholder="Ingresa palabra clave (opcional)"
+                                  className="flex-1 bg-white/10 border border-white/20 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-yellow-400/60"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={handleApplyDiscount}
+                                  className="px-4 py-2.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-blue-950 font-black text-xs uppercase tracking-wider cursor-pointer shrink-0"
+                                >
+                                  Aplicar
+                                </button>
+                              </div>
+                            )}
+                            {discountError && <p className="text-[11px] font-bold text-rose-300">{discountError}</p>}
+                          </div>
+
+                          <div className="flex justify-between items-center pt-3 border-t border-white/15">
+                            <span className="text-xs sm:text-sm font-black text-white uppercase">Monto a Cancelar:</span>
+                            <span className="text-3xl font-black text-yellow-300">
+                              Q. {directMontoFinal.toLocaleString()}.00
+                            </span>
+                          </div>
+
+                          {/* Botón principal de pago con tarjeta BAC */}
+                          <button
+                            type="button"
+                            disabled={loading}
+                            onClick={async () => {
+                              const regActualizado: ConvencionRegistro = {
+                                ...directPayRegistro,
+                                subtotalOriginal: directSubtotal,
+                                montoPagar: directMontoFinal,
+                                ...(appliedDiscount
+                                  ? { codigoDescuento: appliedDiscount.codigo, descuentoAplicado: directDescuento }
+                                  : {})
+                              };
+                              if (directMontoFinal === 0) {
+                                setLoading(true);
+                                try {
+                                  const confirmado: ConvencionRegistro = {
+                                    ...regActualizado,
+                                    metodoPago: 'cortesia',
+                                    estadoPago: 'Pagado',
+                                    ultimoTipoNotificacion: 'pago_confirmado',
+                                    fechaUltimoMensaje: new Date().toISOString()
+                                  };
+                                  await firebaseService.saveConvencionRegistro(confirmado);
+                                  gmailService.sendRegistrationEmail(confirmado, 'pago_confirmado', undefined, config?.googleScriptUrl).catch(() => {});
+                                  setDirectPayRegistro(confirmado);
+                                  showToast("¡Inscripción confirmada con tu código de cortesía!", "success");
+                                } finally {
+                                  setLoading(false);
+                                }
+                                return;
+                              }
+                              setPendingConvencionRegistro(regActualizado);
+                              setIsCyberSourceModalOpen(true);
+                            }}
+                            className="w-full flex items-center justify-center space-x-3 bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 hover:from-emerald-400 hover:to-green-400 text-white font-black px-6 py-4 rounded-2xl text-base transition-all shadow-xl cursor-pointer"
+                          >
+                            <CreditCard size={20} />
+                            <span>
+                              {directMontoFinal === 0
+                                ? 'Confirmar Inscripción Gratuita (Cortesía)'
+                                : `Pagar Ahora con Tarjeta BAC (Q. ${directMontoFinal.toLocaleString()}.00)`}
+                            </span>
+                            <ArrowRight size={18} />
+                          </button>
+
+                          {/* Datos de Depósito / Transferencia BAC 908326358 */}
+                          <div className="bg-amber-500/15 border border-amber-400/40 rounded-2xl p-4 space-y-2.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-amber-300 font-black text-xs flex items-center gap-1.5">
+                                <Building2 size={15} />
+                                <span>O paga por Depósito / Transferencia BAC:</span>
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText('908326358');
+                                  setCopiedBacAccount(true);
+                                  setTimeout(() => setCopiedBacAccount(false), 2000);
+                                }}
+                                className="text-[11px] font-black bg-yellow-400/20 hover:bg-yellow-400/30 text-yellow-300 border border-yellow-400/40 px-2.5 py-1 rounded-lg cursor-pointer"
+                              >
+                                {copiedBacAccount ? '¡Cuenta Copiada!' : 'Copiar Cuenta'}
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-xs text-slate-200">
+                              <div><span className="text-slate-400">Banco:</span> <strong>BAC Credomatic</strong></div>
+                              <div><span className="text-slate-400">Tipo:</span> <strong>Monetaria</strong></div>
+                              <div><span className="text-slate-400">No. Cuenta:</span> <strong className="text-yellow-400 font-mono text-sm">908326358</strong></div>
+                              <div><span className="text-slate-400">A Nombre:</span> <strong>Club de Leones Quetzaltenango</strong></div>
+                            </div>
+                            <p className="text-[11px] text-slate-300 pt-1.5 border-t border-white/10">
+                              Envía tu boleta a <a href="mailto:convencionleones27@gmail.com" className="text-yellow-300 underline font-bold">convencionleones27@gmail.com</a> indicando tu folio <strong className="font-mono text-white">{directPayRegistro.id}</strong>.
+                            </p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => setDirectPayRegistro(null)}
+                        className="text-xs text-slate-400 hover:text-white underline cursor-pointer"
+                      >
+                        ¿Deseas registrar a otra persona? Ir al formulario completo
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()
             ) : config.inscripcionesAbiertas ? (
               !isSubmitted ? (
                 <div>
@@ -1970,7 +2218,7 @@ export default function Convencion() {
                       </span>
                       <span className="flex items-center space-x-1.5 bg-white/5 border border-white/10 px-3 py-1 rounded-full">
                         <CreditCard size={12} className="text-yellow-400" />
-                        <span>Pasarela Segura Recurrente GT</span>
+                        <span>Pasarela Segura BAC Credomatic</span>
                       </span>
                       <span className="flex items-center space-x-1.5 bg-white/5 border border-white/10 px-3 py-1 rounded-full">
                         <Sparkles size={12} className="text-cyan-400" />

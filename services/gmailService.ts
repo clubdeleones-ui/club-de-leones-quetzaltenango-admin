@@ -143,6 +143,7 @@ Correo: ${DEFAULT_GMAIL_SENDER}
     }
 
     if (tipo === 'recordatorio_pago') {
+      const payUrl = `https://clubdeleonesquetzaltenango.org/#/convencion?pagar=${encodeURIComponent(folio)}`;
       const asunto = `⏳ Recordatorio: Completa tu Pago para la LXXV Convención Nacional (Folio: ${folio})`;
       const cuerpoTexto = `
 ¡Estimado(a) ${nombre}!
@@ -156,17 +157,16 @@ RESUMEN DE REGISTRO:
 • Monto Total: ${montoStr}
 • Club: ${club}
 
-MÉTODOS DE PAGO DISPONIBLES:
-1. Depósito o Transferencia Bancaria Oficial (Cuenta Convención):
+MÉTODOS DE PAGO DISPONIBLES (SIN VOLVER A LLENAR EL FORMULARIO):
+1. Pago directo con Tarjeta o Acceso a tus Datos de Pago (Enlace Personal):
+   👉 ${payUrl}
+
+2. Depósito o Transferencia Bancaria Oficial (Cuenta Convención):
    - Banco: BAC Credomatic
    - Tipo de Cuenta: Monetaria
    - No. de Cuenta: 908326358
    - A nombre de: Club de Leones Quetzaltenango
    (Favor enviar la fotografía de tu boleta por WhatsApp o a este correo indicando tu folio ${folio}).
-
-2. Pago con Tarjeta de Crédito/Débito en Línea (Cuotas disponibles):
-   Puedes generar tu pago seguro en línea desde la página oficial:
-   👉 ${webUrl}
 
 ¡Asegura tu lugar con tarifa temprana antes del cierre de cupos!
 
@@ -188,8 +188,14 @@ Correo: ${DEFAULT_GMAIL_SENDER}
   <div style="padding: 24px; color: #1e293b;">
     <p style="font-size: 15px; font-weight: 700;">¡Hola, ${nombre}!</p>
     <p style="font-size: 13px; line-height: 1.6; color: #475569;">
-      Te recordamos amablemente que tu lugar para la Convención Nacional está reservado bajo el folio <strong>${folio}</strong>. Para completar tu acreditación oficial y recibir tu código QR definitivo, puedes realizar tu pago de <strong>${montoStr}</strong> mediante:
+      Te recordamos amablemente que tu lugar para la Convención Nacional está reservado bajo el folio <strong>${folio}</strong>. No necesitas volver a llenar el formulario: completa tu pago de <strong>${montoStr}</strong> directamente desde tu enlace personal o por depósito/transferencia:
     </p>
+
+    <div style="text-align: center; margin: 22px 0;">
+      <a href="${payUrl}" style="background: #059669; color: #ffffff; text-decoration: none; padding: 14px 26px; border-radius: 12px; font-weight: 800; font-size: 14px; display: inline-block;">
+        💳 Pagar Ahora sin Llenar Formulario (${montoStr})
+      </a>
+    </div>
 
     <div style="background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 16px; margin: 18px 0; font-size: 13px;">
       <strong style="color: #92400e;">Cuenta Bancaria Oficial de Convención para Depósito o Transferencia:</strong>
@@ -198,14 +204,8 @@ Correo: ${DEFAULT_GMAIL_SENDER}
         <li><strong>Tipo de Cuenta:</strong> Monetaria</li>
         <li><strong>No. de Cuenta:</strong> <span style="font-family: monospace; font-size: 14px; font-weight: bold; background: #fef3c7; padding: 2px 6px; border-radius: 4px;">908326358</span></li>
         <li><strong>A nombre de:</strong> Club de Leones Quetzaltenango</li>
-        <li><strong>En línea con Tarjeta (Visacuotas / Mastercuotas):</strong> Directamente en la plataforma web</li>
+        <li><strong>En línea con Tarjeta (Visacuotas / Mastercuotas):</strong> Usa el botón verde de arriba (tu folio ya viene precargado)</li>
       </ul>
-    </div>
-
-    <div style="text-align: center; margin: 22px 0;">
-      <a href="${webUrl}" style="background: #d97706; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: 800; font-size: 13px; display: inline-block;">
-        Pagar con Tarjeta o Consultar Entrada QR
-      </a>
     </div>
 
     <p style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 24px;">

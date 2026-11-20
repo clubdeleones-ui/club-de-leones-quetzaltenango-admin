@@ -450,7 +450,10 @@ Hemos recibido su pre-registro oficial con los siguientes datos:
 💰 Total a Pagar: Q.${(reg.montoPagar || 0).toLocaleString()}.00
 ⏳ Estado actual: ${reg.estadoPago || 'Pendiente de Pago'}
 
-Quedamos a su entera disposición para apoyarle con su depósito o transferencia bancaria (BAC Credomatic Cuenta Monetaria 908326358 a nombre de Club de Leones Quetzaltenango) o pasarela de tarjeta para emitir su entrada QR oficial. ¿En qué podemos servirle?`;
+Quedamos a su entera disposición para apoyarle. Puede completar su pago directamente SIN volver a llenar el formulario en su enlace personal:
+👉 https://clubdeleonesquetzaltenango.org/#/convencion?pagar=${reg.id}
+
+O mediante depósito/transferencia a BAC Credomatic Cuenta Monetaria 908326358 a nombre de Club de Leones Quetzaltenango. ¿En qué podemos servirle?`;
     }
   };
 
@@ -1233,12 +1236,18 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
       setRegistros(prev => prev.map(r => r.id === id ? { ...r, estadoPago: nuevoEstado } : r));
 
       if (nuevoEstado === 'Pagado' && targetReg && targetReg.email) {
-        // Enviar automáticamente correo de confirmación de pago con entrada QR oficial
+        // Enviar automáticamente correo de confirmación de pago con entrada QR oficial y acreditar en cuenta BAC 908326358
         const updatedReg = { ...targetReg, estadoPago: nuevoEstado };
         gmailService.sendRegistrationEmail(updatedReg, 'pago_confirmado', undefined, config.googleScriptUrl).catch(e => {
           console.warn("No se pudo enviar correo automático de pago:", e);
         });
-        setSuccessMsg(`Estado actualizado a "Pagado" y confirmación con Entrada QR enviada a ${targetReg.email}.`);
+        firebaseService.registrarIngresoConvencionEnBac(
+          updatedReg,
+          updatedReg.metodoPago === 'tarjeta' ? 'Pasarela BAC' : 'Depósito BAC'
+        ).catch(e => {
+          console.warn("No se pudo acreditar ingreso en cuenta BAC 908326358:", e);
+        });
+        setSuccessMsg(`Estado actualizado a "Pagado", acreditado en Cuenta BAC 908326358 y Entrada QR enviada a ${targetReg.email}.`);
       } else {
         setSuccessMsg(`Estado de pago actualizado a "${nuevoEstado}".`);
       }

@@ -582,9 +582,9 @@ export const firebaseService = {
       const snapshot = await getDocs(colRef);
       const batch = writeBatch(db);
       snapshot.forEach(d => {
-        // Preservar movimientos generados automáticamente desde Donaciones reales
+        // Preservar movimientos generados automáticamente desde Donaciones o Convención reales
         const data = d.data();
-        if (!data?.donacionId) {
+        if (!data?.donacionId && !data?.convencionRegistroId) {
           batch.delete(d.ref);
         }
       });
@@ -676,6 +676,49 @@ export const firebaseService = {
     } catch (error) {
       console.error("Error deleting donacion + presupuesto:", error);
       throw error;
+    }
+  },
+
+  // ================= CONVENCIÓN: ACREDITAR PAGO EN CUENTA BAC 908326358 =================
+  registrarIngresoConvencionEnBac: async (
+    reg: ConvencionRegistro,
+    origen: 'Pasarela BAC' | 'Depósito BAC' = 'Depósito BAC'
+  ): Promise<void> => {
+    try {
+      const monto = Number(reg.montoPagar) || 0;
+      if (monto <= 0) return; // Cortesías Q0.00 no generan movimiento bancario
+
+      const movId = `mov-conv-${reg.id}`;
+      const todayIso = new Date().toISOString().slice(0, 10);
+      const [y, m, d] = todayIso.split('-');
+      const fechaTexto = `${d}/${m}/${y}`;
+      const notaPartes: string[] = [`Folio: ${reg.id}`];
+      if (reg.recurrenteCheckoutId) notaPartes.push(`Ref BAC: ${reg.recurrenteCheckoutId}`);
+      if (reg.codigoDescuento) notaPartes.push(`Cupón: ${reg.codigoDescuento}`);
+
+      const movimiento = {
+        id: movId,
+        cuentaId: 'bac_908326358',
+        numeroCuenta: '908326358',
+        orden: Date.now(),
+        fecha: todayIso,
+        fechaTexto,
+        descripcion: `INSCRIPCIÓN CONVENCIÓN (${origen.toUpperCase()}): ${(reg.nombre || 'Convencionista').toUpperCase()} — ${reg.club || ''}`,
+        categoriaContable:
+          origen === 'Pasarela BAC'
+            ? 'Liquidación Pasarela Tarjeta BAC'
+            : 'Inscripciones Convención Nacional',
+        debito: 0,
+        credito: monto,
+        saldoContable: 0,
+        destacado: true,
+        notaAuditor: notaPartes.join(' • '),
+        convencionRegistroId: reg.id
+      };
+
+      await setDoc(doc(db, "tesoreria_cuentas_movimientos", movId), JSON.parse(JSON.stringify(movimiento)), { merge: true });
+    } catch (error) {
+      console.error("Error registrando ingreso de convención en cuenta BAC 908326358:", error);
     }
   },
 
