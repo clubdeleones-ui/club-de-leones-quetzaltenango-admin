@@ -45,13 +45,13 @@ import { useModal } from '../context/ModalContext';
 import {
   CUENTAS_BANCARIAS_BANRURAL,
   MOVIMIENTOS_BANCARIOS_REALES,
-  MovimientoBancarioReal
+  MovimientoBancarioReal,
+  CuentaBancariaId
 } from '../data/cuentasBancariasReales';
 
 const CATEGORIAS_ADMIN = [
   'Cuotas Ordinarias de Socios',
   'Ingresos de Nuevos Socios',
-  'Ingresos Convención / Socios',
   'Traslado de Cuotas entre Cuentas',
   'Actividades Institucionales / Convivio',
   'Cuotas Internacionales / Distritales',
@@ -74,6 +74,15 @@ const CATEGORIAS_CUEVA = [
   'Otros Movimientos No Administrativos'
 ];
 
+const CATEGORIAS_BAC = [
+  'Inscripciones Convención Nacional',
+  'Liquidación Pasarela Tarjeta BAC',
+  'Patrocinios Convención',
+  'Apertura / Fondos de Convención',
+  'Gastos Logística Convención',
+  'Otros Movimientos Convención'
+];
+
 const formatGTQ = (val: number) =>
   `Q${Number(val || 0).toLocaleString('es-GT', {
     minimumFractionDigits: 2,
@@ -83,7 +92,7 @@ const formatGTQ = (val: number) =>
 export const Presupuestos: React.FC = () => {
   const { showAlert, showConfirm } = useModal();
 
-  const [activeTab, setActiveTab] = useState<'consolidado' | 'admin_3827008588' | 'cueva_3827008592'>('consolidado');
+  const [activeTab, setActiveTab] = useState<'consolidado' | CuentaBancariaId>('consolidado');
   const [movimientos, setMovimientos] = useState<MovimientoBancarioReal[]>(MOVIMIENTOS_BANCARIOS_REALES);
   const [isSyncing, setIsSyncing] = useState(false);
   const [copiedAccount, setCopiedAccount] = useState<string | null>(null);
@@ -97,7 +106,7 @@ export const Presupuestos: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    cuentaId: 'admin_3827008588' as 'admin_3827008588' | 'cueva_3827008592',
+    cuentaId: 'admin_3827008588' as CuentaBancariaId,
     fecha: new Date().toISOString().slice(0, 10),
     fechaTexto: '',
     descripcion: '',
@@ -119,7 +128,9 @@ export const Presupuestos: React.FC = () => {
           (d) => ({ id: d.id, ...d.data() } as MovimientoBancarioReal)
         );
         const hasOfficialBase =
-          loaded.some((m) => m.id === 'adm-2026-01') && loaded.some((m) => m.id === 'cva-2026-01');
+          loaded.some((m) => m.id === 'adm-2026-01') &&
+          loaded.some((m) => m.id === 'cva-2026-01') &&
+          loaded.some((m) => m.id === 'bac-2026-01');
 
         if ((snapshot.empty || !hasOfficialBase) && !seededBase) {
           seededBase = true;
@@ -143,7 +154,7 @@ export const Presupuestos: React.FC = () => {
 
   // Recalcular libro auxiliar ordenado y con saldo contable acumulado por cuenta
   const analizarCuenta = (
-    cuentaId: 'admin_3827008588' | 'cueva_3827008592',
+    cuentaId: CuentaBancariaId,
     listaRaw: MovimientoBancarioReal[]
   ) => {
     const infoCuenta = CUENTAS_BANCARIAS_BANRURAL[cuentaId];
@@ -196,10 +207,9 @@ export const Presupuestos: React.FC = () => {
 
   const estadoAdmin = useMemo(() => analizarCuenta('admin_3827008588', movimientos), [movimientos]);
   const estadoCueva = useMemo(() => analizarCuenta('cueva_3827008592', movimientos), [movimientos]);
+  const estadoBac = useMemo(() => analizarCuenta('bac_908326358', movimientos), [movimientos]);
 
-  const saldoTotalClub = estadoAdmin.saldoFinal + estadoCueva.saldoFinal;
-  const totalIngresosOperativosClub = estadoAdmin.totalCreditosOperativos + estadoCueva.totalCreditosOperativos;
-  const totalEgresosOperativosClub = estadoAdmin.totalDebitosOperativos + estadoCueva.totalDebitosOperativos;
+  const saldoTotalClub = estadoAdmin.saldoFinal + estadoCueva.saldoFinal + estadoBac.saldoFinal;
 
   const handleCopyAccount = (num: string) => {
     navigator.clipboard.writeText(num);
@@ -207,9 +217,14 @@ export const Presupuestos: React.FC = () => {
     setTimeout(() => setCopiedAccount(null), 2000);
   };
 
-  const handleOpenNewModal = (defaultCuenta?: 'admin_3827008588' | 'cueva_3827008592') => {
-    const targetCuenta =
-      defaultCuenta || (activeTab === 'cueva_3827008592' ? 'cueva_3827008592' : 'admin_3827008588');
+  const handleOpenNewModal = (defaultCuenta?: CuentaBancariaId) => {
+    const targetCuenta: CuentaBancariaId =
+      defaultCuenta ||
+      (activeTab === 'cueva_3827008592'
+        ? 'cueva_3827008592'
+        : activeTab === 'bac_908326358'
+        ? 'bac_908326358'
+        : 'admin_3827008588');
     const todayIso = new Date().toISOString().slice(0, 10);
     const [y, m, d] = todayIso.split('-');
     setEditingId(null);
@@ -218,8 +233,13 @@ export const Presupuestos: React.FC = () => {
       fecha: todayIso,
       fechaTexto: `${d}/${m}/${y}`,
       descripcion: '',
-      categoriaContable: targetCuenta === 'admin_3827008588' ? CATEGORIAS_ADMIN[0] : CATEGORIAS_CUEVA[0],
-      tipoMovimiento: targetCuenta === 'admin_3827008588' ? 'credito' : 'debito',
+      categoriaContable:
+        targetCuenta === 'admin_3827008588'
+          ? CATEGORIAS_ADMIN[0]
+          : targetCuenta === 'bac_908326358'
+          ? CATEGORIAS_BAC[0]
+          : CATEGORIAS_CUEVA[0],
+      tipoMovimiento: targetCuenta === 'cueva_3827008592' ? 'debito' : 'credito',
       monto: '',
       notaAuditor: '',
       destacado: false
@@ -253,7 +273,11 @@ export const Presupuestos: React.FC = () => {
     }
 
     const cuentaMovs =
-      formData.cuentaId === 'admin_3827008588' ? estadoAdmin.movimientos : estadoCueva.movimientos;
+      formData.cuentaId === 'admin_3827008588'
+        ? estadoAdmin.movimientos
+        : formData.cuentaId === 'bac_908326358'
+        ? estadoBac.movimientos
+        : estadoCueva.movimientos;
     const maxOrden = cuentaMovs.reduce((max, m) => Math.max(max, m.orden || 0), 0);
     const existingItem = movimientos.find((m) => m.id === editingId);
 
@@ -261,12 +285,23 @@ export const Presupuestos: React.FC = () => {
     const formattedFechaTexto =
       formData.fechaTexto.trim() || (d && m && y ? `${d}/${m}/${y}` : formData.fecha);
 
+    const prefixId =
+      formData.cuentaId === 'admin_3827008588'
+        ? 'adm'
+        : formData.cuentaId === 'bac_908326358'
+        ? 'bac'
+        : 'cva';
+    const numeroCuentaTarget =
+      formData.cuentaId === 'admin_3827008588'
+        ? '3827008588'
+        : formData.cuentaId === 'bac_908326358'
+        ? '908326358'
+        : '3827008592';
+
     const nuevo: MovimientoBancarioReal = {
-      id:
-        editingId ||
-        `${formData.cuentaId === 'admin_3827008588' ? 'adm' : 'cva'}-${Date.now()}`,
+      id: editingId || `${prefixId}-${Date.now()}`,
       cuentaId: formData.cuentaId,
-      numeroCuenta: formData.cuentaId === 'admin_3827008588' ? '3827008588' : '3827008592',
+      numeroCuenta: numeroCuentaTarget,
       orden: existingItem ? existingItem.orden : maxOrden + 1,
       fecha: formData.fecha,
       fechaTexto: formattedFechaTexto,
@@ -349,12 +384,22 @@ export const Presupuestos: React.FC = () => {
       'Saldo_Contable_Q'
     ];
 
-    const todosOrdenados = [...estadoAdmin.movimientos, ...estadoCueva.movimientos];
+    const todosOrdenados = [
+      ...estadoAdmin.movimientos,
+      ...estadoCueva.movimientos,
+      ...estadoBac.movimientos
+    ];
     const rows = todosOrdenados.map((m) =>
       [
-        '"Banrural S.A."',
+        `"${m.cuentaId === 'bac_908326358' ? 'BAC Credomatic' : 'Banrural S.A.'}"`,
         `"${m.numeroCuenta}"`,
-        `"${m.cuentaId === 'admin_3827008588' ? 'Administrativa' : 'Cueva / No Administrativa'}"`,
+        `"${
+          m.cuentaId === 'admin_3827008588'
+            ? 'Administrativa'
+            : m.cuentaId === 'bac_908326358'
+            ? 'BAC Convención'
+            : 'Cueva / No Administrativa'
+        }"`,
         m.orden,
         `"${m.fechaTexto}"`,
         `"${m.descripcion.replace(/"/g, '""')}"`,
@@ -370,7 +415,7 @@ export const Presupuestos: React.FC = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', 'Estados_De_Cuenta_Banrural_Club_Leones_Quetzaltenango.csv');
+    link.setAttribute('download', 'Estados_De_Cuenta_Club_Leones_Quetzaltenango.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -378,7 +423,11 @@ export const Presupuestos: React.FC = () => {
 
   // Filtrar movimientos para la pestaña activa
   const cuentaActivaEstado =
-    activeTab === 'cueva_3827008592' ? estadoCueva : estadoAdmin;
+    activeTab === 'cueva_3827008592'
+      ? estadoCueva
+      : activeTab === 'bac_908326358'
+      ? estadoBac
+      : estadoAdmin;
 
   const categoriasDisponiblesCuenta = useMemo(() => {
     const set = new Set<string>();
@@ -454,8 +503,20 @@ export const Presupuestos: React.FC = () => {
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-900/70 hover:bg-emerald-800/80 border border-emerald-700/60 text-white transition-colors cursor-pointer"
                 >
                   <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                  <span className="font-bold">Cueva (No Admin):</span>
+                  <span className="font-bold">Cueva (Banrural):</span>
                   <span className="font-mono font-black text-emerald-300">3827008592</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('bac_908326358');
+                    setCategoryFilter('todas');
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-900/70 hover:bg-rose-800/80 border border-rose-700/60 text-white transition-colors cursor-pointer"
+                >
+                  <span className="w-2 h-2 rounded-full bg-rose-400"></span>
+                  <span className="font-bold">Convención (BAC):</span>
+                  <span className="font-mono font-black text-rose-200">908326358</span>
                 </button>
               </div>
             </div>
@@ -514,15 +575,15 @@ export const Presupuestos: React.FC = () => {
         </div>
       </div>
 
-      {/* TARJETAS PRINCIPALES DE SALDO EN BANRURAL S.A. */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      {/* TARJETAS PRINCIPALES DE SALDO (BANRURAL S.A. + BAC CREDOMATIC) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         {/* Cuenta 1: Administrativa 3827008588 */}
         <div
           onClick={() => {
             setActiveTab('admin_3827008588');
             setCategoryFilter('todas');
           }}
-          className={`lg:col-span-4 rounded-3xl p-6 border transition-all cursor-pointer relative overflow-hidden ${
+          className={`rounded-3xl p-5 border transition-all cursor-pointer relative overflow-hidden ${
             activeTab === 'admin_3827008588'
               ? 'bg-blue-950 text-white border-blue-700 shadow-xl ring-4 ring-blue-500/20'
               : 'bg-white text-slate-900 border-slate-200 hover:border-blue-400 shadow-sm'
@@ -635,7 +696,7 @@ export const Presupuestos: React.FC = () => {
             setActiveTab('cueva_3827008592');
             setCategoryFilter('todas');
           }}
-          className={`lg:col-span-4 rounded-3xl p-6 border transition-all cursor-pointer relative overflow-hidden ${
+          className={`rounded-3xl p-5 border transition-all cursor-pointer relative overflow-hidden ${
             activeTab === 'cueva_3827008592'
               ? 'bg-emerald-950 text-white border-emerald-700 shadow-xl ring-4 ring-emerald-500/20'
               : 'bg-white text-slate-900 border-slate-200 hover:border-emerald-400 shadow-sm'
@@ -742,10 +803,123 @@ export const Presupuestos: React.FC = () => {
           </div>
         </div>
 
-        {/* Liquidez Total Consolidada (Ambas Cuentas) */}
+        {/* Cuenta 3: BAC Credomatic Monetaria 908326358 (Convención) */}
+        <div
+          onClick={() => {
+            setActiveTab('bac_908326358');
+            setCategoryFilter('todas');
+          }}
+          className={`rounded-3xl p-5 border transition-all cursor-pointer relative overflow-hidden ${
+            activeTab === 'bac_908326358'
+              ? 'bg-rose-950 text-white border-rose-700 shadow-xl ring-4 ring-rose-500/20'
+              : 'bg-white text-slate-900 border-slate-200 hover:border-rose-400 shadow-sm'
+          }`}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <span
+                className={`inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${
+                  activeTab === 'bac_908326358'
+                    ? 'bg-rose-800 text-yellow-300 border border-rose-700'
+                    : 'bg-rose-50 text-rose-800 border border-rose-200'
+                }`}
+              >
+                <Landmark size={12} />
+                <span>BAC Monetaria • Convención</span>
+              </span>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="font-mono text-sm font-black tracking-wider">
+                  No. 908326358
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCopyAccount('908326358');
+                  }}
+                  title="Copiar número de cuenta BAC"
+                  className={`p-1 rounded-lg transition-colors ${
+                    activeTab === 'bac_908326358'
+                      ? 'hover:bg-rose-800 text-rose-200'
+                      : 'hover:bg-slate-100 text-slate-500'
+                  }`}
+                >
+                  {copiedAccount === '908326358' ? <Check size={13} /> : <Copy size={13} />}
+                </button>
+              </div>
+            </div>
+            <div
+              className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
+                activeTab === 'bac_908326358'
+                  ? 'bg-rose-800 text-yellow-300'
+                  : 'bg-rose-50 text-rose-700 border border-rose-100'
+              }`}
+            >
+              <Landmark size={20} />
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <p
+              className={`text-[10px] font-black uppercase tracking-widest ${
+                activeTab === 'bac_908326358' ? 'text-rose-200' : 'text-slate-400'
+              }`}
+            >
+              Saldo Contable Actual (Corte {estadoBac.ultimaFecha})
+            </p>
+            <h2 className="text-3xl font-black tracking-tight mt-0.5">
+              {formatGTQ(estadoBac.saldoFinal)}
+            </h2>
+          </div>
+
+          <p
+            className={`text-xs font-medium mt-2 leading-snug ${
+              activeTab === 'bac_908326358' ? 'text-rose-100' : 'text-slate-600'
+            }`}
+          >
+            Cuenta oficial destinada a Convención Nacional a nombre de Club de Leones Quetzaltenango.
+          </p>
+
+          <div
+            className={`grid grid-cols-2 gap-2 mt-4 pt-3 border-t text-xs ${
+              activeTab === 'bac_908326358' ? 'border-rose-800/80' : 'border-slate-100'
+            }`}
+          >
+            <div>
+              <span
+                className={`text-[10px] font-bold block ${
+                  activeTab === 'bac_908326358' ? 'text-rose-200' : 'text-slate-400'
+                }`}
+              >
+                Créditos (+)
+              </span>
+              <span className="font-mono font-black text-emerald-500">
+                +{formatGTQ(estadoBac.totalCreditos)}
+              </span>
+            </div>
+            <div>
+              <span
+                className={`text-[10px] font-bold block ${
+                  activeTab === 'bac_908326358' ? 'text-rose-200' : 'text-slate-400'
+                }`}
+              >
+                Débitos (-)
+              </span>
+              <span
+                className={`font-mono font-black ${
+                  activeTab === 'bac_908326358' ? 'text-rose-300' : 'text-rose-600'
+                }`}
+              >
+                -{formatGTQ(estadoBac.totalDebitos)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Liquidez Total Consolidada (Las 3 Cuentas) */}
         <div
           onClick={() => setActiveTab('consolidado')}
-          className={`lg:col-span-4 rounded-3xl p-6 border transition-all cursor-pointer relative overflow-hidden ${
+          className={`rounded-3xl p-5 border transition-all cursor-pointer relative overflow-hidden ${
             activeTab === 'consolidado'
               ? 'bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white border-yellow-500/40 shadow-xl ring-4 ring-yellow-500/20'
               : 'bg-white text-slate-900 border-slate-200 hover:border-yellow-500 shadow-sm'
@@ -761,14 +935,14 @@ export const Presupuestos: React.FC = () => {
                 }`}
               >
                 <ShieldCheck size={12} />
-                <span>Liquidez Total en Banrural S.A.</span>
+                <span>Liquidez Total del Club</span>
               </span>
               <p
                 className={`text-xs font-bold mt-2 ${
                   activeTab === 'consolidado' ? 'text-slate-300' : 'text-slate-500'
                 }`}
               >
-                Suma de Cuentas 3827008588 + 3827008592
+                Banrural (2) + BAC Convención (1)
               </p>
             </div>
             <div
@@ -839,7 +1013,7 @@ export const Presupuestos: React.FC = () => {
                 Total Movimientos
               </span>
               <span className="font-black">
-                {estadoAdmin.movimientos.length + estadoCueva.movimientos.length} transacciones
+                {estadoAdmin.movimientos.length + estadoCueva.movimientos.length + estadoBac.movimientos.length} transacciones
               </span>
             </div>
             <div>
@@ -895,14 +1069,30 @@ export const Presupuestos: React.FC = () => {
             setActiveTab('cueva_3827008592');
             setCategoryFilter('todas');
           }}
-          className={`flex-1 min-w-[240px] py-3 px-4 text-xs sm:text-sm font-black transition-all duration-300 rounded-xl flex items-center justify-center space-x-2 cursor-pointer ${
+          className={`flex-1 min-w-[200px] py-3 px-4 text-xs sm:text-sm font-black transition-all duration-300 rounded-xl flex items-center justify-center space-x-2 cursor-pointer ${
             activeTab === 'cueva_3827008592'
               ? 'bg-emerald-900 shadow-md text-white'
               : 'text-slate-600 hover:text-emerald-900 hover:bg-white/50'
           }`}
         >
           <Car size={16} className={activeTab === 'cueva_3827008592' ? 'text-yellow-300' : 'text-emerald-600'} />
-          <span>3. Cuenta Cueva (No Admin) • 3827008592 ({estadoCueva.movimientos.length})</span>
+          <span>3. Cueva • 3827008592 ({estadoCueva.movimientos.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('bac_908326358');
+            setCategoryFilter('todas');
+          }}
+          className={`flex-1 min-w-[200px] py-3 px-4 text-xs sm:text-sm font-black transition-all duration-300 rounded-xl flex items-center justify-center space-x-2 cursor-pointer ${
+            activeTab === 'bac_908326358'
+              ? 'bg-rose-900 shadow-md text-white'
+              : 'text-slate-600 hover:text-rose-900 hover:bg-white/50'
+          }`}
+        >
+          <Landmark size={16} className={activeTab === 'bac_908326358' ? 'text-yellow-300' : 'text-rose-600'} />
+          <span>4. BAC Convención • 908326358 ({estadoBac.movimientos.length})</span>
         </button>
       </div>
 
@@ -1142,15 +1332,17 @@ export const Presupuestos: React.FC = () => {
       )}
 
       {/* =====================================================================
-          PESTAÑAS 2 Y 3: DETALLE Y GESTIÓN POR CUENTA BANCARIA INDIVIDUAL
+          PESTAÑAS 2, 3 Y 4: DETALLE Y GESTIÓN POR CUENTA BANCARIA INDIVIDUAL
       ===================================================================== */}
-      {(activeTab === 'admin_3827008588' || activeTab === 'cueva_3827008592') && (
+      {(activeTab === 'admin_3827008588' || activeTab === 'cueva_3827008592' || activeTab === 'bac_908326358') && (
         <div className="space-y-6">
           {/* Ficha Técnica de la Cuenta Seleccionada */}
           <div
             className={`rounded-3xl p-6 border shadow-sm flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 ${
               activeTab === 'admin_3827008588'
                 ? 'bg-blue-50/70 border-blue-200'
+                : activeTab === 'bac_908326358'
+                ? 'bg-rose-50/70 border-rose-200'
                 : 'bg-emerald-50/70 border-emerald-200'
             }`}
           >
@@ -1160,6 +1352,8 @@ export const Presupuestos: React.FC = () => {
                   className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md ${
                     activeTab === 'admin_3827008588'
                       ? 'bg-blue-900 text-yellow-300'
+                      : activeTab === 'bac_908326358'
+                      ? 'bg-rose-900 text-yellow-300'
                       : 'bg-emerald-900 text-yellow-300'
                   }`}
                 >
@@ -1438,9 +1632,9 @@ export const Presupuestos: React.FC = () => {
               {/* Selección de Cuenta */}
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">
-                  Cuenta Monetaria Banrural S.A.
+                  Cuenta Monetaria Oficial del Club
                 </label>
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <button
                     type="button"
                     onClick={() =>
@@ -1457,7 +1651,7 @@ export const Presupuestos: React.FC = () => {
                     }`}
                   >
                     <span className="font-mono text-xs font-black block">3827008588</span>
-                    <span className="text-[11px] font-bold opacity-90">Administrativa (Cuotas)</span>
+                    <span className="text-[10px] font-bold opacity-90">Banrural Admin</span>
                   </button>
                   <button
                     type="button"
@@ -1475,7 +1669,25 @@ export const Presupuestos: React.FC = () => {
                     }`}
                   >
                     <span className="font-mono text-xs font-black block">3827008592</span>
-                    <span className="text-[11px] font-bold opacity-90">Cueva (Parqueo/Rentas)</span>
+                    <span className="text-[10px] font-bold opacity-90">Banrural Cueva</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData({
+                        ...formData,
+                        cuentaId: 'bac_908326358',
+                        categoriaContable: CATEGORIAS_BAC[0]
+                      })
+                    }
+                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                      formData.cuentaId === 'bac_908326358'
+                        ? 'bg-rose-950 text-white border-rose-800 shadow-md'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span className="font-mono text-xs font-black block">908326358</span>
+                    <span className="text-[10px] font-bold opacity-90">BAC Convención</span>
                   </button>
                 </div>
               </div>
@@ -1562,6 +1774,8 @@ export const Presupuestos: React.FC = () => {
                   >
                     {(formData.cuentaId === 'admin_3827008588'
                       ? CATEGORIAS_ADMIN
+                      : formData.cuentaId === 'bac_908326358'
+                      ? CATEGORIAS_BAC
                       : CATEGORIAS_CUEVA
                     ).map((cat) => (
                       <option key={cat} value={cat}>

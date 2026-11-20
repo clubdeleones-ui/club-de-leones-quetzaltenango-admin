@@ -379,7 +379,7 @@ Hemos recibido su pre-registro oficial con los siguientes datos:
 💰 Total a Pagar: Q.${(reg.montoPagar || 0).toLocaleString()}.00
 ⏳ Estado actual: ${reg.estadoPago || 'Pendiente de Pago'}
 
-Quedamos a su entera disposición para apoyarle con su depósito o transferencia bancaria (Banrural Cuenta Monetaria 3827008588) o pasarela de tarjeta para emitir su entrada QR oficial. ¿En qué podemos servirle?`;
+Quedamos a su entera disposición para apoyarle con su depósito o transferencia bancaria (BAC Credomatic Cuenta Monetaria 908326358 a nombre de Club de Leones Quetzaltenango) o pasarela de tarjeta para emitir su entrada QR oficial. ¿En qué podemos servirle?`;
     }
   };
 
@@ -448,9 +448,9 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
           headerBgOverlayOpacity: dbConfig.headerBgOverlayOpacity !== undefined ? dbConfig.headerBgOverlayOpacity : 75,
           tarifaBase: dbConfig.tarifaBase !== undefined ? dbConfig.tarifaBase : 650,
           aforoMeta: dbConfig.aforoMeta !== undefined ? dbConfig.aforoMeta : 300,
-          cuentaBancariaBanrural: dbConfig.cuentaBancariaBanrural || '3827008588',
-          nombreCuentaBancaria: dbConfig.nombreCuentaBancaria || 'Club de Leones de Quetzaltenango',
-          bancoNombre: dbConfig.bancoNombre || 'Banrural Monetaria',
+          cuentaBancariaBanrural: (!dbConfig.cuentaBancariaBanrural || dbConfig.cuentaBancariaBanrural === '3827008588') ? '908326358' : dbConfig.cuentaBancariaBanrural,
+          nombreCuentaBancaria: dbConfig.nombreCuentaBancaria || 'Club de Leones Quetzaltenango',
+          bancoNombre: (!dbConfig.bancoNombre || dbConfig.bancoNombre.toLowerCase().includes('banrural')) ? 'BAC Credomatic Monetaria' : dbConfig.bancoNombre,
           actividadesCulturales: dbConfig.actividadesCulturales || [],
           experienciasUnicas: dbConfig.experienciasUnicas || []
         });
@@ -1130,7 +1130,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
           `"${(r.paquete || '').replace(/"/g, '""')}"`,
           `"${r.cantidadAcompanantes || 0}"`,
           `"${r.montoPagar || 0}"`,
-          `"${r.metodoPago === 'tarjeta' ? 'Tarjeta en linea' : 'Transferencia Banrural'}"`,
+          `"${r.metodoPago === 'tarjeta' ? 'Tarjeta en linea' : 'Transferencia BAC'}"`,
           `"${r.estadoPago || 'Pendiente'}"`,
           `"${r.preferenciaNotificacion === 'telegram' ? 'Telegram' : 'Correo'}"`,
           `"${r.telegramVerificado ? 'SI (Activo en Bot)' : 'NO'}"`,
@@ -1914,21 +1914,21 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                         <span className="text-[10px] text-slate-400">Capacidad proyectada para cálculos de % de ocupación.</span>
                       </div>
 
-                      {/* Cuenta Banrural */}
+                      {/* Cuenta BAC Credomatic Convención */}
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-slate-700 block" htmlFor="cuentaBancariaBanrural">
-                          Número de Cuenta Banrural (Monetaria)
+                          Número de Cuenta BAC Credomatic (Monetaria — Convención)
                         </label>
                         <input
                           id="cuentaBancariaBanrural"
                           name="cuentaBancariaBanrural"
                           type="text"
-                          value={config.cuentaBancariaBanrural || '3827008588'}
+                          value={config.cuentaBancariaBanrural || '908326358'}
                           onChange={handleConfigChange}
-                          placeholder="3827008588"
+                          placeholder="908326358"
                           className="w-full bg-white border border-slate-200 focus:border-blue-900 rounded-xl px-4 py-2.5 text-slate-800 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all"
                         />
-                        <span className="text-[10px] text-slate-400">Cuenta bancaria oficial para depósitos y transferencias.</span>
+                        <span className="text-[10px] text-slate-400">Cuenta bancaria monetaria oficial de BAC Credomatic destinada a Convención.</span>
                       </div>
 
                       {/* Nombre Cuenta */}
@@ -1940,12 +1940,12 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                           id="nombreCuentaBancaria"
                           name="nombreCuentaBancaria"
                           type="text"
-                          value={config.nombreCuentaBancaria || 'Club de Leones de Quetzaltenango'}
+                          value={config.nombreCuentaBancaria || 'Club de Leones Quetzaltenango'}
                           onChange={handleConfigChange}
-                          placeholder="Club de Leones de Quetzaltenango"
+                          placeholder="Club de Leones Quetzaltenango"
                           className="w-full bg-white border border-slate-200 focus:border-blue-900 rounded-xl px-4 py-2.5 text-slate-800 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-900/10 transition-all"
                         />
-                        <span className="text-[10px] text-slate-400">Titular verificado para emisión de boletas y transferencias.</span>
+                        <span className="text-[10px] text-slate-400">Titular verificado para emisión de boletas y transferencias BAC.</span>
                       </div>
                     </div>
                   </div>
@@ -3658,7 +3658,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
                                   </select>
 
                                   <span className="text-[10px] text-slate-400 font-semibold block">
-                                    {reg.metodoPago === 'tarjeta' ? '💳 En línea (CyberSource BAC)' : '🏦 Banrural Depósito'}
+                                    {reg.metodoPago === 'tarjeta' ? '💳 En línea (CyberSource BAC)' : '🏦 BAC Depósito (908326358)'}
                                   </span>
                                 </div>
                               </td>
@@ -4407,7 +4407,7 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
 
                       <div className="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-100 space-y-1">
                         <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">
-                          Boleta Banrural
+                          Boleta BAC (908326358)
                         </span>
                         <p className="text-xl font-black text-emerald-950">
                           {pagoTransferencia}

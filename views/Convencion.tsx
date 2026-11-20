@@ -2932,7 +2932,7 @@ export default function Convencion() {
                           className="w-full flex items-center justify-center space-x-2 bg-white/10 hover:bg-white/15 text-white font-bold px-6 py-3.5 rounded-2xl text-xs sm:text-sm transition-all border border-white/20 hover:border-yellow-400/40 cursor-pointer min-h-[46px]"
                         >
                           <Send size={15} />
-                          <span>Pre-registrarme con Opción de Depósito / Transferencia Bancaria (Banrural)</span>
+                          <span>Pre-registrarme con Opción de Depósito / Transferencia Bancaria (BAC Credomatic)</span>
                         </button>
                       </div>
 
@@ -2993,18 +2993,18 @@ export default function Convencion() {
                       )}</p>
                     </div>
 
-                    {/* Si seleccionó transferencia, mostrar cuenta de Banrural */}
+                    {/* Si seleccionó transferencia, mostrar cuenta oficial BAC Credomatic de Convención */}
                     {paymentSuccessData?.metodo === 'transferencia' && (
                       <div className="bg-amber-500/15 border border-amber-400/40 rounded-2xl p-4.5 mt-3 space-y-2.5">
                         <div className="flex items-center space-x-2 text-amber-300 font-black text-xs">
                           <Building2 size={16} />
-                          <span>Datos para Depósito o Transferencia Banrural:</span>
+                          <span>Datos para Depósito o Transferencia BAC Credomatic (Cuenta Convención):</span>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-xs text-slate-200">
-                          <div><span className="text-slate-400">Banco:</span> <strong>Banrural</strong></div>
+                          <div><span className="text-slate-400">Banco:</span> <strong>BAC Credomatic</strong></div>
                           <div><span className="text-slate-400">Tipo de Cuenta:</span> <strong>Monetaria</strong></div>
-                          <div><span className="text-slate-400">No. Cuenta:</span> <strong className="text-yellow-400 font-mono text-sm">3827008588</strong></div>
-                          <div><span className="text-slate-400">A Nombre:</span> <strong>Club de Leones de Quetzaltenango</strong></div>
+                          <div><span className="text-slate-400">No. Cuenta:</span> <strong className="text-yellow-400 font-mono text-sm">908326358</strong></div>
+                          <div><span className="text-slate-400">A Nombre:</span> <strong>Club de Leones Quetzaltenango</strong></div>
                         </div>
                         <p className="text-[11px] text-slate-300 pt-1.5 border-t border-white/10 font-medium">
                           Al realizar tu pago, envía la fotografía de tu boleta a la Comisión Organizadora al correo{' '}

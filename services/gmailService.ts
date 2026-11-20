@@ -157,11 +157,11 @@ RESUMEN DE REGISTRO:
 • Club: ${club}
 
 MÉTODOS DE PAGO DISPONIBLES:
-1. Depósito o Transferencia Bancaria Oficial:
-   - Banco: Banrural
+1. Depósito o Transferencia Bancaria Oficial (Cuenta Convención):
+   - Banco: BAC Credomatic
    - Tipo de Cuenta: Monetaria
-   - No. de Cuenta: 3827008588
-   - A nombre de: Club de Leones de Quetzaltenango
+   - No. de Cuenta: 908326358
+   - A nombre de: Club de Leones Quetzaltenango
    (Favor enviar la fotografía de tu boleta por WhatsApp o a este correo indicando tu folio ${folio}).
 
 2. Pago con Tarjeta de Crédito/Débito en Línea (Cuotas disponibles):
@@ -192,12 +192,12 @@ Correo: ${DEFAULT_GMAIL_SENDER}
     </p>
 
     <div style="background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 16px; margin: 18px 0; font-size: 13px;">
-      <strong style="color: #92400e;">Cuenta Bancaria Oficial para Depósito o Transferencia:</strong>
+      <strong style="color: #92400e;">Cuenta Bancaria Oficial de Convención para Depósito o Transferencia:</strong>
       <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #78350f; line-height: 1.6;">
-        <li><strong>Banco:</strong> Banrural</li>
+        <li><strong>Banco:</strong> BAC Credomatic</li>
         <li><strong>Tipo de Cuenta:</strong> Monetaria</li>
-        <li><strong>No. de Cuenta:</strong> <span style="font-family: monospace; font-size: 14px; font-weight: bold; background: #fef3c7; padding: 2px 6px; border-radius: 4px;">3827008588</span></li>
-        <li><strong>A nombre de:</strong> Club de Leones de Quetzaltenango</li>
+        <li><strong>No. de Cuenta:</strong> <span style="font-family: monospace; font-size: 14px; font-weight: bold; background: #fef3c7; padding: 2px 6px; border-radius: 4px;">908326358</span></li>
+        <li><strong>A nombre de:</strong> Club de Leones Quetzaltenango</li>
         <li><strong>En línea con Tarjeta (Visacuotas / Mastercuotas):</strong> Directamente en la plataforma web</li>
       </ul>
     </div>

@@ -1,6 +1,8 @@
+export type CuentaBancariaId = 'admin_3827008588' | 'cueva_3827008592' | 'bac_908326358';
+
 export interface CuentaBancariaClub {
-  id: 'admin_3827008588' | 'cueva_3827008592';
-  numeroCuenta: '3827008588' | '3827008592';
+  id: CuentaBancariaId;
+  numeroCuenta: '3827008588' | '3827008592' | '908326358';
   alias: string;
   nombreOficial: string;
   banco: string;
@@ -10,13 +12,13 @@ export interface CuentaBancariaClub {
   saldoInicialPeriodo: number;
   saldoActual: number;
   fechaCorte: string;
-  colorTema: 'blue' | 'emerald';
+  colorTema: 'blue' | 'emerald' | 'rose';
 }
 
 export interface MovimientoBancarioReal {
   id: string;
-  cuentaId: 'admin_3827008588' | 'cueva_3827008592';
-  numeroCuenta: '3827008588' | '3827008592';
+  cuentaId: CuentaBancariaId;
+  numeroCuenta: '3827008588' | '3827008592' | '908326358';
   orden: number;
   fecha: string; // Formato ISO YYYY-MM-DD para filtros/orden
   fechaTexto: string; // Formato original del libro banco
@@ -29,7 +31,7 @@ export interface MovimientoBancarioReal {
   notaAuditor?: string;
 }
 
-export const CUENTAS_BANCARIAS_BANRURAL: Record<'admin_3827008588' | 'cueva_3827008592', CuentaBancariaClub> = {
+export const CUENTAS_BANCARIAS_BANRURAL: Record<CuentaBancariaId, CuentaBancariaClub> = {
   admin_3827008588: {
     id: 'admin_3827008588',
     numeroCuenta: '3827008588',
@@ -37,11 +39,11 @@ export const CUENTAS_BANCARIAS_BANRURAL: Record<'admin_3827008588' | 'cueva_3827
     nombreOficial: 'Monetaria Administrativa — Cuotas y Socios',
     banco: 'Banrural S.A.',
     tipoCuenta: 'Monetaria en Quetzales (Q)',
-    proposito: 'Administrativa: Pago de cuotas ordinarias de socios, ingresos de nuevos socios y pagos institucionales/convención.',
+    proposito: 'Administrativa: Pago de cuotas ordinarias de socios e ingresos de nuevos socios.',
     conceptosPermitidos: [
       'Pago de cuotas ordinarias de socios',
       'Ingresos de nuevos socios',
-      'Pagos de convención y cuotas internacionales/distritales',
+      'Cuotas internacionales y distritales',
       'Actividades institucionales de socios'
     ],
     saldoInicialPeriodo: 21431.09,
@@ -68,6 +70,25 @@ export const CUENTAS_BANCARIAS_BANRURAL: Record<'admin_3827008588' | 'cueva_3827
     saldoActual: 21405.17,
     fechaCorte: '19/11/2026',
     colorTema: 'emerald'
+  },
+  bac_908326358: {
+    id: 'bac_908326358',
+    numeroCuenta: '908326358',
+    alias: 'Cuenta BAC Convención',
+    nombreOficial: 'Monetaria BAC Credomatic — Convención Nacional',
+    banco: 'BAC Credomatic',
+    tipoCuenta: 'Monetaria en Quetzales (Q)',
+    proposito: 'Cuenta oficial destinada exclusivamente a la Convención Nacional (inscripciones, depósitos, transferencias y pasarela BAC) a nombre de Club de Leones Quetzaltenango.',
+    conceptosPermitidos: [
+      'Inscripciones a la LXXV Convención Nacional',
+      'Liquidaciones de pasarela de pago con tarjeta BAC / CyberSource',
+      'Patrocinios y aportes específicos de Convención',
+      'Gastos operativos y logística de Convención'
+    ],
+    saldoInicialPeriodo: 0.00,
+    saldoActual: 400.00,
+    fechaCorte: '16/10/2026',
+    colorTema: 'rose'
   }
 };
 
@@ -437,5 +458,24 @@ export const MOVIMIENTOS_BANCARIOS_REALES: MovimientoBancarioReal[] = [
     credito: 0.00,
     saldoContable: 21405.17,
     destacado: true
+  },
+
+  // =========================================================================
+  // CUENTA 908326358 — BAC CREDOMATIC MONETARIA (CONVENCIÓN NACIONAL)
+  // =========================================================================
+  {
+    id: 'bac-2026-01',
+    cuentaId: 'bac_908326358',
+    numeroCuenta: '908326358',
+    orden: 1,
+    fecha: '2026-10-16',
+    fechaTexto: '16/10/2026',
+    descripcion: 'APERTURA CUENTA MONETARIA BAC CREDOMATIC (CONVENCIÓN)',
+    categoriaContable: 'Apertura / Fondos de Convención',
+    debito: 0.00,
+    credito: 400.00,
+    saldoContable: 400.00,
+    destacado: true,
+    notaAuditor: 'Contrapartida de transferencia TIF desde Cuenta Cueva Banrural 3827008592 del 16-oct-2026'
   }
 ];
