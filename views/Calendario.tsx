@@ -2158,202 +2158,185 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                 </div>
             )}
 
-            {/* PROGRAMAR ACTIVIDAD FORM MODAL */}
+            {/* PROGRAMAR ACTIVIDAD FORM MODAL — Compact 2-Column Executive Layout */}
             {isActividadModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-md overflow-y-auto animate-in fade-in duration-300">
-                    <form onSubmit={handleSaveActividad} className="bg-white rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8 max-w-lg w-full space-y-5 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-300 my-6 text-left relative max-h-[92vh] overflow-y-auto">
-                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                            <div className="space-y-0.5">
-                                <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 bg-blue-50 border border-blue-200 rounded-full text-blue-900 text-[10px] font-black uppercase tracking-wider">
-                                    <CalendarPlus size={12} className="text-blue-700" />
-                                    <span>Programación de Actividad</span>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/65 backdrop-blur-md animate-in fade-in duration-200">
+                    <form
+                        onSubmit={handleSaveActividad}
+                        className="bg-white rounded-3xl max-w-4xl w-full shadow-2xl border border-slate-200/80 overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200 text-left relative"
+                    >
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 px-6 py-4 flex items-center justify-between text-white shrink-0">
+                            <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 rounded-xl bg-yellow-400/20 border border-yellow-400/40 text-yellow-300 flex items-center justify-center shrink-0">
+                                    <CalendarPlus size={20} />
                                 </div>
-                                <h4 className="text-xl sm:text-2xl font-black text-blue-900">Programar Nueva Actividad</h4>
+                                <div>
+                                    <h4 className="text-lg sm:text-xl font-black tracking-tight leading-tight">Programar Nueva Actividad</h4>
+                                    <p className="text-[10px] text-blue-200 font-bold uppercase tracking-widest">
+                                        Programación, Logística y Difusión
+                                    </p>
+                                </div>
                             </div>
-                            <button 
-                                type="button" 
-                                onClick={() => setIsActividadModalOpen(false)} 
-                                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                            <button
+                                type="button"
+                                onClick={() => setIsActividadModalOpen(false)}
+                                className="p-2 text-blue-200 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                                aria-label="Cerrar"
                             >
                                 <XIcon size={20} />
                             </button>
                         </div>
 
-                        <div className="space-y-4 pr-1">
-                            {/* Título */}
-                            <div>
-                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                                    Título de la Actividad *
-                                </label>
-                                <input 
-                                    type="text" 
-                                    required 
-                                    value={newActividad.titulo} 
-                                    onChange={e => setNewActividad({...newActividad, titulo: e.target.value})}
-                                    placeholder="Ej. Jornada Médica Visual / Sesión de Juramentación"
-                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-xs sm:text-sm font-semibold text-slate-800"
-                                />
-                            </div>
-
-                            {/* Descripción */}
-                            <div>
-                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                                    Descripción Detallada *
-                                </label>
-                                <textarea 
-                                    rows={3} 
-                                    required
-                                    value={newActividad.descripcion} 
-                                    onChange={e => setNewActividad({...newActividad, descripcion: e.target.value})}
-                                    placeholder="Describe el propósito del evento, quiénes participan y objetivo del servicio..."
-                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all resize-none text-xs sm:text-sm leading-relaxed font-normal text-slate-700"
-                                />
-                            </div>
-
-                            {/* Modalidad de Programación de Fechas */}
-                            <div className="space-y-3 p-4 bg-slate-50 border border-slate-200/80 rounded-2xl">
-                                <div className="flex items-center justify-between">
-                                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center">
-                                        <CalendarIcon size={14} className="mr-1.5 text-blue-900" />
-                                        Programación de Fechas *
+                        {/* Body: 2 columnas equilibradas en escritorio */}
+                        <div className="p-5 sm:p-6 overflow-y-auto grid grid-cols-1 lg:grid-cols-12 gap-5">
+                            {/* Columna Izquierda */}
+                            <div className="lg:col-span-7 space-y-4">
+                                <div>
+                                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5">
+                                        Título de la Actividad *
                                     </label>
-                                    <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-900">
-                                        {modoProgramacionFechas === 'unico' ? '1 Día' : `${fechasMultiples.length} Días Seleccionados`}
-                                    </span>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={newActividad.titulo}
+                                        onChange={e => setNewActividad({ ...newActividad, titulo: e.target.value })}
+                                        placeholder="Ej. Jornada Médica Visual / Sesión de Juramentación"
+                                        className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-800"
+                                    />
                                 </div>
 
-                                {/* Tabs Modo de Fechas */}
-                                <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-200/70 rounded-xl">
-                                    <button
-                                        type="button"
-                                        onClick={() => setModoProgramacionFechas('unico')}
-                                        className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
-                                            modoProgramacionFechas === 'unico'
-                                                ? 'bg-white text-blue-950 shadow-xs font-black'
-                                                : 'text-slate-600 hover:text-slate-900'
-                                        }`}
-                                    >
-                                        <CalendarIcon size={14} />
-                                        <span>Día Único</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setModoProgramacionFechas('multiples');
-                                            if (fechasMultiples.length === 0) {
-                                                setFechasMultiples([newActividad.fecha || `${year}-${String(month + 1).padStart(2, '0')}-15T09:00`]);
-                                            }
-                                        }}
-                                        className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
-                                            modoProgramacionFechas === 'multiples'
-                                                ? 'bg-blue-900 text-white shadow-xs font-black'
-                                                : 'text-slate-600 hover:text-slate-900'
-                                        }`}
-                                    >
-                                        <Sparkles size={14} className="text-amber-300" />
-                                        <span>Múltiples Días / Rango</span>
-                                    </button>
+                                <div>
+                                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5">
+                                        Descripción Detallada *
+                                    </label>
+                                    <textarea
+                                        rows={3}
+                                        required
+                                        value={newActividad.descripcion}
+                                        onChange={e => setNewActividad({ ...newActividad, descripcion: e.target.value })}
+                                        placeholder="Describe el propósito del evento, quiénes participan y objetivo del servicio..."
+                                        className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all resize-none text-sm leading-relaxed text-slate-700"
+                                    />
                                 </div>
 
-                                {/* Modo: Día Único */}
-                                {modoProgramacionFechas === 'unico' ? (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                                                Fecha y Hora *
-                                            </label>
-                                            <input 
-                                                type="datetime-local" 
-                                                required 
-                                                value={newActividad.fecha} 
-                                                onChange={e => setNewActividad({...newActividad, fecha: e.target.value})}
-                                                className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs sm:text-sm font-bold text-slate-800 bg-white"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                                                Vestimenta Sugerida
-                                            </label>
-                                            <select
-                                                value={newActividad.vestimenta}
-                                                onChange={e => setNewActividad({...newActividad, vestimenta: e.target.value})}
-                                                className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs sm:text-sm font-semibold text-slate-800 bg-white cursor-pointer"
+                                {/* Programación de Fechas */}
+                                <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-3">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <label className="text-[11px] font-black text-slate-700 uppercase tracking-wider flex items-center">
+                                            <CalendarIcon size={13} className="mr-1.5 text-blue-900" />
+                                            Programación de Fechas *
+                                        </label>
+                                        <div className="inline-flex bg-slate-200/70 p-0.5 rounded-lg">
+                                            <button
+                                                type="button"
+                                                onClick={() => setModoProgramacionFechas('unico')}
+                                                className={`px-2.5 py-1 rounded-md text-[11px] font-black transition-all cursor-pointer ${
+                                                    modoProgramacionFechas === 'unico'
+                                                        ? 'bg-white text-blue-950 shadow-xs'
+                                                        : 'text-slate-600 hover:text-slate-900'
+                                                }`}
                                             >
-                                                <option value="Libre / Informal">Libre / Informal</option>
-                                                <option value="Chaleco Leonístico">Chaleco Leonístico</option>
-                                                <option value="Formal / Etiqueta">Formal / Etiqueta</option>
-                                                <option value="Sport Elegante">Sport Elegante</option>
-                                                <option value="Uniforme de Servicio">Uniforme de Servicio</option>
-                                            </select>
+                                                Día Único
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setModoProgramacionFechas('multiples');
+                                                    if (fechasMultiples.length === 0) {
+                                                        setFechasMultiples([newActividad.fecha || `${year}-${String(month + 1).padStart(2, '0')}-15T09:00`]);
+                                                    }
+                                                }}
+                                                className={`px-2.5 py-1 rounded-md text-[11px] font-black transition-all flex items-center gap-1 cursor-pointer ${
+                                                    modoProgramacionFechas === 'multiples'
+                                                        ? 'bg-blue-900 text-white shadow-xs'
+                                                        : 'text-slate-600 hover:text-slate-900'
+                                                }`}
+                                            >
+                                                <Sparkles size={11} className="text-amber-300" />
+                                                <span>Múltiples ({fechasMultiples.length || 1})</span>
+                                            </button>
                                         </div>
                                     </div>
-                                ) : (
-                                    /* Modo: Múltiples Días */
-                                    <div className="space-y-3.5 pt-1">
-                                        {/* Generador de Rango */}
-                                        <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl space-y-2.5">
-                                            <span className="text-[11px] font-black text-blue-950 uppercase tracking-wider block">
-                                                ⚡ Generar Rango de Días Consecutivos (Ej. Convención / Jornada)
-                                            </span>
-                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+
+                                    {modoProgramacionFechas === 'unico' ? (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Fecha y Hora *</label>
+                                                <input
+                                                    type="datetime-local"
+                                                    required
+                                                    value={newActividad.fecha}
+                                                    onChange={e => setNewActividad({ ...newActividad, fecha: e.target.value })}
+                                                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs sm:text-sm font-bold text-slate-800 bg-white"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Vestimenta</label>
+                                                <select
+                                                    value={newActividad.vestimenta}
+                                                    onChange={e => setNewActividad({ ...newActividad, vestimenta: e.target.value })}
+                                                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs font-bold text-slate-800 bg-white cursor-pointer"
+                                                >
+                                                    <option value="Libre / Informal">Libre / Informal</option>
+                                                    <option value="Chaleco Leonístico">Chaleco Leonístico</option>
+                                                    <option value="Formal / Etiqueta">Formal / Etiqueta</option>
+                                                    <option value="Sport Elegante">Sport Elegante</option>
+                                                    <option value="Uniforme de Servicio">Uniforme de Servicio</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2.5">
+                                            <div className="grid grid-cols-3 gap-2">
                                                 <div>
-                                                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Desde Día</label>
-                                                    <input 
+                                                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Desde</label>
+                                                    <input
                                                         type="date"
                                                         value={rangoInicio}
                                                         onChange={e => setRangoInicio(e.target.value)}
-                                                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
+                                                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Hasta Día</label>
-                                                    <input 
+                                                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Hasta</label>
+                                                    <input
                                                         type="date"
                                                         value={rangoFin}
                                                         onChange={e => setRangoFin(e.target.value)}
-                                                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
+                                                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Hora Inicio</label>
-                                                    <input 
+                                                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Hora</label>
+                                                    <input
                                                         type="time"
                                                         value={rangoHora}
                                                         onChange={e => setRangoHora(e.target.value)}
-                                                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
+                                                        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
                                                     />
                                                 </div>
                                             </div>
-                                            <button
-                                                type="button"
-                                                onClick={handleGenerarRangoFechas}
-                                                className="w-full py-1.5 bg-blue-900 hover:bg-blue-950 text-white rounded-lg text-xs font-black shadow-xs transition-colors flex items-center justify-center space-x-1.5 cursor-pointer"
-                                            >
-                                                <span>Aplicar Rango al Calendario</span>
-                                            </button>
-                                        </div>
-
-                                        {/* Lista de Días Individuales */}
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between items-center">
-                                                <label className="text-[11px] font-black text-slate-700 uppercase">
-                                                    Lista de Fechas Programadas ({fechasMultiples.length}):
-                                                </label>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleGenerarRangoFechas}
+                                                    className="flex-1 py-1.5 bg-blue-900 hover:bg-blue-950 text-white rounded-lg text-[11px] font-black cursor-pointer"
+                                                >
+                                                    Generar Rango
+                                                </button>
                                                 <button
                                                     type="button"
                                                     onClick={handleAddFechaPersonalizada}
-                                                    className="text-xs font-bold text-blue-900 hover:text-blue-950 flex items-center space-x-1 cursor-pointer"
+                                                    className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-blue-900 rounded-lg text-[11px] font-black cursor-pointer"
                                                 >
-                                                    <span>+ Añadir Fecha</span>
+                                                    + Día
                                                 </button>
                                             </div>
-
-                                            <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                                            <div className="space-y-1 max-h-28 overflow-y-auto pr-1">
                                                 {fechasMultiples.map((fechaItem, idx) => (
-                                                    <div key={idx} className="flex items-center space-x-2 bg-white p-2 border border-slate-200 rounded-xl shadow-2xs">
-                                                        <span className="text-[11px] font-black text-slate-400 w-12 flex-shrink-0">
-                                                            Día {idx + 1}:
-                                                        </span>
+                                                    <div key={idx} className="flex items-center gap-2 bg-white p-1.5 border border-slate-200 rounded-lg">
+                                                        <span className="text-[10px] font-black text-slate-400 w-10 shrink-0">Día {idx + 1}</span>
                                                         <input
                                                             type="datetime-local"
                                                             required
@@ -2363,116 +2346,103 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                                                 updated[idx] = e.target.value;
                                                                 setFechasMultiples(updated);
                                                             }}
-                                                            className="flex-1 px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
+                                                            className="flex-1 px-2 py-1 border border-slate-200 rounded-md text-xs font-bold text-slate-800"
                                                         />
                                                         {fechasMultiples.length > 1 && (
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleRemoveFechaPersonalizada(idx)}
-                                                                className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
-                                                                title="Eliminar este día"
+                                                                className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer"
                                                             >
-                                                                <XIcon size={14} />
+                                                                <XIcon size={13} />
                                                             </button>
                                                         )}
                                                     </div>
                                                 ))}
                                             </div>
                                         </div>
+                                    )}
+                                </div>
 
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                                                Vestimenta Sugerida
-                                            </label>
-                                            <select
-                                                value={newActividad.vestimenta}
-                                                onChange={e => setNewActividad({...newActividad, vestimenta: e.target.value})}
-                                                className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs sm:text-sm font-semibold text-slate-800 bg-white cursor-pointer"
+                                {/* Ubicación y Tipo de Lugar */}
+                                <div className="space-y-2">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider">
+                                            Lugar / Ubicación *
+                                        </label>
+                                        <div className="inline-flex gap-1.5">
+                                            <button
+                                                type="button"
+                                                onClick={() => setNewActividad({ ...newActividad, esEnSalon: true, lugar: 'Salón de Eventos del Club' })}
+                                                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
+                                                    newActividad.esEnSalon
+                                                        ? 'bg-purple-900 text-white border-purple-950'
+                                                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-purple-50'
+                                                }`}
                                             >
-                                                <option value="Libre / Informal">Libre / Informal</option>
-                                                <option value="Chaleco Leonístico">Chaleco Leonístico</option>
-                                                <option value="Formal / Etiqueta">Formal / Etiqueta</option>
-                                                <option value="Sport Elegante">Sport Elegante</option>
-                                                <option value="Uniforme de Servicio">Uniforme de Servicio</option>
-                                            </select>
+                                                🏛️ En Salón
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setNewActividad({
+                                                    ...newActividad,
+                                                    esEnSalon: false,
+                                                    lugar: newActividad.lugar === 'Salón de Eventos del Club' ? '' : newActividad.lugar
+                                                })}
+                                                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
+                                                    !newActividad.esEnSalon
+                                                        ? 'bg-blue-900 text-white border-blue-950'
+                                                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-blue-50'
+                                                }`}
+                                            >
+                                                📍 Exterior / Otro
+                                            </button>
                                         </div>
                                     </div>
-                                )}
-                            </div>
-
-                            {/* Ubicación y Tipo de Lugar */}
-                            <div className="space-y-2">
-                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider">
-                                    Lugar / Ubicación *
-                                </label>
-                                <div className="grid grid-cols-2 gap-2 mb-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setNewActividad({
-                                            ...newActividad, 
-                                            esEnSalon: true, 
-                                            lugar: 'Salón de Eventos del Club'
-                                        })}
-                                        className={`py-2 px-3 rounded-xl text-xs font-bold border flex items-center justify-center space-x-1.5 transition-all ${
-                                            newActividad.esEnSalon
-                                                ? 'bg-purple-900 text-white border-purple-950 shadow-xs'
-                                                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-purple-50'
-                                        }`}
-                                    >
-                                        <span>🏛️ En Salón</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setNewActividad({
-                                            ...newActividad, 
-                                            esEnSalon: false, 
-                                            lugar: newActividad.lugar === 'Salón de Eventos del Club' ? '' : newActividad.lugar
-                                        })}
-                                        className={`py-2 px-3 rounded-xl text-xs font-bold border flex items-center justify-center space-x-1.5 transition-all ${
-                                            !newActividad.esEnSalon
-                                                ? 'bg-blue-900 text-white border-blue-950 shadow-xs'
-                                                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-blue-50'
-                                        }`}
-                                    >
-                                        <span>📍 En Exterior / Otro</span>
-                                    </button>
+                                    <div className="relative">
+                                        <MapPin size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            required
+                                            value={newActividad.lugar}
+                                            onChange={e => setNewActividad({ ...newActividad, lugar: e.target.value })}
+                                            placeholder="Ej. Salón de Eventos del Club / Parque Central Xela"
+                                            className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-sm font-semibold text-slate-800"
+                                        />
+                                    </div>
                                 </div>
-                                <input 
-                                    type="text" 
-                                    required 
-                                    value={newActividad.lugar} 
-                                    onChange={e => setNewActividad({...newActividad, lugar: e.target.value})}
-                                    placeholder="Ej. Salón de Eventos del Club / Parque Central Xela"
-                                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-xs sm:text-sm font-semibold text-slate-800"
-                                />
                             </div>
 
-                            {/* Afiche / Imagen */}
-                            <div>
-                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                                    Imagen / Afiche de la Actividad
-                                </label>
-                                <div className="space-y-2">
-                                    <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100/60 transition-all overflow-hidden relative group">
-                                        {newActividadImagePreview ? (
+                            {/* Columna Derecha: Afiche + Switch Cards 2x2 */}
+                            <div className="lg:col-span-5 space-y-4 flex flex-col justify-between">
+                                <div className="space-y-2.5">
+                                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider">
+                                        Imagen / Afiche Oficial
+                                    </label>
+                                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer bg-slate-50 hover:bg-blue-50/40 hover:border-blue-400 transition-all overflow-hidden relative group">
+                                        {newActividadImagePreview || newActividad.imagen ? (
                                             <>
-                                                <img src={newActividadImagePreview} alt="Preview" className="w-full h-full object-cover" />
-                                                <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold">
-                                                    Cambiar Imagen
+                                                <img
+                                                    src={newActividadImagePreview || newActividad.imagen}
+                                                    alt="Vista previa"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                <div className="absolute inset-0 bg-slate-950/45 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-black">
+                                                    Cambiar Afiche
                                                 </div>
                                             </>
                                         ) : (
-                                            <div className="flex flex-col items-center justify-center p-3 text-center">
-                                                <Upload className="w-6 h-6 text-slate-400 mb-1 group-hover:text-blue-900 transition-colors" />
-                                                <p className="text-xs font-bold text-slate-600">Subir Afiche o Foto</p>
-                                                <p className="text-[10px] text-slate-400">PNG, JPG o WEBP (Optimización automática)</p>
+                                            <div className="flex flex-col items-center justify-center px-4 text-center">
+                                                <Upload className="w-6 h-6 text-slate-400 mb-1.5 group-hover:text-blue-900 transition-colors" />
+                                                <p className="text-xs font-black text-slate-600">Subir Afiche o Foto</p>
+                                                <p className="text-[10px] text-slate-400">PNG, JPG o WEBP (optimización automática)</p>
                                             </div>
                                         )}
-                                        <input 
-                                            type="file" 
-                                            accept="image/*" 
-                                            className="hidden" 
-                                            onChange={async (e) => {
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={async e => {
                                                 const file = e.target.files?.[0];
                                                 if (file) {
                                                     const validation = validateImageFile(file);
@@ -2484,97 +2454,94 @@ const Calendario: React.FC<CalendarioProps> = ({ accessToken, isAuthenticated = 
                                                     try {
                                                         const compressed = await compressImageFile(file, 800, 800, 0.7);
                                                         setNewActividadImagePreview(compressed);
-                                                    } catch (err) {
-                                                        console.error("Error preview image:", err);
+                                                    } catch {
                                                         const reader = new FileReader();
-                                                        reader.onloadend = () => {
-                                                            setNewActividadImagePreview(reader.result as string);
-                                                        };
+                                                        reader.onloadend = () => setNewActividadImagePreview(reader.result as string);
                                                         reader.readAsDataURL(file);
                                                     }
                                                 }
                                             }}
                                         />
                                     </label>
-
-                                    <input 
-                                        type="text" 
-                                        value={newActividad.imagen} 
+                                    <input
+                                        type="text"
+                                        value={newActividad.imagen}
                                         onChange={e => {
-                                            setNewActividad({...newActividad, imagen: e.target.value});
+                                            setNewActividad({ ...newActividad, imagen: e.target.value });
                                             setNewActividadImageFile(null);
                                             setNewActividadImagePreview(null);
                                         }}
-                                        placeholder="O ingresa enlace de imagen (Opcional)"
-                                        className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-xs font-mono outline-none text-slate-700"
+                                        placeholder="O pegar URL de imagen (opcional)"
+                                        className="w-full px-3 py-2 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-xs font-mono outline-none text-slate-700"
                                     />
                                 </div>
-                            </div>
 
-                            {/* Opciones de Participación */}
-                            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2.5">
-                                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Opciones y Difusión</span>
-                                
-                                <label className="flex items-center space-x-2.5 cursor-pointer text-xs font-bold text-slate-700 select-none">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={newActividad.publica} 
-                                        onChange={e => setNewActividad({...newActividad, publica: e.target.checked})}
-                                        className="w-4 h-4 rounded text-blue-900 border-slate-300 focus:ring-blue-900 cursor-pointer"
-                                    />
-                                    <span>Actividad visible públicamente en el portal web</span>
-                                </label>
-
-                                <label className="flex items-center space-x-2.5 cursor-pointer text-xs font-bold text-slate-700 select-none">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={newActividad.conBotonAsistencia} 
-                                        onChange={e => setNewActividad({...newActividad, conBotonAsistencia: e.target.checked})}
-                                        className="w-4 h-4 rounded text-blue-900 border-slate-300 focus:ring-blue-900 cursor-pointer"
-                                    />
-                                    <span>Habilitar botón de Confirmación de Asistencia (RSVP)</span>
-                                </label>
-
-                                <label className="flex items-center space-x-2.5 cursor-pointer text-xs font-bold text-slate-700 select-none">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={newActividad.conBotonVoluntariado} 
-                                        onChange={e => setNewActividad({...newActividad, conBotonVoluntariado: e.target.checked})}
-                                        className="w-4 h-4 rounded text-blue-900 border-slate-300 focus:ring-blue-900 cursor-pointer"
-                                    />
-                                    <span>Habilitar botón de Convocatoria de Voluntarios</span>
-                                </label>
-
-                                <label className="flex items-center space-x-2.5 cursor-pointer text-xs font-bold text-slate-700 select-none">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={newActividad.conBotonDonacion} 
-                                        onChange={e => setNewActividad({...newActividad, conBotonDonacion: e.target.checked})}
-                                        className="w-4 h-4 rounded text-blue-900 border-slate-300 focus:ring-blue-900 cursor-pointer"
-                                    />
-                                    <span>Habilitar Botón de Donaciones</span>
-                                </label>
+                                {/* Tarjetas Switch 2x2 — Cero desborde */}
+                                <div className="space-y-2">
+                                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider">
+                                        Visibilidad y Botones Interactivos
+                                    </label>
+                                    <div className="grid grid-cols-2 gap-2.5">
+                                        {[
+                                            { key: 'publica' as const, label: 'Pública en Web', sub: 'Visible al público', icon: Globe, active: newActividad.publica },
+                                            { key: 'conBotonAsistencia' as const, label: 'Asistencia', sub: 'Confirmar cupo', icon: CheckCircle2, active: newActividad.conBotonAsistencia },
+                                            { key: 'conBotonVoluntariado' as const, label: 'Voluntariado', sub: 'Sumar apoyo', icon: Users, active: newActividad.conBotonVoluntariado },
+                                            { key: 'conBotonDonacion' as const, label: 'Donaciones', sub: 'Botón aportar', icon: Heart, active: newActividad.conBotonDonacion }
+                                        ].map(opt => {
+                                            const Icon = opt.icon;
+                                            return (
+                                                <button
+                                                    key={opt.key}
+                                                    type="button"
+                                                    onClick={() => setNewActividad({ ...newActividad, [opt.key]: !opt.active })}
+                                                    className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2 min-w-0 ${
+                                                        opt.active
+                                                            ? 'bg-blue-950 text-white border-blue-900 shadow-sm'
+                                                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center justify-between gap-2 w-full">
+                                                        <Icon size={16} className={opt.active ? 'text-yellow-300 shrink-0' : 'text-slate-400 shrink-0'} />
+                                                        <span
+                                                            className={`w-8 h-4.5 rounded-full p-0.5 transition-colors flex items-center shrink-0 ${
+                                                                opt.active ? 'bg-emerald-400 justify-end' : 'bg-slate-300 justify-start'
+                                                            }`}
+                                                        >
+                                                            <span className="w-3.5 h-3.5 rounded-full bg-white shadow-xs block" />
+                                                        </span>
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <span className="text-xs font-black block truncate">{opt.label}</span>
+                                                        <span className={`text-[10px] block truncate ${opt.active ? 'text-blue-200' : 'text-slate-400'}`}>
+                                                            {opt.sub}
+                                                        </span>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="pt-3 flex justify-end space-x-3 border-t border-slate-100">
+                        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200/80 flex justify-end space-x-3 shrink-0">
                             <button
                                 type="button"
                                 onClick={() => setIsActividadModalOpen(false)}
-                                className="px-4 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-bold hover:bg-slate-50 text-xs cursor-pointer"
+                                className="px-5 py-2.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 font-bold text-xs uppercase tracking-wider cursor-pointer"
                             >
                                 Cancelar
                             </button>
                             <button
                                 type="submit"
                                 disabled={isSavingActividad}
-                                className="px-6 py-2.5 bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-950 hover:from-blue-800 hover:to-indigo-800 disabled:opacity-50 text-white font-black rounded-xl shadow-md text-xs transition-all flex items-center justify-center space-x-2 cursor-pointer"
+                                className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 disabled:opacity-50 text-white font-black rounded-xl shadow-md text-xs uppercase tracking-wider transition-all flex items-center justify-center space-x-2 cursor-pointer"
                             >
                                 {isSavingActividad ? (
                                     <>
                                         <Loader2 size={14} className="animate-spin" />
-                                        <span>Guardando Actividad...</span>
+                                        <span>Guardando...</span>
                                     </>
                                 ) : (
                                     <>
