@@ -615,7 +615,38 @@ export default function Convencion() {
   const [pendingConvencionRegistro, setPendingConvencionRegistro] = useState<ConvencionRegistro | null>(null);
   const [directPayRegistro, setDirectPayRegistro] = useState<ConvencionRegistro | null>(null);
   const [directPayLoading, setDirectPayLoading] = useState(false);
+  const [showQuickPayLookup, setShowQuickPayLookup] = useState(false);
+  const [quickPayQuery, setQuickPayQuery] = useState('');
+  const [quickPayLoading, setQuickPayLoading] = useState(false);
+  const [quickPayError, setQuickPayError] = useState('');
   const [copiedBacAccount, setCopiedBacAccount] = useState(false);
+
+  const handleQuickPayLookup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = quickPayQuery.trim();
+    if (!q) {
+      setQuickPayError('Ingresa tu correo, teléfono o folio de pre-inscripción.');
+      return;
+    }
+    setQuickPayLoading(true);
+    setQuickPayError('');
+    try {
+      const match = await firebaseService.searchConvencionRegistro(q);
+      if (!match) {
+        setQuickPayError('No encontramos una pre-inscripción con ese dato. Verifica tu correo, teléfono o folio.');
+        return;
+      }
+      setDirectPayRegistro(match);
+      setShowQuickPayLookup(false);
+      setQuickPayQuery('');
+      showToast(`¡Folio ${match.id} encontrado! Puedes completar tu pago sin volver a llenar el formulario.`, 'success');
+    } catch (err) {
+      console.error('Error buscando pre-inscripción para pago rápido:', err);
+      setQuickPayError('No pudimos consultar tu registro en este momento. Intenta de nuevo.');
+    } finally {
+      setQuickPayLoading(false);
+    }
+  };
   const [paymentSuccessData, setPaymentSuccessData] = useState<{
     id: string;
     nombre: string;
@@ -2229,17 +2260,70 @@ export default function Convencion() {
                       </span>
                     </div>
 
-                    {/* Botón de Acceso Rápido para Consultar Entrada QR */}
-                    <div className="pt-2 flex justify-center">
+                    {/* Botones de Acceso Rápido: Pagar sin repetir formulario & Consultar Entrada QR */}
+                    <div className="pt-2 flex flex-wrap items-center justify-center gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => { setShowQuickPayLookup(prev => !prev); setQuickPayError(''); }}
+                        className="inline-flex items-center space-x-2 bg-gradient-to-r from-emerald-500/25 via-teal-500/25 to-emerald-500/25 hover:from-emerald-400 hover:to-teal-300 hover:text-blue-955 text-emerald-200 border border-emerald-400/50 px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 shadow-md cursor-pointer group"
+                      >
+                        <CreditCard size={15} className="group-hover:scale-110 transition-transform text-emerald-300 group-hover:text-blue-955" />
+                        <span>¿Ya te pre-inscribiste y solo quieres pagar?</span>
+                      </button>
+
                       <button
                         type="button"
                         onClick={() => { setIsQrSearchModalOpen(true); setQrSearchError(''); }}
                         className="inline-flex items-center space-x-2 bg-gradient-to-r from-yellow-500/20 via-amber-400/25 to-yellow-500/20 hover:from-yellow-400 hover:to-amber-300 hover:text-blue-955 text-yellow-300 border border-yellow-400/40 px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-wider transition-all duration-300 shadow-md cursor-pointer group"
                       >
                         <QrCode size={15} className="group-hover:scale-110 transition-transform text-yellow-400" />
-                        <span>¿Ya te registraste? Encuentra tu Entrada QR Oficial aquí</span>
+                        <span>Encuentra tu Entrada QR Oficial</span>
                       </button>
                     </div>
+
+                    {/* Buscador Inline para Pago Directo de Pre-Inscritos */}
+                    {showQuickPayLookup && (
+                      <form
+                        onSubmit={handleQuickPayLookup}
+                        className="mt-4 max-w-xl mx-auto bg-white/[0.06] border border-emerald-400/40 rounded-2xl p-4 space-y-3 text-left animate-in fade-in slide-in-from-top-2 duration-200 shadow-lg"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-black uppercase tracking-wider text-emerald-300 flex items-center space-x-1.5">
+                            <CreditCard size={13} />
+                            <span>Acceso directo a pago (sin repetir formulario)</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => { setShowQuickPayLookup(false); setQuickPayError(''); }}
+                            className="text-slate-400 hover:text-white text-xs font-bold cursor-pointer"
+                          >
+                            Cerrar
+                          </button>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <div className="relative flex-1">
+                            <Search size={15} className="absolute left-3.5 top-3 text-slate-400" />
+                            <input
+                              type="text"
+                              value={quickPayQuery}
+                              onChange={(e) => { setQuickPayQuery(e.target.value); setQuickPayError(''); }}
+                              placeholder="Tu correo, teléfono o folio (ej. CONV-2026-...)"
+                              className="w-full pl-9 pr-3 py-2.5 bg-[#071126]/80 border border-white/15 rounded-xl text-xs sm:text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                            />
+                          </div>
+                          <button
+                            type="submit"
+                            disabled={quickPayLoading}
+                            className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 text-blue-955 font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shrink-0 shadow-md"
+                          >
+                            {quickPayLoading ? 'Buscando...' : 'Ir a Pagar'}
+                          </button>
+                        </div>
+                        {quickPayError && (
+                          <p className="text-xs font-bold text-amber-300">{quickPayError}</p>
+                        )}
+                      </form>
+                    )}
                   </div>
 
                   {/* Banner de Borrador Restaurado */}

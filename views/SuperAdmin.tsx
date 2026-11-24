@@ -328,8 +328,29 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>('Principal');
   const [moduleSearchQuery, setModuleSearchQuery] = useState('');
+  const [headerQuickSearch, setHeaderQuickSearch] = useState('');
+  const [isHeaderSearchOpen, setIsHeaderSearchOpen] = useState(false);
   const [showApisModal, setShowApisModal] = useState(false);
   const [geminiApiKeyInput, setGeminiApiKeyInput] = useState(() => geminiService.getApiKey());
+
+  const quickJumpModules = useMemo(() => {
+    const q = headerQuickSearch.trim().toLowerCase();
+    if (!q) return [];
+    const results: Array<{ id: TabType; label: string; category: string; icon: any }> = [];
+    CATEGORIAS_MODULOS.forEach(group => {
+      group.items.forEach(item => {
+        if (!allowedTabs.includes(item.id)) return;
+        if (
+          item.label.toLowerCase().includes(q) ||
+          group.category.toLowerCase().includes(q) ||
+          item.id.toLowerCase().includes(q)
+        ) {
+          results.push({ id: item.id, label: item.label, category: group.category, icon: item.icon });
+        }
+      });
+    });
+    return results.slice(0, 8);
+  }, [headerQuickSearch, allowedTabs]);
 
   // Filtrar categorías y expandir dinámicamente si hay búsqueda
   const filteredCategorias = useMemo(() => {
@@ -4622,15 +4643,86 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
           <p className="text-lg text-slate-500 mt-2">Gestiona las actividades, finanzas, actas y beneficios del club en un solo lugar.</p>
         </div>
 
-        {/* Action button for APIs & Integrations */}
-        {(user.rol === UserRole.SUPER_ADMIN || user.rol === UserRole.SECRETARIO) && (
-          <div className="flex items-center gap-3">
+        {/* Quick Module Search + Action button for APIs & Integrations */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+          <div className="relative w-full sm:w-72">
+            <Search size={15} className="absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              value={headerQuickSearch}
+              onFocus={() => setIsHeaderSearchOpen(true)}
+              onBlur={() => setTimeout(() => setIsHeaderSearchOpen(false), 180)}
+              onChange={(e) => {
+                setHeaderQuickSearch(e.target.value);
+                setIsHeaderSearchOpen(true);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && quickJumpModules.length > 0) {
+                  e.preventDefault();
+                  navigate(`/admin?tab=${quickJumpModules[0].id}`);
+                  setHeaderQuickSearch('');
+                  setIsHeaderSearchOpen(false);
+                } else if (e.key === 'Escape') {
+                  setHeaderQuickSearch('');
+                  setIsHeaderSearchOpen(false);
+                }
+              }}
+              placeholder="Ir rápido a un módulo..."
+              className="w-full pl-10 pr-8 py-3 bg-white border border-slate-200/90 rounded-2xl text-xs sm:text-sm font-bold text-slate-700 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent transition-all"
+            />
+            {headerQuickSearch && (
+              <button
+                type="button"
+                onClick={() => setHeaderQuickSearch('')}
+                className="absolute right-3 top-3 p-1 text-slate-400 hover:text-slate-600 rounded-md"
+              >
+                <XIcon size={13} />
+              </button>
+            )}
+            {isHeaderSearchOpen && headerQuickSearch.trim() !== '' && (
+              <div className="absolute right-0 left-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-slate-100">
+                {quickJumpModules.length === 0 ? (
+                  <div className="p-4 text-center text-xs font-semibold text-slate-400">
+                    Sin módulos coincidentes
+                  </div>
+                ) : (
+                  quickJumpModules.map(mod => {
+                    const ModIcon = mod.icon;
+                    return (
+                      <button
+                        key={mod.id}
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          navigate(`/admin?tab=${mod.id}`);
+                          setHeaderQuickSearch('');
+                          setIsHeaderSearchOpen(false);
+                        }}
+                        className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-blue-50/70 transition-colors text-left cursor-pointer"
+                      >
+                        <div className="flex items-center space-x-2.5 min-w-0">
+                          <ModIcon size={15} className="text-blue-900 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-xs font-extrabold text-slate-800 truncate">{mod.label}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">{mod.category}</p>
+                          </div>
+                        </div>
+                        <ChevronRight size={14} className="text-slate-300 shrink-0" />
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </div>
+
+          {(user.rol === UserRole.SUPER_ADMIN || user.rol === UserRole.SECRETARIO) && (
             <button
               onClick={() => {
                 setGeminiApiKeyInput(geminiService.getApiKey());
                 setShowApisModal(true);
               }}
-              className="flex items-center space-x-2.5 bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-700 hover:text-blue-950 font-extrabold px-4 sm:px-5 py-3 rounded-2xl text-xs sm:text-sm shadow-sm hover:shadow-md transition-all active:scale-95 cursor-pointer"
+              className="flex items-center justify-center space-x-2.5 bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-700 hover:text-blue-950 font-extrabold px-4 sm:px-5 py-3 rounded-2xl text-xs sm:text-sm shadow-sm hover:shadow-md transition-all active:scale-95 cursor-pointer shrink-0"
               title="Configuración centralizada de APIs, Gemini IA e Integraciones"
             >
               <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-xs">
@@ -4639,8 +4731,8 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
               <span>Integraciones & IA</span>
               <span className={`w-2 h-2 rounded-full ${geminiService.getApiKey() ? 'bg-emerald-500 shadow-xs shadow-emerald-500/50' : 'bg-slate-300'}`}></span>
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </header>
 
       <div className="flex flex-col lg:flex-row gap-8">

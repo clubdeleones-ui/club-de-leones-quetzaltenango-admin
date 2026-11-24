@@ -261,8 +261,40 @@ export const ClubDataProvider: React.FC<ClubDataProviderProps> = ({ children, is
     oldKeys.forEach(k => localStorage.removeItem(k));
   }, []);
 
+  // 2b. Detectar ruta actual (HashRouter) para evitar lecturas innecesarias de Firestore en landings públicas autónomas
+  const [hashRoute, setHashRoute] = useState<string>(() =>
+    typeof window !== 'undefined' ? window.location.hash.replace(/^#/, '').split('?')[0].toLowerCase() : '/'
+  );
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const next = window.location.hash.replace(/^#/, '').split('?')[0].toLowerCase();
+      setHashRoute(next || '/');
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const isLightweightPublicRoute =
+    !isAuthenticated &&
+    (hashRoute.startsWith('/convencion') ||
+      hashRoute.startsWith('/herramientas/diabetes') ||
+      hashRoute.startsWith('/donar'));
+
   // 3. Set up root-level onSnapshot subscriptions for public essentials (Actividades, Galería, Historia, Socios, Solicitudes)
   useEffect(() => {
+    if (isLightweightPublicRoute) {
+      setLoading(prev => ({
+        ...prev,
+        socios: false,
+        actividades: false,
+        galeria: false,
+        hitos: false,
+        solicitudes: false
+      }));
+      return;
+    }
+
     // 3a. Socios
     const unsubSocios = onSnapshot(collection(db, 'socios'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Socio);
@@ -327,7 +359,7 @@ export const ClubDataProvider: React.FC<ClubDataProviderProps> = ({ children, is
       unsubHitos();
       unsubSolicitudes();
     };
-  }, []);
+  }, [isLightweightPublicRoute]);
 
   // 4. Set up private administrative subscriptions only when a user is authenticated
   useEffect(() => {

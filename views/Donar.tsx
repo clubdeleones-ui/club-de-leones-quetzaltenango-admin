@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Gift, Heart, ArrowLeft, CreditCard, ShieldCheck, Sparkles, Check, CheckCircle2 } from 'lucide-react';
+import { Gift, Heart, ArrowLeft, CreditCard, ShieldCheck, Sparkles, Check, CheckCircle2, Building2, Copy, MessageCircle } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { CyberSourcePaymentModal } from '../components/CyberSourcePaymentModal';
 import { CyberSourcePaymentResult } from '../services/cybersourceService';
@@ -9,12 +9,28 @@ import { Donacion } from '../types';
 
 const Donar: React.FC = () => {
   const { showToast } = useToast();
+  const [metodoDonacion, setMetodoDonacion] = useState<'tarjeta' | 'transferencia'>('tarjeta');
+  const [copiedCuenta, setCopiedCuenta] = useState(false);
   const [monto, setMonto] = useState<number>(100);
   const [montoPersonalizado, setMontoPersonalizado] = useState<string>('');
   const [nombreDonante, setNombreDonante] = useState<string>('');
   const [correoDonante, setCorreoDonante] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [donationResult, setDonationResult] = useState<CyberSourcePaymentResult | null>(null);
+
+  const CUENTA_BANRURAL_CUEVA = '3827008592';
+  const WHATSAPP_CLUB = '50277612345';
+
+  const handleCopyCuenta = async () => {
+    try {
+      await navigator.clipboard.writeText(CUENTA_BANRURAL_CUEVA);
+      setCopiedCuenta(true);
+      showToast('Número de cuenta Banrural copiado al portapapeles.', 'success');
+      setTimeout(() => setCopiedCuenta(false), 2500);
+    } catch {
+      showToast(`Cuenta Banrural: ${CUENTA_BANRURAL_CUEVA}`, 'info');
+    }
+  };
 
   const presetAmounts = [50, 100, 250, 500];
 
@@ -133,6 +149,34 @@ const Donar: React.FC = () => {
         /* Donation Form */
         <form onSubmit={handleStartDonation} className="bg-slate-50 border border-slate-200/80 rounded-3xl p-6 sm:p-8 space-y-6 text-left max-w-xl mx-auto shadow-sm">
           
+          {/* Method Selector Tabs */}
+          <div className="grid grid-cols-2 gap-2 p-1.5 bg-white border border-slate-200 rounded-2xl shadow-xs">
+            <button
+              type="button"
+              onClick={() => setMetodoDonacion('tarjeta')}
+              className={`flex items-center justify-center space-x-2 py-2.5 px-3 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                metodoDonacion === 'tarjeta'
+                  ? 'bg-blue-900 text-white shadow-md'
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <CreditCard size={15} />
+              <span>Tarjeta (BAC)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMetodoDonacion('transferencia')}
+              className={`flex items-center justify-center space-x-2 py-2.5 px-3 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                metodoDonacion === 'transferencia'
+                  ? 'bg-emerald-700 text-white shadow-md'
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <Building2 size={15} />
+              <span>Transferencia / Depósito</span>
+            </button>
+          </div>
+
           {/* Preset Amounts */}
           <div className="space-y-2">
             <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">1. Selecciona el Monto (GTQ)</label>
@@ -174,50 +218,111 @@ const Donar: React.FC = () => {
             </div>
           </div>
 
-          {/* Donor Info */}
-          <div className="space-y-3 pt-2 border-t border-slate-200/60">
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">2. Datos de Contacto</label>
-            
-            <div>
-              <input
-                type="text"
-                value={nombreDonante}
-                onChange={(e) => setNombreDonante(e.target.value)}
-                placeholder="Nombre Completo (Opcional si deseas ser anónimo)"
-                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400"
-              />
-            </div>
+          {metodoDonacion === 'tarjeta' ? (
+            <>
+              {/* Donor Info */}
+              <div className="space-y-3 pt-2 border-t border-slate-200/60">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">2. Datos de Contacto</label>
+                
+                <div>
+                  <input
+                    type="text"
+                    value={nombreDonante}
+                    onChange={(e) => setNombreDonante(e.target.value)}
+                    placeholder="Nombre Completo (Opcional si deseas ser anónimo)"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400"
+                  />
+                </div>
 
-            <div>
-              <input
-                type="email"
-                value={correoDonante}
-                onChange={(e) => setCorreoDonante(e.target.value)}
-                placeholder="Correo Electrónico (para enviarte tu comprobante)"
-                required
-                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400"
-              />
-            </div>
-          </div>
+                <div>
+                  <input
+                    type="email"
+                    value={correoDonante}
+                    onChange={(e) => setCorreoDonante(e.target.value)}
+                    placeholder="Correo Electrónico (para enviarte tu comprobante)"
+                    required
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-slate-400"
+                  />
+                </div>
+              </div>
 
-          {/* Security Banner */}
-          <div className="bg-blue-50/60 border border-blue-150 rounded-2xl p-4 flex items-center space-x-3 text-left">
-            <div className="w-10 h-10 rounded-xl bg-blue-900 text-yellow-400 flex items-center justify-center shrink-0">
-              <ShieldCheck size={20} />
-            </div>
-            <p className="text-[11px] text-slate-600 leading-tight">
-              Procesado de forma 100% segura por <strong>CyberSource / BAC Credomatic</strong> con autenticación 3D Secure 2.0 y cifrado SSL bancario. Acepta Visa, Mastercard y AMEX.
-            </p>
-          </div>
+              {/* Security Banner */}
+              <div className="bg-blue-50/60 border border-blue-150 rounded-2xl p-4 flex items-center space-x-3 text-left">
+                <div className="w-10 h-10 rounded-xl bg-blue-900 text-yellow-400 flex items-center justify-center shrink-0">
+                  <ShieldCheck size={20} />
+                </div>
+                <p className="text-[11px] text-slate-600 leading-tight">
+                  Procesado de forma 100% segura por <strong>CyberSource / BAC Credomatic</strong> con autenticación 3D Secure 2.0 y cifrado SSL bancario. Acepta Visa, Mastercard y AMEX.
+                </p>
+              </div>
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            className="w-full py-4 bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-800 hover:to-indigo-800 text-white font-black text-sm rounded-2xl transition-all shadow-xl shadow-blue-900/20 active:scale-[0.98] flex items-center justify-center space-x-2"
-          >
-            <CreditCard size={18} />
-            <span>Donar Q{currentAmount > 0 ? currentAmount.toLocaleString() : '0.00'} con Tarjeta (BAC)</span>
-          </button>
+              {/* Submit Button */}
+              <button
+                type="submit"
+                className="w-full py-4 bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-blue-800 hover:to-indigo-800 text-white font-black text-sm rounded-2xl transition-all shadow-xl shadow-blue-900/20 active:scale-[0.98] flex items-center justify-center space-x-2"
+              >
+                <CreditCard size={18} />
+                <span>Donar Q{currentAmount > 0 ? currentAmount.toLocaleString() : '0.00'} con Tarjeta (BAC)</span>
+              </button>
+            </>
+          ) : (
+            <div className="space-y-4 pt-2 border-t border-slate-200/60 animate-in fade-in duration-300">
+              <div className="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-full">
+                    Cuenta Oficial Obras Sociales
+                  </span>
+                  <span className="text-xs font-black text-emerald-900">Banrural S.A.</span>
+                </div>
+
+                <div className="bg-white rounded-xl p-3.5 border border-emerald-200/80 flex items-center justify-between gap-3">
+                  <div>
+                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cuenta Monetaria</span>
+                    <span className="font-mono text-xl font-black text-slate-900 tracking-wider">{CUENTA_BANRURAL_CUEVA}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyCuenta}
+                    className={`inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 ${
+                      copiedCuenta
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200'
+                    }`}
+                  >
+                    {copiedCuenta ? <Check size={14} /> : <Copy size={14} />}
+                    <span>{copiedCuenta ? '¡Copiada!' : 'Copiar cuenta'}</span>
+                  </button>
+                </div>
+
+                <div className="text-xs text-slate-600 space-y-1">
+                  <p><strong>A nombre de:</strong> Club de Leones Quetzaltenango (Cuenta Cueva)</p>
+                  <p><strong>Monto sugerido:</strong> <span className="font-black text-emerald-800">Q{currentAmount > 0 ? currentAmount.toLocaleString() : '100'}</span></p>
+                </div>
+              </div>
+
+              <div>
+                <input
+                  type="text"
+                  value={nombreDonante}
+                  onChange={(e) => setNombreDonante(e.target.value)}
+                  placeholder="Tu nombre (opcional, para incluirlo en el mensaje)"
+                  className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all placeholder:text-slate-400"
+                />
+              </div>
+
+              <a
+                href={`https://wa.me/${WHATSAPP_CLUB}?text=${encodeURIComponent(
+                  `Hola Club de Leones Quetzaltenango, adjunto comprobante de mi donación por Q${currentAmount > 0 ? currentAmount.toFixed(2) : '100.00'} a la cuenta Banrural ${CUENTA_BANRURAL_CUEVA}.${nombreDonante.trim() ? ` Donante: ${nombreDonante.trim()}.` : ''}`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-4 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-black text-sm rounded-2xl transition-all shadow-xl shadow-emerald-600/20 active:scale-[0.98] flex items-center justify-center space-x-2"
+              >
+                <MessageCircle size={18} />
+                <span>Enviar Boleta por WhatsApp</span>
+              </a>
+            </div>
+          )}
         </form>
       )}
 
