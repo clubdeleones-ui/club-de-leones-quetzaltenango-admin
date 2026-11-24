@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  Plus, Calendar, Search, Filter, Edit, Trash2, Gift, Building, X, Loader2, Users, Check, Upload, ChevronLeft, ChevronRight, Phone, Printer, Sparkles, FileSpreadsheet
+  Plus, Calendar, Search, Filter, Edit, Trash2, Gift, Building, X, Loader2, Users, Check, Upload, ChevronLeft, ChevronRight, Phone, Printer, Sparkles, FileSpreadsheet, Globe, MapPin, HeartHandshake, UserCheck
 } from 'lucide-react';
 import { Actividad, SolicitudVoluntario, RegistroParticipacion } from '../../types';
 import { firebaseService } from '../../services/firebaseService';
@@ -1104,167 +1104,184 @@ export const AdminCalendario: React.FC = () => {
         </div>
       </div>
 
-      {/* Add Activity Form Modal */}
+      {/* Add Activity Form Modal — Compact 2-Column Executive Layout */}
       {showAddActividad && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md overflow-y-auto animate-in fade-in duration-300">
-          <form onSubmit={handleAddActividad} className="bg-white rounded-[2.5rem] p-6 sm:p-10 max-w-lg w-full space-y-6 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-300 my-8 text-left">
-            <div className="flex justify-between items-center">
-              <div>
-                <h4 className="text-2xl font-black text-blue-900">Nueva Actividad</h4>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Programación y Difusión</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/65 backdrop-blur-md animate-in fade-in duration-200">
+          <form
+            onSubmit={handleAddActividad}
+            className="bg-white rounded-3xl max-w-4xl w-full shadow-2xl border border-slate-200/80 overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200 text-left"
+          >
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 px-6 py-4 flex items-center justify-between text-white shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-yellow-400/20 border border-yellow-400/40 text-yellow-300 flex items-center justify-center shrink-0">
+                  <Calendar size={20} />
+                </div>
+                <div>
+                  <h4 className="text-lg sm:text-xl font-black tracking-tight leading-tight">Nueva Actividad</h4>
+                  <p className="text-[10px] text-blue-200 font-bold uppercase tracking-widest">
+                    Programación, Logística y Difusión
+                  </p>
+                </div>
               </div>
-              <button type="button" onClick={() => setShowAddActividad(false)} className="p-2 text-slate-400 hover:text-slate-655 hover:bg-slate-50 rounded-xl transition-colors"><X size={20} /></button>
+              <button
+                type="button"
+                onClick={() => setShowAddActividad(false)}
+                className="p-2 text-blue-200 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                aria-label="Cerrar"
+              >
+                <X size={20} />
+              </button>
             </div>
 
-            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Título de la Actividad</label>
-                <input 
-                  type="text" 
-                  required 
-                  value={newActividad.titulo} 
-                  onChange={e => setNewActividad({...newActividad, titulo: e.target.value})}
-                  placeholder="Ej. Jornada Médica Visual"
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Descripción Detallada</label>
-                <textarea 
-                  rows={4} 
-                  required
-                  value={newActividad.descripcion} 
-                  onChange={e => setNewActividad({...newActividad, descripcion: e.target.value})}
-                  placeholder="Describe el propósito del evento, quiénes pueden asistir y cómo participar..."
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all resize-none text-sm leading-relaxed"
-                />
-              </div>
-              {/* Modalidad de Programación de Fechas */}
-              <div className="space-y-3 p-4 bg-slate-50 border border-slate-200/80 rounded-2xl">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center">
-                    <Calendar size={14} className="mr-1.5 text-blue-900" />
-                    Programación de Fechas *
-                  </label>
-                  <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-900">
-                    {modoProgramacionFechas === 'unico' ? '1 Día' : `${fechasMultiples.length} Días Seleccionados`}
-                  </span>
-                </div>
-
-                {/* Tabs Modo de Fechas */}
-                <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-200/70 rounded-xl">
-                  <button
-                    type="button"
-                    onClick={() => setModoProgramacionFechas('unico')}
-                    className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
-                      modoProgramacionFechas === 'unico'
-                        ? 'bg-white text-blue-950 shadow-xs font-black'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    <Calendar size={14} />
-                    <span>Día Único</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setModoProgramacionFechas('multiples');
-                      if (fechasMultiples.length === 0) {
-                        setFechasMultiples([newActividad.fecha || new Date().toISOString().slice(0, 16)]);
-                      }
-                    }}
-                    className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center space-x-1.5 cursor-pointer ${
-                      modoProgramacionFechas === 'multiples'
-                        ? 'bg-blue-900 text-white shadow-xs font-black'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    <Sparkles size={14} className="text-amber-300" />
-                    <span>Múltiples Días / Rango</span>
-                  </button>
-                </div>
-
-                {/* Modo: Día Único */}
-                {modoProgramacionFechas === 'unico' ? (
+            {/* Body: 2 columnas equilibradas en escritorio, 1 en móvil */}
+            <div className="p-5 sm:p-6 overflow-y-auto grid grid-cols-1 lg:grid-cols-12 gap-5">
+              {/* Columna Izquierda: Datos principales, fechas, costos y vestimenta */}
+              <div className="lg:col-span-7 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-                      Fecha y Hora *
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5">
+                      Título de la Actividad *
                     </label>
-                    <input 
-                      type="datetime-local" 
-                      required 
-                      value={newActividad.fecha} 
-                      onChange={e => setNewActividad({...newActividad, fecha: e.target.value})}
-                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs sm:text-sm font-bold text-slate-800 bg-white"
+                    <input
+                      type="text"
+                      required
+                      value={newActividad.titulo}
+                      onChange={e => setNewActividad({ ...newActividad, titulo: e.target.value })}
+                      placeholder="Ej. Jornada Médica Visual"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-800"
                     />
                   </div>
-                ) : (
-                  /* Modo: Múltiples Días */
-                  <div className="space-y-3.5 pt-1">
-                    {/* Generador de Rango */}
-                    <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl space-y-2.5">
-                      <span className="text-[11px] font-black text-blue-950 uppercase tracking-wider block">
-                        ⚡ Generar Rango de Días Consecutivos (Ej. Convención / Jornada)
-                      </span>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5">
+                      Ubicación / Lugar *
+                    </label>
+                    <div className="relative">
+                      <MapPin size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        required
+                        value={newActividad.lugar}
+                        onChange={e => setNewActividad({ ...newActividad, lugar: e.target.value })}
+                        placeholder="Ej. Parque Central Xela"
+                        className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-800"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5">
+                    Descripción Detallada *
+                  </label>
+                  <textarea
+                    rows={3}
+                    required
+                    value={newActividad.descripcion}
+                    onChange={e => setNewActividad({ ...newActividad, descripcion: e.target.value })}
+                    placeholder="Propósito del evento, quiénes pueden asistir y detalles clave..."
+                    className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all resize-none text-sm leading-relaxed text-slate-800"
+                  />
+                </div>
+
+                {/* Programación de Fechas */}
+                <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="text-[11px] font-black text-slate-700 uppercase tracking-wider flex items-center">
+                      <Calendar size={13} className="mr-1.5 text-blue-900" />
+                      Programación de Fechas *
+                    </label>
+                    <div className="inline-flex bg-slate-200/70 p-0.5 rounded-lg">
+                      <button
+                        type="button"
+                        onClick={() => setModoProgramacionFechas('unico')}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-black transition-all cursor-pointer ${
+                          modoProgramacionFechas === 'unico'
+                            ? 'bg-white text-blue-950 shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        Día Único
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setModoProgramacionFechas('multiples');
+                          if (fechasMultiples.length === 0) {
+                            setFechasMultiples([newActividad.fecha || new Date().toISOString().slice(0, 16)]);
+                          }
+                        }}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-black transition-all flex items-center gap-1 cursor-pointer ${
+                          modoProgramacionFechas === 'multiples'
+                            ? 'bg-blue-900 text-white shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <Sparkles size={11} className="text-amber-300" />
+                        <span>Múltiples ({fechasMultiples.length || 1})</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {modoProgramacionFechas === 'unico' ? (
+                    <input
+                      type="datetime-local"
+                      required
+                      value={newActividad.fecha}
+                      onChange={e => setNewActividad({ ...newActividad, fecha: e.target.value })}
+                      className="w-full px-3.5 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs sm:text-sm font-bold text-slate-800 bg-white"
+                    />
+                  ) : (
+                    <div className="space-y-2.5">
+                      <div className="grid grid-cols-3 gap-2">
                         <div>
-                          <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Desde Día</label>
-                          <input 
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Desde</label>
+                          <input
                             type="date"
                             value={rangoInicio}
                             onChange={e => setRangoInicio(e.target.value)}
-                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
+                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
                           />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Hasta Día</label>
-                          <input 
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Hasta</label>
+                          <input
                             type="date"
                             value={rangoFin}
                             onChange={e => setRangoFin(e.target.value)}
-                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
+                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
                           />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Hora Inicio</label>
-                          <input 
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Hora</label>
+                          <input
                             type="time"
                             value={rangoHora}
                             onChange={e => setRangoHora(e.target.value)}
-                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
+                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
                           />
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={handleGenerarRangoFechas}
-                        className="w-full py-1.5 bg-blue-900 hover:bg-blue-950 text-white rounded-lg text-xs font-black shadow-xs transition-colors flex items-center justify-center space-x-1.5 cursor-pointer"
-                      >
-                        <span>Aplicar Rango al Calendario</span>
-                      </button>
-                    </div>
-
-                    {/* Lista de Días Individuales */}
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <label className="text-[11px] font-black text-slate-700 uppercase">
-                          Lista de Fechas Programadas ({fechasMultiples.length}):
-                        </label>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleGenerarRangoFechas}
+                          className="flex-1 py-1.5 bg-blue-900 hover:bg-blue-950 text-white rounded-lg text-[11px] font-black cursor-pointer"
+                        >
+                          Generar Rango
+                        </button>
                         <button
                           type="button"
                           onClick={handleAddFechaPersonalizada}
-                          className="text-xs font-bold text-blue-900 hover:text-blue-950 flex items-center space-x-1 cursor-pointer"
+                          className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-blue-900 rounded-lg text-[11px] font-black cursor-pointer"
                         >
-                          <span>+ Añadir Fecha</span>
+                          + Día
                         </button>
                       </div>
-
-                      <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                      <div className="space-y-1 max-h-28 overflow-y-auto pr-1">
                         {fechasMultiples.map((fechaItem, idx) => (
-                          <div key={idx} className="flex items-center space-x-2 bg-white p-2 border border-slate-200 rounded-xl shadow-2xs">
-                            <span className="text-[11px] font-black text-slate-400 w-12 flex-shrink-0">
-                              Día {idx + 1}:
-                            </span>
+                          <div key={idx} className="flex items-center gap-2 bg-white p-1.5 border border-slate-200 rounded-lg">
+                            <span className="text-[10px] font-black text-slate-400 w-10 shrink-0">Día {idx + 1}</span>
                             <input
                               type="datetime-local"
                               required
@@ -1274,214 +1291,238 @@ export const AdminCalendario: React.FC = () => {
                                 updated[idx] = e.target.value;
                                 setFechasMultiples(updated);
                               }}
-                              className="flex-1 px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
+                              className="flex-1 px-2 py-1 border border-slate-200 rounded-md text-xs font-bold text-slate-800"
                             />
                             {fechasMultiples.length > 1 && (
                               <button
                                 type="button"
                                 onClick={() => handleRemoveFechaPersonalizada(idx)}
-                                className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
-                                title="Eliminar este día"
+                                className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer"
                               >
-                                <X size={14} />
+                                <X size={13} />
                               </button>
                             )}
                           </div>
                         ))}
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Ubicación / Lugar</label>
-                <input 
-                  type="text" 
-                  required 
-                  value={newActividad.lugar} 
-                  onChange={e => setNewActividad({...newActividad, lugar: e.target.value})}
-                  placeholder="Ej. Parque Central Xela"
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Imagen / Afiche de la Actividad</label>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-center w-full">
-                    <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100/50 hover:border-blue-900/30 transition-all overflow-hidden relative group">
-                      {newActividadImagePreview ? (
-                        <>
-                          <img src={newActividadImagePreview} alt="Preview" className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold">
-                            Cambiar Imagen
-                          </div>
-                        </>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6 px-4 text-center">
-                          <Upload className="w-8 h-8 text-slate-400 mb-2 group-hover:text-blue-900 transition-colors" />
-                          <p className="mb-1 text-xs font-bold text-slate-500 uppercase tracking-wider">Subir archivo de imagen</p>
-                          <p className="text-[10px] text-slate-400">PNG, JPG o WEBP (se comprimirá automáticamente)</p>
-                        </div>
-                      )}
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        className="hidden" 
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const validation = validateImageFile(file);
-                            if (!validation.valid) {
-                              showAlert(validation.error || "Imagen inválida", "error");
-                              return;
-                            }
-                            setNewActividadImageFile(file);
-                            try {
-                              const compressed = await compressImageFile(file, 800, 800, 0.7);
-                              setNewActividadImagePreview(compressed);
-                            } catch (err) {
-                              console.error("Error compressing preview image:", err);
-                              const reader = new FileReader();
-                              reader.onloadend = () => {
-                                setNewActividadImagePreview(reader.result as string);
-                              };
-                              reader.readAsDataURL(file);
-                            }
-                          }
-                        }}
-                      />
+                {/* Costos y Vestimenta en una sola fila compacta */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5">
+                      Costo Socios (Q)
                     </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={newActividad.costoSocio}
+                      onChange={e => setNewActividad({ ...newActividad, costoSocio: e.target.value })}
+                      placeholder="0.00"
+                      className="w-full px-3 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-sm font-bold text-slate-800"
+                    />
                   </div>
-                  
-                  <div className="relative flex items-center">
-                    <div className="flex-grow border-t border-slate-200"></div>
-                    <span className="flex-shrink mx-4 text-slate-400 text-[10px] font-black uppercase tracking-widest">O ingresar URL</span>
-                    <div className="flex-grow border-t border-slate-200"></div>
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5">
+                      Costo Invitados (Q)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={newActividad.costoInvitado}
+                      onChange={e => setNewActividad({ ...newActividad, costoInvitado: e.target.value })}
+                      placeholder="0.00"
+                      className="w-full px-3 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-sm font-bold text-slate-800"
+                    />
                   </div>
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5">
+                      Vestimenta
+                    </label>
+                    <select
+                      value={newActividad.vestimenta}
+                      onChange={e => setNewActividad({ ...newActividad, vestimenta: e.target.value })}
+                      className="w-full px-3 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs font-bold text-slate-800"
+                    >
+                      <option value="libre">Libre</option>
+                      <option value="chaleco leonistico">Chaleco leonístico</option>
+                      <option value="casual">Casual</option>
+                      <option value="formal">Formal</option>
+                      <option value="ropa de trabajo">Ropa de trabajo</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
 
-                  <input 
-                    type="text" 
-                    value={newActividad.imagen} 
+              {/* Columna Derecha: Afiche Visual + Opciones en Tarjetas Táctiles 2x2 */}
+              <div className="lg:col-span-5 space-y-4 flex flex-col justify-between">
+                <div className="space-y-2.5">
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider">
+                    Imagen / Afiche Oficial
+                  </label>
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer bg-slate-50 hover:bg-blue-50/40 hover:border-blue-400 transition-all overflow-hidden relative group">
+                    {newActividadImagePreview || newActividad.imagen ? (
+                      <>
+                        <img
+                          src={newActividadImagePreview || newActividad.imagen}
+                          alt="Vista previa"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-slate-950/45 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-black">
+                          Cambiar Afiche
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center px-4 text-center">
+                        <Upload className="w-6 h-6 text-slate-400 mb-1.5 group-hover:text-blue-900 transition-colors" />
+                        <p className="text-xs font-black text-slate-600">Subir imagen</p>
+                        <p className="text-[10px] text-slate-400">PNG, JPG o WEBP (compresión automática)</p>
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async e => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const validation = validateImageFile(file);
+                          if (!validation.valid) {
+                            showAlert(validation.error || 'Imagen inválida', 'error');
+                            return;
+                          }
+                          setNewActividadImageFile(file);
+                          try {
+                            const compressed = await compressImageFile(file, 800, 800, 0.7);
+                            setNewActividadImagePreview(compressed);
+                          } catch {
+                            const reader = new FileReader();
+                            reader.onloadend = () => setNewActividadImagePreview(reader.result as string);
+                            reader.readAsDataURL(file);
+                          }
+                        }
+                      }}
+                    />
+                  </label>
+
+                  <input
+                    type="text"
+                    value={newActividad.imagen}
                     onChange={e => {
-                      setNewActividad({...newActividad, imagen: e.target.value});
+                      setNewActividad({ ...newActividad, imagen: e.target.value });
                       setNewActividadImageFile(null);
                       setNewActividadImagePreview(null);
                     }}
-                    placeholder="https://images.unsplash.com/... (Opcional)"
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-mono"
+                    placeholder="O pegar URL de imagen (opcional)"
+                    className="w-full px-3 py-2 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs font-mono text-slate-700"
                   />
                 </div>
-              </div>
-              <div className="flex flex-col gap-3 pt-2">
-                <div className="flex items-center space-x-3">
-                  <input 
-                    type="checkbox" 
-                    id="publica" 
-                    checked={newActividad.publica} 
-                    onChange={e => setNewActividad({...newActividad, publica: e.target.checked})}
-                    className="w-5 h-5 rounded text-blue-900 border-slate-300 focus:ring-blue-900"
-                  />
-                  <label htmlFor="publica" className="text-sm font-bold text-slate-700 select-none cursor-pointer">Hacer actividad pública en el sitio web</label>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <input 
-                    type="checkbox" 
-                    id="conBotonDonacion" 
-                    checked={newActividad.conBotonDonacion} 
-                    onChange={e => setNewActividad({...newActividad, conBotonDonacion: e.target.checked})}
-                    className="w-5 h-5 rounded text-blue-900 border-slate-300 focus:ring-blue-900"
-                  />
-                  <label htmlFor="conBotonDonacion" className="text-sm font-bold text-slate-700 select-none cursor-pointer">Habilitar Botón de Donaciones</label>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <input 
-                    type="checkbox" 
-                    id="conBotonVoluntariado" 
-                    checked={newActividad.conBotonVoluntariado} 
-                    onChange={e => setNewActividad({...newActividad, conBotonVoluntariado: e.target.checked})}
-                    className="w-5 h-5 rounded text-blue-900 border-slate-300 focus:ring-blue-900"
-                  />
-                  <label htmlFor="conBotonVoluntariado" className="text-sm font-bold text-slate-700 select-none cursor-pointer">Habilitar Botón de Voluntariado</label>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <input 
-                    type="checkbox" 
-                    id="conBotonAsistencia" 
-                    checked={newActividad.conBotonAsistencia} 
-                    onChange={e => setNewActividad({...newActividad, conBotonAsistencia: e.target.checked})}
-                    className="w-5 h-5 rounded text-blue-900 border-slate-300 focus:ring-blue-900"
-                  />
-                  <label htmlFor="conBotonAsistencia" className="text-sm font-bold text-slate-700 select-none cursor-pointer">Habilitar Botón de Confirmar Asistencia</label>
-                </div>
-              </div>
 
-              {/* Costo Socios e Invitados */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Costo para Socios (Q)</label>
-                  <input 
-                    type="number" 
-                    min="0"
-                    step="0.01"
-                    value={newActividad.costoSocio} 
-                    onChange={e => setNewActividad({...newActividad, costoSocio: e.target.value})}
-                    placeholder="Ej. 50 (0 para gratis)"
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-800"
-                  />
+                {/* Tarjetas Switch 2x2 — Cero desborde */}
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider">
+                    Visibilidad y Botones Interactivos
+                  </label>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {[
+                      {
+                        key: 'publica' as const,
+                        label: 'Pública en Web',
+                        sub: 'Visible al público',
+                        icon: Globe,
+                        active: newActividad.publica,
+                        accent: 'blue'
+                      },
+                      {
+                        key: 'conBotonAsistencia' as const,
+                        label: 'Asistencia',
+                        sub: 'Confirmar cupo',
+                        icon: UserCheck,
+                        active: newActividad.conBotonAsistencia,
+                        accent: 'emerald'
+                      },
+                      {
+                        key: 'conBotonVoluntariado' as const,
+                        label: 'Voluntariado',
+                        sub: 'Sumar apoyo',
+                        icon: HeartHandshake,
+                        active: newActividad.conBotonVoluntariado,
+                        accent: 'amber'
+                      },
+                      {
+                        key: 'conBotonDonacion' as const,
+                        label: 'Donaciones',
+                        sub: 'Botón aportar',
+                        icon: Gift,
+                        active: newActividad.conBotonDonacion,
+                        accent: 'rose'
+                      }
+                    ].map(opt => {
+                      const Icon = opt.icon;
+                      return (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          onClick={() => setNewActividad({ ...newActividad, [opt.key]: !opt.active })}
+                          className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2 min-w-0 ${
+                            opt.active
+                              ? 'bg-blue-950 text-white border-blue-900 shadow-sm'
+                              : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2 w-full">
+                            <Icon size={16} className={opt.active ? 'text-yellow-300 shrink-0' : 'text-slate-400 shrink-0'} />
+                            <span
+                              className={`w-8 h-4.5 rounded-full p-0.5 transition-colors flex items-center shrink-0 ${
+                                opt.active ? 'bg-emerald-400 justify-end' : 'bg-slate-300 justify-start'
+                              }`}
+                            >
+                              <span className="w-3.5 h-3.5 rounded-full bg-white shadow-xs block" />
+                            </span>
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-xs font-black block truncate">{opt.label}</span>
+                            <span className={`text-[10px] block truncate ${opt.active ? 'text-blue-200' : 'text-slate-400'}`}>
+                              {opt.sub}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Costo para Invitados (Q)</label>
-                  <input 
-                    type="number" 
-                    min="0"
-                    step="0.01"
-                    value={newActividad.costoInvitado} 
-                    onChange={e => setNewActividad({...newActividad, costoInvitado: e.target.value})}
-                    placeholder="Ej. 100 (0 para gratis)"
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-800"
-                  />
-                </div>
-              </div>
-
-              {/* Vestimenta select */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Vestimenta Requerida</label>
-                <select
-                  value={newActividad.vestimenta}
-                  onChange={e => setNewActividad({...newActividad, vestimenta: e.target.value})}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-800 bg-white"
-                >
-                  <option value="formal">Formal</option>
-                  <option value="casual">Casual</option>
-                  <option value="ropa de trabajo">Ropa de trabajo</option>
-                  <option value="chaleco leonistico">Chaleco leonístico</option>
-                  <option value="libre">Libre</option>
-                </select>
               </div>
             </div>
 
-            <div className="flex space-x-3 pt-4 border-t border-slate-100">
-              <button 
-                type="button" 
+            {/* Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200/80 flex items-center justify-end gap-3 shrink-0">
+              <button
+                type="button"
                 onClick={() => setShowAddActividad(false)}
-                className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl transition-colors text-sm"
+                className="px-5 py-2.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold rounded-xl transition-colors text-xs uppercase tracking-wider cursor-pointer"
                 disabled={isSavingActividad}
               >
                 Cancelar
               </button>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={isSavingActividad}
-                className="w-1/2 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-black py-3.5 rounded-2xl transition-all shadow-md hover:shadow-lg text-sm flex items-center justify-center space-x-2"
+                className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-black rounded-xl transition-all shadow-md text-xs uppercase tracking-wider flex items-center space-x-2 cursor-pointer"
               >
                 {isSavingActividad ? (
                   <>
-                    <Loader2 className="animate-spin" size={16} />
+                    <Loader2 className="animate-spin" size={15} />
                     <span>Guardando...</span>
                   </>
                 ) : (
-                  <span>Agregar</span>
+                  <>
+                    <Plus size={15} />
+                    <span>Crear Actividad</span>
+                  </>
                 )}
               </button>
             </div>
@@ -1489,265 +1530,324 @@ export const AdminCalendario: React.FC = () => {
         </div>
       )}
 
-      {/* Edit Activity Form Modal */}
+      {/* Edit Activity Form Modal — Compact 2-Column Executive Layout */}
       {showEditActividad && editingActividad && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md overflow-y-auto animate-in fade-in duration-300">
-          <form onSubmit={handleSaveEditedActividad} className="bg-white rounded-[2.5rem] p-6 sm:p-10 max-w-lg w-full space-y-6 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-300 my-8 text-left">
-            <div className="flex justify-between items-center">
-              <div>
-                <h4 className="text-2xl font-black text-blue-900">Editar Actividad</h4>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Modificación de Contenido</p>
-              </div>
-              <button 
-                type="button" 
-                onClick={() => {
-                  setShowEditActividad(false);
-                  setEditingActividad(null);
-                }} 
-                className="p-2 text-slate-400 hover:text-slate-655 hover:bg-slate-50 rounded-xl transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Título de la Actividad</label>
-                <input 
-                  type="text" 
-                  required 
-                  value={editingActividad.titulo} 
-                  onChange={e => setEditingActividad({...editingActividad, titulo: e.target.value})}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Descripción Detallada</label>
-                <textarea 
-                  rows={4} 
-                  required
-                  value={editingActividad.descripcion} 
-                  onChange={e => setEditingActividad({...editingActividad, descripcion: e.target.value})}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all resize-none text-sm leading-relaxed"
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Fecha y Hora</label>
-                  <input 
-                    type="datetime-local" 
-                    required 
-                    value={editingActividad.fecha.includes(' ') ? editingActividad.fecha.replace(' ', 'T') : editingActividad.fecha} 
-                    onChange={e => setEditingActividad({...editingActividad, fecha: e.target.value})}
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm"
-                  />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/65 backdrop-blur-md animate-in fade-in duration-200">
+          <form
+            onSubmit={handleSaveEditedActividad}
+            className="bg-white rounded-3xl max-w-4xl w-full shadow-2xl border border-slate-200/80 overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200 text-left"
+          >
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 px-6 py-4 flex items-center justify-between text-white shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-yellow-400/20 border border-yellow-400/40 text-yellow-300 flex items-center justify-center shrink-0">
+                  <Edit size={20} />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Ubicación / Lugar</label>
-                  <input 
-                    type="text" 
-                    required 
-                    value={editingActividad.lugar} 
-                    onChange={e => setEditingActividad({...editingActividad, lugar: e.target.value})}
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm"
-                  />
+                  <h4 className="text-lg sm:text-xl font-black tracking-tight leading-tight">Editar Actividad</h4>
+                  <p className="text-[10px] text-blue-200 font-bold uppercase tracking-widest">
+                    Actualización de Contenido y Logística
+                  </p>
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Imagen / Afiche de la Actividad</label>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-center w-full">
-                    <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100/50 hover:border-blue-900/30 transition-all overflow-hidden relative group">
-                      {(editActividadImagePreview || editingActividad.imagen) ? (
-                        <>
-                          <img src={editActividadImagePreview || editingActividad.imagen} alt="Preview" className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold">
-                            Cambiar Imagen
-                          </div>
-                        </>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6 px-4 text-center">
-                          <Upload className="w-8 h-8 text-slate-400 mb-2 group-hover:text-blue-900 transition-colors" />
-                          <p className="mb-1 text-xs font-bold text-slate-500 uppercase tracking-wider">Subir archivo de imagen</p>
-                          <p className="text-[10px] text-slate-400">PNG, JPG o WEBP (se comprimirá automáticamente)</p>
-                        </div>
-                      )}
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        className="hidden" 
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const validation = validateImageFile(file);
-                            if (!validation.valid) {
-                              showAlert(validation.error || "Imagen inválida", "error");
-                              return;
-                            }
-                            setEditActividadImageFile(file);
-                            try {
-                              const compressed = await compressImageFile(file, 800, 800, 0.7);
-                              setEditActividadImagePreview(compressed);
-                            } catch (err) {
-                              console.error("Error compressing preview image:", err);
-                              const reader = new FileReader();
-                              reader.onloadend = () => {
-                                setEditActividadImagePreview(reader.result as string);
-                              };
-                              reader.readAsDataURL(file);
-                            }
-                          }
-                        }}
-                      />
-                    </label>
-                  </div>
-                  
-                  <div className="relative flex items-center">
-                    <div className="flex-grow border-t border-slate-200"></div>
-                    <span className="flex-shrink mx-4 text-slate-400 text-[10px] font-black uppercase tracking-widest">O ingresar URL</span>
-                    <div className="flex-grow border-t border-slate-200"></div>
-                  </div>
-
-                  <input 
-                    type="text" 
-                    value={editingActividad.imagen} 
-                    onChange={e => {
-                      setEditingActividad({...editingActividad, imagen: e.target.value});
-                      setEditActividadImageFile(null);
-                      setEditActividadImagePreview(null);
-                    }}
-                    placeholder="https://images.unsplash.com/... (Opcional)"
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-mono"
-                  />
-                </div>
-              </div>
-              <div className="flex flex-col gap-3 pt-2">
-                <div className="flex items-center space-x-3">
-                  <input 
-                    type="checkbox" 
-                    id="edit-publica" 
-                    checked={editingActividad.publica} 
-                    onChange={e => setEditingActividad({...editingActividad, publica: e.target.checked})}
-                    className="w-5 h-5 rounded text-blue-900 border-slate-300 focus:ring-blue-900"
-                  />
-                  <label htmlFor="edit-publica" className="text-sm font-bold text-slate-700 select-none cursor-pointer">Hacer actividad pública en el sitio web</label>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <input 
-                    type="checkbox" 
-                    id="edit-conBotonDonacion" 
-                    checked={editingActividad.conBotonDonacion || false} 
-                    onChange={e => setEditingActividad({...editingActividad, conBotonDonacion: e.target.checked})}
-                    className="w-5 h-5 rounded text-blue-900 border-slate-300 focus:ring-blue-900"
-                  />
-                  <label htmlFor="edit-conBotonDonacion" className="text-sm font-bold text-slate-700 select-none cursor-pointer">Habilitar Botón de Donaciones</label>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <input 
-                    type="checkbox" 
-                    id="edit-conBotonVoluntariado" 
-                    checked={editingActividad.conBotonVoluntariado !== false} 
-                    onChange={e => setEditingActividad({...editingActividad, conBotonVoluntariado: e.target.checked})}
-                    className="w-5 h-5 rounded text-blue-900 border-slate-300 focus:ring-blue-900"
-                  />
-                  <label htmlFor="edit-conBotonVoluntariado" className="text-sm font-bold text-slate-700 select-none cursor-pointer">Habilitar Botón de Voluntariado</label>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <input 
-                    type="checkbox" 
-                    id="edit-conBotonAsistencia" 
-                    checked={editingActividad.conBotonAsistencia || false} 
-                    onChange={e => setEditingActividad({...editingActividad, conBotonAsistencia: e.target.checked})}
-                    className="w-5 h-5 rounded text-blue-900 border-slate-300 focus:ring-blue-900"
-                  />
-                  <label htmlFor="edit-conBotonAsistencia" className="text-sm font-bold text-slate-700 select-none cursor-pointer">Habilitar Botón de Confirmar Asistencia</label>
-                </div>
-              </div>
-
-              {(editingActividad.conBotonDonacion) && (
-                <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Enlace de Donación Personalizado (Opcional)</label>
-                  <input 
-                    type="text" 
-                    value={editingActividad.donacionUrl || ''} 
-                    onChange={e => setEditingActividad({...editingActividad, donacionUrl: e.target.value})}
-                    placeholder="Ej. #/donar o link de pago externo"
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-mono"
-                  />
-                </div>
-              )}
-
-              {/* Costo Socios e Invitados */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Costo para Socios (Q)</label>
-                  <input 
-                    type="number" 
-                    min="0"
-                    step="0.01"
-                    value={editingActividad.costoSocio !== undefined ? editingActividad.costoSocio : ''} 
-                    onChange={e => setEditingActividad({...editingActividad, costoSocio: e.target.value ? parseFloat(e.target.value) : 0})}
-                    placeholder="Ej. 50 (0 para gratis)"
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-800"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Costo para Invitados (Q)</label>
-                  <input 
-                    type="number" 
-                    min="0"
-                    step="0.01"
-                    value={editingActividad.costoInvitado !== undefined ? editingActividad.costoInvitado : ''} 
-                    onChange={e => setEditingActividad({...editingActividad, costoInvitado: e.target.value ? parseFloat(e.target.value) : 0})}
-                    placeholder="Ej. 100 (0 para gratis)"
-                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-800"
-                  />
-                </div>
-              </div>
-
-              {/* Vestimenta select */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider">Vestimenta Requerida</label>
-                <select
-                  value={editingActividad.vestimenta || 'libre'}
-                  onChange={e => setEditingActividad({...editingActividad, vestimenta: e.target.value})}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition-all text-sm font-semibold text-slate-800 bg-white"
-                >
-                  <option value="formal">Formal</option>
-                  <option value="casual">Casual</option>
-                  <option value="ropa de trabajo">Ropa de trabajo</option>
-                  <option value="chaleco leonistico">Chaleco leonístico</option>
-                  <option value="libre">Libre</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex space-x-3 pt-4 border-t border-slate-100">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => {
                   setShowEditActividad(false);
                   setEditingActividad(null);
                   setEditActividadImageFile(null);
                   setEditActividadImagePreview(null);
                 }}
-                className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-2xl transition-colors text-sm"
+                className="p-2 text-blue-200 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                aria-label="Cerrar"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 sm:p-6 overflow-y-auto grid grid-cols-1 lg:grid-cols-12 gap-5">
+              <div className="lg:col-span-7 space-y-4">
+                <div>
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5">
+                    Título de la Actividad *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editingActividad.titulo}
+                    onChange={e => setEditingActividad({ ...editingActividad, titulo: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-sm font-semibold text-slate-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5">
+                    Descripción Detallada *
+                  </label>
+                  <textarea
+                    rows={3}
+                    required
+                    value={editingActividad.descripcion}
+                    onChange={e => setEditingActividad({ ...editingActividad, descripcion: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none resize-none text-sm leading-relaxed text-slate-800"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5">
+                      Fecha y Hora *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      required
+                      value={editingActividad.fecha.includes(' ') ? editingActividad.fecha.replace(' ', 'T') : editingActividad.fecha}
+                      onChange={e => setEditingActividad({ ...editingActividad, fecha: e.target.value })}
+                      className="w-full px-3 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs sm:text-sm font-bold text-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5">
+                      Ubicación / Lugar *
+                    </label>
+                    <div className="relative">
+                      <MapPin size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        required
+                        value={editingActividad.lugar}
+                        onChange={e => setEditingActividad({ ...editingActividad, lugar: e.target.value })}
+                        className="w-full pl-9 pr-3 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-sm font-semibold text-slate-800"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5">
+                      Costo Socios (Q)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={editingActividad.costoSocio !== undefined ? editingActividad.costoSocio : ''}
+                      onChange={e => setEditingActividad({ ...editingActividad, costoSocio: e.target.value ? parseFloat(e.target.value) : 0 })}
+                      className="w-full px-3 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-sm font-bold text-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5">
+                      Costo Invitados (Q)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={editingActividad.costoInvitado !== undefined ? editingActividad.costoInvitado : ''}
+                      onChange={e => setEditingActividad({ ...editingActividad, costoInvitado: e.target.value ? parseFloat(e.target.value) : 0 })}
+                      className="w-full px-3 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-sm font-bold text-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5">
+                      Vestimenta
+                    </label>
+                    <select
+                      value={editingActividad.vestimenta || 'libre'}
+                      onChange={e => setEditingActividad({ ...editingActividad, vestimenta: e.target.value })}
+                      className="w-full px-3 py-2.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs font-bold text-slate-800"
+                    >
+                      <option value="libre">Libre</option>
+                      <option value="chaleco leonistico">Chaleco leonístico</option>
+                      <option value="casual">Casual</option>
+                      <option value="formal">Formal</option>
+                      <option value="ropa de trabajo">Ropa de trabajo</option>
+                    </select>
+                  </div>
+                </div>
+
+                {editingActividad.conBotonDonacion && (
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1.5">
+                      Enlace de Donación Personalizado (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={editingActividad.donacionUrl || ''}
+                      onChange={e => setEditingActividad({ ...editingActividad, donacionUrl: e.target.value })}
+                      placeholder="Ej. #/donar"
+                      className="w-full px-3 py-2 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs font-mono"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Columna Derecha: Afiche + Switch Cards 2x2 */}
+              <div className="lg:col-span-5 space-y-4 flex flex-col justify-between">
+                <div className="space-y-2.5">
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider">
+                    Imagen / Afiche Oficial
+                  </label>
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer bg-slate-50 hover:bg-blue-50/40 hover:border-blue-400 transition-all overflow-hidden relative group">
+                    {editActividadImagePreview || editingActividad.imagen ? (
+                      <>
+                        <img
+                          src={editActividadImagePreview || editingActividad.imagen}
+                          alt="Vista previa"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-slate-950/45 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-black">
+                          Cambiar Afiche
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center px-4 text-center">
+                        <Upload className="w-6 h-6 text-slate-400 mb-1.5 group-hover:text-blue-900 transition-colors" />
+                        <p className="text-xs font-black text-slate-600">Subir imagen</p>
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async e => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const validation = validateImageFile(file);
+                          if (!validation.valid) {
+                            showAlert(validation.error || 'Imagen inválida', 'error');
+                            return;
+                          }
+                          setEditActividadImageFile(file);
+                          try {
+                            const compressed = await compressImageFile(file, 800, 800, 0.7);
+                            setEditActividadImagePreview(compressed);
+                          } catch {
+                            const reader = new FileReader();
+                            reader.onloadend = () => setEditActividadImagePreview(reader.result as string);
+                            reader.readAsDataURL(file);
+                          }
+                        }
+                      }}
+                    />
+                  </label>
+                  <input
+                    type="text"
+                    value={editingActividad.imagen}
+                    onChange={e => {
+                      setEditingActividad({ ...editingActividad, imagen: e.target.value });
+                      setEditActividadImageFile(null);
+                      setEditActividadImagePreview(null);
+                    }}
+                    placeholder="O pegar URL de imagen (opcional)"
+                    className="w-full px-3 py-2 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-900 outline-none text-xs font-mono text-slate-700"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider">
+                    Visibilidad y Botones Interactivos
+                  </label>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {[
+                      {
+                        key: 'publica' as const,
+                        label: 'Pública en Web',
+                        sub: 'Visible al público',
+                        icon: Globe,
+                        active: !!editingActividad.publica
+                      },
+                      {
+                        key: 'conBotonAsistencia' as const,
+                        label: 'Asistencia',
+                        sub: 'Confirmar cupo',
+                        icon: UserCheck,
+                        active: !!editingActividad.conBotonAsistencia
+                      },
+                      {
+                        key: 'conBotonVoluntariado' as const,
+                        label: 'Voluntariado',
+                        sub: 'Sumar apoyo',
+                        icon: HeartHandshake,
+                        active: editingActividad.conBotonVoluntariado !== false
+                      },
+                      {
+                        key: 'conBotonDonacion' as const,
+                        label: 'Donaciones',
+                        sub: 'Botón aportar',
+                        icon: Gift,
+                        active: !!editingActividad.conBotonDonacion
+                      }
+                    ].map(opt => {
+                      const Icon = opt.icon;
+                      return (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          onClick={() => setEditingActividad({ ...editingActividad, [opt.key]: !opt.active })}
+                          className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2 min-w-0 ${
+                            opt.active
+                              ? 'bg-blue-950 text-white border-blue-900 shadow-sm'
+                              : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2 w-full">
+                            <Icon size={16} className={opt.active ? 'text-yellow-300 shrink-0' : 'text-slate-400 shrink-0'} />
+                            <span
+                              className={`w-8 h-4.5 rounded-full p-0.5 transition-colors flex items-center shrink-0 ${
+                                opt.active ? 'bg-emerald-400 justify-end' : 'bg-slate-300 justify-start'
+                              }`}
+                            >
+                              <span className="w-3.5 h-3.5 rounded-full bg-white shadow-xs block" />
+                            </span>
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-xs font-black block truncate">{opt.label}</span>
+                            <span className={`text-[10px] block truncate ${opt.active ? 'text-blue-200' : 'text-slate-400'}`}>
+                              {opt.sub}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200/80 flex items-center justify-end gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditActividad(false);
+                  setEditingActividad(null);
+                  setEditActividadImageFile(null);
+                  setEditActividadImagePreview(null);
+                }}
+                className="px-5 py-2.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold rounded-xl transition-colors text-xs uppercase tracking-wider cursor-pointer"
                 disabled={isSavingActividad}
               >
                 Cancelar
               </button>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={isSavingActividad}
-                className="w-1/2 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-black py-3.5 rounded-2xl transition-all shadow-md hover:shadow-lg text-sm flex items-center justify-center space-x-2"
+                className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 disabled:bg-blue-900/50 text-white font-black rounded-xl transition-all shadow-md text-xs uppercase tracking-wider flex items-center space-x-2 cursor-pointer"
               >
                 {isSavingActividad ? (
                   <>
-                    <Loader2 className="animate-spin" size={16} />
+                    <Loader2 className="animate-spin" size={15} />
                     <span>Guardando...</span>
                   </>
                 ) : (
-                  <span>Guardar Cambios</span>
+                  <>
+                    <Check size={15} />
+                    <span>Guardar Cambios</span>
+                  </>
                 )}
               </button>
             </div>
