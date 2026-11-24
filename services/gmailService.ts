@@ -54,7 +54,12 @@ export const gmailService = {
   ): EmailTemplateData => {
     const webUrl = 'https://clubdeleonesquetzaltenango.org/#/convencion';
     const botUrl = 'https://t.me/ConvencionLeonesbot';
-    const montoStr = `Q${(registro.montoPagar || 650).toLocaleString()}`;
+    const montoStr = `Q${(registro.montoPagar ?? 650).toLocaleString()}`;
+    const descuentoAplicado = registro.descuentoAplicado || 0;
+    const subtotalOriginal = registro.subtotalOriginal || ((registro.montoPagar ?? 650) + descuentoAplicado);
+    const descuentoEtiqueta = registro.codigoDescuento === 'CLUB_QUETZALTENANGO'
+      ? 'Beneficio Exclusivo Club de Leones Quetzaltenango'
+      : (registro.codigoDescuento ? `Código "${registro.codigoDescuento}"` : 'Descuento aplicado');
     const paqueteStr = registro.paquete || 'Inscripción Convención';
     const nombre = registro.nombre || 'Estimado(a) Compañero(a) León';
     const club = registro.club || 'Club de Leones';
@@ -74,7 +79,7 @@ DETALLES DE TU ACREDITACIÓN OFICIAL:
 • Participante: ${nombre}
 • Club: ${club}
 • Cargo: ${cargo}
-• Paquete: ${paqueteStr}
+• Paquete: ${paqueteStr}${descuentoAplicado > 0 ? `\n• Tarifa Oficial: Q${subtotalOriginal.toLocaleString()}\n• Descuento Aplicado: -Q${descuentoAplicado.toLocaleString()} (${descuentoEtiqueta})` : ''}
 • Monto Pagado: ${montoStr}
 • Estado: ACREDITADO / PAGADO OFICIAL
 
@@ -117,6 +122,7 @@ Correo: ${DEFAULT_GMAIL_SENDER}
         <tr><td style="padding: 4px 0; color: #64748b; font-weight: 600;">Club:</td><td style="padding: 4px 0; color: #0f172a;">${club}</td></tr>
         <tr><td style="padding: 4px 0; color: #64748b; font-weight: 600;">Cargo:</td><td style="padding: 4px 0; color: #0f172a;">${cargo}</td></tr>
         <tr><td style="padding: 4px 0; color: #64748b; font-weight: 600;">Paquete:</td><td style="padding: 4px 0; font-weight: 700; color: #b45309;">${paqueteStr}</td></tr>
+        ${descuentoAplicado > 0 ? `<tr><td style="padding: 4px 0; color: #64748b; font-weight: 600;">Descuento:</td><td style="padding: 4px 0; font-weight: 800; color: #059669;">-Q${descuentoAplicado.toLocaleString()} (${descuentoEtiqueta})</td></tr>` : ''}
         <tr><td style="padding: 4px 0; color: #64748b; font-weight: 600;">Monto:</td><td style="padding: 4px 0; font-weight: 800; color: #15803d;">${montoStr}</td></tr>
       </table>
     </div>
@@ -313,7 +319,7 @@ RESUMEN DE REGISTRO:
 • Participante: ${nombre}
 • Club: ${club}
 • Cargo: ${cargo}
-• Paquete: ${paqueteStr}
+• Paquete: ${paqueteStr}${descuentoAplicado > 0 ? `\n• Tarifa Oficial: Q${subtotalOriginal.toLocaleString()}\n• Descuento Aplicado: -Q${descuentoAplicado.toLocaleString()} (${descuentoEtiqueta})` : ''}
 • Monto a Pagar: ${montoStr}
 • Estado: ${registro.estadoPago || 'Pendiente'}
 
@@ -351,8 +357,10 @@ Correo Oficial: ${DEFAULT_GMAIL_SENDER}
         <tr><td style="padding: 4px 0; color: #64748b; font-weight: 600;">Folio:</td><td style="padding: 4px 0; font-weight: 700; font-family: monospace;">${folio}</td></tr>
         <tr><td style="padding: 4px 0; color: #64748b; font-weight: 600;">Club:</td><td style="padding: 4px 0;">${club} (${cargo})</td></tr>
         <tr><td style="padding: 4px 0; color: #64748b; font-weight: 600;">Paquete:</td><td style="padding: 4px 0; font-weight: 700; color: #b45309;">${paqueteStr}</td></tr>
+        ${descuentoAplicado > 0 ? `<tr><td style="padding: 4px 0; color: #059669; font-weight: 700;">Descuento Aplicado:</td><td style="padding: 4px 0; font-weight: 800; color: #059669;">-Q${descuentoAplicado.toLocaleString()} (${descuentoEtiqueta})</td></tr>` : ''}
         <tr><td style="padding: 4px 0; color: #64748b; font-weight: 600;">Monto:</td><td style="padding: 4px 0; font-weight: 800; color: #1e3a8a;">${montoStr}</td></tr>
       </table>
+      ${descuentoAplicado > 0 ? `<div style="margin-top: 12px; background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 10px 12px; font-size: 12px; color: #065f46; font-weight: 700;">🎉 ¡Beneficio aplicado! Se descontaron Q${descuentoAplicado.toLocaleString()}.00 (${descuentoEtiqueta}) sobre la tarifa oficial de Q${subtotalOriginal.toLocaleString()}.00.</div>` : ''}
     </div>
 
     <div style="text-align: center; margin: 24px 0;">

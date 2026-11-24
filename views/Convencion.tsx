@@ -594,16 +594,25 @@ export default function Convencion() {
     setDiscountError(null);
   };
 
+  const DESCUENTO_CLUB_QUETZALTENANGO = 100;
+  const isClubQuetzaltenango =
+    form.distrito !== 'Otro / Internacional' && form.club === 'Quetzaltenango';
   const baseCost = config.tarifaBase && config.tarifaBase > 0 ? config.tarifaBase : 650;
   const hotelCost = includeHotel ? (config.tarifaHotel || 400) : 0;
   const culturalCost = includeCultural ? (config.tarifaCultural || 150) : 0;
   const familiarCost = includeFamiliar ? (config.tarifaFamiliar || 450) : 0;
   const subtotalTotal = baseCost + hotelCost + culturalCost + familiarCost;
-  const descuentoMonto = appliedDiscount
+  const descuentoClubXela = isClubQuetzaltenango ? Math.min(subtotalTotal, DESCUENTO_CLUB_QUETZALTENANGO) : 0;
+  const descuentoCodigoMonto = appliedDiscount
     ? appliedDiscount.tipo === 'porcentaje'
       ? Math.round((subtotalTotal * appliedDiscount.valor) / 100)
       : Math.min(subtotalTotal, appliedDiscount.valor)
     : 0;
+  const descuentoMonto = Math.max(descuentoClubXela, descuentoCodigoMonto);
+  const usaDescuentoClubXela = descuentoClubXela > 0 && descuentoClubXela >= descuentoCodigoMonto;
+  const descuentoCodigoEfectivo = usaDescuentoClubXela
+    ? 'CLUB_QUETZALTENANGO'
+    : (appliedDiscount && descuentoCodigoMonto > 0 ? appliedDiscount.codigo : undefined);
   const montoTotal = Math.max(0, subtotalTotal - descuentoMonto);
   const [isRedirectingPayment, setIsRedirectingPayment] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -655,6 +664,9 @@ export default function Convencion() {
     monto: number;
     metodo: 'recurrente' | 'transferencia';
     estadoPago: string;
+    descuentoAplicado?: number;
+    codigoDescuento?: string;
+    subtotalOriginal?: number;
   } | null>(null);
 
   const handleCyberSourceSuccess = async (result: CyberSourcePaymentResult) => {
@@ -704,9 +716,12 @@ export default function Convencion() {
         nombre: updatedReg.nombre,
         club: updatedReg.club,
         paquete: updatedReg.paquete || 'Inscripción Convención',
-        monto: updatedReg.montoPagar || montoTotal,
+        monto: updatedReg.montoPagar ?? montoTotal,
         metodo: 'recurrente',
-        estadoPago: 'Pagado'
+        estadoPago: 'Pagado',
+        descuentoAplicado: updatedReg.descuentoAplicado,
+        codigoDescuento: updatedReg.codigoDescuento,
+        subtotalOriginal: updatedReg.subtotalOriginal
       });
       setIsSubmitted(true);
       showToast("¡Pago completado con éxito! Tu inscripción oficial a la Convención está confirmada.", "success");
@@ -1226,6 +1241,9 @@ export default function Convencion() {
     if (selectedClub !== 'Otro Club') {
       setCustomClub('');
     }
+    if (selectedClub === 'Quetzaltenango' && form.distrito !== 'Otro / Internacional') {
+      showToast('¡Beneficio Club Anfitrión activado! Se aplicó un descuento automático de Q100.00 en tu inscripción.', 'success');
+    }
     setOpenDropdown(null);
   };
 
@@ -1337,8 +1355,12 @@ export default function Convencion() {
     if (includeHotel) selectedComplementos.push(`Hospedaje Hotel Sede (+ Q. ${hotelCost})`);
     if (includeCultural) selectedComplementos.push(`Paquete Inmersivo Cultural (+ Q. ${culturalCost})`);
     if (includeFamiliar) selectedComplementos.push(`Paquete Familiar Inmersivo Cultural (+ Q. ${familiarCost})`);
-    if (appliedDiscount && descuentoMonto > 0) {
-      selectedComplementos.push(`Descuento "${appliedDiscount.codigo}" (- Q. ${descuentoMonto})`);
+    if (descuentoMonto > 0) {
+      if (usaDescuentoClubXela) {
+        selectedComplementos.push(`Beneficio Club Quetzaltenango (- Q. ${descuentoMonto})`);
+      } else if (appliedDiscount) {
+        selectedComplementos.push(`Descuento "${appliedDiscount.codigo}" (- Q. ${descuentoMonto})`);
+      }
     }
 
     const paqueteNombre = selectedComplementos.join(' + ');
@@ -1357,8 +1379,8 @@ export default function Convencion() {
         preferenciaNotificacion: telegramOption || 'email',
         telegramVerificado: telegramOption === 'telegram' ? telegramVerified : false,
         subtotalOriginal: subtotalTotal,
-        ...(appliedDiscount && descuentoMonto > 0 ? {
-          codigoDescuento: appliedDiscount.codigo,
+        ...(descuentoMonto > 0 && descuentoCodigoEfectivo ? {
+          codigoDescuento: descuentoCodigoEfectivo,
           descuentoAplicado: descuentoMonto
         } : {}),
         montoPagar: montoTotal,
@@ -1425,7 +1447,10 @@ export default function Convencion() {
         paquete: paqueteNombre,
         monto: montoTotal,
         metodo: isCortesiaTotal ? 'recurrente' : metodo,
-        estadoPago: isCortesiaTotal ? 'Pagado' : 'Pendiente'
+        estadoPago: isCortesiaTotal ? 'Pagado' : 'Pendiente',
+        descuentoAplicado: descuentoMonto > 0 ? descuentoMonto : undefined,
+        codigoDescuento: descuentoCodigoEfectivo,
+        subtotalOriginal: subtotalTotal
       });
       setIsSubmitted(true);
       showToast(
@@ -2012,15 +2037,25 @@ export default function Convencion() {
               /* PANTALLA DE PAGO DIRECTO PARA YA PRE-INSCRITOS (?pagar=FOLIO) — SIN REPETIR FORMULARIO */
               (() => {
                 const directSubtotal = directPayRegistro.subtotalOriginal || directPayRegistro.montoPagar || baseCost;
-                const directDescuento = appliedDiscount
+                const yaPagado = (directPayRegistro.estadoPago || '').toLowerCase() === 'pagado';
+                const directClubNorm = (directPayRegistro.club || '').trim().toLowerCase();
+                const isDirectClubXela =
+                  directClubNorm === 'quetzaltenango' || directClubNorm === 'club de leones quetzaltenango';
+                const directDescuentoXela =
+                  !yaPagado && isDirectClubXela ? Math.min(directSubtotal, DESCUENTO_CLUB_QUETZALTENANGO) : 0;
+                const directDescuentoCodigo = appliedDiscount
                   ? appliedDiscount.tipo === 'porcentaje'
                     ? Math.round((directSubtotal * appliedDiscount.valor) / 100)
                     : Math.min(directSubtotal, appliedDiscount.valor)
                   : (directPayRegistro.descuentoAplicado || 0);
-                const directMontoFinal = appliedDiscount
+                const directDescuento = Math.max(directDescuentoXela, directDescuentoCodigo);
+                const directUsaClubXela = directDescuentoXela > 0 && directDescuentoXela >= directDescuentoCodigo;
+                const directCodigoEfectivo = directUsaClubXela
+                  ? 'CLUB_QUETZALTENANGO'
+                  : (appliedDiscount ? appliedDiscount.codigo : directPayRegistro.codigoDescuento);
+                const directMontoFinal = directDescuento > 0
                   ? Math.max(0, directSubtotal - directDescuento)
                   : (directPayRegistro.montoPagar ?? directSubtotal);
-                const yaPagado = (directPayRegistro.estadoPago || '').toLowerCase() === 'pagado';
 
                 return (
                   <div className="max-w-2xl mx-auto py-4 sm:py-8 space-y-6 animate-in fade-in duration-300">
@@ -2124,8 +2159,25 @@ export default function Convencion() {
                             {discountError && <p className="text-[11px] font-bold text-rose-300">{discountError}</p>}
                           </div>
 
+                          {directUsaClubXela && (
+                            <div className="bg-emerald-500/20 border border-emerald-400/50 rounded-2xl p-3.5 flex items-start space-x-2.5 text-left">
+                              <Sparkles size={16} className="text-yellow-300 shrink-0 mt-0.5" />
+                              <div className="text-xs text-emerald-100 leading-relaxed">
+                                <strong className="text-white block">¡Beneficio Exclusivo Club de Leones Quetzaltenango aplicado!</strong>
+                                Se descontaron <strong className="text-yellow-300">Q. {directDescuento.toLocaleString()}.00</strong> sobre la tarifa oficial (Q. {directSubtotal.toLocaleString()}.00).
+                              </div>
+                            </div>
+                          )}
+
                           <div className="flex justify-between items-center pt-3 border-t border-white/15">
-                            <span className="text-xs sm:text-sm font-black text-white uppercase">Monto a Cancelar:</span>
+                            <div>
+                              <span className="text-xs sm:text-sm font-black text-white uppercase block">Monto a Cancelar:</span>
+                              {directDescuento > 0 && (
+                                <span className="text-[11px] text-slate-400 line-through font-bold">
+                                  Tarifa oficial: Q. {directSubtotal.toLocaleString()}.00
+                                </span>
+                              )}
+                            </div>
                             <span className="text-3xl font-black text-yellow-300">
                               Q. {directMontoFinal.toLocaleString()}.00
                             </span>
@@ -2140,8 +2192,8 @@ export default function Convencion() {
                                 ...directPayRegistro,
                                 subtotalOriginal: directSubtotal,
                                 montoPagar: directMontoFinal,
-                                ...(appliedDiscount
-                                  ? { codigoDescuento: appliedDiscount.codigo, descuentoAplicado: directDescuento }
+                                ...(directDescuento > 0 && directCodigoEfectivo
+                                  ? { codigoDescuento: directCodigoEfectivo, descuentoAplicado: directDescuento }
                                   : {})
                               };
                               if (directMontoFinal === 0) {
@@ -2721,6 +2773,26 @@ export default function Convencion() {
                         </div>
                       </div>
 
+                      {/* Banner de Beneficio Automático para Socios del Club de Leones Quetzaltenango */}
+                      {isClubQuetzaltenango && (
+                        <div className="bg-gradient-to-r from-emerald-500/20 via-teal-500/15 to-yellow-500/20 border border-emerald-400/50 rounded-2xl p-4 sm:p-5 flex items-start space-x-3 text-left shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-500/25 border border-emerald-400/40 flex items-center justify-center text-yellow-300 shrink-0">
+                            <Sparkles size={20} />
+                          </div>
+                          <div className="space-y-1">
+                            <span className="inline-block text-[10px] font-black uppercase tracking-widest text-emerald-300 bg-emerald-500/20 border border-emerald-400/30 px-2.5 py-0.5 rounded-full">
+                              Beneficio Club Anfitrión Activado
+                            </span>
+                            <p className="text-xs sm:text-sm font-extrabold text-white leading-snug">
+                              ¡Tienes Q. {DESCUENTO_CLUB_QUETZALTENANGO}.00 de descuento automático por ser socio del Club de Leones Quetzaltenango!
+                            </p>
+                            <p className="text-[11px] text-slate-300 font-medium">
+                              Tu tarifa base baja de <span className="line-through text-slate-400">Q. {baseCost.toLocaleString()}.00</span> a <strong className="text-yellow-300">Q. {Math.max(0, baseCost - DESCUENTO_CLUB_QUETZALTENANGO).toLocaleString()}.00</strong> y se aplicará automáticamente al finalizar tu inscripción.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Resumen de Afiliación Estilo Credencial */}
                       <div className="bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-5 sm:p-6 rounded-2xl border border-white/15 text-left space-y-3 shadow-lg">
                         <div className="flex items-center justify-between border-b border-white/10 pb-2">
@@ -3251,19 +3323,26 @@ export default function Convencion() {
                               <span className="font-bold text-white">Q. {(config.tarifaFamiliar || 450).toLocaleString()}.00</span>
                             </div>
                           )}
-                          {appliedDiscount && descuentoMonto > 0 && (
+                          {descuentoMonto > 0 && (
                             <div className="flex justify-between items-center font-bold text-emerald-300 pt-1">
                               <span>
-                                • Descuento "{appliedDiscount.codigo}" (
-                                {appliedDiscount.tipo === 'porcentaje'
-                                  ? `${appliedDiscount.valor}%`
-                                  : `Q. ${appliedDiscount.valor}`}
-                                ):
+                                {usaDescuentoClubXela
+                                  ? '• Beneficio Exclusivo Club de Leones Quetzaltenango:'
+                                  : `• Descuento "${appliedDiscount?.codigo}" (${appliedDiscount?.tipo === 'porcentaje' ? `${appliedDiscount.valor}%` : `Q. ${appliedDiscount?.valor}`}):`}
                               </span>
                               <span>- Q. {descuentoMonto.toLocaleString()}.00</span>
                             </div>
                           )}
                         </div>
+
+                        {usaDescuentoClubXela && (
+                          <div className="bg-emerald-500/15 border border-emerald-400/40 rounded-xl px-3.5 py-2.5 flex items-center space-x-2.5 text-xs text-emerald-200 font-bold">
+                            <Sparkles size={15} className="text-yellow-300 shrink-0" />
+                            <span>
+                              Descuento automático de <strong className="text-white">Q. {DESCUENTO_CLUB_QUETZALTENANGO}.00</strong> aplicado por pertenecer al Club de Leones Quetzaltenango.
+                            </span>
+                          </div>
+                        )}
 
                         {/* Palabra Clave de Descuento */}
                         <div className="pt-3 border-t border-white/10 space-y-2">
@@ -3324,7 +3403,7 @@ export default function Convencion() {
                         <div className="flex justify-between items-center pt-3 border-t border-white/15 text-sm sm:text-base font-black">
                           <div>
                             <span className="text-white tracking-wide block">MONTO TOTAL A CANCELAR:</span>
-                            {appliedDiscount && descuentoMonto > 0 && (
+                            {descuentoMonto > 0 && (
                               <span className="text-[11px] text-slate-400 line-through font-bold">
                                 Subtotal original: Q. {subtotalTotal.toLocaleString()}.00
                               </span>
@@ -3433,6 +3512,17 @@ export default function Convencion() {
 
                     <div className="text-xs text-slate-200 space-y-1.5">
                       <p>• <strong>Paquete:</strong> {paymentSuccessData?.paquete || 'Inscripción Convención Nacional'}</p>
+                      {(paymentSuccessData?.descuentoAplicado || 0) > 0 && (
+                        <div className="bg-emerald-500/20 border border-emerald-400/50 rounded-xl p-3 my-2 flex items-start space-x-2 text-emerald-100">
+                          <Sparkles size={15} className="text-yellow-300 shrink-0 mt-0.5" />
+                          <span>
+                            <strong className="text-white">¡Descuento aplicado!</strong>{' '}
+                            {paymentSuccessData?.codigoDescuento === 'CLUB_QUETZALTENANGO'
+                              ? `Por pertenecer al Club de Leones Quetzaltenango, se aplicó tu beneficio exclusivo de -Q. ${paymentSuccessData.descuentoAplicado?.toLocaleString()}.00 sobre la tarifa oficial${paymentSuccessData?.subtotalOriginal ? ` (Q. ${paymentSuccessData.subtotalOriginal.toLocaleString()}.00)` : ''}.`
+                              : `Se aplicó un descuento de -Q. ${paymentSuccessData?.descuentoAplicado?.toLocaleString()}.00 (${paymentSuccessData?.codigoDescuento}).`}
+                          </span>
+                        </div>
+                      )}
                       <p>• <strong>Estado del Pago:</strong> {paymentSuccessData?.metodo === 'recurrente' || paymentSuccessData?.estadoPago === 'Pagado' ? (
                         <span className="text-emerald-400 font-bold ml-1">
                           {paymentSuccessData?.monto === 0 ? 'Confirmado (Cortesía 100%)' : 'Pagado con Tarjeta (BAC Credomatic)'}
