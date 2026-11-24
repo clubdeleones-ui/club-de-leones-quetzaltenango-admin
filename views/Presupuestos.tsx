@@ -349,8 +349,8 @@ export const Presupuestos: React.FC = () => {
 
   const handleRestaurarLibrosOficiales = async () => {
     const ok = await showConfirm(
-      'Restaurar Libros Reales Banrural S.A.',
-      '¿Deseas restaurar exactamente los 15 movimientos oficiales de la Cuenta Administrativa (3827008588 — Saldo Q27,394.09) y los 12 movimientos oficiales de la Cuenta Cueva (3827008592 — Saldo Q21,405.17)?',
+      'Restaurar Libros Bancarios Oficiales',
+      '¿Deseas restaurar los movimientos oficiales de las 3 cuentas del Club: Banrural Administrativa (3827008588 — Saldo Q27,394.09), Banrural Cueva (3827008592 — Saldo Q21,405.17) y BAC Credomatic Convención (908326358 — Apertura Q400.00)?',
       { confirmText: 'Restaurar Saldos Oficiales', cancelText: 'Cancelar' }
     );
     if (!ok) return;
@@ -360,7 +360,7 @@ export const Presupuestos: React.FC = () => {
       await firebaseService.resetMovimientosBancariosOficiales(MOVIMIENTOS_BANCARIOS_REALES);
       showAlert(
         'Libros Bancarios Sincronizados',
-        'Se han restaurado las dos cuentas monetarias de Banrural S.A. con sus saldos y transacciones reales.'
+        'Se han restaurado las 3 cuentas monetarias oficiales (Banrural Administrativa, Banrural Cueva y BAC Credomatic Convención) con sus saldos y transacciones reales.'
       );
     } catch (err) {
       console.error('Error restaurando libros:', err);

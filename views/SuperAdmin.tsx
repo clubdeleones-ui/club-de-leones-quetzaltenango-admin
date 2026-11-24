@@ -813,25 +813,6 @@ const SuperAdmin: React.FC<SuperAdminProps> = ({ user, onUpdateUser }) => {
     showAlert('Agenda Importada', `Se cargaron ${newPuntos.length} puntos de agenda de "${selected.titulo}" al creador de actas.`);
   };
 
-  const [showAddActividad, setShowAddActividad] = useState(false);
-  const [showEditActividad, setShowEditActividad] = useState(false);
-  const [editingActividad, setEditingActividad] = useState<Actividad | null>(null);
-  const [newActividad, setNewActividad] = useState({ 
-    titulo: '', 
-    descripcion: '', 
-    fecha: '', 
-    lugar: '', 
-    publica: true,
-    conBotonDonacion: false,
-    donacionUrl: '',
-    imagen: ''
-  });
-  const [newActividadImageFile, setNewActividadImageFile] = useState<File | null>(null);
-  const [editActividadImageFile, setEditActividadImageFile] = useState<File | null>(null);
-  const [newActividadImagePreview, setNewActividadImagePreview] = useState<string | null>(null);
-  const [editActividadImagePreview, setEditActividadImagePreview] = useState<string | null>(null);
-  const [isSavingActividad, setIsSavingActividad] = useState(false);
-
   const [showAddDonacion, setShowAddDonacion] = useState(false);
   const [isSavingDonacion, setIsSavingDonacion] = useState(false);
   const [newDonacion, setNewDonacion] = useState({
@@ -1432,77 +1413,6 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
 
     setEditingActaId(null);
     setShowAddActa(false);
-  };
-
-  const handleAddActividad = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newActividad.titulo || !newActividad.fecha || !newActividad.lugar) return;
-    setIsSavingActividad(true);
-    try {
-      let finalImageUrl = newActividad.imagen;
-      if (newActividadImageFile) {
-        const compressedBase64 = await compressImageFile(newActividadImageFile, 800, 800, 0.7);
-        finalImageUrl = await firebaseService.uploadGaleriaImage(compressedBase64, 'actividad');
-      }
-
-      const created: Actividad = {
-        id: `ev-${Date.now()}`,
-        titulo: newActividad.titulo,
-        descripcion: newActividad.descripcion,
-        fecha: newActividad.fecha.replace('T', ' '),
-        lugar: newActividad.lugar,
-        imagen: finalImageUrl || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800',
-        publica: newActividad.publica,
-        conBotonDonacion: newActividad.conBotonDonacion,
-        donacionUrl: newActividad.conBotonDonacion ? (newActividad.donacionUrl || '#/donar') : ''
-      };
-
-      await firebaseService.saveActividad(created);
-      setActividades([created, ...actividades]);
-      setNewActividad({ titulo: '', descripcion: '', fecha: '', lugar: '', publica: true, conBotonDonacion: false, donacionUrl: '', imagen: '' });
-      setNewActividadImageFile(null);
-      setNewActividadImagePreview(null);
-      setShowAddActividad(false);
-      showAlert("Actividad programada exitosamente", "success");
-    } catch (err: any) {
-      console.error("Error saving new activity in Firestore:", err);
-      showAlert(err.message || "Error al guardar la actividad", "error");
-    } finally {
-      setIsSavingActividad(false);
-    }
-  };
-
-  const handleSaveEditedActividad = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingActividad || !editingActividad.titulo || !editingActividad.fecha || !editingActividad.lugar) return;
-    setIsSavingActividad(true);
-    try {
-      let finalImageUrl = editingActividad.imagen;
-      if (editActividadImageFile) {
-        const compressedBase64 = await compressImageFile(editActividadImageFile, 800, 800, 0.7);
-        finalImageUrl = await firebaseService.uploadGaleriaImage(compressedBase64, 'actividad');
-      }
-
-      const updated: Actividad = {
-        ...editingActividad,
-        fecha: editingActividad.fecha.replace('T', ' '),
-        imagen: finalImageUrl,
-        donacionUrl: editingActividad.conBotonDonacion ? (editingActividad.donacionUrl || '#/donar') : ''
-      };
-
-      await firebaseService.saveActividad(updated);
-      setActividades(actividades.map(a => a.id === updated.id ? updated : a));
-      setEditingActividad(null);
-      setEditActividadImageFile(null);
-      setEditActividadImagePreview(null);
-      setShowEditActividad(false);
-      showAlert("Actividad actualizada exitosamente", "success");
-    } catch (err: any) {
-      console.error("Error saving updated activity in Firestore:", err);
-      showAlert(err.message || "Error al actualizar la actividad", "error");
-    } finally {
-      setIsSavingActividad(false);
-    }
   };
 
   const handleAddDonacion = async (e: React.FormEvent) => {

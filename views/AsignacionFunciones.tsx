@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { firebaseService } from '../services/firebaseService';
 import { ALL_APP_MODULES, AppModule } from '../config/modules';
+import { getSafeAvatarUrl, handleAvatarError } from '../utils/imageFallback';
 
 const AVAILABLE_TABS = ALL_APP_MODULES;
 
@@ -395,8 +396,11 @@ export const AsignacionFunciones: React.FC = () => {
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <img
-                        src={socio.foto || 'https://picsum.photos/seed/default/200/200'}
+                        src={getSafeAvatarUrl(socio.foto, socio.nombre)}
                         alt={socio.nombre}
+                        loading="lazy"
+                        decoding="async"
+                        onError={(e) => handleAvatarError(e, socio.nombre)}
                         className={`w-12 h-12 rounded-full object-cover flex-shrink-0 border-2 ${
                           isDirectiva ? 'border-amber-300' : 'border-slate-100'
                         }`}

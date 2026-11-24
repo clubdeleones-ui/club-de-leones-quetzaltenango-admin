@@ -247,7 +247,7 @@ export default function CensoSocio() {
           fechaNacimiento: fechaNacimiento,
           profesion: profesion.trim(),
           direccion: direccion.trim(),
-          foto: foto || 'https://picsum.photos/seed/' + Date.now() + '/200/200',
+          foto: foto || '',
           rol: UserRole.SOCIO,
           puesto: 'Socio en Validación',
           estadoCuotas: 'Al día',

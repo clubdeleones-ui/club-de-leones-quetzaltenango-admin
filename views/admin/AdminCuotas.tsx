@@ -12,6 +12,7 @@ import { useToast } from '../../context/ToastContext';
 import { useConfirm } from '../../components/ConfirmProvider';
 import { formatDisplayDate } from '../../utils/dateSpanishFormatter';
 import { validateImageFile, compressImageFile } from '../../utils/imageCompressor';
+import { getSafeAvatarUrl, handleAvatarError } from '../../utils/imageFallback';
 
 export const AdminCuotas: React.FC = () => {
   const { socios: dbSocios } = useClubData();
@@ -981,12 +982,12 @@ export const AdminCuotas: React.FC = () => {
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center space-x-4 text-left min-w-0">
                       <img 
-                        src={s.foto || 'https://picsum.photos/seed/socio/200/200'} 
+                        src={getSafeAvatarUrl(s.foto, s.nombre)} 
                         alt={s.nombre} 
+                        loading="lazy"
+                        decoding="async"
                         className="w-12 h-12 rounded-full object-cover border-2 border-slate-100 flex-shrink-0"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/socio/200/200';
-                        }}
+                        onError={(e) => handleAvatarError(e, s.nombre)}
                       />
                       <div className="min-w-0">
                         <h4 className="font-extrabold text-slate-800 text-sm sm:text-base leading-tight break-words">{s.nombre}</h4>
@@ -1448,9 +1449,13 @@ export const AdminCuotas: React.FC = () => {
                       <div className="flex items-center justify-between p-2.5 bg-green-50/50 border border-green-200 rounded-xl animate-in fade-in duration-200">
                         <div className="flex items-center space-x-2.5">
                           <img 
-                            src={socios.find(s => s.id === registrarPagoData.socioId)?.foto || 'https://picsum.photos/seed/socio/100/100'} 
+                            src={getSafeAvatarUrl(
+                              socios.find(s => s.id === registrarPagoData.socioId)?.foto,
+                              socios.find(s => s.id === registrarPagoData.socioId)?.nombre
+                            )} 
                             alt="Socio" 
                             className="w-8 h-8 rounded-full object-cover border border-green-200 flex-shrink-0"
+                            onError={(e) => handleAvatarError(e, socios.find(s => s.id === registrarPagoData.socioId)?.nombre)}
                           />
                           <div className="text-left">
                             <p className="font-extrabold text-slate-800 text-xs leading-tight">
@@ -1530,9 +1535,10 @@ export const AdminCuotas: React.FC = () => {
                                   >
                                     <div className="flex items-center space-x-2">
                                       <img 
-                                        src={s.foto || 'https://picsum.photos/seed/socio/50/50'} 
+                                        src={getSafeAvatarUrl(s.foto, s.nombre)} 
                                         alt={s.nombre} 
                                         className="w-7 h-7 rounded-full object-cover border flex-shrink-0"
+                                        onError={(e) => handleAvatarError(e, s.nombre)}
                                       />
                                       <span className="text-xs font-bold text-slate-700 truncate max-w-[200px]">{s.nombre}</span>
                                     </div>

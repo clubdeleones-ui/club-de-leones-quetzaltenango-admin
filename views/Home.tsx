@@ -207,6 +207,7 @@ const Home: React.FC = () => {
           src="https://images.unsplash.com/photo-1593113598332-cd288d649433?auto=format&fit=crop&q=80&w=1600"
           className="absolute inset-0 w-full h-full object-cover"
           alt="Hero"
+          fetchPriority="high"
         />
         <div className="relative z-20 text-center text-white px-2 sm:px-6 max-w-4xl space-y-4 sm:space-y-6">
           <AnimatedLionsLogo 
@@ -574,6 +575,8 @@ const Home: React.FC = () => {
                     <img 
                       src={getSafeActivityUrl(act.imagen)} 
                       onError={(e) => handleImageError(e, DEFAULT_ACTIVITY_FALLBACK)}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                       alt={act.titulo}
                     />
@@ -674,6 +677,8 @@ const Home: React.FC = () => {
                 <img 
                   src={getSafeGalleryUrl(activeFondo.url)} 
                   alt={activeFondo.titulo} 
+                  loading="lazy"
+                  decoding="async"
                   onError={(e) => handleImageError(e, DEFAULT_GALLERY_FALLBACK)}
                   className="max-w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl border-4 border-white/10"
                 />

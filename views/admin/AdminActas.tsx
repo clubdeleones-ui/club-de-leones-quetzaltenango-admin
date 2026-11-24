@@ -14,6 +14,7 @@ import { useToast } from '../../context/ToastContext';
 import { getWrittenDateTimeSpanish, formatDisplayDate } from '../../utils/dateSpanishFormatter';
 import { generateActaPDF, generateActaCode } from '../../utils/pdfGenerator';
 import { FormattedActa } from '../../components/FormattedActa';
+import { getSafeAvatarUrl, handleAvatarError } from '../../utils/imageFallback';
 
 interface AdminActasProps {
   user: Socio;
@@ -1166,12 +1167,12 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                             >
                               <div className="flex items-center space-x-3">
                                 <img 
-                                  src={member.foto || 'https://picsum.photos/seed/socio/200/200'} 
+                                  src={getSafeAvatarUrl(member.foto, member.nombre)} 
                                   alt={member.nombre} 
+                                  loading="lazy"
+                                  decoding="async"
                                   className="w-9 h-9 rounded-full object-cover border border-slate-100 shadow-sm"
-                                  onError={(e) => {
-                                    (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/socio/200/200';
-                                  }}
+                                  onError={(e) => handleAvatarError(e, member.nombre)}
                                 />
                                 <div>
                                   <p className="text-sm font-extrabold text-slate-700 group-hover:text-amber-600 transition-colors leading-tight">{member.nombre}</p>
@@ -1217,12 +1218,12 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                               <div className="flex items-center space-x-3">
                                 <span className="text-[10px] font-black text-slate-400 w-5 text-right">{index + 1}.</span>
                                 <img 
-                                  src={member.foto || 'https://picsum.photos/seed/socio/200/200'} 
+                                  src={getSafeAvatarUrl(member.foto, member.nombre)} 
                                   alt={member.nombre} 
+                                  loading="lazy"
+                                  decoding="async"
                                   className="w-9 h-9 rounded-full object-cover border border-slate-100 shadow-sm"
-                                  onError={(e) => {
-                                    (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/socio/200/200';
-                                  }}
+                                  onError={(e) => handleAvatarError(e, member.nombre)}
                                 />
                                 <div>
                                   <p className="text-sm font-extrabold text-slate-805 leading-tight">{member.nombre}</p>
@@ -1716,12 +1717,12 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                     className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-50/60 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-950 transition-all select-none cursor-pointer active:scale-95 shadow-sm"
                                   >
                                     <img 
-                                      src={member.foto || 'https://picsum.photos/seed/socio/200/200'} 
+                                      src={getSafeAvatarUrl(member.foto, member.nombre)} 
                                       alt={member.nombre} 
+                                      loading="lazy"
+                                      decoding="async"
                                       className="w-5 h-5 rounded-full object-cover border border-emerald-200 shadow-sm"
-                                      onError={(e) => {
-                                        (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/socio/200/200';
-                                      }}
+                                      onError={(e) => handleAvatarError(e, member.nombre)}
                                     />
                                     <span>
                                       C.L. {member.nombre.split(' ')[0]} {member.nombre.split(' ')[1] ? member.nombre.split(' ')[1][0] + '.' : ''}
@@ -1872,12 +1873,12 @@ No habiendo más asuntos que tratar, se da por finalizada la presente sesión, p
                                     className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-50/60 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-950 transition-all select-none cursor-pointer active:scale-95 shadow-sm"
                                   >
                                     <img 
-                                      src={member.foto || 'https://picsum.photos/seed/socio/200/200'} 
+                                      src={getSafeAvatarUrl(member.foto, member.nombre)} 
                                       alt={member.nombre} 
+                                      loading="lazy"
+                                      decoding="async"
                                       className="w-5 h-5 rounded-full object-cover border border-emerald-200 shadow-sm"
-                                      onError={(e) => {
-                                        (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/socio/200/200';
-                                      }}
+                                      onError={(e) => handleAvatarError(e, member.nombre)}
                                     />
                                     <span>
                                       C.L. {member.nombre.split(' ')[0]} {member.nombre.split(' ')[1] ? member.nombre.split(' ')[1][0] + '.' : ''}

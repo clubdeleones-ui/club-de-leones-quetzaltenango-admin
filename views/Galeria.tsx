@@ -191,6 +191,8 @@ const Galeria: React.FC = () => {
                               <img
                                 src={getSafeGalleryUrl(item.url)}
                                 alt={item.titulo}
+                                loading="lazy"
+                                decoding="async"
                                 onError={(e) => handleImageError(e, DEFAULT_GALLERY_FALLBACK)}
                                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                               />

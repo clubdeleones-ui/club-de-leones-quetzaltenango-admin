@@ -1783,6 +1783,7 @@ export default function Convencion() {
                       src={aliado.logoUrl} 
                       alt={aliado.name}
                       loading="lazy"
+                      decoding="async"
                       className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
                       onError={(e) => {
                         const target = e.currentTarget;
@@ -1852,6 +1853,8 @@ export default function Convencion() {
             <img 
               src={config.fotoSede || "https://images.unsplash.com/photo-1596436889106-be35e843f974?auto=format&fit=crop&q=80&w=1200"} 
               alt="Quetzaltenango Sede"
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 absolute inset-0"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#060e1d]/95 via-[#060e1d]/30 to-transparent flex items-end p-6 z-10">
