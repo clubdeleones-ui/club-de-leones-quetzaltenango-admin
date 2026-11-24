@@ -622,6 +622,7 @@ export default function Convencion() {
   const [searchParams] = useSearchParams();
   const [isCyberSourceModalOpen, setIsCyberSourceModalOpen] = useState(false);
   const [pendingConvencionRegistro, setPendingConvencionRegistro] = useState<ConvencionRegistro | null>(null);
+  const pendingPreEmailSentRef = useRef<Set<string>>(new Set());
   const [directPayRegistro, setDirectPayRegistro] = useState<ConvencionRegistro | null>(null);
   const [directPayLoading, setDirectPayLoading] = useState(false);
   const [showQuickPayLookup, setShowQuickPayLookup] = useState(false);
@@ -674,17 +675,39 @@ export default function Convencion() {
     setIsCyberSourceModalOpen(false);
     setLoading(true);
     try {
+      const nowIso = new Date().toISOString();
+      const prevNotifs = Array.isArray(pendingConvencionRegistro.notificacionesEnviadas)
+        ? pendingConvencionRegistro.notificacionesEnviadas
+        : [];
+      const prevMsgs = Array.isArray(pendingConvencionRegistro.mensajesEnviados)
+        ? pendingConvencionRegistro.mensajesEnviados
+        : [];
+
       const updatedReg: ConvencionRegistro = {
         ...pendingConvencionRegistro,
         metodoPago: 'tarjeta',
         estadoPago: 'Pagado',
         recurrenteCheckoutId: result.transactionId,
         ultimoTipoNotificacion: 'pago_confirmado',
-        ultimoMensajeEnviado: `🦁 Pago Confirmado: LXXV Convención Nacional (Ref: ${result.transactionId})`,
-        fechaUltimoMensaje: new Date().toISOString()
+        ultimoMensajeEnviado: `🎟️ ¡Pago Confirmado y Entrada QR Oficial! (Ref: ${result.transactionId})`,
+        fechaUltimoMensaje: nowIso,
+        canalUltimoMensaje: 'gmail',
+        notificacionesEnviadas: Array.from(new Set([...prevNotifs, 'pago_confirmado'])),
+        mensajesEnviados: [
+          ...prevMsgs,
+          {
+            id: `msg_${Date.now()}_pago_bac`,
+            fecha: nowIso,
+            canal: 'gmail',
+            tipo: 'pago_confirmado',
+            asunto: `🎟️ ¡Pago Confirmado y Entrada QR Oficial! (Folio: ${pendingConvencionRegistro.id})`,
+            mensajeResumen: `Pago completado con tarjeta BAC Credomatic (Ref: ${result.transactionId}).`
+          }
+        ]
       };
 
       await firebaseService.saveConvencionRegistro(updatedReg);
+      pendingPreEmailSentRef.current.add(updatedReg.id);
 
       // Acreditar automáticamente el pago en la Cuenta BAC 908326358 dentro de Tesorería / Presupuestos
       firebaseService.registrarIngresoConvencionEnBac(updatedReg, 'Pasarela BAC').catch(err => {
@@ -695,6 +718,14 @@ export default function Convencion() {
       gmailService.sendRegistrationEmail(updatedReg, 'pago_confirmado', undefined, config?.googleScriptUrl).catch(err => {
         console.warn("No se pudo enviar correo de confirmación de pago por Gmail:", err);
       });
+
+      // Notificar al comité organizador por Telegram que el pago fue recibido
+      telegramService.notifyPagoConfirmadoConvencion(
+        updatedReg,
+        'Pasarela BAC Credomatic',
+        config?.telegramBotToken,
+        config?.telegramChatId
+      ).catch(() => {});
 
       setDirectPayRegistro(null);
 
@@ -1367,8 +1398,16 @@ export default function Convencion() {
     const isCortesiaTotal = montoTotal === 0 || metodo === 'cortesia';
     
     try {
+      const shouldReusePendingId =
+        pendingConvencionRegistro &&
+        pendingConvencionRegistro.estadoPago !== 'Pagado' &&
+        (pendingConvencionRegistro.email || '').trim().toLowerCase() === form.email.trim().toLowerCase();
+      const registroId = shouldReusePendingId ? pendingConvencionRegistro.id : `reg_${Date.now()}`;
+      const isCardCheckout = metodo === 'recurrente' && !isCortesiaTotal;
+      const nowIso = new Date().toISOString();
+
       const nuevoRegistro: ConvencionRegistro = {
-        id: `reg_${Date.now()}`,
+        id: registroId,
         ...form,
         club: finalClub,
         dpi: dpiDigitos.trim(),
@@ -1386,31 +1425,52 @@ export default function Convencion() {
         montoPagar: montoTotal,
         metodoPago: isCortesiaTotal ? 'cortesia' : (metodo === 'recurrente' ? 'tarjeta' : 'transferencia'),
         estadoPago: isCortesiaTotal ? 'Pagado' : (metodo === 'recurrente' ? 'Checkout_Creado' : 'Pendiente'),
-        fechaRegistro: new Date().toISOString(),
-        ultimoTipoNotificacion: isCortesiaTotal ? 'pago_confirmado' : 'pre_registro',
-        ultimoMensajeEnviado: isCortesiaTotal
-          ? `🦁 Inscripción Confirmada con Cortesía (${appliedDiscount?.codigo || '100%'}): LXXV Convención Nacional`
-          : '🦁 Confirmación de Pre-Inscripción: LXXV Convención Nacional',
-        fechaUltimoMensaje: new Date().toISOString(),
-        canalUltimoMensaje: 'gmail',
-        notificacionesEnviadas: [isCortesiaTotal ? 'pago_confirmado' : 'pre_registro'],
-        mensajesEnviados: [{
-          id: `msg_${Date.now()}_pre`,
-          fecha: new Date().toISOString(),
-          canal: 'gmail',
-          tipo: isCortesiaTotal ? 'pago_confirmado' : 'pre_registro',
-          asunto: isCortesiaTotal
-            ? '🦁 Inscripción Oficial Confirmada: LXXV Convención Nacional'
+        fechaRegistro: shouldReusePendingId ? pendingConvencionRegistro.fechaRegistro : nowIso,
+        ...(!isCardCheckout ? {
+          ultimoTipoNotificacion: isCortesiaTotal ? 'pago_confirmado' : 'pre_registro',
+          ultimoMensajeEnviado: isCortesiaTotal
+            ? `🦁 Inscripción Confirmada con Cortesía (${appliedDiscount?.codigo || '100%'}): LXXV Convención Nacional`
             : '🦁 Confirmación de Pre-Inscripción: LXXV Convención Nacional',
-          mensajeResumen: isCortesiaTotal
-            ? `Inscripción confirmada con código de cortesía ${appliedDiscount?.codigo || ''}.`
-            : 'Bienvenido y confirmación de pre-registro recibida.'
-        }]
+          fechaUltimoMensaje: nowIso,
+          canalUltimoMensaje: 'gmail',
+          notificacionesEnviadas: [isCortesiaTotal ? 'pago_confirmado' : 'pre_registro'],
+          mensajesEnviados: [{
+            id: `msg_${Date.now()}_pre`,
+            fecha: nowIso,
+            canal: 'gmail',
+            tipo: isCortesiaTotal ? 'pago_confirmado' : 'pre_registro',
+            asunto: isCortesiaTotal
+              ? '🦁 Inscripción Oficial Confirmada: LXXV Convención Nacional'
+              : '🦁 Confirmación de Pre-Inscripción: LXXV Convención Nacional',
+            mensajeResumen: isCortesiaTotal
+              ? `Inscripción confirmada con código de cortesía ${appliedDiscount?.codigo || ''}.`
+              : 'Confirmación de pre-registro con instrucciones de pago y enlace directo enviada.'
+          }]
+        } : {})
       };
       
       await firebaseService.saveConvencionRegistro(nuevoRegistro);
-      
-      // Enviar correo informativo automático por Gmail & notificación de Telegram
+
+      // Si es pago con tarjeta BAC, abrir pasarela primero (evita enviar 2 correos contradictorios si paga de inmediato)
+      if (isCardCheckout) {
+        if (!shouldReusePendingId) {
+          telegramService.notifyNuevaInscripcionConvencion(
+            nuevoRegistro, 
+            config?.telegramBotToken, 
+            config?.telegramChatId
+          ).catch(err => {
+            console.warn("No se pudo enviar notificación de Telegram:", err);
+          });
+        }
+        setPendingConvencionRegistro(nuevoRegistro);
+        setIsCyberSourceModalOpen(true);
+        setLoading(false);
+        setIsRedirectingPayment(false);
+        return;
+      }
+
+      // Para transferencia o cortesía: enviar correo automático inmediato y notificación de Telegram
+      pendingPreEmailSentRef.current.add(nuevoRegistro.id);
       gmailService.sendRegistrationEmail(
         nuevoRegistro, 
         isCortesiaTotal ? 'pago_confirmado' : 'pre_registro', 
@@ -1420,20 +1480,21 @@ export default function Convencion() {
         console.warn("No se pudo enviar correo de bienvenida por Gmail:", err);
       });
 
-      telegramService.notifyNuevaInscripcionConvencion(
-        nuevoRegistro, 
-        config?.telegramBotToken, 
-        config?.telegramChatId
-      ).catch(err => {
-        console.warn("No se pudo enviar notificación de Telegram:", err);
-      });
-
-      if (metodo === 'recurrente' && !isCortesiaTotal) {
-        setPendingConvencionRegistro(nuevoRegistro);
-        setIsCyberSourceModalOpen(true);
-        setLoading(false);
-        setIsRedirectingPayment(false);
-        return;
+      if (isCortesiaTotal) {
+        telegramService.notifyPagoConfirmadoConvencion(
+          nuevoRegistro,
+          `Cortesía 100% (${appliedDiscount?.codigo || 'Autorizada'})`,
+          config?.telegramBotToken,
+          config?.telegramChatId
+        ).catch(() => {});
+      } else {
+        telegramService.notifyNuevaInscripcionConvencion(
+          nuevoRegistro, 
+          config?.telegramBotToken, 
+          config?.telegramChatId
+        ).catch(err => {
+          console.warn("No se pudo enviar notificación de Telegram:", err);
+        });
       }
 
       try {
@@ -3530,6 +3591,13 @@ export default function Convencion() {
                       ) : (
                         <span className="text-amber-300 font-bold ml-1">Pendiente de depósito / transferencia BAC (Cta. 908326358)</span>
                       )}</p>
+                      <p className="text-sky-200 bg-sky-500/15 border border-sky-400/30 rounded-xl px-3 py-2 mt-2">
+                        ✉️ <strong>Notificación enviada:</strong> Enviamos la confirmación oficial{' '}
+                        {paymentSuccessData?.metodo === 'recurrente' || paymentSuccessData?.estadoPago === 'Pagado'
+                          ? 'de tu pago y tu Entrada QR'
+                          : 'de tu pre-inscripción con tu enlace directo de pago'}{' '}
+                        a <strong className="text-white">{form.email}</strong> (revisa también tu carpeta de Spam o Promociones).
+                      </p>
                     </div>
 
                     {/* Si seleccionó transferencia, mostrar cuenta oficial BAC Credomatic de Convención */}
@@ -3817,7 +3885,48 @@ export default function Convencion() {
       {pendingConvencionRegistro && (
         <CyberSourcePaymentModal
           isOpen={isCyberSourceModalOpen}
-          onClose={() => setIsCyberSourceModalOpen(false)}
+          onClose={() => {
+            setIsCyberSourceModalOpen(false);
+            // Si cerró la pasarela sin completar el pago y era una nueva pre-inscripción sin correo enviado,
+            // enviamos automáticamente el correo de pre-registro con su enlace directo ?pagar=FOLIO
+            if (
+              pendingConvencionRegistro &&
+              pendingConvencionRegistro.estadoPago !== 'Pagado' &&
+              !pendingPreEmailSentRef.current.has(pendingConvencionRegistro.id) &&
+              !(pendingConvencionRegistro.notificacionesEnviadas || []).includes('pre_registro')
+            ) {
+              pendingPreEmailSentRef.current.add(pendingConvencionRegistro.id);
+              const nowIso = new Date().toISOString();
+              const regConCorreo: ConvencionRegistro = {
+                ...pendingConvencionRegistro,
+                estadoPago: 'Pendiente',
+                ultimoTipoNotificacion: 'pre_registro',
+                ultimoMensajeEnviado: '🦁 Confirmación de Pre-Inscripción: LXXV Convención Nacional',
+                fechaUltimoMensaje: nowIso,
+                canalUltimoMensaje: 'gmail',
+                notificacionesEnviadas: Array.from(new Set([...(pendingConvencionRegistro.notificacionesEnviadas || []), 'pre_registro'])),
+                mensajesEnviados: [
+                  ...(pendingConvencionRegistro.mensajesEnviados || []),
+                  {
+                    id: `msg_${Date.now()}_pre_abandoned`,
+                    fecha: nowIso,
+                    canal: 'gmail',
+                    tipo: 'pre_registro',
+                    asunto: `🦁 Confirmación de Pre-Inscripción (Folio: ${pendingConvencionRegistro.id})`,
+                    mensajeResumen: 'Pre-inscripción guardada; se envió enlace directo de pago por correo.'
+                  }
+                ]
+              };
+              firebaseService.saveConvencionRegistro(regConCorreo).catch(() => {});
+              gmailService.sendRegistrationEmail(
+                regConCorreo,
+                'pre_registro',
+                { customWelcomeText: config?.mensajeBienvenidaEmail },
+                config?.googleScriptUrl
+              ).catch(() => {});
+              showToast(`Tu pre-inscripción quedó guardada (Folio ${pendingConvencionRegistro.id}). Te enviamos el enlace de pago a ${pendingConvencionRegistro.email}.`, 'info');
+            }
+          }}
           onSuccess={handleCyberSourceSuccess}
           amount={pendingConvencionRegistro.montoPagar || montoTotal}
           currency="GTQ"

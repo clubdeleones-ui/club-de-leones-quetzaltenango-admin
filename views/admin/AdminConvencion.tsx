@@ -1231,24 +1231,59 @@ Fecha de Registro: ${new Date(qrModalRegistro.fechaRegistro).toLocaleDateString(
 
   const handleUpdateEstadoPago = async (id: string, nuevoEstado: 'Pendiente' | 'Pagado' | 'Checkout_Creado') => {
     try {
-      await firebaseService.updateConvencionRegistroStatus(id, nuevoEstado);
       const targetReg = registros.find(r => r.id === id);
-      setRegistros(prev => prev.map(r => r.id === id ? { ...r, estadoPago: nuevoEstado } : r));
+      const yaEstabaPagado = targetReg?.estadoPago === 'Pagado';
 
-      if (nuevoEstado === 'Pagado' && targetReg && targetReg.email) {
-        // Enviar automáticamente correo de confirmación de pago con entrada QR oficial y acreditar en cuenta BAC 908326358
-        const updatedReg = { ...targetReg, estadoPago: nuevoEstado };
-        gmailService.sendRegistrationEmail(updatedReg, 'pago_confirmado', undefined, config.googleScriptUrl).catch(e => {
-          console.warn("No se pudo enviar correo automático de pago:", e);
-        });
+      if (nuevoEstado === 'Pagado' && targetReg && !yaEstabaPagado) {
+        const nowIso = new Date().toISOString();
+        const prevNotifs = Array.isArray(targetReg.notificacionesEnviadas) ? targetReg.notificacionesEnviadas : [];
+        const prevMsgs = Array.isArray(targetReg.mensajesEnviados) ? targetReg.mensajesEnviados : [];
+        const updatedReg: ConvencionRegistro = {
+          ...targetReg,
+          estadoPago: 'Pagado',
+          ultimoTipoNotificacion: 'pago_confirmado',
+          ultimoMensajeEnviado: '🎟️ ¡Pago Confirmado y Entrada QR Oficial! - LXXV Convención Nacional',
+          fechaUltimoMensaje: nowIso,
+          canalUltimoMensaje: 'gmail',
+          notificacionesEnviadas: Array.from(new Set([...prevNotifs, 'pago_confirmado'])),
+          mensajesEnviados: [
+            ...prevMsgs,
+            {
+              id: `msg_${Date.now()}_pago_admin`,
+              fecha: nowIso,
+              canal: 'gmail',
+              tipo: 'pago_confirmado',
+              asunto: `🎟️ ¡Pago Confirmado y Entrada QR Oficial! (Folio: ${targetReg.id})`,
+              mensajeResumen: 'Confirmación de pago aprobada desde panel administrativo y Entrada QR enviada automáticamente.'
+            }
+          ]
+        };
+
+        await firebaseService.saveConvencionRegistro(updatedReg);
+        setRegistros(prev => prev.map(r => r.id === id ? updatedReg : r));
+
+        if (updatedReg.email) {
+          gmailService.sendRegistrationEmail(updatedReg, 'pago_confirmado', undefined, config.googleScriptUrl).catch(e => {
+            console.warn("No se pudo enviar correo automático de pago:", e);
+          });
+        }
         firebaseService.registrarIngresoConvencionEnBac(
           updatedReg,
           updatedReg.metodoPago === 'tarjeta' ? 'Pasarela BAC' : 'Depósito BAC'
         ).catch(e => {
           console.warn("No se pudo acreditar ingreso en cuenta BAC 908326358:", e);
         });
-        setSuccessMsg(`Estado actualizado a "Pagado", acreditado en Cuenta BAC 908326358 y Entrada QR enviada a ${targetReg.email}.`);
+        telegramService.notifyPagoConfirmadoConvencion(
+          updatedReg,
+          updatedReg.metodoPago === 'tarjeta' ? 'Pasarela BAC' : 'Depósito BAC (Validado en Admin)',
+          config.telegramBotToken,
+          config.telegramChatId
+        ).catch(() => {});
+
+        setSuccessMsg(`Estado actualizado a "Pagado", acreditado en Cuenta BAC 908326358 y Entrada QR enviada a ${updatedReg.email || 'participante'}.`);
       } else {
+        await firebaseService.updateConvencionRegistroStatus(id, nuevoEstado);
+        setRegistros(prev => prev.map(r => r.id === id ? { ...r, estadoPago: nuevoEstado } : r));
         setSuccessMsg(`Estado de pago actualizado a "${nuevoEstado}".`);
       }
       setTimeout(() => setSuccessMsg(''), 4000);

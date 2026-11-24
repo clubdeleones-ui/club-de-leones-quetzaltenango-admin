@@ -304,8 +304,9 @@ Club de Leones Quetzaltenango
     }
 
     // Default: 'pre_registro'
+    const payUrl = `https://clubdeleonesquetzaltenango.org/#/convencion?pagar=${encodeURIComponent(folio)}`;
     const defaultWelcome = extra?.customWelcomeText || 
-      "¡Bienvenido, Compañero León! Tu pre-inscripción a la Convención ha sido confirmada con éxito. A partir de este momento recibirás información oportuna de primera mano sobre los avances, actividades y beneficios tempranos por tu confirmación.";
+      "¡Bienvenido, Compañero León! Tu pre-inscripción a la Convención ha sido registrada con éxito. A partir de este momento recibirás información oportuna de primera mano sobre los avances, actividades y beneficios tempranos por tu confirmación.";
 
     const asunto = `🦁 Confirmación de Pre-Inscripción: LXXV Convención Nacional (Folio: ${folio})`;
     const cuerpoTexto = `
@@ -323,9 +324,19 @@ RESUMEN DE REGISTRO:
 • Monto a Pagar: ${montoStr}
 • Estado: ${registro.estadoPago || 'Pendiente'}
 
+CÓMO COMPLETAR TU PAGO (SIN VOLVER A LLENAR EL FORMULARIO):
+1. Pago en línea con Tarjeta (BAC Credomatic — Visacuotas / Mastercuotas):
+   👉 ${payUrl}
+
+2. Depósito o Transferencia Bancaria Oficial (Cuenta Convención):
+   - Banco: BAC Credomatic
+   - Tipo de Cuenta: Monetaria
+   - No. de Cuenta: 908326358
+   - A nombre de: Club de Leones Quetzaltenango
+   (Envía tu boleta indicando tu folio ${folio} para confirmar tu Entrada QR).
+
 CONSULTA TU ENTRADA QR:
-Puedes consultar el estado de tu inscripción y acceder a tu credencial con código QR en cualquier momento desde nuestra plataforma oficial:
-👉 ${webUrl} (Opción: "¿Ya te registraste? Encuentra tu Entrada QR Oficial")
+👉 ${webUrl} (Opción: "Encuentra tu Entrada QR Oficial")
 
 COMUNIDAD EN TELEGRAM:
 Te invitamos a sumarte a nuestro canal en Telegram para recibir alertas en vivo:
@@ -342,7 +353,7 @@ Correo Oficial: ${DEFAULT_GMAIL_SENDER}
     <h1 style="color: #fbbf24; margin: 0; font-size: 21px; font-weight: 900;">LXXV CONVENCIÓN NACIONAL</h1>
     <p style="color: #93c5fd; margin: 4px 0 0 0; font-size: 13px;">Club de Leones Quetzaltenango 2027</p>
     <div style="margin-top: 12px; display: inline-block; background-color: #3b82f6; color: #ffffff; padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 800; text-transform: uppercase;">
-      🦁 Pre-Inscripción Registrada
+      🦁 Pre-Inscripción Registrada con Éxito
     </div>
   </div>
 
@@ -358,13 +369,25 @@ Correo Oficial: ${DEFAULT_GMAIL_SENDER}
         <tr><td style="padding: 4px 0; color: #64748b; font-weight: 600;">Club:</td><td style="padding: 4px 0;">${club} (${cargo})</td></tr>
         <tr><td style="padding: 4px 0; color: #64748b; font-weight: 600;">Paquete:</td><td style="padding: 4px 0; font-weight: 700; color: #b45309;">${paqueteStr}</td></tr>
         ${descuentoAplicado > 0 ? `<tr><td style="padding: 4px 0; color: #059669; font-weight: 700;">Descuento Aplicado:</td><td style="padding: 4px 0; font-weight: 800; color: #059669;">-Q${descuentoAplicado.toLocaleString()} (${descuentoEtiqueta})</td></tr>` : ''}
-        <tr><td style="padding: 4px 0; color: #64748b; font-weight: 600;">Monto:</td><td style="padding: 4px 0; font-weight: 800; color: #1e3a8a;">${montoStr}</td></tr>
+        <tr><td style="padding: 4px 0; color: #64748b; font-weight: 600;">Monto a Pagar:</td><td style="padding: 4px 0; font-weight: 800; color: #1e3a8a;">${montoStr}</td></tr>
       </table>
       ${descuentoAplicado > 0 ? `<div style="margin-top: 12px; background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 10px; padding: 10px 12px; font-size: 12px; color: #065f46; font-weight: 700;">🎉 ¡Beneficio aplicado! Se descontaron Q${descuentoAplicado.toLocaleString()}.00 (${descuentoEtiqueta}) sobre la tarifa oficial de Q${subtotalOriginal.toLocaleString()}.00.</div>` : ''}
     </div>
 
-    <div style="text-align: center; margin: 24px 0;">
-      <a href="${webUrl}" style="background: #1e3a8a; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: 800; font-size: 13px; display: inline-block;">
+    <div style="text-align: center; margin: 20px 0;">
+      <a href="${payUrl}" style="background: #059669; color: #ffffff; text-decoration: none; padding: 13px 24px; border-radius: 10px; font-weight: 800; font-size: 13px; display: inline-block;">
+        💳 Completar Pago en Línea (${montoStr}) — Sin Repetir Formulario
+      </a>
+    </div>
+
+    <div style="background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 14px 16px; margin: 16px 0; font-size: 12px; color: #78350f;">
+      <strong style="color: #92400e; display: block; margin-bottom: 6px;">🏦 O realiza tu Depósito / Transferencia Bancaria Oficial:</strong>
+      <strong>Banco:</strong> BAC Credomatic • <strong>Cuenta Monetaria:</strong> <span style="font-family: monospace; font-weight: 800; background: #fef3c7; padding: 2px 6px; border-radius: 4px;">908326358</span><br/>
+      <strong>A nombre de:</strong> Club de Leones Quetzaltenango (indica tu folio <strong>${folio}</strong>).
+    </div>
+
+    <div style="text-align: center; margin: 18px 0;">
+      <a href="${webUrl}" style="background: #1e3a8a; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; font-size: 12px; display: inline-block;">
         Ver Mi Entrada QR Oficial
       </a>
     </div>
@@ -388,7 +411,7 @@ Correo Oficial: ${DEFAULT_GMAIL_SENDER}
     extra?: { customSubject?: string; customBody?: string; customWelcomeText?: string },
     customScriptUrl?: string
   ): Promise<boolean> => {
-    const scriptUrl = customScriptUrl || 
+    const scriptUrl = (customScriptUrl || '').trim() || 
       (import.meta as any).env?.VITE_GOOGLE_SCRIPT_URL || 
       DEFAULT_GOOGLE_SCRIPT_URL;
 
@@ -440,7 +463,7 @@ Correo Oficial: ${DEFAULT_GMAIL_SENDER}
    * Verifica si el Webhook de Google Apps Script está activo y accesible públicamente sin bloqueo de permisos
    */
   checkScriptHealth: async (customScriptUrl?: string): Promise<{ ok: boolean; message: string }> => {
-    const scriptUrl = customScriptUrl || 
+    const scriptUrl = (customScriptUrl || '').trim() || 
       (import.meta as any).env?.VITE_GOOGLE_SCRIPT_URL || 
       DEFAULT_GOOGLE_SCRIPT_URL;
 
@@ -471,7 +494,7 @@ Correo Oficial: ${DEFAULT_GMAIL_SENDER}
    * Envía un correo de prueba para validar el webhook de Google Apps Script
    */
   sendTestEmail: async (toEmail: string, customScriptUrl?: string): Promise<{ ok: boolean; message?: string }> => {
-    const scriptUrl = customScriptUrl || 
+    const scriptUrl = (customScriptUrl || '').trim() || 
       (import.meta as any).env?.VITE_GOOGLE_SCRIPT_URL || 
       DEFAULT_GOOGLE_SCRIPT_URL;
 
@@ -522,7 +545,7 @@ Correo Oficial: ${DEFAULT_GMAIL_SENDER}
     tipo: TipoCorreoConvencion = 'personalizado',
     onProgress?: (event: BroadcastProgressEvent) => void
   ): Promise<BroadcastResult> => {
-    const scriptUrl = customScriptUrl || 
+    const scriptUrl = (customScriptUrl || '').trim() || 
       (import.meta as any).env?.VITE_GOOGLE_SCRIPT_URL || 
       DEFAULT_GOOGLE_SCRIPT_URL;
 
@@ -606,7 +629,7 @@ Correo Oficial: ${DEFAULT_GMAIL_SENDER}
     magicUrl: string, 
     customScriptUrl?: string
   ): Promise<{ ok: boolean; message?: string }> => {
-    const scriptUrl = customScriptUrl || 
+    const scriptUrl = (customScriptUrl || '').trim() || 
       (import.meta as any).env?.VITE_GOOGLE_SCRIPT_URL || 
       DEFAULT_GOOGLE_SCRIPT_URL;
 

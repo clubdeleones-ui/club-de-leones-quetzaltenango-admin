@@ -170,19 +170,57 @@ export const telegramService = {
       return false;
     }
 
+    const montoTexto = `Q${(registro.montoPagar ?? 650).toLocaleString()}.00`;
+    const descuentoTexto = registro.descuentoAplicado && registro.descuentoAplicado > 0
+      ? `\n<b>Descuento:</b> -Q${registro.descuentoAplicado.toLocaleString()}.00 (${registro.codigoDescuento === 'CLUB_QUETZALTENANGO' ? 'Club Quetzaltenango' : (registro.codigoDescuento || 'Aplicado')})`
+      : '';
+
     const mensajeHtml = `
 🦁 <b>¡NUEVA PRE-INSCRIPCIÓN A LA CONVENCIÓN!</b> 🦁
 
+<b>Folio:</b> <code>${registro.id}</code>
 <b>Nombre:</b> ${registro.nombre}
 <b>Club:</b> ${registro.club}
 <b>Cargo:</b> ${registro.cargo}
 <b>Email:</b> ${registro.email}
 <b>Teléfono / Telegram:</b> ${registro.telefono}
+<b>Monto:</b> ${montoTexto}${descuentoTexto}
+<b>Estado de Pago:</b> ${registro.estadoPago || 'Pendiente'} (${registro.metodoPago || 'transferencia'})
 <b>Canal Preferido:</b> ${registro.preferenciaNotificacion === 'telegram' ? '📱 Telegram' : '✉️ Correo Electrónico'}${registro.telegramVerificado ? '\n<b>Estado Bot:</b> 🟢 <i>Conectado y número verificado</i>' : ''}
 ${(registro as any).esAcompanante ? `<b>Acompañante de:</b> ${(registro as any).nombreTitular || 'N/A'}` : ''}
 <b>Fecha de Registro:</b> ${new Date(registro.fechaRegistro).toLocaleString('es-GT')}
 
 <i>Sistema Club de Leones Quetzaltenango</i>
+    `.trim();
+
+    return await telegramService.sendMessage(token, targetChat, mensajeHtml);
+  },
+
+  /**
+   * Notifica al comité organizador cuando un pago de Convención queda confirmado.
+   */
+  notifyPagoConfirmadoConvencion: async (
+    registro: ConvencionRegistro,
+    origenPago: string = 'Pasarela BAC',
+    botToken?: string,
+    chatId?: string
+  ): Promise<boolean> => {
+    const token = botToken || (import.meta as any).env?.VITE_TELEGRAM_BOT_TOKEN || DEFAULT_TELEGRAM_BOT_TOKEN;
+    const targetChat = chatId || (import.meta as any).env?.VITE_TELEGRAM_CHAT_ID || DEFAULT_TELEGRAM_CHAT_ID;
+    if (!token || !targetChat) return false;
+
+    const montoTexto = `Q${(registro.montoPagar ?? 0).toLocaleString()}.00`;
+    const mensajeHtml = `
+✅ <b>¡PAGO CONFIRMADO — LXXV CONVENCIÓN!</b> 💳
+
+<b>Folio:</b> <code>${registro.id}</code>
+<b>Participante:</b> ${registro.nombre}
+<b>Club:</b> ${registro.club}
+<b>Monto Acreditado:</b> <b>${montoTexto}</b>
+<b>Origen:</b> ${origenPago}${registro.recurrenteCheckoutId ? `\n<b>Ref. Transacción:</b> <code>${registro.recurrenteCheckoutId}</code>` : ''}
+<b>Correo de Entrada QR:</b> Enviado a ${registro.email}
+
+<i>Acreditado automáticamente en Cuenta BAC 908326358</i>
     `.trim();
 
     return await telegramService.sendMessage(token, targetChat, mensajeHtml);
