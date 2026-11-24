@@ -185,30 +185,7 @@ export const MOCK_ACTAS: Acta[] = [
   }
 ];
 
-export const MOCK_ACTIVIDADES: Actividad[] = [
-  {
-    id: 'ev-1',
-    titulo: 'Gran Bingo Benéfico 2026',
-    descripcion: 'Acompáñanos en nuestro evento anual para recaudar fondos destinados a becas educativas y suministros escolares para niños de escasos recursos en Quetzaltenango. ¡Habrá música en vivo, deliciosa comida tradicional y fabulosos premios!',
-    fecha: '2026-07-15 15:00',
-    lugar: 'Sede Central Club de Leones (Diagonal 3, Xela)',
-    imagen: 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=800',
-    publica: true,
-    conBotonDonacion: true,
-    donacionUrl: '#/donar'
-  },
-  {
-    id: 'ev-2',
-    titulo: 'Jornada Oftalmológica Comunitaria',
-    descripcion: 'Exámenes de la vista gratuitos y entrega de lentes recetados de alta calidad para personas vulnerables de nuestra comunidad. Contaremos con la participación de oftalmólogos certificados y equipo de alta tecnología.',
-    fecha: '2026-08-20 08:00',
-    lugar: 'Parque Central de Quetzaltenango',
-    imagen: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&q=80&w=800',
-    publica: true,
-    conBotonDonacion: true,
-    donacionUrl: '#/donar'
-  }
-];
+export const MOCK_ACTIVIDADES: Actividad[] = [];
 
 
 export const MOCK_GALERIA: GaleriaItem[] = [

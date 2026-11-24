@@ -161,10 +161,9 @@ const Home: React.FC = () => {
   }, []);
 
   const actividades = React.useMemo(() => {
-    const publicSorted = dbActividades
+    return dbActividades
       .filter(a => a.publica)
       .sort((a, b) => new Date(b.fecha.replace(' ', 'T')).getTime() - new Date(a.fecha.replace(' ', 'T')).getTime());
-    return publicSorted.length > 0 ? publicSorted : MOCK_ACTIVIDADES.filter(a => a.publica);
   }, [dbActividades]);
 
   const loading = dbLoading.actividades && dbActividades.length === 0;
