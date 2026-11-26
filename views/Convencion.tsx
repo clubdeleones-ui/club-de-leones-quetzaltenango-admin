@@ -657,6 +657,24 @@ export default function Convencion() {
       setQuickPayLoading(false);
     }
   };
+  const cyberSourceCustomer = useMemo(() => {
+    if (!pendingConvencionRegistro) {
+      return { firstName: 'León', lastName: 'Convencionista', email: '', phoneNumber: '' };
+    }
+    const parts = (pendingConvencionRegistro.nombre || '').trim().split(/\s+/);
+    return {
+      firstName: parts[0] || 'León',
+      lastName: parts.slice(1).join(' ') || 'Convencionista',
+      email: pendingConvencionRegistro.email || '',
+      phoneNumber: pendingConvencionRegistro.telefono || ''
+    };
+  }, [
+    pendingConvencionRegistro?.id,
+    pendingConvencionRegistro?.nombre,
+    pendingConvencionRegistro?.email,
+    pendingConvencionRegistro?.telefono
+  ]);
+
   const [paymentSuccessData, setPaymentSuccessData] = useState<{
     id: string;
     nombre: string;
@@ -3928,16 +3946,11 @@ export default function Convencion() {
             }
           }}
           onSuccess={handleCyberSourceSuccess}
-          amount={pendingConvencionRegistro.montoPagar || montoTotal}
+          amount={pendingConvencionRegistro.montoPagar ?? montoTotal}
           currency="GTQ"
           orderCode={`CONV-${pendingConvencionRegistro.id}`}
           concept={`Inscripción 75 Convención D-3: ${pendingConvencionRegistro.nombre} (${pendingConvencionRegistro.club})`}
-          customer={{
-            firstName: pendingConvencionRegistro.nombre.split(' ')[0] || 'León',
-            lastName: pendingConvencionRegistro.nombre.split(' ').slice(1).join(' ') || 'Convencionista',
-            email: pendingConvencionRegistro.email,
-            phoneNumber: pendingConvencionRegistro.telefono
-          }}
+          customer={cyberSourceCustomer}
           allowCuotas={true}
         />
       )}

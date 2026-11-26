@@ -77,7 +77,8 @@ export const CyberSourcePaymentModal: React.FC<CyberSourcePaymentModalProps> = (
     setCuotasWarning(null);
   };
 
-  // Reset states on open
+  // Reset states ONLY when the modal transitions from closed to open
+  // (avoids wiping card inputs/loading state when parent re-renders on countdown intervals)
   useEffect(() => {
     if (isOpen) {
       setCardNumber('');
@@ -91,7 +92,8 @@ export const CyberSourcePaymentModal: React.FC<CyberSourcePaymentModalProps> = (
       setCuotasWarning(null);
       setSuccessResult(null);
     }
-  }, [isOpen, customer]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
