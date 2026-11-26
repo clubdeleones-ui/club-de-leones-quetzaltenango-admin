@@ -54,7 +54,7 @@ export interface CyberSourcePaymentResult {
 export const CYBERSOURCE_DEFAULT_CONFIG = {
   merchantIdTest: 'test_bac_gt_clubdeleonesdeqtng',
   merchantIdLive: 'bac_gt_clubdeleonesdeqtng',
-  isTestMode: true,
+  isTestMode: false,
   hostTest: 'apitest.cybersource.com',
   hostLive: 'api.cybersource.com',
   googleScriptUrl: DEFAULT_GOOGLE_SCRIPT_URL,
